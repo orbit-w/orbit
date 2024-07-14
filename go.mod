@@ -3,7 +3,7 @@ module github.com/orbit-w/orbit
 go 1.20
 
 require (
-	github.com/orbit-w/meteor v0.0.0-20240714103512-59e95208af96
+	github.com/orbit-w/meteor v0.0.0-20240714154600-75b391d1923c
 	github.com/spf13/viper v1.19.0
 	go.uber.org/zap v1.27.0
 )

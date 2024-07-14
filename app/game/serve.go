@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"github.com/orbit-w/meteor/bases/packet"
 	"github.com/orbit-w/meteor/modules/net/agent_stream"
-	"github.com/orbit-w/orbit/app/common/config"
-	"github.com/orbit-w/orbit/app/common/logger"
-	"github.com/orbit-w/orbit/app/common/service"
+	"github.com/orbit-w/orbit/app/modules/config"
+	"github.com/orbit-w/orbit/app/modules/logger"
+	"github.com/orbit-w/orbit/app/modules/service"
 	"go.uber.org/zap"
 )
 

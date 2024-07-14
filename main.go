@@ -1,9 +1,10 @@
 package main
 
 import (
+	"encoding/binary"
 	"flag"
-	"github.com/orbit-w/orbit/app/common/config"
 	"github.com/orbit-w/orbit/app/game"
+	"github.com/orbit-w/orbit/app/modules/config"
 	"os"
 	"os/signal"
 	"syscall"
@@ -26,6 +27,8 @@ func main() {
 	config.ParseConfig(*configPath)
 
 	game.Serve(*nodeId)
+
+	binary.BigEndian.String()
 
 	// Wait for exit signal
 	sigs := make(chan os.Signal, 1)
