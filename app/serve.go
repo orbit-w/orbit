@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 	stream "github.com/orbit-w/orbit/app/core/services/agent_stream"
+	"github.com/orbit-w/orbit/app/modules/config"
 	"github.com/orbit-w/orbit/app/modules/logger"
 	"github.com/orbit-w/orbit/app/modules/service"
 	"os"
@@ -17,9 +18,14 @@ import (
 */
 
 func Serve(nodeId string) {
-	logger.InitLogger()
+	cfg := config.GetConfig()
+	// Init logger
+	logger.InitLogger(cfg.Server.Stage)
+
+	// Init services
 	services := service.NewServices()
 
+	// Register services
 	RegServices(services)
 
 	if err := services.Start(); err != nil {
