@@ -14,13 +14,14 @@ import (
 
 var (
 	configPath = flag.String("config", "./", "config file path")
+	configName = flag.String("config_name", "config", "config file name")
 	nodeId     = flag.String("node_id", "game_nd00", "node id")
 )
 
 func main() {
 	flag.Parse()
 
-	config.ParseConfig(*configPath)
+	config.LoadConfig(*configName, *configPath)
 
 	app.Serve(*nodeId)
 }

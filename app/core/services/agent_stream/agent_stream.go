@@ -6,6 +6,7 @@ import (
 	"github.com/orbit-w/orbit/app/modules/config"
 	"github.com/orbit-w/orbit/app/modules/logger"
 	"go.uber.org/zap"
+	"net"
 )
 
 /*
@@ -43,7 +44,7 @@ type AgentStream struct {
 }
 
 func (a *AgentStream) Start() error {
-	host := config.StreamHost()
+	host := streamHost()
 	a.server = new(agent_stream.Server)
 	if err := a.server.Serve(host, streamHandle); err != nil {
 		panic(err)
@@ -58,4 +59,10 @@ func (a *AgentStream) Stop() error {
 		return a.server.Stop()
 	}
 	return nil
+}
+
+func streamHost() string {
+	cfg := config.GetConfig()
+	ipAddr := net.ParseIP(cfg.Server.Host)
+	return net.JoinHostPort(ipAddr.String(), cfg.Server.Port)
 }
