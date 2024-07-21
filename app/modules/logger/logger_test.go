@@ -26,4 +26,5 @@ func TestInitLogger(t *testing.T) {
 func wrap() {
 	l := ZLogger()
 	l.Error("Is Test", zap.String("Name", "Test"))
+	l.Warn("Is Test", zap.String("Name", "Test"))
 }

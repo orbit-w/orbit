@@ -19,6 +19,8 @@ func InitLogger(stage string) {
 	case strings.Contains(stage, "dev") ||
 		strings.Contains(stage, "local") ||
 		strings.Contains(stage, "test"):
+		// 开发环境Logger实例化
+		// Warn 以上日志都会输出堆栈信息
 		gLogger = logger.NewDevelopmentLogger()
 	default:
 		gLogger = logger.New("logs/app.log", zap.InfoLevel)
