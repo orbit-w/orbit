@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+
 	"github.com/orbit-w/orbit/app"
 	"github.com/orbit-w/orbit/app/modules/config"
 )
@@ -13,15 +14,14 @@ import (
 */
 
 var (
-	configPath = flag.String("config", "./", "config file path")
-	configName = flag.String("config_name", "config", "config file name")
+	configPath = flag.String("config", "configs/config.toml", "path to config file")
 	nodeId     = flag.String("node_id", "game_nd00", "node id")
 )
 
 func main() {
 	flag.Parse()
 
-	config.LoadConfig(*configName, *configPath)
+	config.LoadConfig(*configPath)
 
 	app.Serve(*nodeId)
 }

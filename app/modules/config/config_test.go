@@ -12,7 +12,7 @@ import (
 */
 
 func TestLoadConfig(t *testing.T) {
-	LoadConfig("config_local", "./")
+	LoadConfig("./config.toml")
 	c := GetConfig()
 	fmt.Println(c)
 }

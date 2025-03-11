@@ -1,4 +1,0 @@
-server:
-  stage: local      # local | dev | production
-  host: localhost
-  port: 8080

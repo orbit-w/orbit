@@ -1,12 +1,14 @@
 package agent_stream
 
 import (
-	"github.com/orbit-w/meteor/bases/packet"
-	"github.com/orbit-w/meteor/modules/net/agent_stream"
-	"github.com/orbit-w/orbit/app/modules/config"
-	"github.com/orbit-w/orbit/app/modules/logger"
-	"go.uber.org/zap"
+	"context"
 	"net"
+
+	"github.com/orbit-w/meteor/modules/net/packet"
+	"github.com/orbit-w/mux-go"
+	"github.com/orbit-w/orbit/app/modules/config"
+	"github.com/orbit-w/orbit/lib/logger"
+	"go.uber.org/zap"
 )
 
 /*
@@ -15,42 +17,47 @@ import (
    @2024 7月 周二 23:32
 */
 
-var streamHandle = func(stream agent_stream.IStream) error {
+var streamHandle = func(stream mux.IServerConn) error {
 	var (
-		log = logger.ZLogger()
+		log = logger.GetLogger()
 	)
 	log.Info("agent_stream server start")
 	for {
-		in, err := stream.Recv()
+		in, err := stream.Recv(context.Background())
 		if err != nil {
+			log.Error("conn read stream failed", zap.Error(err))
 			break
 		}
 		log.Info("agent_stream server recv", zap.String("Data", string(in)))
 
-		w := packet.Writer()
+		w := packet.WriterP(256)
 		w.WriteInt8(0)
 		w.WriteString("hello, client")
 		err = stream.Send(w.Data())
 		if err != nil {
 			log.Error("gent_stream server send failed", zap.Error(err))
 		}
-		w.Return()
+		packet.Return(w)
 	}
 	return nil
 }
 
 type AgentStream struct {
-	server *agent_stream.Server
+	server *mux.Server
 }
 
 func (a *AgentStream) Start() error {
 	host := streamHost()
-	a.server = new(agent_stream.Server)
-	if err := a.server.Serve(host, streamHandle); err != nil {
+
+	server := new(mux.Server)
+	err := server.Serve(host, streamHandle)
+	if err != nil {
 		panic(err)
 	}
 
-	logger.ZLogger().Info("AgentStream server listened...", zap.String("Host", host))
+	a.server = server
+
+	logger.GetLogger().Info("AgentStream server listened...", zap.String("Host", host))
 	return nil
 }
 

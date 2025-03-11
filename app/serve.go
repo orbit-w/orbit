@@ -2,13 +2,13 @@ package app
 
 import (
 	"fmt"
-	stream "github.com/orbit-w/orbit/app/core/services/agent_stream"
-	"github.com/orbit-w/orbit/app/modules/config"
-	"github.com/orbit-w/orbit/app/modules/logger"
-	"github.com/orbit-w/orbit/app/modules/service"
 	"os"
 	"os/signal"
 	"syscall"
+
+	stream "github.com/orbit-w/orbit/app/core/services/agent_stream"
+	"github.com/orbit-w/orbit/app/modules/service"
+	"github.com/orbit-w/orbit/lib/logger"
 )
 
 /*
@@ -18,9 +18,7 @@ import (
 */
 
 func Serve(nodeId string) {
-	cfg := config.GetConfig()
-	// Init logger
-	logger.InitLogger(cfg.Server.Stage)
+	//cfg := config.GetConfig()
 
 	// Init services
 	services := service.NewServices()
@@ -38,7 +36,7 @@ func Serve(nodeId string) {
 	<-sigs
 
 	services.Stop()
-	logger.ZLogger().Info("orbit service exit")
+	logger.GetLogger().Info("orbit service exit")
 	logger.StopLogger()
 }
 
