@@ -1,11 +1,11 @@
 package agent_stream
 
 import (
-	"context"
 	"net"
 
 	"github.com/orbit-w/meteor/modules/net/packet"
 	"github.com/orbit-w/mux-go"
+	"github.com/orbit-w/orbit/app/core/network"
 	"github.com/orbit-w/orbit/app/modules/config"
 	"github.com/orbit-w/orbit/lib/logger"
 	"go.uber.org/zap"
@@ -22,8 +22,10 @@ var streamHandle = func(stream mux.IServerConn) error {
 		log = logger.GetLogger()
 	)
 	log.Info("agent_stream server start")
+	ctx := stream.Context()
+	session := network.NewSession(0, stream)
 	for {
-		in, err := stream.Recv(context.Background())
+		in, err := stream.Recv(ctx)
 		if err != nil {
 			log.Error("conn read stream failed", zap.Error(err))
 			break
