@@ -1,38 +1,26 @@
 package network
 
-import "github.com/orbit-w/meteor/modules/net/packet"
-
 type ClientRequest struct {
 	upSeq uint32
 	pid   uint32
-	data  []byte
+	in    []byte
 
 	session *Session
 }
 
-func NewClientRequest(upSeq uint32, pid uint32, data []byte, session *Session) *ClientRequest {
+func NewClientRequest(seq uint32, pid uint32, in []byte, session *Session) *ClientRequest {
 	return &ClientRequest{
-		upSeq:   upSeq,
+		upSeq:   seq,
 		pid:     pid,
-		data:    data,
+		in:      in,
 		session: session,
 	}
 }
 
 func (r *ClientRequest) Response(data []byte, pid uint32) error {
-	pack, err := codec.Encode(data, r.upSeq, pid)
-	if err != nil {
-		return err
-	}
-	defer packet.Return(pack)
-	return r.session.Send(pack.Data())
+	return r.session.SendMessage(data, r.upSeq, pid)
 }
 
 func (r *ClientRequest) ResponseBatch(msgs []Message) error {
-	pack, err := codec.EncodeBatch(r.upSeq, msgs)
-	if err != nil {
-		return err
-	}
-	defer packet.Return(pack)
-	return r.session.Send(pack.Data())
+	return r.session.SendMessageBatch(msgs)
 }

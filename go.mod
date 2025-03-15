@@ -7,7 +7,7 @@ toolchain go1.22.10
 require (
 	github.com/BurntSushi/toml v1.4.0
 	github.com/orbit-w/meteor v0.0.0-20250303104708-7e49482f30f6
-	github.com/orbit-w/mux-go v0.0.0-20250312100652-8633b541f777
+	github.com/orbit-w/mux-go v0.0.0-20250315033152-557ceb59f2b9
 	github.com/spf13/viper v1.19.0
 	go.uber.org/zap v1.27.0
 )
@@ -23,7 +23,7 @@ require (
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
-	github.com/spf13/cast v1.6.0 // indirect
+	github.com/spf13/cast v1.7.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect

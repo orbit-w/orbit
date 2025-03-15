@@ -30,6 +30,8 @@ github.com/orbit-w/mux-go v0.0.0-20250310160205-ad783c678fb1 h1:MMgN3djVYpaiHDn5
 github.com/orbit-w/mux-go v0.0.0-20250310160205-ad783c678fb1/go.mod h1:q08/7CNfjSFMYInap/OVdPM/YdOkaAfUe2AnjszkEn4=
 github.com/orbit-w/mux-go v0.0.0-20250312100652-8633b541f777 h1:YbnG/+XgRQe6COPQIqVhAlPW0HdcMydfEzyxLBqhlac=
 github.com/orbit-w/mux-go v0.0.0-20250312100652-8633b541f777/go.mod h1:hics8cfzP4Q7kLEfXOqYUtQdEGP2VYKegS9mwWXdS8k=
+github.com/orbit-w/mux-go v0.0.0-20250315033152-557ceb59f2b9 h1:IhJmCnOt6D+TGxfsYX54ptF6pZ7PcT9pcbr9/cBBc1o=
+github.com/orbit-w/mux-go v0.0.0-20250315033152-557ceb59f2b9/go.mod h1:cySP9Xln+56pyB2XUCTkXdfH2+bDI2uSydcOdR4OZO8=
 github.com/pelletier/go-toml/v2 v2.2.2 h1:aYUidT7k73Pcl9nb2gScu7NSrKCSHIDE89b3+6Wq+LM=
 github.com/pelletier/go-toml/v2 v2.2.2/go.mod h1:1t835xjRzz80PqgE6HHgN2JOsmgYu/h4qDAS4n929Rs=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
@@ -47,6 +49,8 @@ github.com/spf13/afero v1.11.0 h1:WJQKhtpdm3v2IzqG8VMqrr6Rf3UYpEF239Jy9wNepM8=
 github.com/spf13/afero v1.11.0/go.mod h1:GH9Y3pIexgf1MTIWtNGyogA5MwRIDXGUr+hbWNoBjkY=
 github.com/spf13/cast v1.6.0 h1:GEiTHELF+vaR5dhz3VqZfFSzZjYbgeKDpBxQVS4GYJ0=
 github.com/spf13/cast v1.6.0/go.mod h1:ancEpBxwJDODSW/UG4rDrAqiKolqNNh2DX3mk86cAdo=
+github.com/spf13/cast v1.7.1 h1:cuNEagBQEHWN1FnbGEjCXL2szYEXqfJPbP2HNUaca9Y=
+github.com/spf13/cast v1.7.1/go.mod h1:ancEpBxwJDODSW/UG4rDrAqiKolqNNh2DX3mk86cAdo=
 github.com/spf13/pflag v1.0.5 h1:iy+VFUOCP1a+8yFto/drg2CJ5u0yRoB7fZw3DKv/JXA=
 github.com/spf13/pflag v1.0.5/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An2Bg=
 github.com/spf13/viper v1.19.0 h1:RWq5SEjt8o25SROyN3z2OrDB9l7RPd3lwTWU8EcEdcI=
