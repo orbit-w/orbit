@@ -3,6 +3,7 @@ package agent_stream
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 
 	"github.com/orbit-w/mux-go"
@@ -45,14 +46,17 @@ var streamHandle = func(stream mux.IServerConn) error {
 		}
 
 		// TODO: 处理消息
-		pid, seq, _, err := session.Decode(in)
+		msgList, err := session.Decode(in)
 		if err != nil {
 			log.Error("decode failed", zap.Error(err))
 			stream.Close()
 			break
 		}
 
-		session.SendMessage([]byte("hello, client"), seq, pid)
+		for _, msg := range msgList {
+			fmt.Println(msg)
+			session.SendMessage([]byte("hello, client"), msg.Seq, msg.Pid)
+		}
 	}
 	return nil
 }
