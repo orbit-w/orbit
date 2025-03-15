@@ -29,11 +29,14 @@ var streamHandle = func(stream mux.IServerConn) error {
 	)
 
 	log.Info("agent_stream server start")
+	// 处理连接：退出情况下，系统会自动关闭stream，不需要业务层显示处理
 	session, err := newSession(stream)
 	if err != nil {
 		log.Error("new session failed", zap.Error(err))
 		return err
 	}
+	defer session.Close()
+
 	for {
 		in, err := stream.Recv(context.Background())
 		if err != nil {

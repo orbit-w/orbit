@@ -14,6 +14,7 @@ type Session struct {
 	uid    int64 // 用户ID
 	stream mux.IServerConn
 	codec  *Codec
+	closed atomic.Int32 // 0: not closed, 1: closed
 }
 
 // NewSession 创建新的会话，自动分配全局唯一ID
@@ -73,7 +74,10 @@ func (s *Session) Decode(data []byte) (uint32, uint32, []byte, error) {
 	return s.codec.Decode(data)
 }
 
-// Close 关闭会话
-func (s *Session) Close() error {
-	return nil
+// Close 关闭会话，保证只执行一次
+func (s *Session) Close() {
+	// CompareAndSwap returns true if the swap was successful
+	if s.closed.CompareAndSwap(0, 1) {
+		s.stream.Close()
+	}
 }
