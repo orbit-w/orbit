@@ -7,6 +7,11 @@ import (
 	"github.com/orbit-w/mux-go"
 )
 
+const (
+	PatternNone = iota
+	PatternKick
+)
+
 var globalSessionId atomic.Int64
 
 type Session struct {
@@ -29,7 +34,18 @@ func NewSession(uid int64, stream mux.IServerConn) *Session {
 
 // Send 发送原始数据
 func (s *Session) Send(data []byte) error {
-	return s.stream.Send(data)
+	w := packet.WriterP(1 + len(data))
+	w.WriteInt8(PatternNone)
+	w.Write(data)
+	defer packet.Return(w)
+	return s.stream.Send(w.Data())
+}
+
+func (s *Session) Kick() error {
+	w := packet.WriterP(1)
+	w.WriteInt8(PatternKick)
+	defer packet.Return(w)
+	return s.stream.Send(w.Data())
 }
 
 // SendMessage 发送需要编码的消息
@@ -39,7 +55,7 @@ func (s *Session) SendMessage(data []byte, seq uint32, pid uint32) error {
 		return err
 	}
 	defer packet.Return(pack)
-	return s.stream.Send(pack.Data())
+	return s.Send(pack.Data())
 }
 
 func (s *Session) SendMessageBatch(msgs []Message) error {
@@ -48,7 +64,7 @@ func (s *Session) SendMessageBatch(msgs []Message) error {
 		return err
 	}
 	defer packet.Return(pack)
-	return s.stream.Send(pack.Data())
+	return s.Send(pack.Data())
 }
 
 // Push 直接发送消息，不需要序列号
@@ -70,7 +86,7 @@ func (s *Session) PushBatch(msgs []Message) error {
 	return s.stream.Send(pack.Data())
 }
 
-func (s *Session) Decode(data []byte) (uint32, uint32, []byte, error) {
+func (s *Session) Decode(data []byte) ([]Message, error) {
 	return s.codec.Decode(data)
 }
 
