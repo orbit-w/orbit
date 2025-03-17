@@ -7,7 +7,7 @@ toolchain go1.22.10
 require (
 	github.com/BurntSushi/toml v1.4.0
 	github.com/orbit-w/meteor v0.0.0-20250303104708-7e49482f30f6
-	github.com/orbit-w/mux-go v0.0.0-20250315033152-557ceb59f2b9
+	github.com/orbit-w/mux-go v0.0.0-20250317135428-0dea50065ed0
 	github.com/spf13/viper v1.19.0
 	go.uber.org/zap v1.27.0
 )

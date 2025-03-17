@@ -32,6 +32,14 @@ func NewSession(uid int64, stream mux.IServerConn) *Session {
 	}
 }
 
+func (s *Session) Id() int64 {
+	return s.id
+}
+
+func (s *Session) Uid() int64 {
+	return s.uid
+}
+
 // Send 发送原始数据
 func (s *Session) Send(data []byte) error {
 	w := packet.WriterP(1 + len(data))

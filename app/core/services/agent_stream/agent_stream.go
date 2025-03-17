@@ -3,9 +3,10 @@ package agent_stream
 import (
 	"context"
 	"errors"
-	"fmt"
+	"io"
 	"net"
 
+	gnetwork "github.com/orbit-w/meteor/modules/net/network"
 	"github.com/orbit-w/mux-go"
 	"github.com/orbit-w/mux-go/metadata"
 	"github.com/orbit-w/orbit/app/core/network"
@@ -29,7 +30,6 @@ var streamHandle = func(stream mux.IServerConn) error {
 		log = logger.GetLogger()
 	)
 
-	log.Info("agent_stream server start")
 	// 处理连接：退出情况下，系统会自动关闭stream，不需要业务层显示处理
 	session, err := newSession(stream)
 	if err != nil {
@@ -37,10 +37,15 @@ var streamHandle = func(stream mux.IServerConn) error {
 		return err
 	}
 	defer session.Close()
+	log.Info("agent_stream server start", zap.Int64("uid", session.Uid()))
 
 	for {
 		in, err := stream.Recv(context.Background())
 		if err != nil {
+			if gnetwork.IsClosedConnError(err) || errors.Is(err, io.EOF) {
+				log.Info("stream closed", zap.Int64("uid", session.Uid()))
+				break
+			}
 			log.Error("conn read stream failed", zap.Error(err))
 			break
 		}
@@ -54,7 +59,6 @@ var streamHandle = func(stream mux.IServerConn) error {
 		}
 
 		for _, msg := range msgList {
-			fmt.Println(msg)
 			session.SendMessage([]byte("hello, client"), msg.Seq, msg.Pid)
 		}
 	}
