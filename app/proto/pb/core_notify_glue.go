@@ -3,7 +3,6 @@ package pb
 
 import (
 	"fmt"
-
 	"google.golang.org/protobuf/proto"
 )
 

@@ -5,15 +5,19 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
 )
 
 var (
-	protoDir  = flag.String("proto_dir", "app/proto", "Directory containing .proto files")
-	debugMode = flag.Bool("debug", false, "Enable debug mode")
-	quietMode = flag.Bool("quiet", true, "Quiet mode: only show errors")
+	protoDir     = flag.String("proto_dir", "app/proto", "Directory containing .proto files")
+	outputDir    = flag.String("output_dir", "app/proto/pb", "Directory for generated protocol ID files")
+	debugMode    = flag.Bool("debug", false, "Enable debug mode")
+	quietMode    = flag.Bool("quiet", true, "Quiet mode: only show errors")
+	genProtoCode = flag.Bool("gen_proto_code", true, "Generate glue code for proto messages")
+	genProtoIDs  = flag.Bool("gen_proto_ids", true, "Generate protocol IDs for proto messages")
 )
 
 // 消息结构，用于存储消息定义及其注释
@@ -35,6 +39,50 @@ type Field struct {
 func main() {
 	flag.Parse()
 
+	// Generate protocol IDs if requested
+	if *genProtoIDs {
+		if !*quietMode {
+			fmt.Println("Generating protocol IDs...")
+		}
+		generateProtocolIDs()
+	}
+
+	// Generate glue code if requested
+	if *genProtoCode {
+		if !*quietMode {
+			fmt.Println("Generating proto glue code...")
+		}
+		generateGlueCode()
+	}
+
+	if !*quietMode {
+		fmt.Println("All generation completed!")
+	}
+}
+
+// generateProtocolIDs generates protocol IDs for proto messages
+func generateProtocolIDs() {
+	// Create a new hashgen process
+	cmd := exec.Command("go", "run", "lib/genproto/cmd/hashgen/main.go",
+		"-proto_dir", *protoDir,
+		"-output_dir", *outputDir)
+
+	if *debugMode {
+		cmd.Args = append(cmd.Args, "-debug")
+	}
+
+	// Set the output to our stdout/stderr
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	// Run the command
+	if err := cmd.Run(); err != nil {
+		fmt.Printf("Error generating protocol IDs: %v\n", err)
+	}
+}
+
+// generateGlueCode generates the proto glue code
+func generateGlueCode() {
 	// 确保proto目录存在
 	if _, err := os.Stat(*protoDir); os.IsNotExist(err) {
 		fmt.Printf("Proto directory %s does not exist\n", *protoDir)
