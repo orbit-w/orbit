@@ -7,8 +7,9 @@ import (
 )
 
 // MarshalBeAttacked 序列化BeAttacked通知消息
-func MarshalBeAttacked(notify *Notify_BeAttacked) ([]byte, error) {
-	return proto.Marshal(notify)
+func MarshalBeAttacked(notify *Notify_BeAttacked) ([]byte, uint32, error) {
+	data, err := proto.Marshal(notify)
+	return data, PID_Core_BeAttacked, err
 }
 
 // ParseCoreNotify 根据消息名称解析Core包的通知消息
