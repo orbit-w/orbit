@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+//消息所属的包，需要和文件名相同
+package Core;
+
+// 定义Go代码生成的包路径
+option go_package = "app/proto/pb";
+
+//------发送墙，包含的消息可以由客户端发送，由服务端回复rsp
+message Request {
+    //只有直接放在消息前的注释会被胶水代码读取
+    //名字可以随便取，同一个包内不能重名
+    message SearchBook {
+        string Query = 1;//这行注释会被胶水代码读取
+        int32 PageNumber = 2;
+        //该请求的回复消息，名字必须为Rsp，
+        //如果没有，则默认回复为通用成功OK
+        message Rsp{
+            Book Result = 1;
+        }
+    }
+    //心跳
+    message HeartBeat {
+    }
+}
+
+//-------通知墙，包含的消息只能由服务器发送给客户端
+message Notify {
+    message BeAttacked {
+        int32 CurHp = 1; 
+    }
+}
+
+//--------在墙外定义的是单纯的数据结构，无法单独发送
+message Book {
+    string Content = 1;//这行注释会被胶水代码读取
+}
+
+//通用成功
+message OK {
+}
+
+//通用失败
+message Error {
+    string Reason = 1;//Reason建议命名：error_墙名_消息名_Reason
+}
