@@ -27,8 +27,27 @@ var CoreMessageNameToID = map[string]uint32{
 	"SearchBook": PID_Core_SearchBook,
 }
 
+// IDToMessageName maps protocol IDs to their message names
+var CoreIDToMessageName = map[uint32]string{
+	PID_Core_BeAttacked: "BeAttacked",
+	PID_Core_Book: "Book",
+	PID_Core_Error: "Error",
+	PID_Core_HeartBeat: "HeartBeat",
+	PID_Core_Notify: "Notify",
+	PID_Core_OK: "OK",
+	PID_Core_Request: "Request",
+	PID_Core_Rsp: "Rsp",
+	PID_Core_SearchBook: "SearchBook",
+}
+
 // GetProtocolID returns the protocol ID for the given message name
 func GetCoreProtocolID(messageName string) (uint32, bool) {
 	id, ok := CoreMessageNameToID[messageName]
 	return id, ok
+}
+
+// GetMessageName returns the message name for the given protocol ID
+func GetCoreMessageName(pid uint32) (string, bool) {
+	name, ok := CoreIDToMessageName[pid]
+	return name, ok
 }

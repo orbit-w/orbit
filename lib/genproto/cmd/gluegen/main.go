@@ -244,10 +244,23 @@ var {{.PackageName}}MessageNameToID = map[string]uint32{
 {{- end}}
 }
 
+// IDToMessageName maps protocol IDs to their message names
+var {{.PackageName}}IDToMessageName = map[uint32]string{
+{{- range .MessageIDs}}
+	PID_{{$.PackageName}}_{{.Name}}: "{{.Name}}",
+{{- end}}
+}
+
 // GetProtocolID returns the protocol ID for the given message name
 func Get{{.PackageName}}ProtocolID(messageName string) (uint32, bool) {
 	id, ok := {{.PackageName}}MessageNameToID[messageName]
 	return id, ok
+}
+
+// GetMessageName returns the message name for the given protocol ID
+func Get{{.PackageName}}MessageName(pid uint32) (string, bool) {
+	name, ok := {{.PackageName}}IDToMessageName[pid]
+	return name, ok
 }
 `
 
@@ -494,9 +507,9 @@ func generateRequestGlueCode(messages []Message, packageName, pbDir string) {
 
 	writer.WriteString("}\n\n")
 
-	// 写入请求分发函数
+	// 写入请求分发函数 - 基于消息名称
 	writer.WriteString(fmt.Sprintf("// Dispatch%sRequest 分发%s包的请求消息到对应处理函数\n", packageName, packageName))
-	writer.WriteString(fmt.Sprintf("func Dispatch%sRequest(handler %sRequestHandler, msgName string, msgData []byte) (any, error) {\n", packageName, packageName))
+	writer.WriteString(fmt.Sprintf("func Dispatch%sRequest(handler %sRequestHandler, msgName string, data []byte) (any, error) {\n", packageName, packageName))
 	writer.WriteString("\tvar err error\n")
 	writer.WriteString("\tvar response any\n\n")
 	writer.WriteString("\tswitch msgName {\n")
@@ -504,7 +517,7 @@ func generateRequestGlueCode(messages []Message, packageName, pbDir string) {
 	for _, msg := range messages {
 		writer.WriteString(fmt.Sprintf("\tcase \"%s\":\n", msg.Name))
 		writer.WriteString(fmt.Sprintf("\t\treq := &Request_%s{}\n", msg.Name))
-		writer.WriteString("\t\tif err = proto.Unmarshal(msgData, req); err != nil {\n")
+		writer.WriteString("\t\tif err = proto.Unmarshal(data, req); err != nil {\n")
 		writer.WriteString(fmt.Sprintf("\t\t\treturn nil, fmt.Errorf(\"unmarshal %s failed: %%v\", err)\n", msg.Name))
 		writer.WriteString("\t\t}\n")
 		writer.WriteString(fmt.Sprintf("\t\tresponse = handler.Handle%s(req)\n", msg.Name))
@@ -512,6 +525,28 @@ func generateRequestGlueCode(messages []Message, packageName, pbDir string) {
 
 	writer.WriteString("\tdefault:\n")
 	writer.WriteString("\t\treturn nil, fmt.Errorf(\"unknown request message: %s\", msgName)\n")
+	writer.WriteString("\t}\n\n")
+	writer.WriteString("\treturn response, nil\n")
+	writer.WriteString("}\n\n")
+
+	// 写入基于协议ID的请求分发函数
+	writer.WriteString(fmt.Sprintf("// Dispatch%sRequestByID 通过协议ID分发%s包的请求消息到对应处理函数\n", packageName, packageName))
+	writer.WriteString(fmt.Sprintf("func Dispatch%sRequestByID(handler %sRequestHandler, pid uint32, data []byte) (any, error) {\n", packageName, packageName))
+	writer.WriteString("\tvar err error\n")
+	writer.WriteString("\tvar response any\n\n")
+	writer.WriteString("\tswitch pid {\n")
+
+	for _, msg := range messages {
+		writer.WriteString(fmt.Sprintf("\tcase PID_%s_%s:\n", packageName, msg.Name))
+		writer.WriteString(fmt.Sprintf("\t\treq := &Request_%s{}\n", msg.Name))
+		writer.WriteString("\t\tif err = proto.Unmarshal(data, req); err != nil {\n")
+		writer.WriteString(fmt.Sprintf("\t\t\treturn nil, fmt.Errorf(\"unmarshal message with ID 0x%%08x failed: %%v\", pid, err)\n"))
+		writer.WriteString("\t\t}\n")
+		writer.WriteString(fmt.Sprintf("\t\tresponse = handler.Handle%s(req)\n", msg.Name))
+	}
+
+	writer.WriteString("\tdefault:\n")
+	writer.WriteString("\t\treturn nil, fmt.Errorf(\"unknown protocol ID: 0x%08x\", pid)\n")
 	writer.WriteString("\t}\n\n")
 	writer.WriteString("\treturn response, nil\n")
 	writer.WriteString("}\n")
@@ -552,9 +587,9 @@ func generateNotifyGlueCode(messages []Message, packageName, pbDir string) {
 		writer.WriteString("}\n\n")
 	}
 
-	// 写入通知解析函数
+	// 写入基于消息名称的通知解析函数
 	writer.WriteString(fmt.Sprintf("// Parse%sNotify 根据消息名称解析%s包的通知消息\n", packageName, packageName))
-	writer.WriteString(fmt.Sprintf("func Parse%sNotify(msgName string, msgData []byte) (any, error) {\n", packageName))
+	writer.WriteString(fmt.Sprintf("func Parse%sNotify(msgName string, data []byte) (any, error) {\n", packageName))
 	writer.WriteString("\tvar err error\n")
 	writer.WriteString("\tvar notification any\n\n")
 	writer.WriteString("\tswitch msgName {\n")
@@ -562,7 +597,7 @@ func generateNotifyGlueCode(messages []Message, packageName, pbDir string) {
 	for _, msg := range messages {
 		writer.WriteString(fmt.Sprintf("\tcase \"%s\":\n", msg.Name))
 		writer.WriteString(fmt.Sprintf("\t\tnotify := &Notify_%s{}\n", msg.Name))
-		writer.WriteString("\t\tif err = proto.Unmarshal(msgData, notify); err != nil {\n")
+		writer.WriteString("\t\tif err = proto.Unmarshal(data, notify); err != nil {\n")
 		writer.WriteString(fmt.Sprintf("\t\t\treturn nil, fmt.Errorf(\"unmarshal %s notification failed: %%v\", err)\n", msg.Name))
 		writer.WriteString("\t\t}\n")
 		writer.WriteString("\t\tnotification = notify\n")
@@ -570,6 +605,28 @@ func generateNotifyGlueCode(messages []Message, packageName, pbDir string) {
 
 	writer.WriteString("\tdefault:\n")
 	writer.WriteString("\t\treturn nil, fmt.Errorf(\"unknown notification message: %s\", msgName)\n")
+	writer.WriteString("\t}\n\n")
+	writer.WriteString("\treturn notification, nil\n")
+	writer.WriteString("}\n\n")
+
+	// 写入基于协议ID的通知解析函数
+	writer.WriteString(fmt.Sprintf("// Parse%sNotifyByID 根据协议ID解析%s包的通知消息\n", packageName, packageName))
+	writer.WriteString(fmt.Sprintf("func Parse%sNotifyByID(pid uint32, data []byte) (any, error) {\n", packageName))
+	writer.WriteString("\tvar err error\n")
+	writer.WriteString("\tvar notification any\n\n")
+	writer.WriteString("\tswitch pid {\n")
+
+	for _, msg := range messages {
+		writer.WriteString(fmt.Sprintf("\tcase PID_%s_%s:\n", packageName, msg.Name))
+		writer.WriteString(fmt.Sprintf("\t\tnotify := &Notify_%s{}\n", msg.Name))
+		writer.WriteString("\t\tif err = proto.Unmarshal(data, notify); err != nil {\n")
+		writer.WriteString(fmt.Sprintf("\t\t\treturn nil, fmt.Errorf(\"unmarshal notification with ID 0x%%08x failed: %%v\", pid, err)\n"))
+		writer.WriteString("\t\t}\n")
+		writer.WriteString("\t\tnotification = notify\n")
+	}
+
+	writer.WriteString("\tdefault:\n")
+	writer.WriteString("\t\treturn nil, fmt.Errorf(\"unknown notification protocol ID: 0x%08x\", pid)\n")
 	writer.WriteString("\t}\n\n")
 	writer.WriteString("\treturn notification, nil\n")
 	writer.WriteString("}\n")

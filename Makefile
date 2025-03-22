@@ -12,13 +12,33 @@ BuildLinux:
 	mkdir -p bin
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/$(APP_NAME) main.go
 
+# 生成所有proto相关的代码（protobuf、协议ID和胶水代码）
 GenProto:
 	mkdir -p app/proto/pb
 	find app/proto -name "*.proto" -type f | xargs -I{} protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative {}
 	# 将生成的pb.go文件移动到app/proto/pb目录
 	find app/proto -name "*.pb.go" -type f -not -path "*/pb/*" | xargs -I{} mv {} app/proto/pb/
-	# 生成胶水代码
+	# 生成协议ID和胶水代码
 	go run lib/genproto/main.go --proto_dir=app/proto --quiet
+
+# 只生成协议ID
+GenProtoID:
+	mkdir -p app/proto/pb
+	go run lib/genproto/main.go --proto_dir=app/proto --gen_proto_code=false --quiet
+
+# 只生成胶水代码
+GenGlueCode:
+	mkdir -p app/proto/pb
+	go run lib/genproto/main.go --proto_dir=app/proto --gen_proto_ids=false --quiet
+
+# 调试模式生成所有proto相关代码
+GenProtoDebug:
+	mkdir -p app/proto/pb
+	find app/proto -name "*.proto" -type f | xargs -I{} protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative {}
+	# 将生成的pb.go文件移动到app/proto/pb目录
+	find app/proto -name "*.pb.go" -type f -not -path "*/pb/*" | xargs -I{} mv {} app/proto/pb/
+	# 调试模式生成协议ID和胶水代码
+	go run lib/genproto/main.go --proto_dir=app/proto --debug --quiet=false
 
 # Build for Linux with specified config file
 # Usage: make BuildPackageLinux ENV=prod (or other environment name without the 'config_' prefix and '.toml' suffix)
@@ -34,3 +54,17 @@ BuildPackageLinux:
 		cp configs/config.toml package/config.toml; \
 	fi
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o package/$(APP_NAME) main.go
+
+# 帮助信息
+.PHONY: help
+help:
+	@echo "可用的make命令："
+	@echo "  make Build              - 构建项目"
+	@echo "  make BuildLinux         - 构建Linux版本"
+	@echo "  make GenProto           - 生成所有proto相关代码"
+	@echo "  make GenProtoID         - 只生成协议ID"
+	@echo "  make GenGlueCode        - 只生成胶水代码"
+	@echo "  make GenProtoDebug      - 调试模式生成proto代码"
+	@echo "  make BuildPackageLinux  - 为Linux打包，用法: make BuildPackageLinux ENV=prod"
+	@echo "  make GoBenchmark        - 运行基准测试"
+	@echo "  make help               - 显示此帮助信息"
