@@ -15,23 +15,15 @@ type CoreRequestHandler interface {
 	HandleHeartBeat(req *Request_HeartBeat) any
 }
 
-// getResponsePID 通过反射获取响应消息的协议ID
-func getResponsePID(response any) uint32 {
+// getCoreResponsePID 通过反射获取响应消息的协议ID
+func getCoreResponsePID(response any) uint32 {
 	// 获取消息名称
 	typeName := proto_utils.ParseMessageName(response)
 	if typeName == "" {
 		return 0
 	}
 
-	// 处理已知类型
-	switch typeName {
-	case "OK":
-		return PID_Core_OK
-	case "Error":
-		return PID_Core_Error
-	}
-
-	// 尝试查找类型对应的协议ID
+	// 查找类型对应的协议ID
 	pid, ok := GetCoreProtocolID(typeName)
 	if ok {
 		return pid
@@ -54,14 +46,14 @@ func DispatchCoreRequest(handler CoreRequestHandler, msgName string, data []byte
 			return nil, 0, fmt.Errorf("unmarshal SearchBook failed: %v", err)
 		}
 		response = handler.HandleSearchBook(req)
-		responsePid = getResponsePID(response)
+		responsePid = getCoreResponsePID(response)
 	case "HeartBeat":
 		req := &Request_HeartBeat{}
 		if err = proto.Unmarshal(data, req); err != nil {
 			return nil, 0, fmt.Errorf("unmarshal HeartBeat failed: %v", err)
 		}
 		response = handler.HandleHeartBeat(req)
-		responsePid = getResponsePID(response)
+		responsePid = getCoreResponsePID(response)
 	default:
 		return nil, 0, fmt.Errorf("unknown request message: %s", msgName)
 	}
@@ -82,14 +74,14 @@ func DispatchCoreRequestByID(handler CoreRequestHandler, pid uint32, data []byte
 			return nil, 0, fmt.Errorf("unmarshal message with ID 0x%08x failed: %v", pid, err)
 		}
 		response = handler.HandleSearchBook(req)
-		responsePid = getResponsePID(response)
+		responsePid = getCoreResponsePID(response)
 	case PID_Core_HeartBeat:
 		req := &Request_HeartBeat{}
 		if err = proto.Unmarshal(data, req); err != nil {
 			return nil, 0, fmt.Errorf("unmarshal message with ID 0x%08x failed: %v", pid, err)
 		}
 		response = handler.HandleHeartBeat(req)
-		responsePid = getResponsePID(response)
+		responsePid = getCoreResponsePID(response)
 	default:
 		return nil, 0, fmt.Errorf("unknown protocol ID: 0x%08x", pid)
 	}
