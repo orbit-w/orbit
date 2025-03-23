@@ -490,7 +490,7 @@ func generateRequestGlueCode(messages []Message, packageName, pbDir string) {
 
 	// 写入文件头
 	writer.WriteString("// 自动生成的代码 - 请勿手动修改\n")
-	writer.WriteString(fmt.Sprintf("package %s\n\n", packageName))
+	writer.WriteString("package pb\n\n")
 
 	// 写入导入
 	writer.WriteString("import (\n")
@@ -602,6 +602,8 @@ func generateNotifyGlueCode(messages []Message, packageName, pbDir string) {
 	// 写入文件头
 	writer.WriteString("// 自动生成的代码 - 请勿手动修改\n")
 	writer.WriteString("package pb\n\n")
+
+	// 写入导入
 	writer.WriteString("import (\n")
 	writer.WriteString("\t\"fmt\"\n")
 	writer.WriteString("\t\"google.golang.org/protobuf/proto\"\n")

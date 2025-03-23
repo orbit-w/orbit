@@ -1,5 +1,5 @@
 // 自动生成的代码 - 请勿手动修改
-package Core
+package pb
 
 import (
 	"fmt"
