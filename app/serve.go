@@ -9,6 +9,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/orbit-w/orbit/app/controller"
+
 	"github.com/orbit-w/orbit/app/core/dispatch"
 	"github.com/orbit-w/orbit/app/core/network"
 	stream "github.com/orbit-w/orbit/app/core/services/agent_stream"
@@ -45,6 +47,8 @@ func Serve(nodeId string) {
 }
 
 func RegServices(services *service.Services) {
+	controller.Init()
+
 	stream.RegisterRequestHandler(requestHandler)
 
 	services.Reg(new(stream.AgentStream))
@@ -83,6 +87,5 @@ var requestHandler = func(session *network.Session, data []byte, seq, pid uint32
 		return err
 	}
 
-	session.SendData(respData, seq, pid)
-	return nil
+	return session.SendData(respData, seq, pid)
 }
