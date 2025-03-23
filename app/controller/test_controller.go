@@ -8,9 +8,13 @@ type ExampleController struct {
 }
 
 func (e *ExampleController) HandleSearchBook(req *pb.Request_SearchBook) any {
-	return nil
+	return &pb.Request_SearchBook_Rsp{
+		Result: &pb.Book{
+			Content: "Hello, World!",
+		},
+	}
 }
 
 func (e *ExampleController) HandleHeartBeat(req *pb.Request_HeartBeat) any {
-	return nil
+	return &pb.OK{}
 }
