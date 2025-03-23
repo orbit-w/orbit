@@ -3,41 +3,41 @@ package pb
 
 // Protocol IDs for Core package messages
 const (
-	PID_Core_BeAttacked uint32 = 0xfc87b763 // Core.BeAttacked
 	PID_Core_Book uint32 = 0x2208a5d5 // Core.Book
 	PID_Core_Error uint32 = 0x25d988c4 // Core.Error
-	PID_Core_HeartBeat uint32 = 0x54294753 // Core.HeartBeat
 	PID_Core_Notify uint32 = 0x6b7711d3 // Core.Notify
+	PID_Core_Notify_BeAttacked uint32 = 0x5b635c7d // Core.Notify_BeAttacked
 	PID_Core_OK uint32 = 0x65732552 // Core.OK
 	PID_Core_Request uint32 = 0x518423f0 // Core.Request
-	PID_Core_Rsp uint32 = 0xa23a6aad // Core.Rsp
-	PID_Core_SearchBook uint32 = 0x10de33b7 // Core.SearchBook
+	PID_Core_Request_HeartBeat uint32 = 0xa2dae08d // Core.Request_HeartBeat
+	PID_Core_Request_SearchBook uint32 = 0x1e967897 // Core.Request_SearchBook
+	PID_Core_Request_SearchBook_Rsp uint32 = 0xfcc35785 // Core.Request_SearchBook_Rsp
 )
 
 // MessageNameToID maps message names to their protocol IDs
 var CoreMessageNameToID = map[string]uint32{
-	"BeAttacked": PID_Core_BeAttacked,
 	"Book": PID_Core_Book,
 	"Error": PID_Core_Error,
-	"HeartBeat": PID_Core_HeartBeat,
 	"Notify": PID_Core_Notify,
+	"Notify_BeAttacked": PID_Core_Notify_BeAttacked,
 	"OK": PID_Core_OK,
 	"Request": PID_Core_Request,
-	"Rsp": PID_Core_Rsp,
-	"SearchBook": PID_Core_SearchBook,
+	"Request_HeartBeat": PID_Core_Request_HeartBeat,
+	"Request_SearchBook": PID_Core_Request_SearchBook,
+	"Request_SearchBook_Rsp": PID_Core_Request_SearchBook_Rsp,
 }
 
 // IDToMessageName maps protocol IDs to their message names
 var CoreIDToMessageName = map[uint32]string{
-	PID_Core_BeAttacked: "BeAttacked",
 	PID_Core_Book: "Book",
 	PID_Core_Error: "Error",
-	PID_Core_HeartBeat: "HeartBeat",
 	PID_Core_Notify: "Notify",
+	PID_Core_Notify_BeAttacked: "Notify_BeAttacked",
 	PID_Core_OK: "OK",
 	PID_Core_Request: "Request",
-	PID_Core_Rsp: "Rsp",
-	PID_Core_SearchBook: "SearchBook",
+	PID_Core_Request_HeartBeat: "Request_HeartBeat",
+	PID_Core_Request_SearchBook: "Request_SearchBook",
+	PID_Core_Request_SearchBook_Rsp: "Request_SearchBook_Rsp",
 }
 
 // GetProtocolID returns the protocol ID for the given message name

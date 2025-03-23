@@ -22,14 +22,14 @@ func DispatchCoreRequest(handler CoreRequestHandler, msgName string, data []byte
 	var responsePid uint32
 
 	switch msgName {
-	case "SearchBook":
+	case "Request_SearchBook":
 		req := &Request_SearchBook{}
 		if err = proto.Unmarshal(data, req); err != nil {
 			return nil, 0, fmt.Errorf("unmarshal SearchBook failed: %v", err)
 		}
 		response = handler.HandleSearchBook(req)
 		responsePid = getCoreResponsePID(response)
-	case "HeartBeat":
+	case "Request_HeartBeat":
 		req := &Request_HeartBeat{}
 		if err = proto.Unmarshal(data, req); err != nil {
 			return nil, 0, fmt.Errorf("unmarshal HeartBeat failed: %v", err)
@@ -50,14 +50,14 @@ func DispatchCoreRequestByID(handler CoreRequestHandler, pid uint32, data []byte
 	var responsePid uint32
 
 	switch pid {
-	case PID_Core_SearchBook:
+	case PID_Core_Request_SearchBook:
 		req := &Request_SearchBook{}
 		if err = proto.Unmarshal(data, req); err != nil {
 			return nil, 0, fmt.Errorf("unmarshal SearchBook failed: %v", err)
 		}
 		response = handler.HandleSearchBook(req)
 		responsePid = getCoreResponsePID(response)
-	case PID_Core_HeartBeat:
+	case PID_Core_Request_HeartBeat:
 		req := &Request_HeartBeat{}
 		if err = proto.Unmarshal(data, req); err != nil {
 			return nil, 0, fmt.Errorf("unmarshal HeartBeat failed: %v", err)

@@ -28,7 +28,7 @@ func getCoreNotificationPID(notification any) uint32 {
 // MarshalBeAttacked 序列化BeAttacked通知消息
 func MarshalBeAttacked(notify *Notify_BeAttacked) ([]byte, uint32, error) {
 	data, err := proto.Marshal(notify)
-	return data, PID_Core_BeAttacked, err
+	return data, PID_Core_Notify_BeAttacked, err
 }
 
 // ParseCoreNotify 根据消息名称解析Core包的通知消息
@@ -38,7 +38,7 @@ func ParseCoreNotify(msgName string, data []byte) (any, uint32, error) {
 	var notificationPid uint32
 
 	switch msgName {
-	case "BeAttacked":
+	case "Notify_BeAttacked":
 		notify := &Notify_BeAttacked{}
 		if err = proto.Unmarshal(data, notify); err != nil {
 			return nil, 0, fmt.Errorf("unmarshal BeAttacked notification failed: %v", err)
@@ -59,7 +59,7 @@ func ParseCoreNotifyByID(pid uint32, data []byte) (any, uint32, error) {
 	var notificationPid uint32
 
 	switch pid {
-	case PID_Core_BeAttacked:
+	case PID_Core_Notify_BeAttacked:
 		notify := &Notify_BeAttacked{}
 		if err = proto.Unmarshal(data, notify); err != nil {
 			return nil, 0, fmt.Errorf("unmarshal notification with ID 0x%08x failed: %v", pid, err)

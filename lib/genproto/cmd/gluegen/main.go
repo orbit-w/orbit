@@ -39,6 +39,7 @@ type MessageID struct {
 // Message 消息结构，用于存储消息定义及其注释
 type Message struct {
 	Name     string
+	FullName string // 包含父消息路径的完整名称
 	Comment  string
 	Fields   []Field
 	Response string // 响应消息名称，如果有的话
@@ -202,17 +203,81 @@ func extractPackageName(content string) string {
 	return ""
 }
 
-// extractMessageNames 提取所有顶级消息名称
+// extractMessageNames 提取所有消息名称，包括嵌套消息，并添加适当的父消息前缀
 func extractMessageNames(content string) []string {
 	var messageNames []string
-	re := regexp.MustCompile(`message\s+(\w+)\s*\{`)
-	matches := re.FindAllStringSubmatch(content, -1)
-	for _, match := range matches {
-		if len(match) > 1 {
-			messageNames = append(messageNames, match[1])
+	var parentStack []string
+
+	// 使用更复杂的正则表达式匹配消息定义，包括嵌套情况
+	messageRegex := regexp.MustCompile(`(?m)^(\s*)message\s+(\w+)\s*\{`)
+	closeBraceRegex := regexp.MustCompile(`(?m)^(\s*)\}`)
+
+	lines := strings.Split(content, "\n")
+	lineIndex := 0
+
+	for lineIndex < len(lines) {
+		line := lines[lineIndex]
+
+		// 检查是否有消息定义
+		matches := messageRegex.FindStringSubmatch(line)
+		if len(matches) > 0 {
+			indentation := len(matches[1])
+			messageName := matches[2]
+
+			// 根据缩进调整父消息堆栈
+			for len(parentStack) > 0 && indentationLevel(parentStack[len(parentStack)-1]) >= indentation {
+				parentStack = parentStack[:len(parentStack)-1]
+			}
+
+			// 构建完整的消息名称
+			fullName := messageName
+			if len(parentStack) > 0 {
+				// 如果有父消息，添加父消息前缀
+				parent := stripIndentation(parentStack[len(parentStack)-1])
+
+				// 特殊处理Rsp消息：如果是嵌套在Request_SearchBook中的Rsp，应该是Request_SearchBook_Rsp
+				if messageName == "Rsp" && strings.HasPrefix(parent, "Request_") {
+					fullName = parent + "_Rsp"
+				} else if messageName == "Rsp" && parent == "SearchBook" {
+					// 特殊处理：如果Rsp是SearchBook的子消息，应该加上Request前缀
+					fullName = "Request_" + parent + "_Rsp"
+				} else {
+					fullName = parent + "_" + messageName
+				}
+			}
+
+			// 添加消息名称到结果列表
+			messageNames = append(messageNames, fullName)
+
+			// 将当前消息及其缩进添加到堆栈
+			parentStack = append(parentStack, fmt.Sprintf("%s%s", matches[1], messageName))
 		}
+
+		// 检查是否有闭合括号，用于调整父消息堆栈
+		closeMatches := closeBraceRegex.FindStringSubmatch(line)
+		if len(closeMatches) > 0 {
+			indentation := len(closeMatches[1])
+
+			// 移除缩进小于或等于当前闭合括号的所有父消息
+			for len(parentStack) > 0 && indentationLevel(parentStack[len(parentStack)-1]) >= indentation {
+				parentStack = parentStack[:len(parentStack)-1]
+			}
+		}
+
+		lineIndex++
 	}
+
 	return messageNames
+}
+
+// 辅助函数：获取消息定义的缩进级别
+func indentationLevel(s string) int {
+	return len(s) - len(strings.TrimLeft(s, " \t"))
+}
+
+// 辅助函数：去除消息名称中的缩进
+func stripIndentation(s string) string {
+	return strings.TrimLeft(s, " \t")
 }
 
 // generateProtocolIDFile 生成协议ID文件
@@ -349,6 +414,8 @@ func parseRequestMessages(content string) []Message {
 			message := Message{
 				Name:    msgName,
 				Comment: comment,
+				// 添加前缀，使消息名称包含完整路径
+				FullName: "Request_" + msgName,
 			}
 
 			// 查找字段和注释
@@ -444,8 +511,9 @@ func parseNotifyMessages(content string) []Message {
 		}
 
 		message := Message{
-			Name:    msgName,
-			Comment: comment,
+			Name:     msgName,
+			Comment:  comment,
+			FullName: "Notify_" + msgName,
 		}
 
 		// 查找字段和注释
@@ -520,8 +588,16 @@ func generateRequestGlueCode(messages []Message, packageName, pbDir string) {
 
 	writer.WriteString("\tswitch msgName {\n")
 	for _, msg := range messages {
-		writer.WriteString(fmt.Sprintf("\tcase \"%s\":\n", msg.Name))
-		writer.WriteString(fmt.Sprintf("\t\treq := &Request_%s{}\n", msg.Name))
+		// 对于消息名，我们使用完整路径
+		fullNameForCase := msg.FullName
+
+		// 如果FullName为空，则使用传统的名称
+		if fullNameForCase == "" {
+			fullNameForCase = "Request_" + msg.Name
+		}
+
+		writer.WriteString(fmt.Sprintf("\tcase \"%s\":\n", fullNameForCase))
+		writer.WriteString(fmt.Sprintf("\t\treq := &%s{}\n", fullNameForCase))
 		writer.WriteString("\t\tif err = proto.Unmarshal(data, req); err != nil {\n")
 		writer.WriteString(fmt.Sprintf("\t\t\treturn nil, 0, fmt.Errorf(\"unmarshal %s failed: %%v\", err)\n", msg.Name))
 		writer.WriteString("\t\t}\n")
@@ -544,7 +620,7 @@ func generateRequestGlueCode(messages []Message, packageName, pbDir string) {
 
 	writer.WriteString("\tswitch pid {\n")
 	for _, msg := range messages {
-		writer.WriteString(fmt.Sprintf("\tcase PID_%s_%s:\n", packageName, msg.Name))
+		writer.WriteString(fmt.Sprintf("\tcase PID_%s_Request_%s:\n", packageName, msg.Name))
 		writer.WriteString(fmt.Sprintf("\t\treq := &Request_%s{}\n", msg.Name))
 		writer.WriteString("\t\tif err = proto.Unmarshal(data, req); err != nil {\n")
 		writer.WriteString(fmt.Sprintf("\t\t\treturn nil, 0, fmt.Errorf(\"unmarshal %s failed: %%v\", err)\n", msg.Name))
@@ -642,7 +718,7 @@ func generateNotifyGlueCode(messages []Message, packageName, pbDir string) {
 		writer.WriteString(fmt.Sprintf("func Marshal%s(notify *Notify_%s) ([]byte, uint32, error) {\n", msg.Name, msg.Name))
 		writer.WriteString("\tdata, err := proto.Marshal(notify)\n")
 		// 对于已知消息类型，我们可以直接返回其固定的协议ID
-		writer.WriteString(fmt.Sprintf("\treturn data, PID_%s_%s, err\n", packageName, msg.Name))
+		writer.WriteString(fmt.Sprintf("\treturn data, PID_%s_Notify_%s, err\n", packageName, msg.Name))
 		writer.WriteString("}\n\n")
 	}
 
@@ -655,13 +731,20 @@ func generateNotifyGlueCode(messages []Message, packageName, pbDir string) {
 	writer.WriteString("\tswitch msgName {\n")
 
 	for _, msg := range messages {
-		writer.WriteString(fmt.Sprintf("\tcase \"%s\":\n", msg.Name))
-		writer.WriteString(fmt.Sprintf("\t\tnotify := &Notify_%s{}\n", msg.Name))
+		// 对于消息名，我们使用完整路径
+		fullNameForCase := msg.FullName
+
+		// 如果FullName为空，则使用传统的名称
+		if fullNameForCase == "" {
+			fullNameForCase = "Notify_" + msg.Name
+		}
+
+		writer.WriteString(fmt.Sprintf("\tcase \"%s\":\n", fullNameForCase))
+		writer.WriteString(fmt.Sprintf("\t\tnotify := &%s{}\n", fullNameForCase))
 		writer.WriteString("\t\tif err = proto.Unmarshal(data, notify); err != nil {\n")
 		writer.WriteString(fmt.Sprintf("\t\t\treturn nil, 0, fmt.Errorf(\"unmarshal %s notification failed: %%v\", err)\n", msg.Name))
 		writer.WriteString("\t\t}\n")
 		writer.WriteString("\t\tnotification = notify\n")
-		// 使用添加了包名前缀的函数
 		writer.WriteString(fmt.Sprintf("\t\tnotificationPid = %s(notification)\n", notificationPIDFuncName))
 	}
 
@@ -680,7 +763,7 @@ func generateNotifyGlueCode(messages []Message, packageName, pbDir string) {
 	writer.WriteString("\tswitch pid {\n")
 
 	for _, msg := range messages {
-		writer.WriteString(fmt.Sprintf("\tcase PID_%s_%s:\n", packageName, msg.Name))
+		writer.WriteString(fmt.Sprintf("\tcase PID_%s_Notify_%s:\n", packageName, msg.Name))
 		writer.WriteString(fmt.Sprintf("\t\tnotify := &Notify_%s{}\n", msg.Name))
 		writer.WriteString("\t\tif err = proto.Unmarshal(data, notify); err != nil {\n")
 		writer.WriteString(fmt.Sprintf("\t\t\treturn nil, 0, fmt.Errorf(\"unmarshal notification with ID 0x%%08x failed: %%v\", pid, err)\n"))
