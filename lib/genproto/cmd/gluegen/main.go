@@ -108,7 +108,7 @@ func main() {
 					fmt.Printf("Found %d request messages\n", len(requestMessages))
 					if *debugMode {
 						for i, msg := range requestMessages {
-							fmt.Printf("  Request %d: %s, Response: %s\n", i+1, msg.Name, msg.Response)
+							fmt.Printf("  Request %d: %s, Response: %s\n", i+1, msg, msg.Response)
 						}
 					}
 				}
@@ -490,17 +490,18 @@ func generateRequestGlueCode(messages []Message, packageName, pbDir string) {
 
 	// 写入文件头
 	writer.WriteString("// 自动生成的代码 - 请勿手动修改\n")
-	writer.WriteString("package pb\n\n")
+	writer.WriteString(fmt.Sprintf("package %s\n\n", packageName))
+
+	// 写入导入
 	writer.WriteString("import (\n")
 	writer.WriteString("\t\"fmt\"\n")
 	writer.WriteString("\t\"google.golang.org/protobuf/proto\"\n")
 	writer.WriteString("\t\"github.com/orbit-w/orbit/lib/utils/proto_utils\"\n")
 	writer.WriteString(")\n\n")
 
-	// 写入请求处理接口
+	// 写入接口定义
 	writer.WriteString(fmt.Sprintf("// %sRequestHandler 定义处理%s包Request消息的接口\n", packageName, packageName))
 	writer.WriteString(fmt.Sprintf("type %sRequestHandler interface {\n", packageName))
-
 	for _, msg := range messages {
 		writer.WriteString(fmt.Sprintf("\t// Handle%s 处理%s请求\n", msg.Name, msg.Name))
 		if msg.Comment != "" {
@@ -508,15 +509,59 @@ func generateRequestGlueCode(messages []Message, packageName, pbDir string) {
 		}
 		writer.WriteString(fmt.Sprintf("\tHandle%s(req *Request_%s) any\n", msg.Name, msg.Name))
 	}
-
 	writer.WriteString("}\n\n")
 
-	// 为每个包创建唯一的getResponsePID函数名
-	responsePIDFuncName := fmt.Sprintf("get%sResponsePID", packageName)
+	// 写入Dispatch函数
+	writer.WriteString(fmt.Sprintf("// Dispatch%sRequest 分发%s包的请求消息到对应处理函数\n", packageName, packageName))
+	writer.WriteString(fmt.Sprintf("func Dispatch%sRequest(handler %sRequestHandler, msgName string, data []byte) (any, uint32, error) {\n", packageName, packageName))
+	writer.WriteString("\tvar err error\n")
+	writer.WriteString("\tvar response any\n")
+	writer.WriteString("\tvar responsePid uint32\n\n")
 
-	// 写入getResponsePID辅助函数，添加包名前缀确保唯一性
-	writer.WriteString(fmt.Sprintf("// %s 通过反射获取响应消息的协议ID\n", responsePIDFuncName))
-	writer.WriteString(fmt.Sprintf("func %s(response any) uint32 {\n", responsePIDFuncName))
+	writer.WriteString("\tswitch msgName {\n")
+	for _, msg := range messages {
+		writer.WriteString(fmt.Sprintf("\tcase \"%s\":\n", msg.Name))
+		writer.WriteString(fmt.Sprintf("\t\treq := &Request_%s{}\n", msg.Name))
+		writer.WriteString("\t\tif err = proto.Unmarshal(data, req); err != nil {\n")
+		writer.WriteString(fmt.Sprintf("\t\t\treturn nil, 0, fmt.Errorf(\"unmarshal %s failed: %%v\", err)\n", msg.Name))
+		writer.WriteString("\t\t}\n")
+		writer.WriteString(fmt.Sprintf("\t\tresponse = handler.Handle%s(req)\n", msg.Name))
+		writer.WriteString(fmt.Sprintf("\t\tresponsePid = get%sResponsePID(response)\n", packageName))
+	}
+	writer.WriteString("\tdefault:\n")
+	writer.WriteString(fmt.Sprintf("\t\treturn nil, 0, fmt.Errorf(\"unknown request message: %%s\", msgName)\n"))
+	writer.WriteString("\t}\n\n")
+
+	writer.WriteString("\treturn response, responsePid, nil\n")
+	writer.WriteString("}\n\n")
+
+	// 写入DispatchByID函数
+	writer.WriteString(fmt.Sprintf("// Dispatch%sRequestByID 根据协议ID分发%s包的请求消息到对应处理函数\n", packageName, packageName))
+	writer.WriteString(fmt.Sprintf("func Dispatch%sRequestByID(handler %sRequestHandler, pid uint32, data []byte) (any, uint32, error) {\n", packageName, packageName))
+	writer.WriteString("\tvar err error\n")
+	writer.WriteString("\tvar response any\n")
+	writer.WriteString("\tvar responsePid uint32\n\n")
+
+	writer.WriteString("\tswitch pid {\n")
+	for _, msg := range messages {
+		writer.WriteString(fmt.Sprintf("\tcase PID_%s_%s:\n", packageName, msg.Name))
+		writer.WriteString(fmt.Sprintf("\t\treq := &Request_%s{}\n", msg.Name))
+		writer.WriteString("\t\tif err = proto.Unmarshal(data, req); err != nil {\n")
+		writer.WriteString(fmt.Sprintf("\t\t\treturn nil, 0, fmt.Errorf(\"unmarshal %s failed: %%v\", err)\n", msg.Name))
+		writer.WriteString("\t\t}\n")
+		writer.WriteString(fmt.Sprintf("\t\tresponse = handler.Handle%s(req)\n", msg.Name))
+		writer.WriteString(fmt.Sprintf("\t\tresponsePid = get%sResponsePID(response)\n", packageName))
+	}
+	writer.WriteString("\tdefault:\n")
+	writer.WriteString(fmt.Sprintf("\t\treturn nil, 0, fmt.Errorf(\"unknown request protocol ID: 0x%%x\", pid)\n"))
+	writer.WriteString("\t}\n\n")
+
+	writer.WriteString("\treturn response, responsePid, nil\n")
+	writer.WriteString("}\n\n")
+
+	// 最后写入getResponsePID辅助函数
+	writer.WriteString(fmt.Sprintf("// get%sResponsePID 通过反射获取响应消息的协议ID\n", packageName))
+	writer.WriteString(fmt.Sprintf("func get%sResponsePID(response any) uint32 {\n", packageName))
 	writer.WriteString("\t// 获取消息名称\n")
 	writer.WriteString("\ttypeName := proto_utils.ParseMessageName(response)\n")
 	writer.WriteString("\tif typeName == \"\" {\n")
@@ -532,56 +577,6 @@ func generateRequestGlueCode(messages []Message, packageName, pbDir string) {
 
 	writer.WriteString("\t// 未找到对应的协议ID\n")
 	writer.WriteString("\treturn 0\n")
-	writer.WriteString("}\n\n")
-
-	// 写入请求分发函数 - 基于消息名称
-	writer.WriteString(fmt.Sprintf("// Dispatch%sRequest 分发%s包的请求消息到对应处理函数\n", packageName, packageName))
-	writer.WriteString(fmt.Sprintf("func Dispatch%sRequest(handler %sRequestHandler, msgName string, data []byte) (any, uint32, error) {\n", packageName, packageName))
-	writer.WriteString("\tvar err error\n")
-	writer.WriteString("\tvar response any\n")
-	writer.WriteString("\tvar responsePid uint32\n\n")
-	writer.WriteString("\tswitch msgName {\n")
-
-	for _, msg := range messages {
-		writer.WriteString(fmt.Sprintf("\tcase \"%s\":\n", msg.Name))
-		writer.WriteString(fmt.Sprintf("\t\treq := &Request_%s{}\n", msg.Name))
-		writer.WriteString("\t\tif err = proto.Unmarshal(data, req); err != nil {\n")
-		writer.WriteString(fmt.Sprintf("\t\t\treturn nil, 0, fmt.Errorf(\"unmarshal %s failed: %%v\", err)\n", msg.Name))
-		writer.WriteString("\t\t}\n")
-		writer.WriteString(fmt.Sprintf("\t\tresponse = handler.Handle%s(req)\n", msg.Name))
-		// 使用添加了包名前缀的函数
-		writer.WriteString(fmt.Sprintf("\t\tresponsePid = %s(response)\n", responsePIDFuncName))
-	}
-
-	writer.WriteString("\tdefault:\n")
-	writer.WriteString("\t\treturn nil, 0, fmt.Errorf(\"unknown request message: %s\", msgName)\n")
-	writer.WriteString("\t}\n\n")
-	writer.WriteString("\treturn response, responsePid, nil\n")
-	writer.WriteString("}\n\n")
-
-	// 写入基于协议ID的请求分发函数
-	writer.WriteString(fmt.Sprintf("// Dispatch%sRequestByID 通过协议ID分发%s包的请求消息到对应处理函数\n", packageName, packageName))
-	writer.WriteString(fmt.Sprintf("func Dispatch%sRequestByID(handler %sRequestHandler, pid uint32, data []byte) (any, uint32, error) {\n", packageName, packageName))
-	writer.WriteString("\tvar err error\n")
-	writer.WriteString("\tvar response any\n")
-	writer.WriteString("\tvar responsePid uint32\n\n")
-	writer.WriteString("\tswitch pid {\n")
-
-	for _, msg := range messages {
-		writer.WriteString(fmt.Sprintf("\tcase PID_%s_%s:\n", packageName, msg.Name))
-		writer.WriteString(fmt.Sprintf("\t\treq := &Request_%s{}\n", msg.Name))
-		writer.WriteString("\t\tif err = proto.Unmarshal(data, req); err != nil {\n")
-		writer.WriteString(fmt.Sprintf("\t\t\treturn nil, 0, fmt.Errorf(\"unmarshal message with ID 0x%%08x failed: %%v\", pid, err)\n"))
-		writer.WriteString("\t\t}\n")
-		writer.WriteString(fmt.Sprintf("\t\tresponse = handler.Handle%s(req)\n", msg.Name))
-		// 使用添加了包名前缀的函数
-		writer.WriteString(fmt.Sprintf("\t\tresponsePid = %s(response)\n", responsePIDFuncName))
-	}
-
-	writer.WriteString("\tdefault:\n")
-	writer.WriteString("\t\treturn nil, 0, fmt.Errorf(\"unknown protocol ID: 0x%08x\", pid)\n")
-	writer.WriteString("\t}\n\n")
-	writer.WriteString("\treturn response, responsePid, nil\n")
 	writer.WriteString("}\n")
 
 	writer.Flush()
