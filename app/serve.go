@@ -9,9 +9,12 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/orbit-w/orbit/app/core/dispatch"
+	"github.com/orbit-w/orbit/app/core/network"
 	stream "github.com/orbit-w/orbit/app/core/services/agent_stream"
 	"github.com/orbit-w/orbit/app/modules/service"
 	"github.com/orbit-w/orbit/lib/logger"
+	"google.golang.org/protobuf/proto"
 )
 
 /*
@@ -42,6 +45,8 @@ func Serve(nodeId string) {
 }
 
 func RegServices(services *service.Services) {
+	stream.RegisterRequestHandler(requestHandler)
+
 	services.Reg(new(stream.AgentStream))
 }
 
@@ -65,4 +70,19 @@ func gracefulShutdown(stopper func(ctx context.Context) error) {
 	}
 
 	log.Println("Server exiting")
+}
+
+var requestHandler = func(session *network.Session, data []byte, seq, pid uint32) error {
+	response, pid, err := dispatch.Dispatch(pid, data)
+	if err != nil {
+		return err
+	}
+
+	respData, err := proto.Marshal(response.(proto.Message))
+	if err != nil {
+		return err
+	}
+
+	session.SendData(respData, seq, pid)
+	return nil
 }
