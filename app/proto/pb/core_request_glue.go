@@ -7,6 +7,12 @@ import (
 	"github.com/orbit-w/orbit/lib/utils/proto_utils"
 )
 
+// Base message types that don't need protocol IDs
+const (
+	PID_Core_Request uint32 = 0
+	PID_Core_Response uint32 = 0
+)
+
 // CoreRequestHandler 定义处理Core包Request消息的接口
 type CoreRequestHandler interface {
 	// HandleSearchBook 处理SearchBook请求
@@ -73,10 +79,20 @@ func DispatchCoreRequestByID(handler CoreRequestHandler, pid uint32, data []byte
 
 // getCoreResponsePID 通过反射获取响应消息的协议ID
 func getCoreResponsePID(response any) uint32 {
+	// 对基础消息类型特殊处理
+	if response == nil {
+		return 0
+	}
+
 	// 获取消息名称
 	typeName := proto_utils.ParseMessageName(response)
 	if typeName == "" {
 		return 0
+	}
+
+	// 基础消息类型特殊处理
+	if typeName == "Response" || typeName == "OK" {
+		return PID_Core_Response
 	}
 
 	// 查找类型对应的协议ID

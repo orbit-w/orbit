@@ -53,6 +53,12 @@ type Field struct {
 	Comment string
 }
 
+// MessageName 用于存储消息名称和完整路径
+type MessageName struct {
+	Name     string
+	FullName string
+}
+
 func main() {
 	flag.Parse()
 
@@ -158,20 +164,47 @@ func generateProtocolIDs(content, packageName string) {
 	}
 
 	// 按名称排序以得到一致的输出
-	sort.Strings(messageNames)
+	sort.Slice(messageNames, func(i, j int) bool {
+		return messageNames[i].FullName < messageNames[j].FullName
+	})
 
-	// 为每个消息生成ID
-	for _, msgName := range messageNames {
-		fullName := fmt.Sprintf("%s.%s", packageName, msgName)
+	// 为每个消息生成ID，过滤掉基本类型和衍生类型
+	for _, msg := range messageNames {
+		// 跳过基本类型：Request, Rsp, Notify
+		if msg.Name == "Request" || msg.Name == "Rsp" || msg.Name == "Notify" {
+			if *debugMode {
+				fmt.Printf("Skipping base message type: %s\n", msg.Name)
+			}
+			continue
+		}
+
+		// 跳过所有单纯的容器类型消息（不需要协议ID）
+		// 例如：Request、Notify 及其可能的衍生结构
+		if msg.FullName == "Request" || msg.FullName == "Notify" || msg.FullName == "Rsp" ||
+			(strings.HasPrefix(msg.FullName, "Request_") && strings.HasSuffix(msg.FullName, "_Rsp")) {
+			if *debugMode {
+				fmt.Printf("Skipping container message: %s\n", msg.FullName)
+			}
+			continue
+		}
+
+		fullName := fmt.Sprintf("%s-%s", packageName, msg.FullName)
 		pid := protoid.HashProtoMessage(fullName)
 		mapping.MessageIDs = append(mapping.MessageIDs, MessageID{
-			Name: msgName,
+			Name: msg.FullName,
 			ID:   pid,
 		})
 
 		if *debugMode {
-			fmt.Printf("Message: %s, ID: 0x%08x\n", fullName, pid)
+			fmt.Printf("Generated PID for message: %s, ID: 0x%08x\n", fullName, pid)
 		}
+	}
+
+	if len(mapping.MessageIDs) == 0 {
+		if *debugMode {
+			fmt.Printf("No protocol IDs generated for package %s after filtering\n", packageName)
+		}
+		return
 	}
 
 	// 生成协议ID文件
@@ -204,8 +237,8 @@ func extractPackageName(content string) string {
 }
 
 // extractMessageNames 提取所有消息名称，包括嵌套消息，并添加适当的父消息前缀
-func extractMessageNames(content string) []string {
-	var messageNames []string
+func extractMessageNames(content string) []MessageName {
+	var messageNames []MessageName
 	var parentStack []string
 
 	// 使用更复杂的正则表达式匹配消息定义，包括嵌套情况
@@ -235,19 +268,36 @@ func extractMessageNames(content string) []string {
 				// 如果有父消息，添加父消息前缀
 				parent := stripIndentation(parentStack[len(parentStack)-1])
 
-				// 特殊处理Rsp消息：如果是嵌套在Request_SearchBook中的Rsp，应该是Request_SearchBook_Rsp
-				if messageName == "Rsp" && strings.HasPrefix(parent, "Request_") {
-					fullName = parent + "_Rsp"
-				} else if messageName == "Rsp" && parent == "SearchBook" {
-					// 特殊处理：如果Rsp是SearchBook的子消息，应该加上Request前缀
-					fullName = "Request_" + parent + "_Rsp"
+				// 特殊处理Rsp和响应相关消息
+				if messageName == "Rsp" {
+					// 针对各种响应情况的统一处理
+					if strings.HasPrefix(parent, "Request_") {
+						// 常规情况：嵌套在Request_XXX下的Rsp
+						fullName = parent + "_Rsp"
+					} else if strings.HasPrefix(parent, "Notify_") {
+						// 通知的响应情况
+						fullName = parent + "_Rsp"
+					} else {
+						// 对于其他情况，尝试添加适当的前缀
+						prefix := detectMessageTypePrefix(parent)
+						if prefix != "" {
+							fullName = prefix + "_" + parent + "_Rsp"
+						} else {
+							// 默认情况
+							fullName = parent + "_" + messageName
+						}
+					}
 				} else {
+					// 处理普通嵌套消息
 					fullName = parent + "_" + messageName
 				}
 			}
 
 			// 添加消息名称到结果列表
-			messageNames = append(messageNames, fullName)
+			messageNames = append(messageNames, MessageName{
+				Name:     messageName,
+				FullName: fullName,
+			})
 
 			// 将当前消息及其缩进添加到堆栈
 			parentStack = append(parentStack, fmt.Sprintf("%s%s", matches[1], messageName))
@@ -278,6 +328,26 @@ func indentationLevel(s string) int {
 // 辅助函数：去除消息名称中的缩进
 func stripIndentation(s string) string {
 	return strings.TrimLeft(s, " \t")
+}
+
+// 检测消息类型前缀 (Request_/Notify_)
+func detectMessageTypePrefix(msgName string) string {
+	// 检查消息名称中是否包含常见关键字，用于推断其类型
+	switch {
+	case strings.Contains(strings.ToLower(msgName), "search") ||
+		strings.Contains(strings.ToLower(msgName), "query") ||
+		strings.Contains(strings.ToLower(msgName), "get") ||
+		strings.Contains(strings.ToLower(msgName), "find"):
+		return "Request"
+	case strings.Contains(strings.ToLower(msgName), "update") ||
+		strings.Contains(strings.ToLower(msgName), "notify") ||
+		strings.Contains(strings.ToLower(msgName), "push") ||
+		strings.Contains(strings.ToLower(msgName), "event"):
+		return "Notify"
+	default:
+		// 无法确定，默认不添加前缀
+		return ""
+	}
 }
 
 // generateProtocolIDFile 生成协议ID文件
@@ -375,74 +445,87 @@ func parseRequestMessages(content string) []Message {
 		fmt.Println("DEBUG: Found Request block")
 	}
 
-	// 使用更灵活的正则表达式来查找嵌套的消息定义
-	// 先找到注释，然后找到消息定义
-	commentRegex := regexp.MustCompile(`(?s)//([^\n]*(?:\n\s*//[^\n]*)*)`)
-	messageRegex := regexp.MustCompile(`(?s)message\s+(\w+)\s+\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}`)
-
-	// 在requestBody中查找所有消息定义
-	pos := 0
-	for pos < len(requestBody) {
-		// 查找注释
-		comment := ""
-		commentMatches := commentRegex.FindStringSubmatchIndex(requestBody[pos:])
-		if len(commentMatches) > 0 && commentMatches[0] == 0 {
-			comment = requestBody[pos+commentMatches[2] : pos+commentMatches[3]]
-			pos += commentMatches[1]
+	// 获取所有消息定义，包括嵌套
+	allMessageNames := extractMessageNames(requestBody)
+	if *debugMode {
+		fmt.Printf("DEBUG: Found %d nested messages in Request block\n", len(allMessageNames))
+		for i, msg := range allMessageNames {
+			fmt.Printf("DEBUG:   Message %d: Name=%s, FullName=%s\n", i+1, msg.Name, msg.FullName)
 		}
+	}
 
-		// 查找消息定义
-		messageMatches := messageRegex.FindStringSubmatchIndex(requestBody[pos:])
-		if len(messageMatches) == 0 {
-			break
-		}
-
-		msgNameStart := pos + messageMatches[2]
-		msgNameEnd := pos + messageMatches[3]
-		msgBodyStart := pos + messageMatches[4]
-		msgBodyEnd := pos + messageMatches[5]
-
-		msgName := requestBody[msgNameStart:msgNameEnd]
-		msgBody := requestBody[msgBodyStart:msgBodyEnd]
-
-		// 忽略Rsp消息
-		if msgName != "Rsp" {
+	// 过滤出Request_前缀的消息
+	for _, msgInfo := range allMessageNames {
+		// 忽略Rsp消息和通用的Request类型本身
+		if msgInfo.Name == "Rsp" || msgInfo.Name == "Request" {
 			if *debugMode {
-				fmt.Printf("DEBUG: Found message '%s'\n", msgName)
+				fmt.Printf("DEBUG: Skipping base message type: %s\n", msgInfo.Name)
 			}
+			continue
+		}
+
+		fullName := msgInfo.FullName
+		if !strings.HasPrefix(fullName, "Request_") {
+			// 确保消息名称有正确的前缀
+			fullName = "Request_" + fullName
+		}
+
+		if *debugMode {
+			fmt.Printf("DEBUG: Processing request message '%s'\n", fullName)
+		}
+
+		// 直接从原始内容中获取该消息的定义，以确保注释匹配
+		msgRegex := regexp.MustCompile(fmt.Sprintf(`(?s)(message\s+%s\s+\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})`, regexp.QuoteMeta(msgInfo.Name)))
+		msgMatches := msgRegex.FindStringSubmatch(requestBody)
+
+		if len(msgMatches) > 1 {
+			msgContent := msgMatches[1]
+
+			// 解析消息体获取字段
+			fieldRegex := regexp.MustCompile(`(?m)^\s*([^{}\/]+)\s+([^{}\/]+)\s*=\s*(\d+);(?:\s*//(.*))?`)
+			fieldMatches := fieldRegex.FindAllStringSubmatch(msgContent, -1)
 
 			message := Message{
-				Name:    msgName,
-				Comment: comment,
-				// 添加前缀，使消息名称包含完整路径
-				FullName: "Request_" + msgName,
+				Name:     msgInfo.Name,
+				Comment:  extractMessageComment(requestBody, msgInfo.Name),
+				FullName: fullName,
 			}
 
-			// 查找字段和注释
-			fieldRegex := regexp.MustCompile(`(\w+)\s+(\w+)\s*=\s*(\d+);(?:\s*//(.*))?`)
-			fieldMatches := fieldRegex.FindAllStringSubmatch(msgBody, -1)
-
+			// 解析字段
 			for _, fieldMatch := range fieldMatches {
-				field := Field{
-					Type:    fieldMatch[1],
-					Name:    fieldMatch[2],
-					Index:   len(message.Fields) + 1,
-					Comment: "",
-				}
+				if len(fieldMatch) >= 4 {
+					field := Field{
+						Type:    strings.TrimSpace(fieldMatch[1]),
+						Name:    strings.TrimSpace(fieldMatch[2]),
+						Index:   len(message.Fields) + 1,
+						Comment: "",
+					}
 
-				if len(fieldMatch) > 4 && fieldMatch[4] != "" {
-					field.Comment = strings.TrimSpace(fieldMatch[4])
-				}
+					if len(fieldMatch) > 4 && fieldMatch[4] != "" {
+						field.Comment = strings.TrimSpace(fieldMatch[4])
+					}
 
-				message.Fields = append(message.Fields, field)
+					message.Fields = append(message.Fields, field)
+				}
 			}
 
-			// 查找Rsp子消息
-			rspRegex := regexp.MustCompile(`message\s+Rsp\s*\{`)
-			if rspRegex.MatchString(msgBody) {
-				message.Response = "Request_" + msgName + "_Rsp"
+			// 检查是否有对应的Rsp消息
+			rspFullName := fullName + "_Rsp"
+			rspExists := false
+
+			// 查找是否存在Rsp消息
+			for _, rspInfo := range allMessageNames {
+				if rspInfo.FullName == rspFullName ||
+					(rspInfo.Name == "Rsp" && strings.HasPrefix(rspInfo.FullName, fullName)) {
+					rspExists = true
+					break
+				}
+			}
+
+			if rspExists {
+				message.Response = rspFullName
 				if *debugMode {
-					fmt.Printf("DEBUG: Found Rsp message for %s\n", msgName)
+					fmt.Printf("DEBUG: Found Rsp message for %s: %s\n", message.Name, message.Response)
 				}
 			} else {
 				message.Response = "OK" // 默认使用通用成功OK
@@ -450,8 +533,6 @@ func parseRequestMessages(content string) []Message {
 
 			messages = append(messages, message)
 		}
-
-		pos += messageMatches[1]
 	}
 
 	return messages
@@ -476,71 +557,144 @@ func parseNotifyMessages(content string) []Message {
 		fmt.Println("DEBUG: Found Notify block")
 	}
 
-	// 使用更灵活的正则表达式来查找嵌套的消息定义
-	// 先找到注释，然后找到消息定义
-	commentRegex := regexp.MustCompile(`(?s)//([^\n]*(?:\n\s*//[^\n]*)*)`)
-	messageRegex := regexp.MustCompile(`(?s)message\s+(\w+)\s+\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}`)
+	// 获取所有消息定义，包括嵌套
+	allMessageNames := extractMessageNames(notifyBody)
+	if *debugMode {
+		fmt.Printf("DEBUG: Found %d nested messages in Notify block\n", len(allMessageNames))
+		for i, msg := range allMessageNames {
+			fmt.Printf("DEBUG:   Message %d: Name=%s, FullName=%s\n", i+1, msg.Name, msg.FullName)
+		}
+	}
 
-	// 在notifyBody中查找所有消息定义
-	pos := 0
-	for pos < len(notifyBody) {
-		// 查找注释
-		comment := ""
-		commentMatches := commentRegex.FindStringSubmatchIndex(notifyBody[pos:])
-		if len(commentMatches) > 0 && commentMatches[0] == 0 {
-			comment = notifyBody[pos+commentMatches[2] : pos+commentMatches[3]]
-			pos += commentMatches[1]
+	// 过滤出Notify_前缀的消息
+	for _, msgInfo := range allMessageNames {
+		// 忽略通用的Notify类型本身
+		if msgInfo.Name == "Notify" {
+			if *debugMode {
+				fmt.Printf("DEBUG: Skipping base message type: %s\n", msgInfo.Name)
+			}
+			continue
 		}
 
-		// 查找消息定义
-		messageMatches := messageRegex.FindStringSubmatchIndex(notifyBody[pos:])
-		if len(messageMatches) == 0 {
-			break
+		fullName := msgInfo.FullName
+		if !strings.HasPrefix(fullName, "Notify_") {
+			// 确保消息名称有正确的前缀
+			fullName = "Notify_" + fullName
 		}
-
-		msgNameStart := pos + messageMatches[2]
-		msgNameEnd := pos + messageMatches[3]
-		msgBodyStart := pos + messageMatches[4]
-		msgBodyEnd := pos + messageMatches[5]
-
-		msgName := notifyBody[msgNameStart:msgNameEnd]
-		msgBody := notifyBody[msgBodyStart:msgBodyEnd]
 
 		if *debugMode {
-			fmt.Printf("DEBUG: Found message '%s'\n", msgName)
+			fmt.Printf("DEBUG: Processing notify message '%s'\n", fullName)
 		}
 
-		message := Message{
-			Name:     msgName,
-			Comment:  comment,
-			FullName: "Notify_" + msgName,
-		}
+		// 直接从原始内容中获取该消息的定义，以确保注释匹配
+		msgRegex := regexp.MustCompile(fmt.Sprintf(`(?s)(message\s+%s\s+\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})`, regexp.QuoteMeta(msgInfo.Name)))
+		msgMatches := msgRegex.FindStringSubmatch(notifyBody)
 
-		// 查找字段和注释
-		fieldRegex := regexp.MustCompile(`(\w+)\s+(\w+)\s*=\s*(\d+);(?:\s*//(.*))?`)
-		fieldMatches := fieldRegex.FindAllStringSubmatch(msgBody, -1)
+		if len(msgMatches) > 1 {
+			msgContent := msgMatches[1]
 
-		for _, fieldMatch := range fieldMatches {
-			field := Field{
-				Type:    fieldMatch[1],
-				Name:    fieldMatch[2],
-				Index:   len(message.Fields) + 1,
-				Comment: "",
+			// 解析消息体获取字段
+			fieldRegex := regexp.MustCompile(`(?m)^\s*([^{}\/]+)\s+([^{}\/]+)\s*=\s*(\d+);(?:\s*//(.*))?`)
+			fieldMatches := fieldRegex.FindAllStringSubmatch(msgContent, -1)
+
+			message := Message{
+				Name:     msgInfo.Name,
+				Comment:  extractMessageComment(notifyBody, msgInfo.Name),
+				FullName: fullName,
 			}
 
-			if len(fieldMatch) > 4 && fieldMatch[4] != "" {
-				field.Comment = strings.TrimSpace(fieldMatch[4])
+			// 解析字段
+			for _, fieldMatch := range fieldMatches {
+				if len(fieldMatch) >= 4 {
+					field := Field{
+						Type:    strings.TrimSpace(fieldMatch[1]),
+						Name:    strings.TrimSpace(fieldMatch[2]),
+						Index:   len(message.Fields) + 1,
+						Comment: "",
+					}
+
+					if len(fieldMatch) > 4 && fieldMatch[4] != "" {
+						field.Comment = strings.TrimSpace(fieldMatch[4])
+					}
+
+					message.Fields = append(message.Fields, field)
+				}
 			}
 
-			message.Fields = append(message.Fields, field)
+			messages = append(messages, message)
 		}
-
-		messages = append(messages, message)
-
-		pos += messageMatches[1]
 	}
 
 	return messages
+}
+
+// 提取消息注释
+func extractMessageComment(content, messageName string) string {
+	// 查找消息定义前的注释 - 使用更精确的匹配方式
+	// 先获取消息定义的行
+	msgDefRegex := regexp.MustCompile(fmt.Sprintf(`(?m)^(\s*)message\s+%s\s*\{`, regexp.QuoteMeta(messageName)))
+	msgMatches := msgDefRegex.FindStringIndex(content)
+	if len(msgMatches) < 2 {
+		return ""
+	}
+
+	// 从消息定义行向上查找注释块
+	contentBeforeMsg := content[:msgMatches[0]]
+	lines := strings.Split(contentBeforeMsg, "\n")
+
+	// 从下往上遍历寻找注释
+	var commentLines []string
+	for i := len(lines) - 1; i >= 0; i-- {
+		line := strings.TrimSpace(lines[i])
+
+		// 如果是空行，则停止收集注释
+		if line == "" {
+			break
+		}
+
+		// 检查是否是注释行
+		if strings.HasPrefix(line, "//") {
+			// 提取注释内容（去掉 // 前缀）
+			commentContent := strings.TrimSpace(strings.TrimPrefix(line, "//"))
+			commentLines = append([]string{commentContent}, commentLines...) // 保持注释顺序
+		} else if strings.HasPrefix(line, "/*") && strings.HasSuffix(line, "*/") {
+			// 处理单行 /* ... */ 注释
+			commentContent := strings.TrimSpace(line[2 : len(line)-2])
+			commentLines = append([]string{commentContent}, commentLines...)
+		} else {
+			// 不是注释行，停止收集
+			break
+		}
+	}
+
+	// 合并注释行
+	if len(commentLines) > 0 {
+		return strings.Join(commentLines, " ")
+	}
+
+	return ""
+}
+
+// 解析消息字段
+func parseMessageFields(message *Message, msgBody string) {
+	// 查找字段和注释
+	fieldRegex := regexp.MustCompile(`(\w+)\s+(\w+)\s*=\s*(\d+);(?:\s*//(.*))?`)
+	fieldMatches := fieldRegex.FindAllStringSubmatch(msgBody, -1)
+
+	for _, fieldMatch := range fieldMatches {
+		field := Field{
+			Type:    fieldMatch[1],
+			Name:    fieldMatch[2],
+			Index:   len(message.Fields) + 1,
+			Comment: "",
+		}
+
+		if len(fieldMatch) > 4 && fieldMatch[4] != "" {
+			field.Comment = strings.TrimSpace(fieldMatch[4])
+		}
+
+		message.Fields = append(message.Fields, field)
+	}
 }
 
 // 生成Request消息的胶水代码
@@ -565,6 +719,13 @@ func generateRequestGlueCode(messages []Message, packageName, pbDir string) {
 	writer.WriteString("\t\"fmt\"\n")
 	writer.WriteString("\t\"google.golang.org/protobuf/proto\"\n")
 	writer.WriteString("\t\"github.com/orbit-w/orbit/lib/utils/proto_utils\"\n")
+	writer.WriteString(")\n\n")
+
+	// 添加基础消息常量 - 无需协议ID
+	writer.WriteString("// Base message types that don't need protocol IDs\n")
+	writer.WriteString("const (\n")
+	writer.WriteString(fmt.Sprintf("\tPID_%s_Request uint32 = 0\n", packageName))
+	writer.WriteString(fmt.Sprintf("\tPID_%s_Response uint32 = 0\n", packageName))
 	writer.WriteString(")\n\n")
 
 	// 写入接口定义
@@ -620,8 +781,8 @@ func generateRequestGlueCode(messages []Message, packageName, pbDir string) {
 
 	writer.WriteString("\tswitch pid {\n")
 	for _, msg := range messages {
-		writer.WriteString(fmt.Sprintf("\tcase PID_%s_Request_%s:\n", packageName, msg.Name))
-		writer.WriteString(fmt.Sprintf("\t\treq := &Request_%s{}\n", msg.Name))
+		writer.WriteString(fmt.Sprintf("\tcase PID_%s_%s:\n", packageName, msg.FullName))
+		writer.WriteString(fmt.Sprintf("\t\treq := &%s{}\n", msg.FullName))
 		writer.WriteString("\t\tif err = proto.Unmarshal(data, req); err != nil {\n")
 		writer.WriteString(fmt.Sprintf("\t\t\treturn nil, 0, fmt.Errorf(\"unmarshal %s failed: %%v\", err)\n", msg.Name))
 		writer.WriteString("\t\t}\n")
@@ -635,13 +796,24 @@ func generateRequestGlueCode(messages []Message, packageName, pbDir string) {
 	writer.WriteString("\treturn response, responsePid, nil\n")
 	writer.WriteString("}\n\n")
 
-	// 最后写入getResponsePID辅助函数
+	// 最后写入getResponsePID辅助函数，添加基础消息类型处理
 	writer.WriteString(fmt.Sprintf("// get%sResponsePID 通过反射获取响应消息的协议ID\n", packageName))
 	writer.WriteString(fmt.Sprintf("func get%sResponsePID(response any) uint32 {\n", packageName))
+	writer.WriteString("\t// 对基础消息类型特殊处理\n")
+	writer.WriteString("\tif response == nil {\n")
+	writer.WriteString("\t\treturn 0\n")
+	writer.WriteString("\t}\n\n")
+
 	writer.WriteString("\t// 获取消息名称\n")
 	writer.WriteString("\ttypeName := proto_utils.ParseMessageName(response)\n")
 	writer.WriteString("\tif typeName == \"\" {\n")
 	writer.WriteString("\t\treturn 0\n")
+	writer.WriteString("\t}\n\n")
+
+	// 特殊处理基础消息类型
+	writer.WriteString("\t// 基础消息类型特殊处理\n")
+	writer.WriteString("\tif typeName == \"Response\" || typeName == \"OK\" {\n")
+	writer.WriteString(fmt.Sprintf("\t\treturn PID_%s_Response\n", packageName))
 	writer.WriteString("\t}\n\n")
 
 	// 通过名称查找PID - 通用方式处理所有类型
@@ -686,16 +858,33 @@ func generateNotifyGlueCode(messages []Message, packageName, pbDir string) {
 	writer.WriteString("\t\"github.com/orbit-w/orbit/lib/utils/proto_utils\"\n")
 	writer.WriteString(")\n\n")
 
+	// 添加基础消息常量 - 无需协议ID
+	writer.WriteString("// Base notification message type that doesn't need protocol ID\n")
+	writer.WriteString("const (\n")
+	writer.WriteString(fmt.Sprintf("\tPID_%s_Notify uint32 = 0\n", packageName))
+	writer.WriteString(")\n\n")
+
 	// 为每个包创建唯一的getNotificationPID函数名
 	notificationPIDFuncName := fmt.Sprintf("get%sNotificationPID", packageName)
 
 	// 添加getNotificationPID辅助函数，添加包名前缀确保唯一性
 	writer.WriteString(fmt.Sprintf("// %s 通过反射获取通知消息的协议ID\n", notificationPIDFuncName))
 	writer.WriteString(fmt.Sprintf("func %s(notification any) uint32 {\n", notificationPIDFuncName))
+	writer.WriteString("\t// 对基础消息类型特殊处理\n")
+	writer.WriteString("\tif notification == nil {\n")
+	writer.WriteString("\t\treturn 0\n")
+	writer.WriteString("\t}\n\n")
+
 	writer.WriteString("\t// 获取消息名称\n")
 	writer.WriteString("\ttypeName := proto_utils.ParseMessageName(notification)\n")
 	writer.WriteString("\tif typeName == \"\" {\n")
 	writer.WriteString("\t\treturn 0\n")
+	writer.WriteString("\t}\n\n")
+
+	// 特殊处理基础消息类型
+	writer.WriteString("\t// 基础消息类型特殊处理\n")
+	writer.WriteString("\tif typeName == \"Notify\" {\n")
+	writer.WriteString(fmt.Sprintf("\t\treturn PID_%s_Notify\n", packageName))
 	writer.WriteString("\t}\n\n")
 
 	// 通过名称查找PID - 保持简洁
@@ -715,10 +904,10 @@ func generateNotifyGlueCode(messages []Message, packageName, pbDir string) {
 		if msg.Comment != "" {
 			writer.WriteString(fmt.Sprintf("// %s\n", msg.Comment))
 		}
-		writer.WriteString(fmt.Sprintf("func Marshal%s(notify *Notify_%s) ([]byte, uint32, error) {\n", msg.Name, msg.Name))
+		writer.WriteString(fmt.Sprintf("func Marshal%s(notify *%s) ([]byte, uint32, error) {\n", msg.Name, msg.FullName))
 		writer.WriteString("\tdata, err := proto.Marshal(notify)\n")
 		// 对于已知消息类型，我们可以直接返回其固定的协议ID
-		writer.WriteString(fmt.Sprintf("\treturn data, PID_%s_Notify_%s, err\n", packageName, msg.Name))
+		writer.WriteString(fmt.Sprintf("\treturn data, PID_%s_%s, err\n", packageName, msg.FullName))
 		writer.WriteString("}\n\n")
 	}
 
@@ -762,9 +951,14 @@ func generateNotifyGlueCode(messages []Message, packageName, pbDir string) {
 	writer.WriteString("\tvar notificationPid uint32\n\n")
 	writer.WriteString("\tswitch pid {\n")
 
+	// 特殊处理基础Notify类型
+	writer.WriteString(fmt.Sprintf("\tcase PID_%s_Notify:\n", packageName))
+	writer.WriteString("\t\t// 基础通知类型特殊处理\n")
+	writer.WriteString("\t\treturn nil, 0, fmt.Errorf(\"cannot unmarshal base Notify type directly\")\n\n")
+
 	for _, msg := range messages {
-		writer.WriteString(fmt.Sprintf("\tcase PID_%s_Notify_%s:\n", packageName, msg.Name))
-		writer.WriteString(fmt.Sprintf("\t\tnotify := &Notify_%s{}\n", msg.Name))
+		writer.WriteString(fmt.Sprintf("\tcase PID_%s_%s:\n", packageName, msg.FullName))
+		writer.WriteString(fmt.Sprintf("\t\tnotify := &%s{}\n", msg.FullName))
 		writer.WriteString("\t\tif err = proto.Unmarshal(data, notify); err != nil {\n")
 		writer.WriteString(fmt.Sprintf("\t\t\treturn nil, 0, fmt.Errorf(\"unmarshal notification with ID 0x%%08x failed: %%v\", pid, err)\n"))
 		writer.WriteString("\t\t}\n")

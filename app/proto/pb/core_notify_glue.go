@@ -7,12 +7,27 @@ import (
 	"github.com/orbit-w/orbit/lib/utils/proto_utils"
 )
 
+// Base notification message type that doesn't need protocol ID
+const (
+	PID_Core_Notify uint32 = 0
+)
+
 // getCoreNotificationPID 通过反射获取通知消息的协议ID
 func getCoreNotificationPID(notification any) uint32 {
+	// 对基础消息类型特殊处理
+	if notification == nil {
+		return 0
+	}
+
 	// 获取消息名称
 	typeName := proto_utils.ParseMessageName(notification)
 	if typeName == "" {
 		return 0
+	}
+
+	// 基础消息类型特殊处理
+	if typeName == "Notify" {
+		return PID_Core_Notify
 	}
 
 	// 查找类型对应的协议ID
@@ -59,6 +74,10 @@ func ParseCoreNotifyByID(pid uint32, data []byte) (any, uint32, error) {
 	var notificationPid uint32
 
 	switch pid {
+	case PID_Core_Notify:
+		// 基础通知类型特殊处理
+		return nil, 0, fmt.Errorf("cannot unmarshal base Notify type directly")
+
 	case PID_Core_Notify_BeAttacked:
 		notify := &Notify_BeAttacked{}
 		if err = proto.Unmarshal(data, notify); err != nil {

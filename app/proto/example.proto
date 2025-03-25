@@ -41,6 +41,6 @@ message OK {
 }
 
 //通用失败
-message Error {
+message Fail {
     string Reason = 1;//Reason建议命名：error_墙名_消息名_Reason
 }

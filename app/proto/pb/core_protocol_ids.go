@@ -3,41 +3,32 @@ package pb
 
 // Protocol IDs for Core package messages
 const (
-	PID_Core_Book uint32 = 0x2208a5d5 // Core.Book
-	PID_Core_Error uint32 = 0x25d988c4 // Core.Error
-	PID_Core_Notify uint32 = 0x6b7711d3 // Core.Notify
-	PID_Core_Notify_BeAttacked uint32 = 0x5b635c7d // Core.Notify_BeAttacked
-	PID_Core_OK uint32 = 0x65732552 // Core.OK
-	PID_Core_Request uint32 = 0x518423f0 // Core.Request
-	PID_Core_Request_HeartBeat uint32 = 0xa2dae08d // Core.Request_HeartBeat
-	PID_Core_Request_SearchBook uint32 = 0x1e967897 // Core.Request_SearchBook
-	PID_Core_Request_SearchBook_Rsp uint32 = 0xfcc35785 // Core.Request_SearchBook_Rsp
+	PID_Core_Book uint32 = 0xe11f29d6 // Core.Book
+	PID_Core_Fail uint32 = 0xd03670ba // Core.Fail
+	PID_Core_Notify_BeAttacked uint32 = 0x8fee7235 // Core.Notify_BeAttacked
+	PID_Core_OK uint32 = 0x0ece9291 // Core.OK
+	PID_Core_Request_HeartBeat uint32 = 0x95eee555 // Core.Request_HeartBeat
+	PID_Core_Request_SearchBook uint32 = 0xd3ecf693 // Core.Request_SearchBook
 )
 
 // MessageNameToID maps message names to their protocol IDs
 var CoreMessageNameToID = map[string]uint32{
 	"Book": PID_Core_Book,
-	"Error": PID_Core_Error,
-	"Notify": PID_Core_Notify,
+	"Fail": PID_Core_Fail,
 	"Notify_BeAttacked": PID_Core_Notify_BeAttacked,
 	"OK": PID_Core_OK,
-	"Request": PID_Core_Request,
 	"Request_HeartBeat": PID_Core_Request_HeartBeat,
 	"Request_SearchBook": PID_Core_Request_SearchBook,
-	"Request_SearchBook_Rsp": PID_Core_Request_SearchBook_Rsp,
 }
 
 // IDToMessageName maps protocol IDs to their message names
 var CoreIDToMessageName = map[uint32]string{
 	PID_Core_Book: "Book",
-	PID_Core_Error: "Error",
-	PID_Core_Notify: "Notify",
+	PID_Core_Fail: "Fail",
 	PID_Core_Notify_BeAttacked: "Notify_BeAttacked",
 	PID_Core_OK: "OK",
-	PID_Core_Request: "Request",
 	PID_Core_Request_HeartBeat: "Request_HeartBeat",
 	PID_Core_Request_SearchBook: "Request_SearchBook",
-	PID_Core_Request_SearchBook_Rsp: "Request_SearchBook_Rsp",
 }
 
 // GetProtocolID returns the protocol ID for the given message name
