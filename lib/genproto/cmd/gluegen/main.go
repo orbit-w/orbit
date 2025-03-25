@@ -184,10 +184,10 @@ func generateProtocolIDs(content, packageName string) {
 			parentName := strings.TrimSuffix(msg.FullName, "_Rsp")
 			if strings.HasPrefix(parentName, "Request_") {
 				parentName = strings.TrimPrefix(parentName, "Request_")
-				fullName := fmt.Sprintf("%s-%s_Rsp", packageName, parentName)
+				fullName := fmt.Sprintf("%s-Request_%s_Rsp", packageName, parentName)
 				pid := protoid.HashProtoMessage(fullName)
 				mapping.MessageIDs = append(mapping.MessageIDs, MessageID{
-					Name: fmt.Sprintf("%s_Rsp", parentName),
+					Name: fmt.Sprintf("Request_%s_Rsp", parentName),
 					ID:   pid,
 				})
 				if *debugMode {
