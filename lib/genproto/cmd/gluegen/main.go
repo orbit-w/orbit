@@ -115,7 +115,7 @@ func main() {
 					fmt.Printf("Found %d request messages\n", len(requestMessages))
 					if *debugMode {
 						for i, msg := range requestMessages {
-							fmt.Printf("  Request %d: %s, Response: %s\n", i+1, msg, msg.Response)
+							fmt.Printf("  Request %d: Name=%s, FullName=%s\n", i+1, msg.Name, msg.FullName)
 						}
 					}
 				}
@@ -131,7 +131,7 @@ func main() {
 					fmt.Printf("Found %d notify messages\n", len(notifyMessages))
 					if *debugMode {
 						for i, msg := range notifyMessages {
-							fmt.Printf("  Notify %d: %s\n", i+1, msg.Name)
+							fmt.Printf("  Notify %d: Name=%s, FullName=%s\n", i+1, msg.Name, msg.FullName)
 						}
 					}
 				}
@@ -721,13 +721,6 @@ func generateRequestGlueCode(messages []Message, packageName, pbDir string) {
 	writer.WriteString("\t\"github.com/orbit-w/orbit/lib/utils/proto_utils\"\n")
 	writer.WriteString(")\n\n")
 
-	// 添加基础消息常量 - 无需协议ID
-	writer.WriteString("// Base message types that don't need protocol IDs\n")
-	writer.WriteString("const (\n")
-	writer.WriteString(fmt.Sprintf("\tPID_%s_Request uint32 = 0\n", packageName))
-	writer.WriteString(fmt.Sprintf("\tPID_%s_Response uint32 = 0\n", packageName))
-	writer.WriteString(")\n\n")
-
 	// 写入接口定义
 	writer.WriteString(fmt.Sprintf("// %sRequestHandler 定义处理%s包Request消息的接口\n", packageName, packageName))
 	writer.WriteString(fmt.Sprintf("type %sRequestHandler interface {\n", packageName))
@@ -766,7 +759,7 @@ func generateRequestGlueCode(messages []Message, packageName, pbDir string) {
 		writer.WriteString(fmt.Sprintf("\t\tresponsePid = get%sResponsePID(response)\n", packageName))
 	}
 	writer.WriteString("\tdefault:\n")
-	writer.WriteString(fmt.Sprintf("\t\treturn nil, 0, fmt.Errorf(\"unknown request message: %%s\", msgName)\n"))
+	writer.WriteString("\t\treturn nil, 0, fmt.Errorf(\"unknown request message: %s\", msgName)\n")
 	writer.WriteString("\t}\n\n")
 
 	writer.WriteString("\treturn response, responsePid, nil\n")
@@ -790,16 +783,16 @@ func generateRequestGlueCode(messages []Message, packageName, pbDir string) {
 		writer.WriteString(fmt.Sprintf("\t\tresponsePid = get%sResponsePID(response)\n", packageName))
 	}
 	writer.WriteString("\tdefault:\n")
-	writer.WriteString(fmt.Sprintf("\t\treturn nil, 0, fmt.Errorf(\"unknown request protocol ID: 0x%%x\", pid)\n"))
+	writer.WriteString("\t\treturn nil, 0, fmt.Errorf(\"unknown request protocol ID: 0x%x\", pid)\n")
 	writer.WriteString("\t}\n\n")
 
 	writer.WriteString("\treturn response, responsePid, nil\n")
 	writer.WriteString("}\n\n")
 
-	// 最后写入getResponsePID辅助函数，添加基础消息类型处理
+	// 最后写入getResponsePID辅助函数，使用通用逻辑处理所有消息类型
 	writer.WriteString(fmt.Sprintf("// get%sResponsePID 通过反射获取响应消息的协议ID\n", packageName))
 	writer.WriteString(fmt.Sprintf("func get%sResponsePID(response any) uint32 {\n", packageName))
-	writer.WriteString("\t// 对基础消息类型特殊处理\n")
+	writer.WriteString("\t// 基本检查\n")
 	writer.WriteString("\tif response == nil {\n")
 	writer.WriteString("\t\treturn 0\n")
 	writer.WriteString("\t}\n\n")
@@ -810,14 +803,8 @@ func generateRequestGlueCode(messages []Message, packageName, pbDir string) {
 	writer.WriteString("\t\treturn 0\n")
 	writer.WriteString("\t}\n\n")
 
-	// 特殊处理基础消息类型
-	writer.WriteString("\t// 基础消息类型特殊处理\n")
-	writer.WriteString("\tif typeName == \"Response\" || typeName == \"OK\" {\n")
-	writer.WriteString(fmt.Sprintf("\t\treturn PID_%s_Response\n", packageName))
-	writer.WriteString("\t}\n\n")
-
 	// 通过名称查找PID - 通用方式处理所有类型
-	writer.WriteString("\t// 查找类型对应的协议ID\n")
+	writer.WriteString("\t// 通过名称查找协议ID\n")
 	writer.WriteString(fmt.Sprintf("\tpid, ok := Get%sProtocolID(typeName)\n", packageName))
 	writer.WriteString("\tif ok {\n")
 	writer.WriteString("\t\treturn pid\n")
@@ -858,19 +845,13 @@ func generateNotifyGlueCode(messages []Message, packageName, pbDir string) {
 	writer.WriteString("\t\"github.com/orbit-w/orbit/lib/utils/proto_utils\"\n")
 	writer.WriteString(")\n\n")
 
-	// 添加基础消息常量 - 无需协议ID
-	writer.WriteString("// Base notification message type that doesn't need protocol ID\n")
-	writer.WriteString("const (\n")
-	writer.WriteString(fmt.Sprintf("\tPID_%s_Notify uint32 = 0\n", packageName))
-	writer.WriteString(")\n\n")
-
 	// 为每个包创建唯一的getNotificationPID函数名
 	notificationPIDFuncName := fmt.Sprintf("get%sNotificationPID", packageName)
 
-	// 添加getNotificationPID辅助函数，添加包名前缀确保唯一性
+	// 添加getNotificationPID辅助函数，使用通用逻辑处理所有通知类型
 	writer.WriteString(fmt.Sprintf("// %s 通过反射获取通知消息的协议ID\n", notificationPIDFuncName))
 	writer.WriteString(fmt.Sprintf("func %s(notification any) uint32 {\n", notificationPIDFuncName))
-	writer.WriteString("\t// 对基础消息类型特殊处理\n")
+	writer.WriteString("\t// 基本检查\n")
 	writer.WriteString("\tif notification == nil {\n")
 	writer.WriteString("\t\treturn 0\n")
 	writer.WriteString("\t}\n\n")
@@ -881,14 +862,8 @@ func generateNotifyGlueCode(messages []Message, packageName, pbDir string) {
 	writer.WriteString("\t\treturn 0\n")
 	writer.WriteString("\t}\n\n")
 
-	// 特殊处理基础消息类型
-	writer.WriteString("\t// 基础消息类型特殊处理\n")
-	writer.WriteString("\tif typeName == \"Notify\" {\n")
-	writer.WriteString(fmt.Sprintf("\t\treturn PID_%s_Notify\n", packageName))
-	writer.WriteString("\t}\n\n")
-
-	// 通过名称查找PID - 保持简洁
-	writer.WriteString("\t// 查找类型对应的协议ID\n")
+	// 通过名称查找PID - 通用方式处理所有类型
+	writer.WriteString("\t// 通过名称查找协议ID\n")
 	writer.WriteString(fmt.Sprintf("\tpid, ok := Get%sProtocolID(typeName)\n", packageName))
 	writer.WriteString("\tif ok {\n")
 	writer.WriteString("\t\treturn pid\n")
@@ -907,7 +882,7 @@ func generateNotifyGlueCode(messages []Message, packageName, pbDir string) {
 		writer.WriteString(fmt.Sprintf("func Marshal%s(notify *%s) ([]byte, uint32, error) {\n", msg.Name, msg.FullName))
 		writer.WriteString("\tdata, err := proto.Marshal(notify)\n")
 		// 对于已知消息类型，我们可以直接返回其固定的协议ID
-		writer.WriteString(fmt.Sprintf("\treturn data, PID_%s_%s, err\n", packageName, msg.FullName))
+		writer.WriteString(fmt.Sprintf("\treturn data, PID_%s_Notify_%s, err\n", packageName, msg.Name))
 		writer.WriteString("}\n\n")
 	}
 
@@ -951,16 +926,11 @@ func generateNotifyGlueCode(messages []Message, packageName, pbDir string) {
 	writer.WriteString("\tvar notificationPid uint32\n\n")
 	writer.WriteString("\tswitch pid {\n")
 
-	// 特殊处理基础Notify类型
-	writer.WriteString(fmt.Sprintf("\tcase PID_%s_Notify:\n", packageName))
-	writer.WriteString("\t\t// 基础通知类型特殊处理\n")
-	writer.WriteString("\t\treturn nil, 0, fmt.Errorf(\"cannot unmarshal base Notify type directly\")\n\n")
-
 	for _, msg := range messages {
-		writer.WriteString(fmt.Sprintf("\tcase PID_%s_%s:\n", packageName, msg.FullName))
+		writer.WriteString(fmt.Sprintf("\tcase PID_%s_Notify_%s:\n", packageName, msg.Name))
 		writer.WriteString(fmt.Sprintf("\t\tnotify := &%s{}\n", msg.FullName))
 		writer.WriteString("\t\tif err = proto.Unmarshal(data, notify); err != nil {\n")
-		writer.WriteString(fmt.Sprintf("\t\t\treturn nil, 0, fmt.Errorf(\"unmarshal notification with ID 0x%%08x failed: %%v\", pid, err)\n"))
+		writer.WriteString("\t\t\treturn nil, 0, fmt.Errorf(\"unmarshal notification with ID 0x%08x failed: %v\", pid, err)\n")
 		writer.WriteString("\t\t}\n")
 		writer.WriteString("\t\tnotification = notify\n")
 		// 使用添加了包名前缀的函数

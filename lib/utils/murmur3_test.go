@@ -174,3 +174,9 @@ func BenchmarkStringHash128(b *testing.B) {
 		StringHash128(s, 0)
 	}
 }
+
+func TestHashProtoMessage(t *testing.T) {
+	messageName := "Core-Request_SearchBook"
+	hash := HashProtoMessage(messageName)
+	fmt.Println(fmt.Printf("Hash of %s: 0x%08x\n", messageName, hash))
+}
