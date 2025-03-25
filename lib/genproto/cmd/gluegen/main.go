@@ -184,6 +184,7 @@ func generateProtocolIDs(content, packageName string) {
 			parentName := strings.TrimSuffix(msg.FullName, "_Rsp")
 			if strings.HasPrefix(parentName, "Request_") {
 				parentName = strings.TrimPrefix(parentName, "Request_")
+				// 使用Core-Request_SearchBook_Rsp格式的消息名称计算PID
 				fullName := fmt.Sprintf("%s-Request_%s_Rsp", packageName, parentName)
 				pid := protoid.HashProtoMessage(fullName)
 				mapping.MessageIDs = append(mapping.MessageIDs, MessageID{
