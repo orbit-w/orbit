@@ -171,17 +171,35 @@ func generateProtocolIDs(content, packageName string) {
 	// 为每个消息生成ID，过滤掉基本类型和衍生类型
 	for _, msg := range messageNames {
 		// 跳过基本类型：Request, Rsp, Notify
-		if msg.Name == "Request" || msg.Name == "Rsp" || msg.Name == "Notify" {
+		if msg.Name == "Request" || msg.Name == "Notify" {
 			if *debugMode {
 				fmt.Printf("Skipping base message type: %s\n", msg.Name)
 			}
 			continue
 		}
 
+		// 处理响应消息
+		if msg.Name == "Rsp" {
+			// 从父消息名称中提取请求名称
+			parentName := strings.TrimSuffix(msg.FullName, "_Rsp")
+			if strings.HasPrefix(parentName, "Request_") {
+				parentName = strings.TrimPrefix(parentName, "Request_")
+				fullName := fmt.Sprintf("%s-%s_Rsp", packageName, parentName)
+				pid := protoid.HashProtoMessage(fullName)
+				mapping.MessageIDs = append(mapping.MessageIDs, MessageID{
+					Name: fmt.Sprintf("%s_Rsp", parentName),
+					ID:   pid,
+				})
+				if *debugMode {
+					fmt.Printf("Generated PID for response message: %s, ID: 0x%08x\n", fullName, pid)
+				}
+			}
+			continue
+		}
+
 		// 跳过所有单纯的容器类型消息（不需要协议ID）
 		// 例如：Request、Notify 及其可能的衍生结构
-		if msg.FullName == "Request" || msg.FullName == "Notify" || msg.FullName == "Rsp" ||
-			(strings.HasPrefix(msg.FullName, "Request_") && strings.HasSuffix(msg.FullName, "_Rsp")) {
+		if msg.FullName == "Request" || msg.FullName == "Notify" {
 			if *debugMode {
 				fmt.Printf("Skipping container message: %s\n", msg.FullName)
 			}

@@ -9,6 +9,7 @@ const (
 	PID_Core_OK uint32 = 0x0ece9291 // Core.OK
 	PID_Core_Request_HeartBeat uint32 = 0x95eee555 // Core.Request_HeartBeat
 	PID_Core_Request_SearchBook uint32 = 0xd3ecf693 // Core.Request_SearchBook
+	PID_Core_SearchBook_Rsp uint32 = 0x82298c35 // Core.SearchBook_Rsp
 )
 
 // MessageNameToID maps message names to their protocol IDs
@@ -19,6 +20,7 @@ var CoreMessageNameToID = map[string]uint32{
 	"OK": PID_Core_OK,
 	"Request_HeartBeat": PID_Core_Request_HeartBeat,
 	"Request_SearchBook": PID_Core_Request_SearchBook,
+	"SearchBook_Rsp": PID_Core_SearchBook_Rsp,
 }
 
 // IDToMessageName maps protocol IDs to their message names
@@ -29,6 +31,7 @@ var CoreIDToMessageName = map[uint32]string{
 	PID_Core_OK: "OK",
 	PID_Core_Request_HeartBeat: "Request_HeartBeat",
 	PID_Core_Request_SearchBook: "Request_SearchBook",
+	PID_Core_SearchBook_Rsp: "SearchBook_Rsp",
 }
 
 // GetProtocolID returns the protocol ID for the given message name
