@@ -14,18 +14,24 @@ BuildLinux:
 
 # 生成所有proto相关的代码（protobuf、协议ID和胶水代码）
 GenProto:
+	# 删除 app/proto/pb 下的所有文件
+	find app/proto/pb -type f -not -path "*/\.*" -delete
 	find app/proto -name "*.proto" -type f | xargs -I{} protoc --go_out=app/proto --go-grpc_out=app/proto {}
 	# 生成协议ID和胶水代码
 	go run lib/genproto/main.go --proto_dir=app/proto --quiet
 
 # 只生成协议ID
 GenProtoID:
-	mkdir -p app/proto/pb
+	# 删除旧的协议ID文件
+	find app/proto/pb -name "*_protocol_ids.go" -delete
+	find app/proto/pb -name "protocol_ids.go" -delete
 	go run lib/genproto/main.go --proto_dir=app/proto --gen_proto_code=false --quiet
 
 # 只生成胶水代码
 GenGlueCode:
-	mkdir -p app/proto/pb
+	# 删除旧的胶水代码文件
+	find app/proto/pb -name "*_request_glue.go" -delete
+	find app/proto/pb -name "*_notify_glue.go" -delete
 	go run lib/genproto/main.go --proto_dir=app/proto --gen_proto_ids=false --quiet
 
 # 调试模式生成所有proto相关代码
