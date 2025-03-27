@@ -21,29 +21,26 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// 在这里定义你的消息
-type SeasonInfo struct {
+type Request struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=Name,proto3" json:"Name,omitempty"`
-	Duration      int32                  `protobuf:"varint,2,opt,name=Duration,proto3" json:"Duration,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *SeasonInfo) Reset() {
-	*x = SeasonInfo{}
+func (x *Request) Reset() {
+	*x = Request{}
 	mi := &file_app_proto_season_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *SeasonInfo) String() string {
+func (x *Request) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SeasonInfo) ProtoMessage() {}
+func (*Request) ProtoMessage() {}
 
-func (x *SeasonInfo) ProtoReflect() protoreflect.Message {
+func (x *Request) ProtoReflect() protoreflect.Message {
 	mi := &file_app_proto_season_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -55,23 +52,105 @@ func (x *SeasonInfo) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SeasonInfo.ProtoReflect.Descriptor instead.
-func (*SeasonInfo) Descriptor() ([]byte, []int) {
+// Deprecated: Use Request.ProtoReflect.Descriptor instead.
+func (*Request) Descriptor() ([]byte, []int) {
 	return file_app_proto_season_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *SeasonInfo) GetName() string {
+type Request_SeasonInfo struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=Name,proto3" json:"Name,omitempty"`
+	Duration      int32                  `protobuf:"varint,2,opt,name=Duration,proto3" json:"Duration,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Request_SeasonInfo) Reset() {
+	*x = Request_SeasonInfo{}
+	mi := &file_app_proto_season_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Request_SeasonInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Request_SeasonInfo) ProtoMessage() {}
+
+func (x *Request_SeasonInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_app_proto_season_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Request_SeasonInfo.ProtoReflect.Descriptor instead.
+func (*Request_SeasonInfo) Descriptor() ([]byte, []int) {
+	return file_app_proto_season_proto_rawDescGZIP(), []int{0, 0}
+}
+
+func (x *Request_SeasonInfo) GetName() string {
 	if x != nil {
 		return x.Name
 	}
 	return ""
 }
 
-func (x *SeasonInfo) GetDuration() int32 {
+func (x *Request_SeasonInfo) GetDuration() int32 {
 	if x != nil {
 		return x.Duration
 	}
 	return 0
+}
+
+type Request_SeasonInfo_Rsp struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Result        bool                   `protobuf:"varint,1,opt,name=Result,proto3" json:"Result,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Request_SeasonInfo_Rsp) Reset() {
+	*x = Request_SeasonInfo_Rsp{}
+	mi := &file_app_proto_season_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Request_SeasonInfo_Rsp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Request_SeasonInfo_Rsp) ProtoMessage() {}
+
+func (x *Request_SeasonInfo_Rsp) ProtoReflect() protoreflect.Message {
+	mi := &file_app_proto_season_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Request_SeasonInfo_Rsp.ProtoReflect.Descriptor instead.
+func (*Request_SeasonInfo_Rsp) Descriptor() ([]byte, []int) {
+	return file_app_proto_season_proto_rawDescGZIP(), []int{0, 0, 0}
+}
+
+func (x *Request_SeasonInfo_Rsp) GetResult() bool {
+	if x != nil {
+		return x.Result
+	}
+	return false
 }
 
 var File_app_proto_season_proto protoreflect.FileDescriptor
@@ -79,12 +158,14 @@ var File_app_proto_season_proto protoreflect.FileDescriptor
 var file_app_proto_season_proto_rawDesc = string([]byte{
 	0x0a, 0x16, 0x61, 0x70, 0x70, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x73, 0x65, 0x61, 0x73,
 	0x6f, 0x6e, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x12, 0x06, 0x53, 0x65, 0x61, 0x73, 0x6f, 0x6e,
-	0x22, 0x3c, 0x0a, 0x0a, 0x53, 0x65, 0x61, 0x73, 0x6f, 0x6e, 0x49, 0x6e, 0x66, 0x6f, 0x12, 0x12,
-	0x0a, 0x04, 0x4e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x4e, 0x61,
-	0x6d, 0x65, 0x12, 0x1a, 0x0a, 0x08, 0x44, 0x75, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x18, 0x02,
-	0x20, 0x01, 0x28, 0x05, 0x52, 0x08, 0x44, 0x75, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x42, 0x0b,
-	0x5a, 0x09, 0x70, 0x62, 0x2f, 0x73, 0x65, 0x61, 0x73, 0x6f, 0x6e, 0x62, 0x06, 0x70, 0x72, 0x6f,
-	0x74, 0x6f, 0x33,
+	0x22, 0x66, 0x0a, 0x07, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x5b, 0x0a, 0x0a, 0x53,
+	0x65, 0x61, 0x73, 0x6f, 0x6e, 0x49, 0x6e, 0x66, 0x6f, 0x12, 0x12, 0x0a, 0x04, 0x4e, 0x61, 0x6d,
+	0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x4e, 0x61, 0x6d, 0x65, 0x12, 0x1a, 0x0a,
+	0x08, 0x44, 0x75, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x18, 0x02, 0x20, 0x01, 0x28, 0x05, 0x52,
+	0x08, 0x44, 0x75, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x1a, 0x1d, 0x0a, 0x03, 0x52, 0x73, 0x70,
+	0x12, 0x16, 0x0a, 0x06, 0x52, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x08,
+	0x52, 0x06, 0x52, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x42, 0x0b, 0x5a, 0x09, 0x70, 0x62, 0x2f, 0x73,
+	0x65, 0x61, 0x73, 0x6f, 0x6e, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 })
 
 var (
@@ -99,9 +180,11 @@ func file_app_proto_season_proto_rawDescGZIP() []byte {
 	return file_app_proto_season_proto_rawDescData
 }
 
-var file_app_proto_season_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_app_proto_season_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_app_proto_season_proto_goTypes = []any{
-	(*SeasonInfo)(nil), // 0: Season.SeasonInfo
+	(*Request)(nil),                // 0: Season.Request
+	(*Request_SeasonInfo)(nil),     // 1: Season.Request.SeasonInfo
+	(*Request_SeasonInfo_Rsp)(nil), // 2: Season.Request.SeasonInfo.Rsp
 }
 var file_app_proto_season_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -122,7 +205,7 @@ func file_app_proto_season_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_app_proto_season_proto_rawDesc), len(file_app_proto_season_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   1,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

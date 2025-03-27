@@ -18,7 +18,7 @@ GenProto:
 	mkdir -p app/proto/pb/season
 	find app/proto -name "*.proto" -type f | xargs -I{} protoc --go_out=app/proto --go-grpc_out=app/proto {}
 	# 生成协议ID和胶水代码
-	# go run lib/genproto/main.go --proto_dir=app/proto --quiet
+	go run lib/genproto/main.go --proto_dir=app/proto --quiet
 
 # 只生成协议ID
 GenProtoID:

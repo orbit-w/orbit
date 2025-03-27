@@ -4,8 +4,12 @@ package Season;
 
 option go_package = "pb/season";
 
-// 在这里定义你的消息
-message SeasonInfo {
-    string Name = 1;
-    int32 Duration = 2;
-} 
+message Request {
+    message SeasonInfo {
+        string Name = 1;
+        int32 Duration = 2;
+        message Rsp{
+            bool Result = 1;
+        }
+    } 
+}
