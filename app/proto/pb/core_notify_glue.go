@@ -4,14 +4,14 @@ package pb
 import (
 	"fmt"
 	"google.golang.org/protobuf/proto"
-	"github.com/orbit-w/orbit/app/proto/pb/core"
+	"github.com/orbit-w/orbit/app/proto/pb/pb_core"
 )
 
 // ParseCoreNotifyByID 根据协议ID解析通知消息
 func ParseCoreNotifyByID(pid uint32, data []byte) (proto.Message, uint32, error) {
 	switch pid {
 	case PID_Core_Notify_BeAttacked: // Notify_BeAttacked
-		notify := &core.Notify_BeAttacked{}
+		notify := &pb_core.Notify_BeAttacked{}
 		if err := proto.Unmarshal(data, notify); err != nil {
 			return nil, 0, fmt.Errorf("unmarshal Notify_BeAttacked failed: %w", err)
 		}
@@ -22,7 +22,7 @@ func ParseCoreNotifyByID(pid uint32, data []byte) (proto.Message, uint32, error)
 }
 
 // MarshalBeAttacked 序列化BeAttacked通知消息
-func MarshalBeAttacked(notify *core.Notify_BeAttacked) ([]byte, uint32, error) {
+func MarshalBeAttacked(notify *pb_core.Notify_BeAttacked) ([]byte, uint32, error) {
 	data, err := proto.Marshal(notify)
 	return data, PID_Core_Notify_BeAttacked, err
 }

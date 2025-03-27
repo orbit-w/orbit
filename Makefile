@@ -14,8 +14,6 @@ BuildLinux:
 
 # 生成所有proto相关的代码（protobuf、协议ID和胶水代码）
 GenProto:
-	mkdir -p app/proto/pb/core
-	mkdir -p app/proto/pb/season
 	find app/proto -name "*.proto" -type f | xargs -I{} protoc --go_out=app/proto --go-grpc_out=app/proto {}
 	# 生成协议ID和胶水代码
 	go run lib/genproto/main.go --proto_dir=app/proto --quiet
@@ -32,8 +30,6 @@ GenGlueCode:
 
 # 调试模式生成所有proto相关代码
 GenProtoDebug:
-	mkdir -p app/proto/pb/core
-	mkdir -p app/proto/pb/season
 	find app/proto -name "*.proto" -type f | xargs -I{} protoc --go_out=app/proto --go-grpc_out=app/proto {}
 	# 调试模式生成协议ID和胶水代码
 	go run lib/genproto/main.go --proto_dir=app/proto --debug --quiet=false

@@ -644,6 +644,22 @@ func parseMessageFields(message *Message, msgBody string) {
 	}
 }
 
+// 提取go_package值
+func extractGoPackage(content string) string {
+	// 正则表达式匹配option go_package = "...";
+	re := regexp.MustCompile(`option\s+go_package\s*=\s*"([^"]+)"\s*;`)
+	matches := re.FindStringSubmatch(content)
+	if len(matches) >= 2 {
+		// 提取最后一个部分作为包名
+		parts := strings.Split(matches[1], "/")
+		if len(parts) > 0 {
+			return parts[len(parts)-1]
+		}
+		return matches[1]
+	}
+	return ""
+}
+
 // 生成Request消息的胶水代码
 func generateRequestGlueCode(messages []Message, packageName, pbDir string) {
 	// 构建输出文件名
@@ -663,7 +679,32 @@ func generateRequestGlueCode(messages []Message, packageName, pbDir string) {
 	fmt.Fprintf(file, "import (\n")
 	fmt.Fprintf(file, "\t\"fmt\"\n")
 	fmt.Fprintf(file, "\t\"google.golang.org/protobuf/proto\"\n")
-	fmt.Fprintf(file, "\t\"github.com/orbit-w/orbit/app/proto/pb/%s\"\n", strings.ToLower(packageName))
+
+	// 找到该包的proto文件以提取go_package
+	protoFiles, _ := findProtoFiles(*protoDir)
+	var goPackage string
+	for _, protoFile := range protoFiles {
+		content, err := os.ReadFile(protoFile)
+		if err != nil {
+			continue
+		}
+
+		extractedPackage := extractPackageName(string(content))
+		if extractedPackage == packageName {
+			// 找到了匹配的包名，提取go_package
+			goPackage = extractGoPackage(string(content))
+			break
+		}
+	}
+
+	// 如果找不到go_package，使用默认的包名
+	if goPackage == "" {
+		goPackage = strings.ToLower(packageName)
+		fmt.Fprintf(file, "\t\"github.com/orbit-w/orbit/app/proto/pb/%s\"\n", goPackage)
+	} else {
+		fmt.Fprintf(file, "\t\"github.com/orbit-w/orbit/app/proto/pb/%s\"\n", goPackage)
+	}
+
 	fmt.Fprintf(file, ")\n\n")
 
 	// 写入请求处理器接口
@@ -677,7 +718,7 @@ func generateRequestGlueCode(messages []Message, packageName, pbDir string) {
 		if msg.Comment != "" {
 			fmt.Fprintf(file, "\t// %s\n", msg.Comment)
 		}
-		fmt.Fprintf(file, "\tHandle%s(req *%s.%s) proto.Message\n", msg.Name, strings.ToLower(packageName), msg.FullName)
+		fmt.Fprintf(file, "\tHandle%s(req *%s.%s) proto.Message\n", msg.Name, goPackage, msg.FullName)
 	}
 	fmt.Fprintf(file, "}\n\n")
 
@@ -698,7 +739,7 @@ func generateRequestGlueCode(messages []Message, packageName, pbDir string) {
 		_ = protoid.HashProtoMessage(fullName)
 
 		fmt.Fprintf(file, "\tcase PID_%s_%s: // %s\n", packageName, msg.FullName, msg.FullName)
-		fmt.Fprintf(file, "\t\treq := &%s.%s{}\n", strings.ToLower(packageName), msg.FullName)
+		fmt.Fprintf(file, "\t\treq := &%s.%s{}\n", goPackage, msg.FullName)
 		fmt.Fprintf(file, "\t\tif err := proto.Unmarshal(data, req); err != nil {\n")
 		fmt.Fprintf(file, "\t\t\treturn nil, 0, fmt.Errorf(\"unmarshal %s failed: %%w\", err)\n", msg.FullName)
 		fmt.Fprintf(file, "\t\t}\n\n")
@@ -738,7 +779,32 @@ func generateNotifyGlueCode(messages []Message, packageName, pbDir string) {
 	fmt.Fprintf(file, "import (\n")
 	fmt.Fprintf(file, "\t\"fmt\"\n")
 	fmt.Fprintf(file, "\t\"google.golang.org/protobuf/proto\"\n")
-	fmt.Fprintf(file, "\t\"github.com/orbit-w/orbit/app/proto/pb/%s\"\n", strings.ToLower(packageName))
+
+	// 找到该包的proto文件以提取go_package
+	protoFiles, _ := findProtoFiles(*protoDir)
+	var goPackage string
+	for _, protoFile := range protoFiles {
+		content, err := os.ReadFile(protoFile)
+		if err != nil {
+			continue
+		}
+
+		extractedPackage := extractPackageName(string(content))
+		if extractedPackage == packageName {
+			// 找到了匹配的包名，提取go_package
+			goPackage = extractGoPackage(string(content))
+			break
+		}
+	}
+
+	// 如果找不到go_package，使用默认的包名
+	if goPackage == "" {
+		goPackage = strings.ToLower(packageName)
+		fmt.Fprintf(file, "\t\"github.com/orbit-w/orbit/app/proto/pb/%s\"\n", goPackage)
+	} else {
+		fmt.Fprintf(file, "\t\"github.com/orbit-w/orbit/app/proto/pb/%s\"\n", goPackage)
+	}
+
 	fmt.Fprintf(file, ")\n\n")
 
 	// 生成分发函数
@@ -757,7 +823,7 @@ func generateNotifyGlueCode(messages []Message, packageName, pbDir string) {
 		_ = protoid.HashProtoMessage(fullName)
 
 		fmt.Fprintf(file, "\tcase PID_%s_%s: // %s\n", packageName, msg.FullName, msg.FullName)
-		fmt.Fprintf(file, "\t\tnotify := &%s.%s{}\n", strings.ToLower(packageName), msg.FullName)
+		fmt.Fprintf(file, "\t\tnotify := &%s.%s{}\n", goPackage, msg.FullName)
 		fmt.Fprintf(file, "\t\tif err := proto.Unmarshal(data, notify); err != nil {\n")
 		fmt.Fprintf(file, "\t\t\treturn nil, 0, fmt.Errorf(\"unmarshal %s failed: %%w\", err)\n", msg.FullName)
 		fmt.Fprintf(file, "\t\t}\n")
@@ -779,7 +845,7 @@ func generateNotifyGlueCode(messages []Message, packageName, pbDir string) {
 		if msg.Comment != "" {
 			fmt.Fprintf(file, "// %s\n", msg.Comment)
 		}
-		fmt.Fprintf(file, "func Marshal%s(notify *%s.%s) ([]byte, uint32, error) {\n", msg.Name, strings.ToLower(packageName), msg.FullName)
+		fmt.Fprintf(file, "func Marshal%s(notify *%s.%s) ([]byte, uint32, error) {\n", msg.Name, goPackage, msg.FullName)
 		fmt.Fprintf(file, "\tdata, err := proto.Marshal(notify)\n")
 		fmt.Fprintf(file, "\treturn data, PID_%s_%s, err\n", packageName, msg.FullName)
 		fmt.Fprintf(file, "}\n\n")

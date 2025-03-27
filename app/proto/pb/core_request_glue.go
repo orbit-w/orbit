@@ -4,15 +4,15 @@ package pb
 import (
 	"fmt"
 	"google.golang.org/protobuf/proto"
-	"github.com/orbit-w/orbit/app/proto/pb/core"
+	"github.com/orbit-w/orbit/app/proto/pb/pb_core"
 )
 
 // CoreRequestHandler 处理Core包的请求消息
 type CoreRequestHandler interface {
 	// HandleSearchBook 处理SearchBook请求
-	HandleSearchBook(req *core.Request_SearchBook) proto.Message
+	HandleSearchBook(req *pb_core.Request_SearchBook) proto.Message
 	// HandleHeartBeat 处理HeartBeat请求
-	HandleHeartBeat(req *core.Request_HeartBeat) proto.Message
+	HandleHeartBeat(req *pb_core.Request_HeartBeat) proto.Message
 }
 
 // DispatchCoreRequestByID 根据协议ID分发请求到对应处理函数
@@ -20,7 +20,7 @@ func DispatchCoreRequestByID(handler CoreRequestHandler, pid uint32, data []byte
 	var response proto.Message
 	switch pid {
 	case PID_Core_Request_SearchBook: // Request_SearchBook
-		req := &core.Request_SearchBook{}
+		req := &pb_core.Request_SearchBook{}
 		if err := proto.Unmarshal(data, req); err != nil {
 			return nil, 0, fmt.Errorf("unmarshal Request_SearchBook failed: %w", err)
 		}
@@ -28,7 +28,7 @@ func DispatchCoreRequestByID(handler CoreRequestHandler, pid uint32, data []byte
 		response = handler.HandleSearchBook(req)
 	
 	case PID_Core_Request_HeartBeat: // Request_HeartBeat
-		req := &core.Request_HeartBeat{}
+		req := &pb_core.Request_HeartBeat{}
 		if err := proto.Unmarshal(data, req); err != nil {
 			return nil, 0, fmt.Errorf("unmarshal Request_HeartBeat failed: %w", err)
 		}

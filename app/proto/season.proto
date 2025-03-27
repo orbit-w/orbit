@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package Season;
 
-option go_package = "pb/season";
+option go_package = "pb/pb_season";
 
 message Request {
     message SeasonInfo {
