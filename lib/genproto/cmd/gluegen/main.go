@@ -168,9 +168,9 @@ func generateProtocolIDs(content, packageName string) {
 		return messageNames[i].FullName < messageNames[j].FullName
 	})
 
-	// 为每个消息生成ID，过滤掉基本类型和衍生类型
+	// 为每个消息生成ID，只处理特定类型的消息
 	for _, msg := range messageNames {
-		// 跳过基本类型：Request, Rsp, Notify
+		// 跳过基本类型：Request, Notify
 		if msg.Name == "Request" || msg.Name == "Notify" {
 			if *debugMode {
 				fmt.Printf("Skipping base message type: %s\n", msg.Name)
@@ -192,17 +192,21 @@ func generateProtocolIDs(content, packageName string) {
 					ID:   pid,
 				})
 				if *debugMode {
-					fmt.Printf("Generated PID for response message: %s, ID: 0x%08x\n", fullName, pid)
+					fmt.Printf("Generated PID for response message: %s, ID: 0x%016x\n", fullName, pid)
 				}
 			}
 			continue
 		}
 
-		// 跳过所有单纯的容器类型消息（不需要协议ID）
-		// 例如：Request、Notify 及其可能的衍生结构
-		if msg.FullName == "Request" || msg.FullName == "Notify" {
+		// 只处理特定类型的消息
+		isRequest := strings.HasPrefix(msg.FullName, "Request_")
+		isNotify := strings.HasPrefix(msg.FullName, "Notify_")
+		isOK := msg.Name == "OK"
+		isFail := msg.Name == "Fail"
+
+		if !isRequest && !isNotify && !isOK && !isFail {
 			if *debugMode {
-				fmt.Printf("Skipping container message: %s\n", msg.FullName)
+				fmt.Printf("Skipping non-special message: %s\n", msg.FullName)
 			}
 			continue
 		}
@@ -213,17 +217,9 @@ func generateProtocolIDs(content, packageName string) {
 			Name: msg.FullName,
 			ID:   pid,
 		})
-
 		if *debugMode {
-			fmt.Printf("Generated PID for message: %s, ID: 0x%08x\n", fullName, pid)
+			fmt.Printf("Generated PID for special message: %s, ID: 0x%016x\n", fullName, pid)
 		}
-	}
-
-	if len(mapping.MessageIDs) == 0 {
-		if *debugMode {
-			fmt.Printf("No protocol IDs generated for package %s after filtering\n", packageName)
-		}
-		return
 	}
 
 	// 生成协议ID文件

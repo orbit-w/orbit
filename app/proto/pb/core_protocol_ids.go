@@ -3,7 +3,6 @@ package pb
 
 // Protocol IDs for Core package messages
 const (
-	PID_Core_Book uint32 = 0xe11f29d6 // Core.Book
 	PID_Core_Fail uint32 = 0xd03670ba // Core.Fail
 	PID_Core_Notify_BeAttacked uint32 = 0x8fee7235 // Core.Notify_BeAttacked
 	PID_Core_OK uint32 = 0x0ece9291 // Core.OK
@@ -14,7 +13,6 @@ const (
 
 // MessageNameToID maps message names to their protocol IDs
 var CoreMessageNameToID = map[string]uint32{
-	"Book": PID_Core_Book,
 	"Fail": PID_Core_Fail,
 	"Notify_BeAttacked": PID_Core_Notify_BeAttacked,
 	"OK": PID_Core_OK,
@@ -25,7 +23,6 @@ var CoreMessageNameToID = map[string]uint32{
 
 // IDToMessageName maps protocol IDs to their message names
 var CoreIDToMessageName = map[uint32]string{
-	PID_Core_Book: "Book",
 	PID_Core_Fail: "Fail",
 	PID_Core_Notify_BeAttacked: "Notify_BeAttacked",
 	PID_Core_OK: "OK",
