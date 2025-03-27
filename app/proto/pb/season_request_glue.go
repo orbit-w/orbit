@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"google.golang.org/protobuf/proto"
 	"github.com/orbit-w/orbit/app/proto/pb/season"
-	"github.com/orbit-w/orbit/lib/utils/proto_utils"
 )
 
 // SeasonRequestHandler 处理Season包的请求消息
@@ -25,24 +24,12 @@ func DispatchSeasonRequestByID(handler SeasonRequestHandler, pid uint32, data []
 		}
 
 		response = handler.HandleSeasonInfo(req)
+	
 	default:
 		return nil, 0, fmt.Errorf("unknown request protocol ID: 0x%08x", pid)
 	}
 
-	responseId := GetSeasonResponseId(response)
-	return response, responseId, nil
-}
-
-func GetSeasonResponseId(req proto.Message) uint32 {
-	name := proto_utils.ParseMessageName(req)	
-	if name == "" {
-		return 0
-	}
-
-	pid, ok := GetSeasonProtocolID(name)
-	if !ok {
-		return 0
-	}
-
-	return pid
+	// 使用公共映射文件获取响应ID
+	responsePid := GetResponsePID(response)
+	return response, responsePid, nil
 }

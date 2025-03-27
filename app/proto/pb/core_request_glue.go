@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"google.golang.org/protobuf/proto"
 	"github.com/orbit-w/orbit/app/proto/pb/core"
-	"github.com/orbit-w/orbit/lib/utils/proto_utils"
 )
 
 // CoreRequestHandler 处理Core包的请求消息
@@ -27,6 +26,7 @@ func DispatchCoreRequestByID(handler CoreRequestHandler, pid uint32, data []byte
 		}
 
 		response = handler.HandleSearchBook(req)
+	
 	case PID_Core_Request_HeartBeat: // Request_HeartBeat
 		req := &core.Request_HeartBeat{}
 		if err := proto.Unmarshal(data, req); err != nil {
@@ -34,24 +34,12 @@ func DispatchCoreRequestByID(handler CoreRequestHandler, pid uint32, data []byte
 		}
 
 		response = handler.HandleHeartBeat(req)
+	
 	default:
 		return nil, 0, fmt.Errorf("unknown request protocol ID: 0x%08x", pid)
 	}
 
-	responseId := GetCoreResponseId(response)
-	return response, responseId, nil
-}
-
-func GetCoreResponseId(req proto.Message) uint32 {
-	name := proto_utils.ParseMessageName(req)	
-	if name == "" {
-		return 0
-	}
-
-	pid, ok := GetCoreProtocolID(name)
-	if !ok {
-		return 0
-	}
-
-	return pid
+	// 使用公共映射文件获取响应ID
+	responsePid := GetResponsePID(response)
+	return response, responsePid, nil
 }
