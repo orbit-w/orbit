@@ -4,7 +4,7 @@ syntax = "proto3";
 package Core;
 
 // 定义Go代码生成的包路径
-option go_package = "app/proto/pb";
+option go_package = "pb/core";
 
 //------发送墙，包含的消息可以由客户端发送，由服务端回复rsp
 message Request {

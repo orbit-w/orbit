@@ -14,12 +14,11 @@ BuildLinux:
 
 # 生成所有proto相关的代码（protobuf、协议ID和胶水代码）
 GenProto:
-	mkdir -p app/proto/pb
-	find app/proto -name "*.proto" -type f | xargs -I{} protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative {}
-	# 将生成的pb.go文件移动到app/proto/pb目录
-	find app/proto -name "*.pb.go" -type f -not -path "*/pb/*" | xargs -I{} mv {} app/proto/pb/
+	mkdir -p app/proto/pb/core
+	mkdir -p app/proto/pb/season
+	find app/proto -name "*.proto" -type f | xargs -I{} protoc --go_out=app/proto --go-grpc_out=app/proto {}
 	# 生成协议ID和胶水代码
-	go run lib/genproto/main.go --proto_dir=app/proto --quiet
+	# go run lib/genproto/main.go --proto_dir=app/proto --quiet
 
 # 只生成协议ID
 GenProtoID:
@@ -33,10 +32,9 @@ GenGlueCode:
 
 # 调试模式生成所有proto相关代码
 GenProtoDebug:
-	mkdir -p app/proto/pb
-	find app/proto -name "*.proto" -type f | xargs -I{} protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative {}
-	# 将生成的pb.go文件移动到app/proto/pb目录
-	find app/proto -name "*.pb.go" -type f -not -path "*/pb/*" | xargs -I{} mv {} app/proto/pb/
+	mkdir -p app/proto/pb/core
+	mkdir -p app/proto/pb/season
+	find app/proto -name "*.proto" -type f | xargs -I{} protoc --go_out=app/proto --go-grpc_out=app/proto {}
 	# 调试模式生成协议ID和胶水代码
 	go run lib/genproto/main.go --proto_dir=app/proto --debug --quiet=false
 
