@@ -36,6 +36,8 @@ GenGlueCode:
 
 # 调试模式生成所有proto相关代码
 GenProtoDebug:
+	# 删除 app/proto/pb 下的所有文件
+	find app/proto/pb -type f -not -path "*/\.*" -delete
 	find app/proto -name "*.proto" -type f | xargs -I{} protoc --go_out=app/proto --go-grpc_out=app/proto {}
 	# 调试模式生成协议ID和胶水代码
 	go run lib/genproto/main.go --proto_dir=app/proto --debug --quiet=false
