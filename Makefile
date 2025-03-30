@@ -16,7 +16,12 @@ BuildLinux:
 GenProto:
 	# 删除 app/proto/pb 下的所有文件
 	find app/proto/pb -type f -not -path "*/\.*" -delete
-	find app/proto -name "*.proto" -type f | xargs -I{} protoc --go_out=app/proto --go-grpc_out=app/proto {}
+	find app/proto -name "*.proto" -type f | xargs -I{} protoc \
+	       --proto_path=. \
+	       --proto_path=$(GOPATH)/src \
+	       --proto_path=$(GOPATH)/pkg/mod \
+	       --proto_path=./vendor/github.com/asynkron/protoactor-go/actor \
+	       --go_out=app/proto --go-grpc_out=app/proto {}
 	# 生成协议ID和胶水代码
 	go run lib/genproto/main.go --proto_dir=app/proto --quiet
 
@@ -38,7 +43,12 @@ GenGlueCode:
 GenProtoDebug:
 	# 删除 app/proto/pb 下的所有文件
 	find app/proto/pb -type f -not -path "*/\.*" -delete
-	find app/proto -name "*.proto" -type f | xargs -I{} protoc --go_out=app/proto --go-grpc_out=app/proto {}
+	find app/proto -name "*.proto" -type f | xargs -I{} protoc \
+	       --proto_path=. \
+	       --proto_path=$(GOPATH)/src \
+	       --proto_path=$(GOPATH)/pkg/mod \
+	       --proto_path=./vendor/github.com/asynkron/protoactor-go/actor \
+	       --go_out=app/proto --go-grpc_out=app/proto {}
 	# 调试模式生成协议ID和胶水代码
 	go run lib/genproto/main.go --proto_dir=app/proto --debug --quiet=false
 

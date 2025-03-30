@@ -1,0 +1,12 @@
+syntax = "proto3";
+package messages;
+// 定义Go代码生成的包路径
+option go_package = "pb/messages";
+import "actor.proto";
+
+message HelloRequest {
+  actor.PID Sender = 1;
+}
+message HelloResponse {
+  string Message = 1;
+}
