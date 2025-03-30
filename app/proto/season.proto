@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package Season;
+
+option go_package = "pb/pb_season";
+
+message Request {
+    message SeasonInfo {
+        string Name = 1;
+        int32 Duration = 2;
+        message Rsp{
+            bool Result = 1;
+        }
+    } 
+}

@@ -57,7 +57,7 @@ func (s *Session) Kick() error {
 }
 
 // SendMessage 发送需要编码的消息
-func (s *Session) SendMessage(data []byte, seq uint32, pid uint32) error {
+func (s *Session) SendData(data []byte, seq uint32, pid uint32) error {
 	pack, err := s.codec.Encode(data, seq, pid)
 	if err != nil {
 		return err

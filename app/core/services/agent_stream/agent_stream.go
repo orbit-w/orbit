@@ -59,7 +59,7 @@ var streamHandle = func(stream mux.IServerConn) error {
 		}
 
 		for _, msg := range msgList {
-			session.SendMessage([]byte("hello, client"), msg.Seq, msg.Pid)
+			requestHandler(session, msg.Data, msg.Seq, msg.Pid)
 		}
 	}
 	return nil

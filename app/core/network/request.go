@@ -18,7 +18,7 @@ func NewClientRequest(seq uint32, pid uint32, in []byte, session *Session) *Clie
 }
 
 func (r *ClientRequest) Response(data []byte, pid uint32) error {
-	return r.session.SendMessage(data, r.upSeq, pid)
+	return r.session.SendData(data, r.upSeq, pid)
 }
 
 func (r *ClientRequest) ResponseBatch(msgs []Message) error {
