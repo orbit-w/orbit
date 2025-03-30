@@ -6,10 +6,11 @@ toolchain go1.21.13
 
 require (
 	github.com/BurntSushi/toml v1.4.0
-	github.com/orbit-w/meteor v0.0.0-20250318125127-fb0485fec77e
-	github.com/orbit-w/mux-go v0.0.0-20250318134344-494e34299713
+	github.com/orbit-w/meteor v0.0.0-20250330074908-5ee1edecdf27
+	github.com/orbit-w/mux-go v0.0.0-20250330080341-4434feaa0de6
 	github.com/spf13/viper v1.19.0
 	go.uber.org/zap v1.27.0
+	google.golang.org/protobuf v1.36.5
 )
 
 require (
@@ -31,7 +32,6 @@ require (
 	golang.org/x/net v0.33.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect
 	golang.org/x/text v0.22.0 // indirect
-	google.golang.org/protobuf v1.36.5 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
