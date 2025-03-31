@@ -27,6 +27,12 @@ func RemoveActor(id string) {
 	cache.Remove(id)
 }
 
+func RangeActors(callback func(id string, pid *actor.PID)) {
+	cache.IterCb(func(key string, value *actor.PID) {
+		callback(key, value)
+	})
+}
+
 // ChildActor 表示由SupervisorActor管理的子Actor
 // 实现了InitNotifiable接口，允许在初始化完成后发送通知
 type ChildActor struct {

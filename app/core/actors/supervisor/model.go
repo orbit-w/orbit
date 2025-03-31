@@ -1,17 +1,25 @@
 package supervisor
 
-type StartChildActor struct {
+import "github.com/asynkron/protoactor-go/actor"
+
+type SyncStartChildActor struct {
 	ActorName string
 	Pattern   string
 	Message   any
 }
 
+type SyncStartChildActorResponse struct {
+	ActorName string
+	PID       *actor.PID
+	Error     error
+}
+
 // Message types for actor communication
 type SendMessageToChild struct {
-	ActorId string
-	Message any
+	ActorName string
+	Message   any
 }
 
 type ChildNotFound struct {
-	ActorId string
+	ActorName string
 }
