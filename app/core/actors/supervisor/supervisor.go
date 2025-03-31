@@ -16,11 +16,6 @@ type SupervisorActor struct {
 	actor.Actor
 }
 
-// ChildStartedMessage 子Actor启动完成后发送的消息
-type ChildStartedMessage struct {
-	ActorId string
-}
-
 // NewSupervisorActor 创建一个新的SupervisorActor实例
 // 初始化childActors映射表，用于跟踪子Actor
 func NewSupervisorActor() *SupervisorActor {
@@ -68,15 +63,13 @@ func (a *SupervisorActor) SyncStartChildActor(context actor.Context, msg *SyncSt
 
 	// 3. 创建Actor工厂函数
 	actorFactory := func() actor.Actor {
-		childActor := CreateActorWithID(msg.ActorName, msg.ActorName)
+		behaivor := CreateBehaivorWithID(msg.Pattern, msg.ActorName)
 
 		// 设置初始化完成通知
-		if notifiable, ok := childActor.(InitNotifiable); ok {
-			notifiable.SetInitCallback(func() {
-				context.Send(future.PID(), &ChildStartedMessage{ActorId: msg.ActorName})
-			})
-		}
-
+		childActor := NewChildActor(behaivor, msg.ActorName, func() error {
+			context.Send(future.PID(), &ChildStartedNotification{ActorName: msg.ActorName})
+			return nil
+		})
 		return childActor
 	}
 
@@ -100,8 +93,8 @@ func (a *SupervisorActor) SyncStartChildActor(context actor.Context, msg *SyncSt
 	}
 
 	// 8. 验证启动消息
-	startedMsg, ok := result.(*ChildStartedMessage)
-	if !ok || startedMsg.ActorId != msg.ActorName {
+	startedMsg, ok := result.(*ChildStartedNotification)
+	if !ok || startedMsg.ActorName != msg.ActorName {
 		context.Stop(childPID)
 		logger.GetLogger().Error("收到了错误的启动确认消息",
 			zap.String("expected", msg.ActorName),
@@ -121,10 +114,4 @@ func (a *SupervisorActor) SyncStartChildActor(context actor.Context, msg *SyncSt
 	}
 
 	return childPID, nil
-}
-
-// InitNotifiable 定义一个接口，允许Actor在初始化完成后通知
-type InitNotifiable interface {
-	// SetInitCallback 设置初始化完成后的回调函数
-	SetInitCallback(callback func())
 }

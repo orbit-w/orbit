@@ -1,41 +1,40 @@
 package supervisor
 
-import (
-	"github.com/asynkron/protoactor-go/actor"
-)
-
 // Factory function type that accepts an actor ID
-type ActorFactory func(actorName string) actor.Actor
+type BehaivorFactory func(actorName string) Behaivor
 
-var factories = make(map[string]ActorFactory)
+var factories = make(map[string]BehaivorFactory)
 
 // RegFactory registers a factory for a specific actor type
-func RegFactory(name string, factory ActorFactory) {
-	if _, ok := factories[name]; ok {
-		panic("factory already registered: " + name)
+func RegFactory(pattern string, factory BehaivorFactory) {
+	if _, ok := factories[pattern]; ok {
+		panic("factory already registered: " + pattern)
 	}
-	factories[name] = factory
+	factories[pattern] = factory
 }
 
 // RegFactories registers multiple factories at once
-func RegFactories(factoryMap map[string]ActorFactory) {
-	for name, factory := range factoryMap {
-		RegFactory(name, factory)
+func RegFactories(factories ...struct {
+	pattern string
+	factory BehaivorFactory
+}) {
+	for _, cell := range factories {
+		RegFactory(cell.pattern, cell.factory)
 	}
 }
 
 // Dispatch returns a factory function for creating actors with the given ID
-func Dispatch(name string) ActorFactory {
-	factory, ok := factories[name]
+func Dispatch(pattern string) BehaivorFactory {
+	factory, ok := factories[pattern]
 	if !ok {
-		panic("factory not found: " + name)
+		panic("factory not found: " + pattern)
 	}
 
 	return factory
 }
 
-// CreateActorWithID creates an actor with a specific ID
-func CreateActorWithID(pattern string, actorName string) actor.Actor {
+// CreateBehaivorWithID creates an actor with a specific ID
+func CreateBehaivorWithID(pattern string, actorName string) Behaivor {
 	factory := Dispatch(pattern)
 	return factory(actorName)
 }
