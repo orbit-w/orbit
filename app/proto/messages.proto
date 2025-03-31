@@ -1,12 +1,24 @@
 syntax = "proto3";
+
+// 定义RPC通信协议包名
 package messages;
-// 定义Go代码生成的包路径
+
+// 定义Go代码生成的包路径，用于生成Go代码时的包名
 option go_package = "pb/messages";
+
+// 导入actor.proto以使用PID类型
 import "actor.proto";
 
-message HelloRequest {
+// RPC请求消息定义
+// 用于客户端向服务端发送RPC调用请求
+message RpcHelloRequest {
+  // 发送者进程ID，用于服务端回复消息
   actor.PID Sender = 1;
 }
-message HelloResponse {
+
+// RPC响应消息定义
+// 用于服务端向客户端返回RPC调用结果
+message RpcHelloResponse {
+  // 响应消息内容
   string Message = 1;
 }
