@@ -52,12 +52,13 @@ func (m *ActorManager) Receive(context actor.Context) {
 // handleStartActor handles starting a new actor
 // 异步启动Actor
 func (m *ActorManager) handleStartActor(context actor.Context, msg *StartActorRequest) {
-	// Check if actor already exists
+	// 如果Actor已经存在，则直接返回
 	if pid, exists := actorsCache.Get(msg.ActorName); exists {
 		context.Respond(pid)
 		return
 	}
 
+	// 如果正在启动，则将Future添加到队列中
 	if m.starting.Exists(msg.ActorName) {
 		m.starting.Push(msg.ActorName, msg.Future)
 		context.Respond(nil)
@@ -87,9 +88,10 @@ func (m *ActorManager) handleStartActor(context actor.Context, msg *StartActorRe
 		return
 	}
 
-	// Watch the child actor for termination
+	// 监听Actor的终止
 	context.Watch(pid)
 
+	// 将Actor添加到正在启动的列表中
 	m.starting.Set(msg.ActorName, pid, msg.Future)
 
 	context.Respond(nil)

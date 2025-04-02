@@ -1,9 +1,8 @@
 package manager
 
 import (
-	"sync"
-
 	"github.com/asynkron/protoactor-go/actor"
+	cmap "github.com/orcaman/concurrent-map/v2"
 )
 
 var (
@@ -11,35 +10,30 @@ var (
 )
 
 type ActorsCache struct {
-	cache map[string]*actor.PID
-	mu    sync.RWMutex
+	cache cmap.ConcurrentMap[string, *actor.PID]
 }
 
 func NewActorsCache() *ActorsCache {
 	return &ActorsCache{
-		cache: make(map[string]*actor.PID),
-		mu:    sync.RWMutex{},
+		cache: cmap.New[*actor.PID](),
 	}
 }
 
 func (c *ActorsCache) Get(actorName string) (*actor.PID, bool) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	pid, ok := c.cache[actorName]
-	return pid, ok
+	pid, ok := c.cache.Get(actorName)
+	if !ok {
+		return nil, false
+	}
+	return pid, true
 }
 
 func (c *ActorsCache) Set(actorName string, pid *actor.PID) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.cache[actorName] = pid
+	c.cache.Set(actorName, pid)
 }
 
 func (c *ActorsCache) Delete(actorSystem *actor.ActorSystem, actorName string) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if pid, ok := c.cache[actorName]; ok {
-		delete(c.cache, actorName)
+	pid, ok := c.cache.Pop(actorName)
+	if ok {
 		actorSystem.Root.Stop(pid)
 	}
 }

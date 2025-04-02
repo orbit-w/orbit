@@ -9,6 +9,7 @@ require (
 	github.com/asynkron/protoactor-go v0.0.0-20240822202345-3c0e61ca19c9
 	github.com/orbit-w/meteor v0.0.0-20250330074908-5ee1edecdf27
 	github.com/orbit-w/mux-go v0.0.0-20250330080341-4434feaa0de6
+	github.com/orcaman/concurrent-map/v2 v2.0.1
 	github.com/spf13/viper v1.19.0
 	go.uber.org/zap v1.27.0
 	google.golang.org/protobuf v1.36.5
