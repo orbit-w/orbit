@@ -1,4 +1,4 @@
-package supervisor
+package manager
 
 import (
 	"fmt"
@@ -6,10 +6,10 @@ import (
 	"github.com/asynkron/protoactor-go/actor"
 )
 
-type Behaivor interface {
-	Call(context actor.Context, msg any) error
-	Cast(context actor.Context, msg any) error
-	Forward(context actor.Context, msg any) error
+type Behavior interface {
+	HandleCall(context actor.Context, msg any) error
+	HandleCast(context actor.Context, msg any) error
+	HandleForward(context actor.Context, msg any) error
 	HandleInit(context actor.Context) error
 	HandleStop(context actor.Context) error
 }
@@ -17,18 +17,17 @@ type Behaivor interface {
 // ChildActor 表示由SupervisorActor管理的子Actor
 // 实现了InitNotifiable接口，允许在初始化完成后发送通知
 type ChildActor struct {
-	actor.Actor
-	Behaivor
+	Behavior
 	ActorName    string
 	initialized  bool
-	initCallback func() error
+	initCallback func(err error) error
 }
 
 // NewChildActor 创建一个新的子Actor
-func NewChildActor(behavior Behaivor, id string, cb func() error) *ChildActor {
+func NewChildActor(behavior Behavior, id string, cb func(err error) error) *ChildActor {
 	return &ChildActor{
 		ActorName:    id,
-		Behaivor:     behavior,
+		Behavior:     behavior,
 		initCallback: cb,
 	}
 }
@@ -69,11 +68,11 @@ func (state *ChildActor) Receive(context actor.Context) {
 func (state *ChildActor) handleMessage(context actor.Context, msg interface{}) {
 	switch msg := msg.(type) {
 	case *CallMessage:
-		state.Call(context, msg.Message)
+		state.HandleCall(context, msg.Message)
 	case *CastMessage:
-		state.Cast(context, msg.Message)
+		state.HandleCast(context, msg.Message)
 	case *ForwardMessage:
-		state.Forward(context, msg.Message)
+		state.HandleForward(context, msg.Message)
 	}
 }
 
@@ -85,14 +84,12 @@ func (state *ChildActor) HandleInit(context actor.Context) error {
 	}
 
 	// 执行初始化逻辑
-	if err := state.Behaivor.HandleInit(context); err != nil {
-		return err
-	}
+	err := state.Behavior.HandleInit(context)
 
 	// 初始化完成后，通知父进程
 	if state.initCallback != nil {
 		// 只有在初始化成功时才通知父进程
-		if err := state.initCallback(); err != nil {
+		if err := state.initCallback(err); err != nil {
 			err = fmt.Errorf("child actor %s initialization failed: %v", state.ActorName, err)
 			context.Stop(context.Self())
 			return err

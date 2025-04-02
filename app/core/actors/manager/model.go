@@ -1,28 +1,10 @@
-package supervisor
+package manager
 
-import "github.com/asynkron/protoactor-go/actor"
+import (
+	"time"
 
-type SyncStartChildActor struct {
-	ActorName string
-	Pattern   string
-	Message   any
-}
-
-type SyncStartChildActorResponse struct {
-	ActorName string
-	PID       *actor.PID
-	Error     error
-}
-
-// Message types for actor communication
-type SendMessageToChild struct {
-	ActorName string
-	Message   any
-}
-
-type ChildNotFound struct {
-	ActorName string
-}
+	"github.com/asynkron/protoactor-go/actor"
+)
 
 type CastMessage struct {
 	ActorName string
@@ -54,4 +36,26 @@ type ForwardMessageResponse struct {
 // ChildStartedNotification 子Actor启动完成并执行Behavior HandleInit后发送的通知
 type ChildStartedNotification struct {
 	ActorName string
+	Error     error
+	PID       *actor.PID
+}
+
+// Message types for ActorManager
+type StartActorMessage struct {
+	Pattern   string
+	ActorName string
+}
+
+type StartActorWithFutureMessage struct {
+	Pattern   string
+	ActorName string
+	Timeout   time.Duration
+}
+
+type StopActorMessage struct {
+	ActorID string
+}
+
+type ActorStoppedMessage struct {
+	ActorID string
 }

@@ -1,7 +1,7 @@
-package supervisor
+package manager
 
 // Factory function type that accepts an actor ID
-type BehaivorFactory func(actorName string) Behaivor
+type BehaivorFactory func(actorName string) Behavior
 
 var factories = make(map[string]BehaivorFactory)
 
@@ -34,7 +34,7 @@ func Dispatch(pattern string) BehaivorFactory {
 }
 
 // CreateBehaivorWithID creates an actor with a specific ID
-func CreateBehaivorWithID(pattern string, actorName string) Behaivor {
+func CreateBehaivorWithID(pattern string, actorName string) Behavior {
 	factory := Dispatch(pattern)
 	return factory(actorName)
 }
