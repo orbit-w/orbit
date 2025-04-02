@@ -37,19 +37,14 @@ type ForwardMessageResponse struct {
 type ChildStartedNotification struct {
 	ActorName string
 	Error     error
-	PID       *actor.PID
 }
 
 // Message types for ActorManager
-type StartActorMessage struct {
-	Pattern   string
-	ActorName string
-}
-
-type StartActorWithFutureMessage struct {
+type StartActorRequest struct {
 	Pattern   string
 	ActorName string
 	Timeout   time.Duration
+	Future    *actor.Future
 }
 
 type StopActorMessage struct {

@@ -1,6 +1,7 @@
 package manager
 
 import (
+	"errors"
 	"sync"
 	"time"
 
@@ -54,21 +55,31 @@ func GetOrStartActor(actorName, pattern string) (*actor.PID, error) {
 		return pid, nil
 	}
 
-	result, err := ManagerFacade.RequestFuture(actorName, &StartActorMessage{
+	system := ManagerFacade.actorSystem
+	future := actor.NewFuture(system, ManagerStartActorFutureTimeout)
+	rf := system.Root.RequestFuture(ManagerFacade.managerPID, &StartActorRequest{
 		ActorName: actorName,
 		Pattern:   pattern,
+		Future:    future,
 	}, StartActorTimeout)
+
+	result, err := waitFuture(rf)
 	if err != nil {
 		return nil, err
 	}
 
-	// Check if result is an error
-	if err, ok := result.(error); ok {
-		return nil, err
+	switch v := result.(type) {
+	case *actor.PID:
+		return v, nil
+	case nil:
+		result, err = waitFuture(future)
+		if err != nil {
+			return nil, err
+		}
+		return result.(*actor.PID), nil
+	default:
+		return nil, errors.New("unknown result type")
 	}
-
-	// Return the PID
-	return result.(*actor.PID), nil
 }
 
 // StopActor stops the actor with the given ID
@@ -93,6 +104,19 @@ func (f *ActorFacade) RequestFuture(actorName string, msg any, timeout time.Dura
 
 	result, err := future.Result()
 	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func waitFuture(future *actor.Future) (any, error) {
+	result, err := future.Result()
+	if err != nil {
+		return nil, err
+	}
+
+	if err, ok := result.(error); ok {
 		return nil, err
 	}
 

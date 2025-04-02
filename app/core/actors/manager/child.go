@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"github.com/asynkron/protoactor-go/actor"
+	"github.com/orbit-w/orbit/lib/logger"
+	"go.uber.org/zap"
 )
 
 type Behavior interface {
@@ -36,8 +38,6 @@ func NewChildActor(behavior Behavior, id string, cb func(err error) error) *Chil
 func (state *ChildActor) Receive(context actor.Context) {
 	switch msg := context.Message().(type) {
 	case *actor.Started:
-		fmt.Printf("Child actor %s starting\n", state.ActorName)
-
 		// 执行初始化逻辑
 		err := state.HandleInit(context)
 		if err != nil {
@@ -46,26 +46,28 @@ func (state *ChildActor) Receive(context actor.Context) {
 			return
 		}
 
+		logger.GetLogger().Info("Child actor started", zap.String("ActorName", state.ActorName))
+
 	case *actor.Stopping:
-		fmt.Printf("Child actor %s stopping\n", state.ActorName)
+		logger.GetLogger().Info("Child actor stopping", zap.String("ActorName", state.ActorName))
 
 	case *actor.Stopped:
-		fmt.Printf("Child actor %s stopped\n", state.ActorName)
 		state.HandleStop(context)
+		logger.GetLogger().Info("Child actor stopped", zap.String("ActorName", state.ActorName))
 
 	case *actor.Restarting:
-		fmt.Printf("Child actor %s restarting\n", state.ActorName)
+		logger.GetLogger().Info("Child actor restarting", zap.String("ActorName", state.ActorName))
 		// 重启时重新执行初始化逻辑
 		//state.HandleInit(context)
 
 	default:
-		// 直接处理消息，不再需要消息缓存逻辑
+		// 直接处理消息
 		state.handleMessage(context, msg)
 	}
 }
 
 // handleMessage 处理常规消息
-func (state *ChildActor) handleMessage(context actor.Context, msg interface{}) {
+func (state *ChildActor) handleMessage(context actor.Context, msg any) {
 	switch msg := msg.(type) {
 	case *CallMessage:
 		state.HandleCall(context, msg.Message)

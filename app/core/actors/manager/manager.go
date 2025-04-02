@@ -12,6 +12,7 @@ import (
 // ActorManager is responsible for managing actor lifecycle
 type ActorManager struct {
 	actorSystem *actor.ActorSystem
+	starting    *Startings
 }
 
 // NewActorManager creates a new instance of ActorManager
@@ -28,11 +29,8 @@ func (m *ActorManager) Receive(context actor.Context) {
 		// Start the garbage collection routine
 		logger.GetLogger().Info("ActorManager started")
 
-	case *StartActorMessage:
+	case *StartActorRequest:
 		m.handleStartActor(context, msg)
-
-	case *StartActorWithFutureMessage:
-		m.handleStartActorWithFuture(context, msg)
 
 	case *StopActorMessage:
 		m.handleStopActor(context, msg)
@@ -40,25 +38,29 @@ func (m *ActorManager) Receive(context actor.Context) {
 	case *actor.Terminated: //system message
 		// msg.Who contains the PID of the terminated actor
 		// Handle child termination here
-		fmt.Printf("Child actor %s has terminated\n", msg.Who.Id)
+		logger.GetLogger().Info("Child actor has terminated", zap.String("ActorName", msg.Who.Id), zap.String("Reason", msg.Why.String()))
 		m.handleActorStopped(context, msg.Who.Id)
 
 	case *ChildStartedNotification:
-		if msg.Error != nil {
-			actorsCache.Delete(m.actorSystem, msg.ActorName)
-		}
+		m.handleNotifyChildStarted(context, msg)
 
 	default:
-		logger.GetLogger().Error("ActorManager received unknown message", zap.Any("message", msg))
+		logger.GetLogger().Error("ActorManager received unknown message", zap.Any("Message", msg))
 	}
 }
 
 // handleStartActor handles starting a new actor
 // 异步启动Actor
-func (m *ActorManager) handleStartActor(context actor.Context, msg *StartActorMessage) {
+func (m *ActorManager) handleStartActor(context actor.Context, msg *StartActorRequest) {
 	// Check if actor already exists
 	if pid, exists := actorsCache.Get(msg.ActorName); exists {
 		context.Respond(pid)
+		return
+	}
+
+	if m.starting.Exists(msg.ActorName) {
+		m.starting.Push(msg.ActorName, msg.Future)
+		context.Respond(nil)
 		return
 	}
 
@@ -68,9 +70,10 @@ func (m *ActorManager) handleStartActor(context actor.Context, msg *StartActorMe
 
 		// 设置初始化完成通知
 		childActor := NewChildActor(behaivor, msg.ActorName, func(err error) error {
-			context.Send(context.Self(), &ChildStartedNotification{ActorName: msg.ActorName})
+			context.Send(context.Self(), &ChildStartedNotification{ActorName: msg.ActorName, Error: err})
 			return nil
 		})
+
 		return childActor
 	}
 
@@ -87,64 +90,9 @@ func (m *ActorManager) handleStartActor(context actor.Context, msg *StartActorMe
 	// Watch the child actor for termination
 	context.Watch(pid)
 
-	// Store actor PID and update activity time
-	actorsCache.Set(msg.ActorName, pid)
+	m.starting.Set(msg.ActorName, pid, msg.Future)
 
-	context.Respond(pid)
-}
-
-// 同步启动Actor
-func (m *ActorManager) handleStartActorWithFuture(context actor.Context, msg *StartActorWithFutureMessage) {
-	// Check if actor already exists
-	if pid, exists := actorsCache.Get(msg.ActorName); exists {
-		context.Respond(pid)
-		return
-	}
-
-	// 创建Future用于等待Actor启动完成
-	future := actor.NewFuture(context.ActorSystem(), msg.Timeout)
-
-	// 创建Actor工厂函数
-	actorFactory := func() actor.Actor {
-		behaivor := CreateBehaivorWithID(msg.Pattern, msg.ActorName)
-
-		// 设置初始化完成通知
-		childActor := NewChildActor(behaivor, msg.ActorName, func(err error) error {
-			fmt.Printf("Child actor %s started\n", msg.ActorName)
-			context.Send(future.PID(), &ChildStartedNotification{ActorName: msg.ActorName})
-			return nil
-		})
-		return childActor
-	}
-
-	// 创建Props对象
-	props := actor.PropsFromProducer(actorFactory)
-
-	// Create new actor
-	pid, err := context.SpawnNamed(props, msg.ActorName)
-	if err != nil {
-		if err == actor.ErrNameExists {
-			context.Respond(pid)
-			return
-		}
-		context.Respond(err)
-		return
-	}
-
-	// Watch the child actor for termination
-	context.Watch(pid)
-
-	err = m.waitChildStartedFuture(context, pid, msg.ActorName, future)
-	if err != nil {
-		context.Stop(pid)
-		context.Respond(err)
-		return
-	}
-
-	// Store actor PID and update activity time
-	actorsCache.Set(msg.ActorName, pid)
-
-	context.Respond(pid)
+	context.Respond(nil)
 }
 
 // handleStopActor handles stopping an actor
@@ -156,10 +104,7 @@ func (m *ActorManager) handleStopActor(context actor.Context, msg *StopActorMess
 	}
 
 	// Stop the actor
-	context.Stop(pid)
-
-	// Remove actor from maps
-	actorsCache.Delete(m.actorSystem, msg.ActorID)
+	context.Poison(pid)
 
 	context.Respond(nil)
 }
@@ -202,4 +147,23 @@ func (m *ActorManager) waitChildStartedFuture(context actor.Context, childPid *a
 		return fmt.Errorf("子Actor启动失败: %v", startedMsg.Error)
 	}
 	return nil
+}
+
+func (m *ActorManager) handleNotifyChildStarted(context actor.Context, msg *ChildStartedNotification) {
+	child, ok := m.starting.PopAndRange(msg.ActorName, func(child *actor.PID, future *actor.Future) {
+		if msg.Error != nil {
+			context.Send(future.PID(), msg.Error)
+		} else {
+			context.Send(future.PID(), child)
+		}
+	})
+
+	if !ok {
+		logger.GetLogger().Error("ChildStartedNotification received for unknown actor", zap.String("ActorName", msg.ActorName))
+		return
+	}
+
+	if msg.Error != nil {
+		actorsCache.Set(msg.ActorName, child)
+	}
 }

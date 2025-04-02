@@ -77,7 +77,7 @@ github.com/mitchellh/mapstructure
 github.com/natefinch/lumberjack
 # github.com/orbit-w/meteor v0.0.0-20250330074908-5ee1edecdf27
 ## explicit; go 1.21
-github.com/orbit-w/meteor/bases/container/map/concurrent_map
+github.com/orbit-w/meteor/bases/container/linked_list
 github.com/orbit-w/meteor/bases/container/ring_buffer
 github.com/orbit-w/meteor/bases/math
 github.com/orbit-w/meteor/bases/misc/common
