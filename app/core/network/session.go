@@ -3,7 +3,7 @@ package network
 import (
 	"sync/atomic"
 
-	"github.com/orbit-w/meteor/modules/net/packet"
+	"gitee.com/orbit-w/meteor/modules/net/packet"
 	"github.com/orbit-w/mux-go"
 )
 

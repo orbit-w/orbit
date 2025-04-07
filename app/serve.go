@@ -9,13 +9,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/orbit-w/orbit/app/controller"
+	"gitee.com/orbit-w/orbit/app/controller"
 
-	"github.com/orbit-w/orbit/app/core/dispatch"
-	"github.com/orbit-w/orbit/app/core/network"
-	stream "github.com/orbit-w/orbit/app/core/services/agent_stream"
-	"github.com/orbit-w/orbit/app/modules/service"
-	"github.com/orbit-w/orbit/lib/logger"
+	"gitee.com/orbit-w/orbit/app/core/dispatch"
+	"gitee.com/orbit-w/orbit/app/core/network"
+	stream "gitee.com/orbit-w/orbit/app/core/services/agent_stream"
+	"gitee.com/orbit-w/orbit/app/modules/service"
+	"gitee.com/orbit-w/orbit/lib/logger"
 	"google.golang.org/protobuf/proto"
 )
 

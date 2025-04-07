@@ -70,7 +70,7 @@ size (int32) | gzipped (bool) | type (byte) | body (bytes)
 ## 安装
 
 ```bash
-go get github.com/orbit-w/orbit
+go get gitee.com/orbit-w/orbit
 ```
 
 ## 快速开始
@@ -81,7 +81,7 @@ go get github.com/orbit-w/orbit
 package main
 
 import (
-    "github.com/orbit-w/orbit/server"
+    "gitee.com/orbit-w/orbit/server"
 )
 
 func main() {

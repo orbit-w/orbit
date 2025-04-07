@@ -4,8 +4,8 @@ package protoid
 import (
 	"strings"
 
-	"github.com/orbit-w/orbit/lib/logger"
-	"github.com/orbit-w/orbit/lib/utils"
+	"gitee.com/orbit-w/orbit/lib/logger"
+	"gitee.com/orbit-w/orbit/lib/utils"
 )
 
 const (

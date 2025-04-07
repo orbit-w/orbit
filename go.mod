@@ -1,18 +1,24 @@
-module github.com/orbit-w/orbit
+module gitee.com/orbit-w/orbit
 
 go 1.21.0
 
 toolchain go1.21.13
 
 require (
+	gitee.com/orbit-w/meteor v0.0.0-20250407082516-73b6f3dda3a3
 	github.com/BurntSushi/toml v1.4.0
 	github.com/asynkron/protoactor-go v0.0.0-20240822202345-3c0e61ca19c9
-	github.com/orbit-w/meteor v0.0.0-20250330074908-5ee1edecdf27
 	github.com/orbit-w/mux-go v0.0.0-20250330080341-4434feaa0de6
 	github.com/orcaman/concurrent-map/v2 v2.0.1
 	github.com/spf13/viper v1.19.0
 	go.uber.org/zap v1.27.0
 	google.golang.org/protobuf v1.36.5
+)
+
+require (
+	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
+	github.com/orbit-w/meteor v0.0.0-20250330074908-5ee1edecdf27 // indirect
+	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 )
 
 require (
@@ -44,7 +50,7 @@ require (
 	github.com/spf13/afero v1.12.0 // indirect
 	github.com/spf13/cast v1.7.1 // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
-	github.com/stretchr/objx v0.5.2 // indirect
+	github.com/stretchr/testify v1.10.0
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/twmb/murmur3 v1.1.8 // indirect
 	go.opentelemetry.io/otel v1.29.0 // indirect

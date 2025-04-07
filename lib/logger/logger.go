@@ -1,7 +1,7 @@
 package logger
 
 import (
-	mlog "github.com/orbit-w/meteor/modules/mlog"
+	mlog "gitee.com/orbit-w/meteor/modules/mlog"
 )
 
 var logger = mlog.NewFileLogger(mlog.WithLevel("info"),

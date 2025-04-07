@@ -3,7 +3,7 @@ package controller
 import (
 	"sync"
 
-	"github.com/orbit-w/orbit/app/proto/pb"
+	"gitee.com/orbit-w/orbit/app/proto/pb"
 )
 
 var (

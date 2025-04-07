@@ -3,8 +3,8 @@ package manager
 import (
 	"fmt"
 
+	"gitee.com/orbit-w/orbit/lib/logger"
 	"github.com/asynkron/protoactor-go/actor"
-	"github.com/orbit-w/orbit/lib/logger"
 	"go.uber.org/zap"
 )
 

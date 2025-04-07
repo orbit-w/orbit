@@ -4,7 +4,7 @@ package pb
 import (
 	"fmt"
 	"google.golang.org/protobuf/proto"
-	"github.com/orbit-w/orbit/lib/utils/proto_utils"
+	"gitee.com/orbit-w/orbit/lib/utils/proto_utils"
 )
 
 // 所有协议ID常量

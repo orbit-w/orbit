@@ -3,8 +3,8 @@ package orbit_test
 import (
 	"testing"
 
-	"github.com/orbit-w/orbit/app"
-	"github.com/orbit-w/orbit/app/modules/config"
+	"gitee.com/orbit-w/orbit/app"
+	"gitee.com/orbit-w/orbit/app/modules/config"
 )
 
 func Setup(nodeId string) {
