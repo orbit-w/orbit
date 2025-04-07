@@ -44,13 +44,9 @@ type StartActorRequest struct {
 	Pattern   string
 	ActorName string
 	Timeout   time.Duration
-	Future    *actor.Future
+	Future    *actor.PID
 }
 
 type StopActorMessage struct {
-	ActorID string
-}
-
-type ActorStoppedMessage struct {
-	ActorID string
+	ActorName string
 }

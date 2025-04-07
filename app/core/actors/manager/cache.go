@@ -31,9 +31,6 @@ func (c *ActorsCache) Set(actorName string, pid *actor.PID) {
 	c.cache.Set(actorName, pid)
 }
 
-func (c *ActorsCache) Delete(actorSystem *actor.ActorSystem, actorName string) {
-	pid, ok := c.cache.Pop(actorName)
-	if ok {
-		actorSystem.Root.Stop(pid)
-	}
+func (c *ActorsCache) Delete(actorName string) {
+	c.cache.Remove(actorName)
 }

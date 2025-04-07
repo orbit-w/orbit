@@ -1,8 +1,6 @@
 package manager
 
 import (
-	"fmt"
-
 	"gitee.com/orbit-w/orbit/lib/logger"
 	"github.com/asynkron/protoactor-go/actor"
 	"go.uber.org/zap"
@@ -13,7 +11,8 @@ type Behavior interface {
 	HandleCast(context actor.Context, msg any) error
 	HandleForward(context actor.Context, msg any) error
 	HandleInit(context actor.Context) error
-	HandleStop(context actor.Context) error
+	HandleStopping(context actor.Context) error
+	HandleStopped(context actor.Context) error
 }
 
 // ChildActor 表示由SupervisorActor管理的子Actor
@@ -26,11 +25,11 @@ type ChildActor struct {
 }
 
 // NewChildActor 创建一个新的子Actor
-func NewChildActor(behavior Behavior, id string, cb func(err error) error) *ChildActor {
+func NewChildActor(behavior Behavior, id string, initCB func(err error) error) *ChildActor {
 	return &ChildActor{
 		ActorName:    id,
 		Behavior:     behavior,
-		initCallback: cb,
+		initCallback: initCB,
 	}
 }
 
@@ -39,21 +38,13 @@ func (state *ChildActor) Receive(context actor.Context) {
 	switch msg := context.Message().(type) {
 	case *actor.Started:
 		// 执行初始化逻辑
-		err := state.HandleInit(context)
-		if err != nil {
-			fmt.Printf("Child actor %s initialization failed: %v\n", state.ActorName, err)
-			context.Stop(context.Self())
-			return
-		}
-
-		logger.GetLogger().Info("Child actor started", zap.String("ActorName", state.ActorName))
+		state.HandleInit(context)
 
 	case *actor.Stopping:
-		logger.GetLogger().Info("Child actor stopping", zap.String("ActorName", state.ActorName))
+		state.HandleStopping(context)
 
 	case *actor.Stopped:
-		state.HandleStop(context)
-		logger.GetLogger().Info("Child actor stopped", zap.String("ActorName", state.ActorName))
+		state.HandleStopped(context)
 
 	case *actor.Restarting:
 		logger.GetLogger().Info("Child actor restarting", zap.String("ActorName", state.ActorName))
@@ -80,22 +71,39 @@ func (state *ChildActor) handleMessage(context actor.Context, msg any) {
 
 // HandleInit 在Actor启动时执行的初始化逻辑
 // 返回nil表示成功，否则返回错误
-func (state *ChildActor) HandleInit(context actor.Context) error {
+func (state *ChildActor) HandleInit(context actor.Context) {
 	if state.initialized {
-		return nil
+		return
 	}
 
 	// 执行初始化逻辑
 	err := state.Behavior.HandleInit(context)
+	if err != nil {
+		logger.GetLogger().Error("Child actor initialization failed", zap.String("ActorName", state.ActorName), zap.Error(err))
+		return
+	}
 
 	// 初始化完成后，通知父进程
 	if state.initCallback != nil {
-		// 只有在初始化成功时才通知父进程
-		if err := state.initCallback(err); err != nil {
-			err = fmt.Errorf("child actor %s initialization failed: %v", state.ActorName, err)
-			context.Stop(context.Self())
-			return err
-		}
+		state.initCallback(err)
 	}
+
+	state.initialized = true
+	if err == nil {
+		logger.GetLogger().Info("Child actor started", zap.String("ActorName", state.ActorName))
+	}
+}
+
+func (state *ChildActor) HandleStopping(context actor.Context) error {
 	return nil
+}
+
+func (state *ChildActor) HandleStopped(context actor.Context) {
+	// 执行初始化逻辑
+	err := state.Behavior.HandleStopped(context)
+	if err != nil {
+		logger.GetLogger().Error("Child actor stopped failed", zap.String("ActorName", state.ActorName), zap.Error(err))
+	} else {
+		logger.GetLogger().Info("Child actor stopped", zap.String("ActorName", state.ActorName))
+	}
 }

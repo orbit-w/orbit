@@ -60,7 +60,7 @@ func GetOrStartActor(actorName, pattern string) (*actor.PID, error) {
 	rf := system.Root.RequestFuture(ManagerFacade.managerPID, &StartActorRequest{
 		ActorName: actorName,
 		Pattern:   pattern,
-		Future:    future,
+		Future:    future.PID(),
 	}, StartActorTimeout)
 
 	result, err := waitFuture(rf)
@@ -85,7 +85,7 @@ func GetOrStartActor(actorName, pattern string) (*actor.PID, error) {
 // StopActor stops the actor with the given ID
 func StopActor(actorName string) error {
 	result, err := ManagerFacade.RequestFuture(actorName, &StopActorMessage{
-		ActorID: actorName,
+		ActorName: actorName,
 	}, StopActorTimeout)
 	if err != nil {
 		return err

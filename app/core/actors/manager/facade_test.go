@@ -33,7 +33,11 @@ func (b *MockBehavior) HandleInit(_ actor.Context) error {
 	return nil
 }
 
-func (b *MockBehavior) HandleStop(_ actor.Context) error {
+func (b *MockBehavior) HandleStopping(_ actor.Context) error {
+	return nil
+}
+
+func (b *MockBehavior) HandleStopped(_ actor.Context) error {
 	return nil
 }
 
