@@ -7,9 +7,11 @@ import (
 
 const (
 	// Level definitions for actors
+	// 等级越高，停止的优先度越低
 	LevelNormal Level = iota // Normal priority level
 	LevelHigh                // High priority level
-	LevelMaxLimit
+
+	LevelMaxLimit // Max limit level，无实际意义
 )
 
 type Level int

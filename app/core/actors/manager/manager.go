@@ -56,6 +56,9 @@ func (m *ActorManager) Receive(context actor.Context) {
 	case *ChildStartedNotification:
 		m.handleNotifyChildStarted(context, msg)
 
+	case *StopAllRequest:
+		m.handleStoppingAll(context)
+
 	default:
 		logger.GetLogger().Error("ActorManager received unknown message", zap.Any("Message", msg))
 	}
@@ -134,14 +137,18 @@ func (m *ActorManager) handleStopActor(context actor.Context, msg *StopActorMess
 		return
 	}
 
+	m.stopActor(context, msg.ActorName, pid)
+}
+
+func (m *ActorManager) stopActor(context actor.Context, actorName string, pid *actor.PID) {
 	// Stop the actor
 	context.Poison(pid)
 
 	// 将Actor从正在停止的列表中删除
-	m.stopping.Insert(msg.ActorName, "", nil, nil, time.Now().UnixNano())
+	m.stopping.Insert(actorName, "", nil, nil, time.Now().UnixNano())
 
 	// 从缓存中删除Actor
-	actorsCache.Delete(msg.ActorName)
+	actorsCache.Delete(actorName)
 
 	context.Respond(nil)
 }
@@ -192,6 +199,22 @@ func (m *ActorManager) handleNotifyChildStarted(context actor.Context, msg *Chil
 	if msg.Error != nil {
 		actorsCache.Set(msg.ActorName, target)
 	}
+}
+
+func (m *ActorManager) handleStoppingAll(context actor.Context) {
+	for name := range m.watchActors {
+		if m.stopping.Exists(name) {
+			continue
+		}
+
+		pid, exists := actorsCache.Get(name)
+		if !exists {
+			continue
+		}
+
+		m.stopActor(context, name, pid)
+	}
+	context.Respond(&StopAllResponse{Complete: len(m.watchActors) == 0})
 }
 
 // 新增方法：检查Actor是否处于活跃状态（非stopping）

@@ -7,3 +7,7 @@ const (
 	StopActorTimeout               = 30 * time.Second
 	ManagerStartActorFutureTimeout = 30 * time.Second
 )
+
+const (
+	onceStopActor = 50
+)

@@ -50,3 +50,10 @@ type StartActorRequest struct {
 type StopActorMessage struct {
 	ActorName string
 }
+
+type StopAllRequest struct {
+}
+
+type StopAllResponse struct {
+	Complete bool
+}

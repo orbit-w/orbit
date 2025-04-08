@@ -3,6 +3,7 @@ package manager
 import (
 	"errors"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/asynkron/protoactor-go/actor"
@@ -13,13 +14,13 @@ const (
 )
 
 var (
-	ManagerFacade *ActorFacade
-	once          sync.Once
+	ManagerFacade       *ActorFacade
+	once                sync.Once
+	ActorFacadeStopping atomic.Bool
 )
 
 func Init() {
 	once.Do(func() {
-		ManagerFacade = NewActorFacade(actor.NewActorSystem())
 		actorsCache = NewActorsCache()
 	})
 }
@@ -28,6 +29,37 @@ func Init() {
 type ActorFacade struct {
 	actorSystem *actor.ActorSystem
 	managers    []*actor.PID
+}
+
+func (af *ActorFacade) Start() error {
+	system := actor.NewActorSystem()
+	af.actorSystem = system
+	af.managers = make([]*actor.PID, LevelMaxLimit)
+	for lv := LevelNormal; lv < LevelMaxLimit; lv++ {
+		af.managers[lv] = newManager(system, lv)
+	}
+	ManagerFacade = af
+	return nil
+}
+
+func (af *ActorFacade) Stop() error {
+	ActorFacadeStopping.Store(true)
+	for lv := LevelNormal; lv < LevelMaxLimit; {
+		future := af.actorSystem.Root.RequestFuture(af.managers[lv], &StopAllRequest{}, 30*time.Second)
+		result, err := future.Result()
+		if err != nil {
+			return err
+		}
+		if err, ok := result.(error); ok {
+			return err
+		}
+		if resp, ok := result.(*StopAllResponse); ok {
+			if resp.Complete {
+				lv++
+			}
+		}
+	}
+	return nil
 }
 
 // NewActorFacade creates a new instance of ActorFacade
