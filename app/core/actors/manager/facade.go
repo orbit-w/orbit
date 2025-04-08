@@ -27,25 +27,34 @@ func Init() {
 // ActorFacade provides a simplified interface for managing actors
 type ActorFacade struct {
 	actorSystem *actor.ActorSystem
-	managerPID  *actor.PID
+	managers    []*actor.PID
 }
 
 // NewActorFacade creates a new instance of ActorFacade
 func NewActorFacade(actorSystem *actor.ActorSystem) *ActorFacade {
-	// Create the manager actor
+	af := &ActorFacade{
+		actorSystem: actorSystem,
+		managers:    make([]*actor.PID, LevelMaxLimit),
+	}
+
+	for lv := LevelNormal; lv < LevelMaxLimit; lv++ {
+		af.managers[lv] = newManager(actorSystem, lv)
+	}
+
+	return af
+}
+
+func newManager(actorSystem *actor.ActorSystem, level Level) *actor.PID {
 	props := actor.PropsFromProducer(func() actor.Actor {
-		return NewActorManager(actorSystem)
+		return NewActorManager(actorSystem, level)
 	})
 
-	managerPID, err := actorSystem.Root.SpawnNamed(props, "actor-manager")
+	managerPID, err := actorSystem.Root.SpawnNamed(props, GenManagerName(level))
 	if err != nil {
 		panic(err) // In a real application, handle this error appropriately
 	}
 
-	return &ActorFacade{
-		actorSystem: actorSystem,
-		managerPID:  managerPID,
-	}
+	return managerPID
 }
 
 // GetOrStartActor gets an existing actor or starts a new one
@@ -55,9 +64,12 @@ func GetOrStartActor(actorName, pattern string) (*actor.PID, error) {
 		return pid, nil
 	}
 
+	level := GetLevelByPattern(pattern)
+
 	system := ManagerFacade.actorSystem
 	future := actor.NewFuture(system, ManagerStartActorFutureTimeout)
-	rf := system.Root.RequestFuture(ManagerFacade.managerPID, &StartActorRequest{
+	mPid := ManagerFacade.managers[level]
+	rf := system.Root.RequestFuture(mPid, &StartActorRequest{
 		ActorName: actorName,
 		Pattern:   pattern,
 		Future:    future.PID(),
@@ -83,8 +95,8 @@ func GetOrStartActor(actorName, pattern string) (*actor.PID, error) {
 }
 
 // StopActor stops the actor with the given ID
-func StopActor(actorName string) error {
-	result, err := ManagerFacade.RequestFuture(actorName, &StopActorMessage{
+func StopActor(actorName, pattern string) error {
+	result, err := ManagerFacade.RequestFuture(actorName, pattern, &StopActorMessage{
 		ActorName: actorName,
 	}, StopActorTimeout)
 	if err != nil {
@@ -98,9 +110,11 @@ func StopActor(actorName string) error {
 	return nil
 }
 
-func (f *ActorFacade) RequestFuture(actorName string, msg any, timeout time.Duration) (any, error) {
+func (f *ActorFacade) RequestFuture(actorName, pattern string, msg any, timeout time.Duration) (any, error) {
 	// Send message to manager to start the actor
-	future := f.actorSystem.Root.RequestFuture(f.managerPID, msg, timeout)
+	level := GetLevelByPattern(pattern)
+	mPid := ManagerFacade.managers[level]
+	future := f.actorSystem.Root.RequestFuture(mPid, msg, timeout)
 
 	result, err := future.Result()
 	if err != nil {

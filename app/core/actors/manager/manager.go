@@ -1,6 +1,8 @@
 package manager
 
 import (
+	"fmt"
+	"strings"
 	"time"
 
 	"gitee.com/orbit-w/orbit/lib/logger"
@@ -10,18 +12,26 @@ import (
 
 // ActorManager is responsible for managing actor lifecycle
 type ActorManager struct {
+	level       Level
 	actorSystem *actor.ActorSystem
 	starting    *Queue
 	stopping    *Queue
+	watchActors map[string]bool
 }
 
 // NewActorManager creates a new instance of ActorManager
-func NewActorManager(actorSystem *actor.ActorSystem) *ActorManager {
+func NewActorManager(actorSystem *actor.ActorSystem, level Level) *ActorManager {
 	return &ActorManager{
+		level:       level,
 		actorSystem: actorSystem,
 		starting:    NewPriorityQueue(),
 		stopping:    NewPriorityQueue(),
+		watchActors: make(map[string]bool, 0),
 	}
+}
+
+func GenManagerName(level Level) string {
+	return strings.Join([]string{ManagerName, fmt.Sprintf("level-%d", level)}, "-")
 }
 
 // Receive handles messages sent to the ActorManager
@@ -111,6 +121,7 @@ func (m *ActorManager) startActor(context actor.Context, pattern, actorName stri
 
 	// 监听Actor的终止
 	context.Watch(pid)
+	m.watchActors[actorName] = true
 
 	return pid, nil
 }
@@ -139,6 +150,7 @@ func (m *ActorManager) handleStopActor(context actor.Context, msg *StopActorMess
 func (m *ActorManager) handleActorStopped(context actor.Context, actorName string) {
 	defer func() {
 		actorsCache.Delete(actorName)
+		delete(m.watchActors, actorName)
 	}()
 
 	item, ok := m.stopping.Pop(actorName)
@@ -155,6 +167,7 @@ func (m *ActorManager) handleActorStopped(context actor.Context, actorName strin
 				target := item.Future[i]
 				context.Send(target, err)
 			}
+			return
 		}
 		item.Child = pid
 		m.starting.BatchInsert(actorName, item.Pattern, pid, item.Future, time.Now().UnixNano())
