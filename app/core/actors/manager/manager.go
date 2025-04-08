@@ -40,8 +40,8 @@ func (m *ActorManager) Receive(context actor.Context) {
 	case *actor.Terminated: //system message
 		// msg.Who contains the PID of the terminated actor
 		// Handle child termination here
-		logger.GetLogger().Info("Child actor has terminated", zap.String("ActorName", msg.Who.Id), zap.String("Reason", msg.Why.String()))
 		m.handleActorStopped(context, msg.Who.Id)
+		logger.GetLogger().Info("Child actor has terminated", zap.String("ActorName", msg.Who.Id), zap.String("Reason", msg.Why.String()))
 
 	case *ChildStartedNotification:
 		m.handleNotifyChildStarted(context, msg)
@@ -179,4 +179,22 @@ func (m *ActorManager) handleNotifyChildStarted(context actor.Context, msg *Chil
 	if msg.Error != nil {
 		actorsCache.Set(msg.ActorName, target)
 	}
+}
+
+// 新增方法：检查Actor是否处于活跃状态（非stopping）
+func (m *ActorManager) isActorAlive(pid *actor.PID) bool {
+	// 使用Touch消息测试Actor是否响应
+	// Touch是一种特殊消息，如果Actor活跃会回复Touched消息
+	future := m.actorSystem.Root.RequestFuture(pid, &actor.Touch{}, 100*time.Millisecond)
+
+	// 如果能够获得响应，说明Actor是活跃的
+	result, err := future.Result()
+	if err != nil {
+		// 超时或其他错误，说明Actor可能已停止或正在停止
+		return false
+	}
+
+	// 检查返回值是否为Touched消息
+	_, ok := result.(*actor.Touched)
+	return ok
 }
