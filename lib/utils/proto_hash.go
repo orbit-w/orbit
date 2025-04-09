@@ -3,7 +3,7 @@ package utils
 import (
 	"strings"
 
-	"github.com/orbit-w/orbit/lib/logger"
+	"gitee.com/orbit-w/orbit/lib/logger"
 )
 
 const (

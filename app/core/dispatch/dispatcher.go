@@ -1,8 +1,8 @@
 package dispatch
 
 import (
-	"github.com/orbit-w/orbit/app/controller"
-	"github.com/orbit-w/orbit/app/proto/pb"
+	"gitee.com/orbit-w/orbit/app/controller"
+	"gitee.com/orbit-w/orbit/app/proto/pb"
 	"google.golang.org/protobuf/proto"
 )
 

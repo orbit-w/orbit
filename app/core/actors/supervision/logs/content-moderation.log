@@ -1,0 +1,9 @@
+{"level":"\u001b[34mINFO\u001b[0m","ts":"2025-04-03T14:42:35.555+0800","caller":"manager/manager.go:30","msg":"ActorManager started","app":"content-moderation"}
+{"level":"\u001b[31mERROR\u001b[0m","ts":"2025-04-03T14:42:35.556+0800","caller":"manager/manager.go:48","msg":"ActorManager received unknown message","app":"content-moderation","Message":{}}
+{"level":"\u001b[31mERROR\u001b[0m","ts":"2025-04-03T14:42:35.556+0800","caller":"manager/manager.go:48","msg":"ActorManager received unknown message","app":"content-moderation","Message":{}}
+{"level":"\u001b[34mINFO\u001b[0m","ts":"2025-04-03T14:42:35.606+0800","caller":"manager/manager.go:30","msg":"ActorManager started","app":"content-moderation"}
+{"level":"\u001b[34mINFO\u001b[0m","ts":"2025-04-03T14:42:35.607+0800","caller":"manager/child.go:49","msg":"Child actor started","app":"content-moderation","ActorName":"test-actor-1"}
+{"level":"\u001b[34mINFO\u001b[0m","ts":"2025-04-03T14:42:35.607+0800","caller":"manager/child.go:49","msg":"Child actor started","app":"content-moderation","ActorName":"test-actor-2"}
+{"level":"\u001b[34mINFO\u001b[0m","ts":"2025-04-03T14:45:05.408+0800","caller":"manager/manager.go:30","msg":"ActorManager started","app":"content-moderation"}
+{"level":"\u001b[31mERROR\u001b[0m","ts":"2025-04-03T14:45:05.409+0800","caller":"manager/manager.go:48","msg":"ActorManager received unknown message","app":"content-moderation","Message":{}}
+{"level":"\u001b[34mINFO\u001b[0m","ts":"2025-04-03T14:45:05.409+0800","caller":"manager/manager.go:30","msg":"ActorManager started","app":"content-moderation"}

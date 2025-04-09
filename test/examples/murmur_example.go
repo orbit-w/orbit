@@ -3,7 +3,7 @@ package examples
 import (
 	"fmt"
 
-	"github.com/orbit-w/orbit/lib/utils"
+	"gitee.com/orbit-w/orbit/lib/utils"
 )
 
 // MurmurHashExample demonstrates the use of the MurmurHash3 implementation

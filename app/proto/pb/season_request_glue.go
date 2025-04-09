@@ -4,7 +4,7 @@ package pb
 import (
 	"fmt"
 	"google.golang.org/protobuf/proto"
-	"github.com/orbit-w/orbit/app/proto/pb/pb_season"
+	"gitee.com/orbit-w/orbit/app/proto/pb/pb_season"
 )
 
 // SeasonRequestHandler 处理Season包的请求消息

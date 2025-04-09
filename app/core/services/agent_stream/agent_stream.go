@@ -3,15 +3,15 @@ package agent_stream
 import (
 	"context"
 	"errors"
+	"github.com/orbit-w/mux-go"
 	"io"
 	"net"
 
-	gnetwork "github.com/orbit-w/meteor/modules/net/network"
-	"github.com/orbit-w/mux-go"
+	gnetwork "gitee.com/orbit-w/meteor/modules/net/network"
+	"gitee.com/orbit-w/orbit/app/core/network"
+	"gitee.com/orbit-w/orbit/app/modules/config"
+	"gitee.com/orbit-w/orbit/lib/logger"
 	"github.com/orbit-w/mux-go/metadata"
-	"github.com/orbit-w/orbit/app/core/network"
-	"github.com/orbit-w/orbit/app/modules/config"
-	"github.com/orbit-w/orbit/lib/logger"
 	"go.uber.org/zap"
 )
 

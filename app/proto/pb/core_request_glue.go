@@ -4,7 +4,7 @@ package pb
 import (
 	"fmt"
 	"google.golang.org/protobuf/proto"
-	"github.com/orbit-w/orbit/app/proto/pb/pb_core"
+	"gitee.com/orbit-w/orbit/app/proto/pb/pb_core"
 )
 
 // CoreRequestHandler 处理Core包的请求消息

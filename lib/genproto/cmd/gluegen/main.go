@@ -10,7 +10,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/orbit-w/orbit/lib/utils/protoid"
+	"gitee.com/orbit-w/orbit/lib/utils/protoid"
 )
 
 var (
@@ -700,9 +700,9 @@ func generateRequestGlueCode(messages []Message, packageName, pbDir string) {
 	// 如果找不到go_package，使用默认的包名
 	if goPackage == "" {
 		goPackage = strings.ToLower(packageName)
-		fmt.Fprintf(file, "\t\"github.com/orbit-w/orbit/app/proto/pb/%s\"\n", goPackage)
+		fmt.Fprintf(file, "\t\"gitee.com/orbit-w/orbit/app/proto/pb/%s\"\n", goPackage)
 	} else {
-		fmt.Fprintf(file, "\t\"github.com/orbit-w/orbit/app/proto/pb/%s\"\n", goPackage)
+		fmt.Fprintf(file, "\t\"gitee.com/orbit-w/orbit/app/proto/pb/%s\"\n", goPackage)
 	}
 
 	fmt.Fprintf(file, ")\n\n")
@@ -800,9 +800,9 @@ func generateNotifyGlueCode(messages []Message, packageName, pbDir string) {
 	// 如果找不到go_package，使用默认的包名
 	if goPackage == "" {
 		goPackage = strings.ToLower(packageName)
-		fmt.Fprintf(file, "\t\"github.com/orbit-w/orbit/app/proto/pb/%s\"\n", goPackage)
+		fmt.Fprintf(file, "\t\"gitee.com/orbit-w/orbit/app/proto/pb/%s\"\n", goPackage)
 	} else {
-		fmt.Fprintf(file, "\t\"github.com/orbit-w/orbit/app/proto/pb/%s\"\n", goPackage)
+		fmt.Fprintf(file, "\t\"gitee.com/orbit-w/orbit/app/proto/pb/%s\"\n", goPackage)
 	}
 
 	fmt.Fprintf(file, ")\n\n")
@@ -875,7 +875,7 @@ func generateCommonProtocolMappings(allMappings []ProtocolIDMapping, outputDir s
 	fmt.Fprintf(file, "import (\n")
 	fmt.Fprintf(file, "\t\"fmt\"\n")
 	fmt.Fprintf(file, "\t\"google.golang.org/protobuf/proto\"\n")
-	fmt.Fprintf(file, "\t\"github.com/orbit-w/orbit/lib/utils/proto_utils\"\n")
+	fmt.Fprintf(file, "\t\"gitee.com/orbit-w/orbit/lib/utils/proto_utils\"\n")
 	fmt.Fprintf(file, ")\n\n")
 
 	// 生成所有协议ID常量

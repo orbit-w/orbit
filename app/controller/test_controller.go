@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"github.com/orbit-w/orbit/app/proto/pb/pb_core"
+	"gitee.com/orbit-w/orbit/app/proto/pb/pb_core"
 	"google.golang.org/protobuf/proto"
 )
 

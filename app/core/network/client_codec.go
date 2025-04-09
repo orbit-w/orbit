@@ -3,7 +3,7 @@ package network
 import (
 	"errors"
 
-	"github.com/orbit-w/meteor/modules/net/packet"
+	"gitee.com/orbit-w/meteor/modules/net/packet"
 )
 
 // ClientCodec 客户端编解码器

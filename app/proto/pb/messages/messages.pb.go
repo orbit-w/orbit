@@ -4,6 +4,8 @@
 // 	protoc        v5.29.3
 // source: app/proto/messages.proto
 
+// 定义RPC通信协议包名
+
 package messages
 
 import (
@@ -22,27 +24,30 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type HelloRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Sender        *actor.PID             `protobuf:"bytes,1,opt,name=Sender,proto3" json:"Sender,omitempty"`
+// RPC请求消息定义
+// 用于客户端向服务端发送RPC调用请求
+type RpcHelloRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 发送者进程ID，用于服务端回复消息
+	Sender        *actor.PID `protobuf:"bytes,1,opt,name=Sender,proto3" json:"Sender,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *HelloRequest) Reset() {
-	*x = HelloRequest{}
+func (x *RpcHelloRequest) Reset() {
+	*x = RpcHelloRequest{}
 	mi := &file_app_proto_messages_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *HelloRequest) String() string {
+func (x *RpcHelloRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*HelloRequest) ProtoMessage() {}
+func (*RpcHelloRequest) ProtoMessage() {}
 
-func (x *HelloRequest) ProtoReflect() protoreflect.Message {
+func (x *RpcHelloRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_app_proto_messages_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -54,39 +59,42 @@ func (x *HelloRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use HelloRequest.ProtoReflect.Descriptor instead.
-func (*HelloRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use RpcHelloRequest.ProtoReflect.Descriptor instead.
+func (*RpcHelloRequest) Descriptor() ([]byte, []int) {
 	return file_app_proto_messages_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *HelloRequest) GetSender() *actor.PID {
+func (x *RpcHelloRequest) GetSender() *actor.PID {
 	if x != nil {
 		return x.Sender
 	}
 	return nil
 }
 
-type HelloResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Message       string                 `protobuf:"bytes,1,opt,name=Message,proto3" json:"Message,omitempty"`
+// RPC响应消息定义
+// 用于服务端向客户端返回RPC调用结果
+type RpcHelloResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 响应消息内容
+	Message       string `protobuf:"bytes,1,opt,name=Message,proto3" json:"Message,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *HelloResponse) Reset() {
-	*x = HelloResponse{}
+func (x *RpcHelloResponse) Reset() {
+	*x = RpcHelloResponse{}
 	mi := &file_app_proto_messages_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *HelloResponse) String() string {
+func (x *RpcHelloResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*HelloResponse) ProtoMessage() {}
+func (*RpcHelloResponse) ProtoMessage() {}
 
-func (x *HelloResponse) ProtoReflect() protoreflect.Message {
+func (x *RpcHelloResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_app_proto_messages_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -98,12 +106,12 @@ func (x *HelloResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use HelloResponse.ProtoReflect.Descriptor instead.
-func (*HelloResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use RpcHelloResponse.ProtoReflect.Descriptor instead.
+func (*RpcHelloResponse) Descriptor() ([]byte, []int) {
 	return file_app_proto_messages_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *HelloResponse) GetMessage() string {
+func (x *RpcHelloResponse) GetMessage() string {
 	if x != nil {
 		return x.Message
 	}
@@ -116,14 +124,14 @@ var file_app_proto_messages_proto_rawDesc = string([]byte{
 	0x0a, 0x18, 0x61, 0x70, 0x70, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x6d, 0x65, 0x73, 0x73,
 	0x61, 0x67, 0x65, 0x73, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x12, 0x08, 0x6d, 0x65, 0x73, 0x73,
 	0x61, 0x67, 0x65, 0x73, 0x1a, 0x0b, 0x61, 0x63, 0x74, 0x6f, 0x72, 0x2e, 0x70, 0x72, 0x6f, 0x74,
-	0x6f, 0x22, 0x32, 0x0a, 0x0c, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
-	0x74, 0x12, 0x22, 0x0a, 0x06, 0x53, 0x65, 0x6e, 0x64, 0x65, 0x72, 0x18, 0x01, 0x20, 0x01, 0x28,
-	0x0b, 0x32, 0x0a, 0x2e, 0x61, 0x63, 0x74, 0x6f, 0x72, 0x2e, 0x50, 0x49, 0x44, 0x52, 0x06, 0x53,
-	0x65, 0x6e, 0x64, 0x65, 0x72, 0x22, 0x29, 0x0a, 0x0d, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x52, 0x65,
-	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x18, 0x0a, 0x07, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67,
-	0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65,
-	0x42, 0x0d, 0x5a, 0x0b, 0x70, 0x62, 0x2f, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x73, 0x62,
-	0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x6f, 0x22, 0x35, 0x0a, 0x0f, 0x52, 0x70, 0x63, 0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x52, 0x65, 0x71,
+	0x75, 0x65, 0x73, 0x74, 0x12, 0x22, 0x0a, 0x06, 0x53, 0x65, 0x6e, 0x64, 0x65, 0x72, 0x18, 0x01,
+	0x20, 0x01, 0x28, 0x0b, 0x32, 0x0a, 0x2e, 0x61, 0x63, 0x74, 0x6f, 0x72, 0x2e, 0x50, 0x49, 0x44,
+	0x52, 0x06, 0x53, 0x65, 0x6e, 0x64, 0x65, 0x72, 0x22, 0x2c, 0x0a, 0x10, 0x52, 0x70, 0x63, 0x48,
+	0x65, 0x6c, 0x6c, 0x6f, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x18, 0x0a, 0x07,
+	0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x4d,
+	0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x42, 0x0d, 0x5a, 0x0b, 0x70, 0x62, 0x2f, 0x6d, 0x65, 0x73,
+	0x73, 0x61, 0x67, 0x65, 0x73, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 })
 
 var (
@@ -140,12 +148,12 @@ func file_app_proto_messages_proto_rawDescGZIP() []byte {
 
 var file_app_proto_messages_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_app_proto_messages_proto_goTypes = []any{
-	(*HelloRequest)(nil),  // 0: messages.HelloRequest
-	(*HelloResponse)(nil), // 1: messages.HelloResponse
-	(*actor.PID)(nil),     // 2: actor.PID
+	(*RpcHelloRequest)(nil),  // 0: messages.RpcHelloRequest
+	(*RpcHelloResponse)(nil), // 1: messages.RpcHelloResponse
+	(*actor.PID)(nil),        // 2: actor.PID
 }
 var file_app_proto_messages_proto_depIdxs = []int32{
-	2, // 0: messages.HelloRequest.Sender:type_name -> actor.PID
+	2, // 0: messages.RpcHelloRequest.Sender:type_name -> actor.PID
 	1, // [1:1] is the sub-list for method output_type
 	1, // [1:1] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
