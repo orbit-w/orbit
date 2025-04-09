@@ -17,8 +17,8 @@ type MockBehavior struct {
 	actorID string
 }
 
-func (b *MockBehavior) HandleCall(_ actor.Context, _ any) error {
-	return nil
+func (b *MockBehavior) HandleCall(_ actor.Context, _ any) (any, error) {
+	return nil, nil
 }
 
 func (b *MockBehavior) HandleCast(_ actor.Context, _ any) error {

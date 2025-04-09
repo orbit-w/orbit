@@ -7,7 +7,7 @@ import (
 )
 
 type Behavior interface {
-	HandleCall(context actor.Context, msg any) error
+	HandleCall(context actor.Context, msg any) (any, error)
 	HandleCast(context actor.Context, msg any) error
 	HandleForward(context actor.Context, msg any) error
 	HandleInit(context actor.Context) error
@@ -61,7 +61,12 @@ func (state *ChildActor) Receive(context actor.Context) {
 func (state *ChildActor) handleMessage(context actor.Context, msg any) {
 	switch msg := msg.(type) {
 	case *CallMessage:
-		state.HandleCall(context, msg.Message)
+		result, err := state.HandleCall(context, msg.Message)
+		if err != nil {
+			context.Respond(err)
+		} else {
+			context.Respond(result)
+		}
 	case *CastMessage:
 		state.HandleCast(context, msg.Message)
 	case *ForwardMessage:
