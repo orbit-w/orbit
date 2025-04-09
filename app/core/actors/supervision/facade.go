@@ -56,6 +56,10 @@ func (af *ActorFacade) Stop() error {
 	return nil
 }
 
+func (af *ActorFacade) ActorSystem() *actor.ActorSystem {
+	return af.actorSystem
+}
+
 func (af *ActorFacade) stopSupervisor(lv Level) (bool, error) {
 	result, err := retry(func() (any, error) {
 		future := af.actorSystem.Root.RequestFuture(af.supervisors[lv], &StopAllRequest{}, 30*time.Second)
