@@ -1,4 +1,4 @@
-package manager
+package supervision
 
 import (
 	"sync/atomic"

@@ -1,4 +1,4 @@
-package manager
+package supervision
 
 import (
 	"gitee.com/orbit-w/orbit/lib/logger"
@@ -80,7 +80,6 @@ func (state *ChildActor) HandleInit(context actor.Context) {
 	err := state.Behavior.HandleInit(context)
 	if err != nil {
 		logger.GetLogger().Error("Child actor initialization failed", zap.String("ActorName", state.ActorName), zap.Error(err))
-		return
 	}
 
 	// 初始化完成后，通知父进程

@@ -1,4 +1,4 @@
-package manager
+package supervision
 
 import (
 	"time"
@@ -47,6 +47,9 @@ type StartActorRequest struct {
 	Future    *actor.PID
 }
 
+type StartActorWait struct {
+}
+
 type StopActorMessage struct {
 	ActorName string
 }
@@ -57,3 +60,7 @@ type StopAllRequest struct {
 type StopAllResponse struct {
 	Complete bool
 }
+
+var (
+	startActorWaitMessage = &StartActorWait{}
+)

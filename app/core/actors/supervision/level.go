@@ -1,4 +1,4 @@
-package manager
+package supervision
 
 import (
 	"sync/atomic"
@@ -18,7 +18,7 @@ type Level int
 
 var (
 	// Map to store pattern to level mappings
-	patternLevelMap = make(map[string]int)
+	patternLevelMap = make(map[string]Level)
 )
 
 func InitPatternLevelMap(list []struct {
@@ -33,6 +33,6 @@ func InitPatternLevelMap(list []struct {
 	atomic.StorePointer((*unsafe.Pointer)(unsafe.Pointer(&patternLevelMap)), unsafe.Pointer(&m))
 }
 
-func GetLevelByPattern(pattern string) int {
+func GetLevelByPattern(pattern string) Level {
 	return patternLevelMap[pattern]
 }

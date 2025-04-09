@@ -1,4 +1,4 @@
-package manager
+package supervision
 
 import (
 	"testing"
@@ -48,12 +48,12 @@ func MockBehaviorFactory(actorID string) Behavior {
 
 func TestGetOrStartActor(t *testing.T) {
 	// Save existing instance to restore later
-	oldFacade := ManagerFacade
+	oldFacade := Facade
 	oldCache := actorsCache
 
 	// Clean setup
 	actorSystem := actor.NewActorSystem()
-	ManagerFacade = NewActorFacade(actorSystem)
+	Facade = NewActorFacade(actorSystem)
 	actorsCache = NewActorsCache()
 
 	// Register a mock behavior factory
@@ -110,6 +110,6 @@ func TestGetOrStartActor(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Restore original state
-	ManagerFacade = oldFacade
+	Facade = oldFacade
 	actorsCache = oldCache
 }
