@@ -74,12 +74,12 @@ func GetOrStartActor(actorName, pattern string) (*actor.PID, error)
 ```go
 // 向 Actor 发送消息（消息投递）
 func SendMessage(data string) error {
-    return Cast("my-actor", "worker-pattern", &MyMessage{Data: data})
+    return Send("my-actor", "worker-pattern", &MyMessage{Data: data})
 }
 
 // 与 Actor 进行请求-响应模式通信
 func RequestData(id string) (Response, error) {
-    result, err := Call("data-actor", "data-pattern", &DataRequest{ID: id})
+    result, err := Request("data-actor", "data-pattern", &DataRequest{ID: id})
     if err != nil {
         return nil, err
     }

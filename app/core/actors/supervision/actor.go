@@ -2,7 +2,8 @@ package supervision
 
 import "time"
 
-func Cast(actorName, pattern string, msg any) error {
+// Send 单向投递消息给 Actor
+func Send(actorName, pattern string, msg any, timeout ...time.Duration) error {
 	pid, err := GetOrStartActor(actorName, pattern)
 	if err != nil {
 		return err
@@ -12,14 +13,15 @@ func Cast(actorName, pattern string, msg any) error {
 	return nil
 }
 
-func Call(actorName, pattern string, msg any) (any, error) {
+// Request 与 Actor 进行请求-响应模式通信，默认超时5秒
+func Request(actorName, pattern string, msg any, timeout ...time.Duration) (any, error) {
 	pid, err := GetOrStartActor(actorName, pattern)
 	if err != nil {
 		return nil, err
 	}
 
-	futrue := Facade.ActorSystem().Root.RequestFuture(pid, msg, time.Second*5)
-	result, err := futrue.Result()
+	future := Facade.ActorSystem().Root.RequestFuture(pid, msg, parseTimeout(timeout...))
+	result, err := future.Result()
 	if err != nil {
 		return nil, err
 	}
@@ -30,4 +32,12 @@ func Call(actorName, pattern string, msg any) (any, error) {
 	default:
 		return v, nil
 	}
+}
+
+func parseTimeout(ops ...time.Duration) time.Duration {
+	timeout := time.Second * 5
+	if len(ops) > 0 && ops[0] > 0 {
+		timeout = ops[0]
+	}
+	return timeout
 }
