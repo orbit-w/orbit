@@ -10,7 +10,9 @@ import "actor.proto";
 
 message ActorRef {
   actor.PID PID = 1;
-  Dispatcher Dispatcher = 2;
+  string ActorName = 2;
+  string Pattern = 3;
+  Dispatcher Dispatcher = 4;
 }
 
 message Dispatcher {

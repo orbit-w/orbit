@@ -14,7 +14,7 @@ const (
 )
 
 var (
-	Facade              *ActorFacade
+	System              *ActorSystem
 	once                sync.Once
 	ActorFacadeStopping atomic.Bool
 )
@@ -25,24 +25,24 @@ func Init() {
 	})
 }
 
-// ActorFacade provides a simplified interface for managing actors
-type ActorFacade struct {
+// ActorSystem provides a simplified interface for managing actors
+type ActorSystem struct {
 	actorSystem *actor.ActorSystem
 	supervisors []*actor.PID
 }
 
-func (af *ActorFacade) Start() error {
+func (af *ActorSystem) Start() error {
 	system := actor.NewActorSystem()
 	af.actorSystem = system
 	af.supervisors = make([]*actor.PID, LevelMaxLimit)
 	for lv := LevelNormal; lv < LevelMaxLimit; lv++ {
 		af.supervisors[lv] = newSupervisor(system, lv)
 	}
-	Facade = af
+	System = af
 	return nil
 }
 
-func (af *ActorFacade) Stop() error {
+func (af *ActorSystem) Stop() error {
 	ActorFacadeStopping.Store(true)
 	for lv := LevelNormal; lv < LevelMaxLimit; {
 		completed, err := af.stopSupervisor(lv)
@@ -56,11 +56,11 @@ func (af *ActorFacade) Stop() error {
 	return nil
 }
 
-func (af *ActorFacade) ActorSystem() *actor.ActorSystem {
+func (af *ActorSystem) ActorSystem() *actor.ActorSystem {
 	return af.actorSystem
 }
 
-func (af *ActorFacade) stopSupervisor(lv Level) (bool, error) {
+func (af *ActorSystem) stopSupervisor(lv Level) (bool, error) {
 	result, err := retry(func() (any, error) {
 		future := af.actorSystem.Root.RequestFuture(af.supervisors[lv], &StopAllRequest{}, 30*time.Second)
 		result, err := future.Result()
@@ -75,8 +75,8 @@ func (af *ActorFacade) stopSupervisor(lv Level) (bool, error) {
 }
 
 // NewActorFacade creates a new instance of ActorFacade
-func NewActorFacade(actorSystem *actor.ActorSystem) *ActorFacade {
-	af := &ActorFacade{
+func NewActorFacade(actorSystem *actor.ActorSystem) *ActorSystem {
+	af := &ActorSystem{
 		actorSystem: actorSystem,
 		supervisors: make([]*actor.PID, LevelMaxLimit),
 	}
@@ -113,9 +113,9 @@ func GetOrStartActor(actorName, pattern string) (*actor.PID, error) {
 		return pid, nil
 	}
 
-	system := Facade.actorSystem
+	system := System.actorSystem
 	future := actor.NewFuture(system, ManagerStartActorFutureTimeout)
-	mPid := Facade.supervisorByPattern(pattern)
+	mPid := System.supervisorByPattern(pattern)
 	rf := system.Root.RequestFuture(mPid, &StartActorRequest{
 		ActorName: actorName,
 		Pattern:   pattern,
@@ -143,7 +143,7 @@ func GetOrStartActor(actorName, pattern string) (*actor.PID, error) {
 
 // StopActor stops the actor with the given ID
 func StopActor(actorName, pattern string) error {
-	result, err := Facade.RequestFuture(actorName, pattern, &StopActorMessage{
+	result, err := System.RequestFuture(actorName, pattern, &StopActorMessage{
 		ActorName: actorName,
 	}, StopActorTimeout)
 	if err != nil {
@@ -157,7 +157,7 @@ func StopActor(actorName, pattern string) error {
 	return nil
 }
 
-func (f *ActorFacade) RequestFuture(actorName, pattern string, msg any, timeout time.Duration) (any, error) {
+func (f *ActorSystem) RequestFuture(actorName, pattern string, msg any, timeout time.Duration) (any, error) {
 	// Send message to manager to start the actor
 	mPid := f.supervisorByPattern(pattern)
 	future := f.actorSystem.Root.RequestFuture(mPid, msg, timeout)
@@ -170,12 +170,12 @@ func (f *ActorFacade) RequestFuture(actorName, pattern string, msg any, timeout 
 	return result, nil
 }
 
-func (f *ActorFacade) supervisorByPattern(pattern string) *actor.PID {
+func (f *ActorSystem) supervisorByPattern(pattern string) *actor.PID {
 	level := GetLevelByPattern(pattern)
 	return f.supervisorByLevel(level)
 }
 
-func (f *ActorFacade) supervisorByLevel(level Level) *actor.PID {
+func (f *ActorSystem) supervisorByLevel(level Level) *actor.PID {
 	return f.supervisors[level]
 }
 

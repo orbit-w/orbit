@@ -48,12 +48,12 @@ func MockBehaviorFactory(actorID string) Behavior {
 
 func TestGetOrStartActor(t *testing.T) {
 	// Save existing instance to restore later
-	oldFacade := Facade
+	oldFacade := System
 	oldCache := actorsCache
 
 	// Clean setup
 	actorSystem := actor.NewActorSystem()
-	Facade = NewActorFacade(actorSystem)
+	System = NewActorFacade(actorSystem)
 	actorsCache = NewActorsCache()
 
 	// Register a mock behavior factory
@@ -110,6 +110,6 @@ func TestGetOrStartActor(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Restore original state
-	Facade = oldFacade
+	System = oldFacade
 	actorsCache = oldCache
 }
