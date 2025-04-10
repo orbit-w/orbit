@@ -1,4 +1,4 @@
-package supervision
+package actor
 
 import (
 	"gitee.com/orbit-w/orbit/lib/logger"

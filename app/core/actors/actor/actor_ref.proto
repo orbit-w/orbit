@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package actor;
+
+// 定义Go代码生成的包路径，用于生成Go代码时的包名
+option go_package = ".;actor";
+
+// 导入actor.proto以使用PID类型
+import "actor.proto";
+
+message ActorRef {
+  actor.PID PID = 1;
+  Dispatcher Dispatcher = 2;
+}
+
+message Dispatcher {
+    DispatcherType Type = 1;
+    string WorldId = 2;
+    string NodeId = 3;
+}
+
+enum DispatcherType {
+    DISPATCHER_TYPE_IN_WORLD = 0; // 世界分组
+    DISPATCHER_TYPE_IN_REGION = 1; // 区域分组
+    DISPATCHER_TYPE_RANDOM = 2; // 随机分组 
+}

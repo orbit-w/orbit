@@ -1,4 +1,4 @@
-package supervision
+package actor
 
 // Factory function type that accepts an actor ID
 type BehaivorFactory func(actorName string) Behavior

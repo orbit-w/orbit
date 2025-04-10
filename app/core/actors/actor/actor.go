@@ -1,4 +1,4 @@
-package supervision
+package actor
 
 import "time"
 
@@ -14,7 +14,7 @@ func Send(actorName, pattern string, msg any, timeout ...time.Duration) error {
 }
 
 // Request 与 Actor 进行请求-响应模式通信，默认超时5秒
-func Request(actorName, pattern string, msg any, timeout ...time.Duration) (any, error) {
+func RequestFuture(actorName, pattern string, msg any, timeout ...time.Duration) (any, error) {
 	pid, err := GetOrStartActor(actorName, pattern)
 	if err != nil {
 		return nil, err
