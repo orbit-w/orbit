@@ -46,7 +46,8 @@ func (c *UniqueTaskExecutor) executeWithContext(ctx context.Context, key string,
 		go func() {
 			defer func() {
 				if r := recover(); r != nil {
-					runner.Done(fmt.Errorf("task panic: %v", r))
+					runner.Store(fmt.Errorf("task panic: %v", r))
+					runner.Done()
 				}
 			}()
 			runner.Execute(do)
