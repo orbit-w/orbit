@@ -18,14 +18,14 @@ type Level int
 
 var (
 	// Map to store pattern to level mappings
-	patternLevelMap = make(map[string]Level)
+	patternLevelMap *map[string]Level
 )
 
 func InitPatternLevelMap(list []struct {
 	Pattern string
-	Level   int
+	Level   Level
 }) {
-	m := make(map[string]int)
+	m := make(map[string]Level)
 	for _, item := range list {
 		m[item.Pattern] = item.Level
 	}
@@ -34,5 +34,6 @@ func InitPatternLevelMap(list []struct {
 }
 
 func GetLevelByPattern(pattern string) Level {
-	return patternLevelMap[pattern]
+	m := *patternLevelMap
+	return m[pattern]
 }

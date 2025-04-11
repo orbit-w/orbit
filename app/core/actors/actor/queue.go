@@ -27,10 +27,14 @@ func (q *Queue) Insert(actorName, pattern string, child, future *actor.PID, prio
 	if ok {
 		return
 	}
+	futures := make([]*actor.PID, 0)
+	if future != nil {
+		futures = append(futures, future)
+	}
 	q.pq.Push(actorName, &Item{
 		ActorName: actorName,
 		Pattern:   pattern,
-		Future:    []*actor.PID{future},
+		Future:    futures,
 		Child:     child,
 	}, priority)
 }
@@ -55,7 +59,9 @@ func (q *Queue) Push(actorName string, future *actor.PID) {
 		return
 	}
 	v := ent.Value.GetValue()
-	v.Future = append(v.Future, future)
+	if future != nil {
+		v.Future = append(v.Future, future)
+	}
 	q.pq.UpdateValue(actorName, v)
 }
 
@@ -67,16 +73,16 @@ func (q *Queue) Exists(key string) bool {
 	return q.pq.Exist(key)
 }
 
-func (q *Queue) PopAndRangeWithKey(key string, iter func(name string, child, future *actor.PID) bool) (*actor.PID, bool) {
+func (q *Queue) PopAndRangeWithKey(key string, iter func(name, pattern string, child, future *actor.PID) bool) (*Item, bool) {
 	v, ok := q.pq.PopK(key)
 	if !ok {
 		return nil, false
 	}
 	for i := range v.Future {
 		f := v.Future[i]
-		if !iter(key, v.Child, f) {
+		if !iter(key, v.Pattern, v.Child, f) {
 			break
 		}
 	}
-	return v.Child, true
+	return v, true
 }

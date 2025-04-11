@@ -52,6 +52,7 @@ type StartActorWait struct {
 
 type StopActorMessage struct {
 	ActorName string
+	Pattern   string
 }
 
 type StopAllRequest struct {
@@ -64,3 +65,8 @@ type StopAllResponse struct {
 var (
 	startActorWaitMessage = &StartActorWait{}
 )
+
+type ActorInfo struct {
+	ActorName string
+	Pattern   string
+}

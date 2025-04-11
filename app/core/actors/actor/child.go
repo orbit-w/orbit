@@ -41,7 +41,7 @@ func (state *ChildActor) Receive(context actor.Context) {
 		state.HandleInit(context)
 
 	case *actor.Stopping:
-		state.HandleStopping(context)
+		_ = state.HandleStopping(context)
 
 	case *actor.Stopped:
 		state.HandleStopped(context)
@@ -50,6 +50,9 @@ func (state *ChildActor) Receive(context actor.Context) {
 		logger.GetLogger().Info("Child actor restarting", zap.String("ActorName", state.ActorName))
 		// 重启时重新执行初始化逻辑
 		//state.HandleInit(context)
+
+	case string:
+		logger.GetLogger().Info("Child actor received message", zap.String("ActorName", state.ActorName), zap.String("Message", msg))
 
 	default:
 		// 直接处理消息
@@ -98,7 +101,7 @@ func (state *ChildActor) HandleInit(context actor.Context) {
 	}
 }
 
-func (state *ChildActor) HandleStopping(context actor.Context) error {
+func (state *ChildActor) HandleStopping(_ actor.Context) error {
 	return nil
 }
 

@@ -17,8 +17,9 @@ const (
 )
 
 type ActorItem struct {
-	PID   *actor.PID
-	State atomic.Int32
+	Pattern string
+	PID     *actor.PID
+	State   atomic.Int32
 }
 
 func (item *ActorItem) IsStopped() bool {
@@ -51,10 +52,27 @@ func (c *ActorsCache) Get(actorName string) (*actor.PID, bool) {
 	return item.PID, true
 }
 
-func (c *ActorsCache) Set(actorName string, pid *actor.PID) {
+func (c *ActorsCache) GetItem(actorName string) (*ActorItem, bool) {
+	item, ok := c.cache.Get(actorName)
+	if !ok {
+		return nil, false
+	}
+	if item.IsStopped() {
+		c.cache.Remove(actorName)
+		if item.PID != nil {
+			system := actor.NewActorSystem()
+			system.Root.Stop(item.PID)
+		}
+		return nil, false
+	}
+	return item, true
+}
+
+func (c *ActorsCache) Set(actorName, pattern string, pid *actor.PID) {
 	c.cache.Set(actorName, &ActorItem{
-		PID:   pid,
-		State: atomic.Int32{},
+		Pattern: pattern,
+		PID:     pid,
+		State:   atomic.Int32{},
 	})
 }
 

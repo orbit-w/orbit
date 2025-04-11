@@ -6,6 +6,13 @@ import (
 	actor "github.com/asynkron/protoactor-go/actor"
 )
 
+func NewActorRef(actorName string, pattern string) *ActorRef {
+	return &ActorRef{
+		ActorName: actorName,
+		Pattern:   pattern,
+	}
+}
+
 func (actorRef *ActorRef) Send(msg any) {
 	pid := actorRef.ref()
 	System.ActorSystem().Root.Send(pid, msg)

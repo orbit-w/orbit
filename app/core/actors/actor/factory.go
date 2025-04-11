@@ -33,8 +33,8 @@ func Dispatch(pattern string) BehaivorFactory {
 	return factory
 }
 
-// CreateBehaivorWithID creates an actor with a specific ID
-func CreateBehaivorWithID(pattern string, actorName string) Behavior {
+// CreateBehaviorWithID creates an actor with a specific ID
+func CreateBehaviorWithID(pattern string, actorName string) Behavior {
 	factory := Dispatch(pattern)
 	return factory(actorName)
 }

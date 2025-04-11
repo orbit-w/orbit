@@ -56,7 +56,7 @@ func (m *ActorSupervision) Receive(context actor.Context) {
 	case *actor.Terminated: //system message
 		// msg.Who contains the PID of the terminated actor
 		// Handle child termination here
-		m.handleActorStopped(context, msg.Who.Id)
+		m.handleActorStopped(context, ExtractActorName(msg.Who))
 		logger.GetLogger().Info("Child actor has terminated", zap.String("ActorName", msg.Who.Id), zap.String("Reason", msg.Why.String()))
 
 	case *ChildStartedNotification:
@@ -113,10 +113,10 @@ func (m *ActorSupervision) handleStartActor(context actor.Context, msg *StartAct
 func (m *ActorSupervision) startActor(context actor.Context, pattern, actorName string) (*actor.PID, error) {
 	// 创建Actor工厂函数
 	actorFactory := func() actor.Actor {
-		behaivor := CreateBehaivorWithID(pattern, actorName)
+		behavior := CreateBehaviorWithID(pattern, actorName)
 
 		// 设置初始化完成通知
-		childActor := NewChildActor(behaivor, actorName, func(err error) error {
+		childActor := NewChildActor(behavior, actorName, func(err error) error {
 			context.Send(context.Self(), &ChildStartedNotification{ActorName: actorName, Error: err})
 			return nil
 		})
@@ -133,9 +133,6 @@ func (m *ActorSupervision) startActor(context actor.Context, pattern, actorName 
 		return nil, err
 	}
 
-	// 监听Actor的终止
-	context.Watch(pid)
-
 	return pid, nil
 }
 
@@ -147,15 +144,15 @@ func (m *ActorSupervision) handleStopActor(context actor.Context, msg *StopActor
 		return
 	}
 
-	m.stopActor(context, msg.ActorName, pid)
+	m.stopActor(context, msg.ActorName, msg.Pattern, pid)
 }
 
-func (m *ActorSupervision) stopActor(context actor.Context, actorName string, pid *actor.PID) {
+func (m *ActorSupervision) stopActor(context actor.Context, actorName, pattern string, pid *actor.PID) {
 	// Stop the actor
 	context.Poison(pid)
 
 	// 将Actor从正在停止的列表中删除
-	m.stopping.Insert(actorName, "", nil, nil, time.Now().UnixNano())
+	m.stopping.Insert(actorName, pattern, nil, nil, time.Now().UnixNano())
 
 	// 从缓存中删除Actor
 	actorsCache.Delete(actorName)
@@ -198,13 +195,13 @@ func (m *ActorSupervision) handleActorStopped(context actor.Context, actorName s
 }
 
 func (m *ActorSupervision) handleNotifyChildStarted(context actor.Context, msg *ChildStartedNotification) {
-	target, ok := m.starting.PopAndRangeWithKey(msg.ActorName, func(name string, child, future *actor.PID) bool {
+	item, ok := m.starting.PopAndRangeWithKey(msg.ActorName, func(name, pattern string, child, future *actor.PID) bool {
 		if msg.Error != nil {
 			context.Send(future, msg.Error)
 		} else {
 			context.Send(future, child)
 		}
-		return false
+		return true
 	})
 
 	if !ok {
@@ -213,9 +210,9 @@ func (m *ActorSupervision) handleNotifyChildStarted(context actor.Context, msg *
 	}
 
 	if msg.Error == nil {
-		actorsCache.Set(msg.ActorName, target)
+		actorsCache.Set(msg.ActorName, item.Pattern, item.Child)
 	} else {
-		m.stopActor(context, msg.ActorName, target)
+		m.stopActor(context, msg.ActorName, item.Pattern, item.Child)
 	}
 }
 
@@ -224,12 +221,16 @@ func (m *ActorSupervision) handleStoppingAll(context actor.Context) {
 	children := context.Children()
 	for i := range children {
 		child := children[i]
-		name := child.GetId()
+		name := ExtractActorName(child)
 		if m.stopping.Exists(name) {
 			continue
 		}
-
-		m.stopActor(context, name, child)
+		item, exists := actorsCache.GetItem(name)
+		if exists {
+			m.stopActor(context, name, item.Pattern, child)
+		} else {
+			logger.GetLogger().Error("StoppingAll child not found", zap.String("ActorName", name))
+		}
 	}
 	complete := len(context.Children()) == 0
 	if complete {

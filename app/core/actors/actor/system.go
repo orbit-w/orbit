@@ -19,7 +19,7 @@ var (
 	ActorFacadeStopping atomic.Bool
 )
 
-func Init() {
+func init() {
 	once.Do(func() {
 		actorsCache = NewActorsCache()
 	})
@@ -143,8 +143,9 @@ func GetOrStartActor(actorName, pattern string) (*actor.PID, error) {
 
 // StopActor stops the actor with the given ID
 func StopActor(actorName, pattern string) error {
-	result, err := System.RequestFuture(actorName, pattern, &StopActorMessage{
+	result, err := System.RequestFuture(pattern, &StopActorMessage{
 		ActorName: actorName,
+		Pattern:   pattern,
 	}, StopActorTimeout)
 	if err != nil {
 		return err
@@ -157,7 +158,7 @@ func StopActor(actorName, pattern string) error {
 	return nil
 }
 
-func (f *ActorSystem) RequestFuture(actorName, pattern string, msg any, timeout time.Duration) (any, error) {
+func (f *ActorSystem) RequestFuture(pattern string, msg any, timeout time.Duration) (any, error) {
 	// Send message to manager to start the actor
 	mPid := f.supervisorByPattern(pattern)
 	future := f.actorSystem.Root.RequestFuture(mPid, msg, timeout)
