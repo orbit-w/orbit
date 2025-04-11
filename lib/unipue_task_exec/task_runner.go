@@ -34,7 +34,7 @@ func (t *TaskRunner) Wait(ctx context.Context) any {
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
-	case _, _ = <-t.done:
+	case <-t.done:
 		return t.result.Load()
 	}
 }
