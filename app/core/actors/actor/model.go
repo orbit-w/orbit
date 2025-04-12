@@ -70,3 +70,14 @@ type ActorInfo struct {
 	ActorName string
 	Pattern   string
 }
+
+const (
+	MessageTypeSend int8 = iota
+	MessageTypeRequest
+	MessageTypeForward
+)
+
+type RequestMessage struct {
+	MsgType int8
+	Message any
+}

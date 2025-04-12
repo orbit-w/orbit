@@ -51,28 +51,27 @@ func (state *ChildActor) Receive(context actor.Context) {
 		// 重启时重新执行初始化逻辑
 		//state.HandleInit(context)
 
-	case string:
-		logger.GetLogger().Info("Child actor received message", zap.String("ActorName", state.ActorName), zap.String("Message", msg))
+	case *RequestMessage:
+		state.handleMessage(context, msg)
 
 	default:
-		// 直接处理消息
-		state.handleMessage(context, msg)
+		logger.GetLogger().Info("Child actor received invalid message", zap.String("ActorName", state.ActorName), zap.Any("Message", msg))
 	}
 }
 
 // handleMessage 处理常规消息
-func (state *ChildActor) handleMessage(context actor.Context, msg any) {
-	switch msg := msg.(type) {
-	case *CallMessage:
+func (state *ChildActor) handleMessage(context actor.Context, msg *RequestMessage) {
+	switch msg.MsgType {
+	case MessageTypeRequest:
 		result, err := state.HandleCall(context, msg.Message)
 		if err != nil {
 			context.Respond(err)
 		} else {
 			context.Respond(result)
 		}
-	case *CastMessage:
+	case MessageTypeSend:
 		state.HandleCast(context, msg.Message)
-	case *ForwardMessage:
+	case MessageTypeForward:
 		state.HandleForward(context, msg.Message)
 	}
 }

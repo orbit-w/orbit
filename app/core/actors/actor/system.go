@@ -2,6 +2,7 @@ package actor
 
 import (
 	"errors"
+	"gitee.com/orbit-w/orbit/lib/logger"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -23,6 +24,11 @@ func init() {
 	once.Do(func() {
 		actorsCache = NewActorsCache()
 	})
+}
+
+type IService interface {
+	Start() error
+	Stop() error
 }
 
 // ActorSystem provides a simplified interface for managing actors
@@ -53,6 +59,8 @@ func (af *ActorSystem) Stop() error {
 			lv++
 		}
 	}
+
+	logger.GetLogger().Info("ActorSystem stopped complete")
 	return nil
 }
 

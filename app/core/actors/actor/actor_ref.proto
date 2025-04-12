@@ -26,3 +26,20 @@ enum DispatcherType {
     DISPATCHER_TYPE_IN_REGION = 1; // 区域分组
     DISPATCHER_TYPE_RANDOM = 2; // 随机分组 
 }
+
+message RequestMessage {
+    string ActorName = 1;
+    repeated bytes Message = 2;
+}
+
+message RequestMessageResponse {
+    MessageType Type = 1;
+    bytes Message = 2;
+}
+
+enum MessageType {
+    MESSAGE_TYPE_CALL = 0;
+    MESSAGE_TYPE_CAST = 1;
+    MESSAGE_TYPE_FORWARD = 2;
+}
+

@@ -15,12 +15,18 @@ func NewActorRef(actorName string, pattern string) *ActorRef {
 
 func (actorRef *ActorRef) Send(msg any) {
 	pid := actorRef.ref()
-	System.ActorSystem().Root.Send(pid, msg)
+	System.ActorSystem().Root.Send(pid, &RequestMessage{
+		MsgType: MessageTypeSend,
+		Message: msg,
+	})
 }
 
 func (actorRef *ActorRef) RequestFuture(msg any, timeout ...time.Duration) (any, error) {
 	pid := actorRef.ref()
-	future := System.ActorSystem().Root.RequestFuture(pid, msg, parseTimeout(timeout...))
+	future := System.ActorSystem().Root.RequestFuture(pid, &RequestMessage{
+		MsgType: MessageTypeRequest,
+		Message: msg,
+	}, parseTimeout(timeout...))
 	result, err := future.Result()
 	if err != nil {
 		return nil, err
