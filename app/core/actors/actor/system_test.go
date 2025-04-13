@@ -22,29 +22,29 @@ type MockBehavior struct {
 	actorID string
 }
 
-func (b *MockBehavior) HandleRequest(_ actor.Context, _ any) (any, error) {
+func (b *MockBehavior) HandleRequest(ctx IContext, _ any) (any, error) {
 	return nil, nil
 }
 
-func (b *MockBehavior) HandleSend(_ actor.Context, _ any) error {
+func (b *MockBehavior) HandleSend(ctx IContext, _ any) error {
 	return nil
 }
 
-func (b *MockBehavior) HandleForward(_ actor.Context, _ any) error {
+func (b *MockBehavior) HandleForward(ctx IContext, _ any) error {
 	return nil
 }
 
-func (b *MockBehavior) HandleInit(_ actor.Context) error {
+func (b *MockBehavior) HandleInit(ctx IContext) error {
 	fmt.Printf("Initializing actor with ID: %s\n", b.actorID)
 	return nil
 }
 
-func (b *MockBehavior) HandleStopping(_ actor.Context) error {
+func (b *MockBehavior) HandleStopping(ctx IContext) error {
 	fmt.Printf("Stopping actor with ID: %s\n", b.actorID)
 	return nil
 }
 
-func (b *MockBehavior) HandleStopped(_ actor.Context) error {
+func (b *MockBehavior) HandleStopped(ctx IContext) error {
 	fmt.Printf("Stopped actor with ID: %s\n", b.actorID)
 	return nil
 }
@@ -237,7 +237,7 @@ type StoppingBehavior struct {
 	actorName string
 }
 
-func (b *StoppingBehavior) HandleRequest(_ actor.Context, msg any) (any, error) {
+func (b *StoppingBehavior) HandleRequest(ctx IContext, msg any) (any, error) {
 	v, ok := msg.(string)
 	if !ok {
 		return nil, fmt.Errorf("unknown message type: %T", msg)
@@ -246,7 +246,7 @@ func (b *StoppingBehavior) HandleRequest(_ actor.Context, msg any) (any, error) 
 	return v, nil
 }
 
-func (b *StoppingBehavior) HandleSend(_ actor.Context, msg any) error {
+func (b *StoppingBehavior) HandleSend(ctx IContext, msg any) error {
 	v, ok := msg.(string)
 	if !ok {
 		return fmt.Errorf("unknown message type: %T", msg)
@@ -255,21 +255,21 @@ func (b *StoppingBehavior) HandleSend(_ actor.Context, msg any) error {
 	return nil
 }
 
-func (b *StoppingBehavior) HandleForward(_ actor.Context, _ any) error {
+func (b *StoppingBehavior) HandleForward(ctx IContext, _ any) error {
 	return nil
 }
 
-func (b *StoppingBehavior) HandleInit(_ actor.Context) error {
+func (b *StoppingBehavior) HandleInit(ctx IContext) error {
 	//fmt.Printf("Initializing actor with ID: %s\n", b.actorName)
 	return nil
 }
 
-func (b *StoppingBehavior) HandleStopping(_ actor.Context) error {
+func (b *StoppingBehavior) HandleStopping(ctx IContext) error {
 	fmt.Printf("Stopping actor with ID: %s\n", b.actorName)
 	return nil
 }
 
-func (b *StoppingBehavior) HandleStopped(_ actor.Context) error {
+func (b *StoppingBehavior) HandleStopped(ctx IContext) error {
 	fmt.Printf("Stopped actor with ID: %s\n", b.actorName)
 	return nil
 }
