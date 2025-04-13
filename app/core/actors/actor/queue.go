@@ -10,9 +10,10 @@ type Item struct {
 	Pattern   string
 	Future    []*actor.PID
 	Child     *actor.PID
+	Props     *Props
 }
 
-func NewItem(actorName, pattern string, child *actor.PID) *Item {
+func NewItem(actorName, pattern string, child *actor.PID, props *Props) *Item {
 	return &Item{
 		ActorName: actorName,
 		Pattern:   pattern,

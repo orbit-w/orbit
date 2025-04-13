@@ -78,6 +78,8 @@ type ActorRef struct {
 	ServerId      string                 `protobuf:"bytes,4,opt,name=ServerId,proto3" json:"ServerId,omitempty"` //初始逻辑服ID
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
+
+	Props *Props `protobuf:"-"`
 }
 
 func (x *ActorRef) Reset() {

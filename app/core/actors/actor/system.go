@@ -116,7 +116,7 @@ func newSupervisor(actorSystem *actor.ActorSystem, level Level) *actor.PID {
 }
 
 // GetOrStartActor 获取一个就绪的Actor对象
-func GetOrStartActor(actorName, pattern string) (*actor.PID, error) {
+func GetOrStartActor(actorName, pattern string, props *Props) (*actor.PID, error) {
 	// First check if manager already has this actor
 	if pid, exists := actorsCache.Get(actorName); exists {
 		return pid, nil
@@ -129,6 +129,7 @@ func GetOrStartActor(actorName, pattern string) (*actor.PID, error) {
 		ActorName: actorName,
 		Pattern:   pattern,
 		Future:    future.PID(),
+		Props:     props,
 	}, StartActorTimeout)
 
 	result, err := waitFuture(rf)

@@ -6,10 +6,19 @@ import (
 	actor "github.com/asynkron/protoactor-go/actor"
 )
 
-func NewActorRef(actorName string, pattern string) *ActorRef {
+func NewActorRef(props *Props, actorName, pattern string, ops ...PropsOption) *ActorRef {
+	if props == nil {
+		props = NewProps()
+	}
+
+	for i := range ops {
+		ops[i](props)
+	}
+
 	return &ActorRef{
 		ActorName: actorName,
 		Pattern:   pattern,
+		Props:     props,
 	}
 }
 
@@ -56,9 +65,5 @@ func (actorRef *ActorRef) Stop() {
 //
 // 注意: 此方法通常用于内部实现，获取底层Actor系统需要的PID引用
 func (actorRef *ActorRef) ref() *actor.PID {
-	pid, err := GetOrStartActor(actorRef.ActorName, actorRef.Pattern)
-	if err != nil {
-		panic(err)
-	}
-	return pid
+	return actorRef.Props.getOrCreateActorPID(actorRef.ActorName, actorRef.Pattern)
 }

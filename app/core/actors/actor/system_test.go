@@ -71,7 +71,7 @@ func TestGetOrStartActor(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			pid, err := GetOrStartActor(actorName, testPattern)
+			pid, err := GetOrStartActor(actorName, testPattern, nil)
 			if err != nil {
 				panic(err)
 			}
@@ -85,11 +85,11 @@ func TestGetOrStartActor(t *testing.T) {
 
 	wg.Wait()
 
-	pid, err := GetOrStartActor(actorName, testPattern)
+	pid, err := GetOrStartActor(actorName, testPattern, nil)
 	assert.NoError(t, err)
 
 	// Now call GetOrStartActor - it should return the cached actor
-	retrievedPID, err := GetOrStartActor(actorName, testPattern)
+	retrievedPID, err := GetOrStartActor(actorName, testPattern, nil)
 	fmt.Printf("Retrieved PID: %v\n", retrievedPID)
 	// Verify results
 	if err != nil {
@@ -104,7 +104,7 @@ func TestGetOrStartActor(t *testing.T) {
 
 	// Test case 2: Create a new actor that doesn't exist in cache
 	actorName2 := "test-actor-2"
-	pid2, err := GetOrStartActor(actorName2, testPattern)
+	pid2, err := GetOrStartActor(actorName2, testPattern, nil)
 	fmt.Printf("Retrieved PID: %v\n", pid2)
 	// This might fail depending on how the actual implementation works
 	// since we're testing with real actors. Just check basic expectations

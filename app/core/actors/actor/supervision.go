@@ -24,6 +24,7 @@ type ActorSupervision struct {
 	actorSystem *actor.ActorSystem
 	starting    *Queue
 	stopping    *Queue
+	restarting  *Queue
 }
 
 // NewActorSupervision creates a new instance of ActorManager
@@ -33,6 +34,7 @@ func NewActorSupervision(actorSystem *actor.ActorSystem, level Level) *ActorSupe
 		actorSystem: actorSystem,
 		starting:    NewPriorityQueue(),
 		stopping:    NewPriorityQueue(),
+		restarting:  NewPriorityQueue(),
 	}
 }
 
@@ -88,7 +90,11 @@ func (m *ActorSupervision) handleStartActor(context actor.Context, msg *StartAct
 
 	// 如果正在停止，则将Future添加到队列中
 	if m.stopping.Exists(msg.ActorName) {
-		m.stopping.PushFuture(msg.ActorName, msg.Future)
+		if m.restarting.Exists(msg.ActorName) {
+			m.restarting.PushFuture(msg.ActorName, msg.Future)
+		} else {
+			m.restarting.Insert(msg.ActorName, NewItem(msg.ActorName, msg.Pattern, nil, msg.Props), time.Now().UnixNano())
+		}
 		context.Respond(startActorWaitMessage)
 		return
 	}
@@ -98,27 +104,27 @@ func (m *ActorSupervision) handleStartActor(context actor.Context, msg *StartAct
 		return
 	}
 
-	pid, err := m.startActor(context, msg.Pattern, msg.ActorName)
+	pid, err := m.startActor(context, msg.Pattern, msg.ActorName, msg.Props)
 	if err != nil {
 		context.Respond(err)
 		return
 	}
 
 	// 将Actor添加到正在启动的列表中
-	item := NewItem(msg.ActorName, msg.Pattern, pid)
+	item := NewItem(msg.ActorName, msg.Pattern, pid, msg.Props)
 	item.AddFuture(msg.Future)
 	m.starting.Insert(msg.ActorName, item, time.Now().UnixNano())
 
 	context.Respond(startActorWaitMessage)
 }
 
-func (m *ActorSupervision) startActor(context actor.Context, pattern, actorName string) (*actor.PID, error) {
+func (m *ActorSupervision) startActor(context actor.Context, pattern, actorName string, props *Props) (*actor.PID, error) {
 	// 创建Actor工厂函数
 	actorFactory := func() actor.Actor {
 		behavior := CreateBehaviorWithID(pattern, actorName)
 
 		// 设置初始化完成通知
-		childActor := NewChildActor(behavior, actorName, pattern, func(err error) error {
+		childActor := NewChildActor(behavior, actorName, pattern, props.GetMeta(), func(err error) error {
 			context.Send(context.Self(), &ChildStartedNotification{ActorName: actorName, Error: err})
 			return nil
 		})
@@ -126,11 +132,8 @@ func (m *ActorSupervision) startActor(context actor.Context, pattern, actorName 
 		return childActor
 	}
 
-	// 创建Props对象
-	props := actor.PropsFromProducer(actorFactory)
-
 	// Create new actor
-	pid, err := context.SpawnNamed(props, actorName)
+	pid, err := context.SpawnNamed(actor.PropsFromProducer(actorFactory), actorName)
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +158,7 @@ func (m *ActorSupervision) stopActor(context actor.Context, actorName, pattern s
 	context.Poison(pid)
 
 	// 将Actor从正在停止的列表中删除
-	item := NewItem(actorName, pattern, nil)
+	item := NewItem(actorName, pattern, nil, nil)
 	m.stopping.Insert(actorName, item, time.Now().UnixNano())
 
 	// 从缓存中删除Actor
@@ -183,8 +186,25 @@ func (m *ActorSupervision) handleActorStopped(context actor.Context, actorName s
 		return
 	}
 
+	watching, ok := m.restarting.Pop(actorName)
+	if ok && watching.FuturesNum() > 0 {
+		pid, err := m.startActor(context, watching.Pattern, actorName, watching.Props)
+		if err != nil {
+			logger.GetLogger().Error("Failed to start actor", zap.String("ActorName", actorName), zap.Error(err))
+			for i := range item.Future {
+				target := item.Future[i]
+				context.Send(target, err)
+			}
+			return
+		}
+
+		newItem := NewItem(actorName, watching.Pattern, pid, watching.Props)
+		newItem.AddFuture(watching.Future...)
+		m.starting.Insert(actorName, newItem, time.Now().UnixNano())
+	}
+
 	if item != nil && item.FuturesNum() > 0 {
-		pid, err := m.startActor(context, item.Pattern, actorName)
+		pid, err := m.startActor(context, item.Pattern, actorName, item.Props)
 		if err != nil {
 			logger.GetLogger().Error("Failed to start actor", zap.String("ActorName", actorName), zap.Error(err))
 			for i := range item.Future {
@@ -194,7 +214,7 @@ func (m *ActorSupervision) handleActorStopped(context actor.Context, actorName s
 			return
 		}
 		item.Child = pid
-		newItem := NewItem(actorName, item.Pattern, pid)
+		newItem := NewItem(actorName, item.Pattern, pid, item.Props)
 		newItem.AddFuture(item.Future...)
 		m.starting.Insert(actorName, newItem, time.Now().UnixNano())
 	}

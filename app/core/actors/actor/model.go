@@ -45,6 +45,7 @@ type StartActorRequest struct {
 	ActorName string
 	Timeout   time.Duration
 	Future    *actor.PID
+	Props     *Props
 }
 
 type StartActorWait struct {

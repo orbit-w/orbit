@@ -18,6 +18,7 @@ type Behavior interface {
 // 实现了InitNotifiable接口，允许在初始化完成后发送通知
 type ChildActor struct {
 	Behavior
+	Meta         *Meta
 	ActorName    string
 	Pattern      string
 	initialized  bool
@@ -25,11 +26,12 @@ type ChildActor struct {
 }
 
 // NewChildActor 创建一个新的子Actor
-func NewChildActor(behavior Behavior, actorName, pattern string, initCB func(err error) error) *ChildActor {
+func NewChildActor(behavior Behavior, name, pattern string, meta *Meta, initCB func(err error) error) *ChildActor {
 	return &ChildActor{
-		ActorName:    actorName,
+		ActorName:    name,
 		Pattern:      pattern,
 		Behavior:     behavior,
+		Meta:         meta,
 		initCallback: initCB,
 	}
 }

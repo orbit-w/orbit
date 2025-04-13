@@ -22,7 +22,7 @@ func TestStopActor(t *testing.T) {
 
 	// Create our test actor
 	actorName := "test-actor-stopping"
-	actorRef := NewActorRef(actorName, testPattern)
+	actorRef := NewActorRef(NewProps(), actorName, testPattern)
 	actorRef.Send("initial-message")
 	// Stop the actor which will trigger the stopping phase
 	err := StopActor(actorName, testPattern)
@@ -49,7 +49,7 @@ func TestMessageLossDuringStopping(t *testing.T) {
 
 	// Create our test actor
 	actorName := "test-actor-stopping"
-	actorRef := NewActorRef(actorName, testPattern)
+	actorRef := NewActorRef(NewProps(), actorName, testPattern)
 	actorRef.Send("initial-message")
 
 	// Start a goroutine that will send messages during the stopping phase
