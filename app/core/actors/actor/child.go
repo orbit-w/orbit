@@ -7,11 +7,10 @@ import (
 )
 
 type Behavior interface {
-	HandleCall(context actor.Context, msg any) (any, error)
-	HandleCast(context actor.Context, msg any) error
+	HandleRequest(context actor.Context, msg any) (any, error)
+	HandleSend(context actor.Context, msg any) error
 	HandleForward(context actor.Context, msg any) error
 	HandleInit(context actor.Context) error
-	HandleStopping(context actor.Context) error
 	HandleStopped(context actor.Context) error
 }
 
@@ -20,14 +19,16 @@ type Behavior interface {
 type ChildActor struct {
 	Behavior
 	ActorName    string
+	Pattern      string
 	initialized  bool
 	initCallback func(err error) error
 }
 
 // NewChildActor 创建一个新的子Actor
-func NewChildActor(behavior Behavior, id string, initCB func(err error) error) *ChildActor {
+func NewChildActor(behavior Behavior, actorName, pattern string, initCB func(err error) error) *ChildActor {
 	return &ChildActor{
-		ActorName:    id,
+		ActorName:    actorName,
+		Pattern:      pattern,
 		Behavior:     behavior,
 		initCallback: initCB,
 	}
@@ -63,14 +64,14 @@ func (state *ChildActor) Receive(context actor.Context) {
 func (state *ChildActor) handleMessage(context actor.Context, msg *RequestMessage) {
 	switch msg.MsgType {
 	case MessageTypeRequest:
-		result, err := state.HandleCall(context, msg.Message)
+		result, err := state.HandleRequest(context, msg.Message)
 		if err != nil {
 			context.Respond(err)
 		} else {
 			context.Respond(result)
 		}
 	case MessageTypeSend:
-		state.HandleCast(context, msg.Message)
+		state.HandleSend(context, msg.Message)
 	case MessageTypeForward:
 		state.HandleForward(context, msg.Message)
 	}

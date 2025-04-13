@@ -2,10 +2,11 @@ package actor
 
 import (
 	"errors"
-	"gitee.com/orbit-w/orbit/lib/logger"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"gitee.com/orbit-w/orbit/lib/logger"
 
 	"github.com/asynkron/protoactor-go/actor"
 )

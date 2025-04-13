@@ -81,14 +81,14 @@ func (m *ActorSupervision) handleStartActor(context actor.Context, msg *StartAct
 
 	// 如果正在启动，则将Future添加到队列中
 	if m.starting.Exists(msg.ActorName) {
-		m.starting.Push(msg.ActorName, msg.Future)
+		m.starting.PushFuture(msg.ActorName, msg.Future)
 		context.Respond(startActorWaitMessage)
 		return
 	}
 
 	// 如果正在停止，则将Future添加到队列中
 	if m.stopping.Exists(msg.ActorName) {
-		m.stopping.Push(msg.ActorName, msg.Future)
+		m.stopping.PushFuture(msg.ActorName, msg.Future)
 		context.Respond(startActorWaitMessage)
 		return
 	}
@@ -105,7 +105,9 @@ func (m *ActorSupervision) handleStartActor(context actor.Context, msg *StartAct
 	}
 
 	// 将Actor添加到正在启动的列表中
-	m.starting.Insert(msg.ActorName, msg.Pattern, pid, msg.Future, time.Now().UnixNano())
+	item := NewItem(msg.ActorName, msg.Pattern, pid)
+	item.AddFuture(msg.Future)
+	m.starting.Insert(msg.ActorName, item, time.Now().UnixNano())
 
 	context.Respond(startActorWaitMessage)
 }
@@ -116,7 +118,7 @@ func (m *ActorSupervision) startActor(context actor.Context, pattern, actorName 
 		behavior := CreateBehaviorWithID(pattern, actorName)
 
 		// 设置初始化完成通知
-		childActor := NewChildActor(behavior, actorName, func(err error) error {
+		childActor := NewChildActor(behavior, actorName, pattern, func(err error) error {
 			context.Send(context.Self(), &ChildStartedNotification{ActorName: actorName, Error: err})
 			return nil
 		})
@@ -147,12 +149,14 @@ func (m *ActorSupervision) handleStopActor(context actor.Context, msg *StopActor
 	m.stopActor(context, msg.ActorName, msg.Pattern, pid)
 }
 
+// Pid 属于需要停止的目标Actor
 func (m *ActorSupervision) stopActor(context actor.Context, actorName, pattern string, pid *actor.PID) {
 	// Stop the actor
 	context.Poison(pid)
 
 	// 将Actor从正在停止的列表中删除
-	m.stopping.Insert(actorName, pattern, nil, nil, time.Now().UnixNano())
+	item := NewItem(actorName, pattern, nil)
+	m.stopping.Insert(actorName, item, time.Now().UnixNano())
 
 	// 从缓存中删除Actor
 	actorsCache.Delete(actorName)
@@ -179,7 +183,7 @@ func (m *ActorSupervision) handleActorStopped(context actor.Context, actorName s
 		return
 	}
 
-	if item != nil && len(item.Future) > 0 {
+	if item != nil && item.FuturesNum() > 0 {
 		pid, err := m.startActor(context, item.Pattern, actorName)
 		if err != nil {
 			logger.GetLogger().Error("Failed to start actor", zap.String("ActorName", actorName), zap.Error(err))
@@ -190,7 +194,9 @@ func (m *ActorSupervision) handleActorStopped(context actor.Context, actorName s
 			return
 		}
 		item.Child = pid
-		m.starting.BatchInsert(actorName, item.Pattern, pid, item.Future, time.Now().UnixNano())
+		newItem := NewItem(actorName, item.Pattern, pid)
+		newItem.AddFuture(item.Future...)
+		m.starting.Insert(actorName, newItem, time.Now().UnixNano())
 	}
 }
 

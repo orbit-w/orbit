@@ -12,6 +12,43 @@ type Item struct {
 	Child     *actor.PID
 }
 
+func NewItem(actorName, pattern string, child *actor.PID) *Item {
+	return &Item{
+		ActorName: actorName,
+		Pattern:   pattern,
+		Future:    make([]*actor.PID, 0),
+		Child:     child,
+	}
+}
+
+func (i *Item) AddFuture(future ...*actor.PID) {
+	if i.Future == nil {
+		i.Future = make([]*actor.PID, 0)
+	}
+	if future != nil {
+		i.Future = append(i.Future, future...)
+	}
+}
+
+func (i *Item) FuturesNum() int {
+	num := 0
+	for _, future := range i.Future {
+		if future != nil {
+			num++
+		}
+	}
+	return num
+}
+
+func (i *Item) Futures() []*actor.PID {
+	for j := range i.Future {
+		if i.Future[j] == nil {
+			i.Future = append(i.Future[:j], i.Future[j+1:]...)
+		}
+	}
+	return i.Future
+}
+
 type Queue struct {
 	pq *priority_queue.PriorityQueue[string, *Item, int64]
 }
@@ -22,46 +59,21 @@ func NewPriorityQueue() *Queue {
 	}
 }
 
-func (q *Queue) Insert(actorName, pattern string, child, future *actor.PID, priority int64) {
+func (q *Queue) Insert(actorName string, item *Item, priority int64) {
 	ok := q.pq.Exist(actorName)
 	if ok {
 		return
 	}
-	futures := make([]*actor.PID, 0)
-	if future != nil {
-		futures = append(futures, future)
-	}
-	q.pq.Push(actorName, &Item{
-		ActorName: actorName,
-		Pattern:   pattern,
-		Future:    futures,
-		Child:     child,
-	}, priority)
+	q.pq.Push(actorName, item, priority)
 }
 
-func (q *Queue) BatchInsert(actorName, pattern string, child *actor.PID, futures []*actor.PID, priority int64) {
-	ok := q.pq.Exist(actorName)
-	if ok {
-		return
-	}
-
-	q.pq.Push(actorName, &Item{
-		ActorName: actorName,
-		Pattern:   pattern,
-		Future:    futures,
-		Child:     child,
-	}, priority)
-}
-
-func (q *Queue) Push(actorName string, future *actor.PID) {
+func (q *Queue) PushFuture(actorName string, future *actor.PID) {
 	ent, ok := q.pq.Get(actorName)
 	if !ok {
 		return
 	}
 	v := ent.Value.GetValue()
-	if future != nil {
-		v.Future = append(v.Future, future)
-	}
+	v.AddFuture(future)
 	q.pq.UpdateValue(actorName, v)
 }
 

@@ -22,11 +22,11 @@ type MockBehavior struct {
 	actorID string
 }
 
-func (b *MockBehavior) HandleCall(_ actor.Context, _ any) (any, error) {
+func (b *MockBehavior) HandleRequest(_ actor.Context, _ any) (any, error) {
 	return nil, nil
 }
 
-func (b *MockBehavior) HandleCast(_ actor.Context, _ any) error {
+func (b *MockBehavior) HandleSend(_ actor.Context, _ any) error {
 	return nil
 }
 
@@ -237,7 +237,7 @@ type StoppingBehavior struct {
 	actorName string
 }
 
-func (b *StoppingBehavior) HandleCall(_ actor.Context, msg any) (any, error) {
+func (b *StoppingBehavior) HandleRequest(_ actor.Context, msg any) (any, error) {
 	v, ok := msg.(string)
 	if !ok {
 		return nil, fmt.Errorf("unknown message type: %T", msg)
@@ -246,7 +246,7 @@ func (b *StoppingBehavior) HandleCall(_ actor.Context, msg any) (any, error) {
 	return v, nil
 }
 
-func (b *StoppingBehavior) HandleCast(_ actor.Context, msg any) error {
+func (b *StoppingBehavior) HandleSend(_ actor.Context, msg any) error {
 	v, ok := msg.(string)
 	if !ok {
 		return fmt.Errorf("unknown message type: %T", msg)

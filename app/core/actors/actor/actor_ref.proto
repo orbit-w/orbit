@@ -5,20 +5,37 @@ package actor;
 // 定义Go代码生成的包路径，用于生成Go代码时的包名
 option go_package = ".;actor";
 
-// 导入actor.proto以使用PID类型
-import "actor.proto";
+//import "actor.proto";
 
+// ActorRef 包含 Actor不变的初始化信息
 message ActorRef {
-  actor.PID PID = 1;
+  // 在proto中移除PID字段，但在生成的Go结构中保留
+  // 在生成的Go代码中应添加:
+  // import 	actor "github.com/asynkron/protoactor-go/actor"
+  /*
+    type ActorRef struct {
+      ......
+
+      PID *actor.PID `protobuf:"-"`
+}
+  */
+  reserved 1;
   string ActorName = 2;
   string Pattern = 3;
+  string ServerId = 4; //初始逻辑服ID
+}
+
+message Meta {
+  string ActorName = 1;
+  string Pattern = 2;
+  string ServerId = 3; //初始逻辑服ID
   Dispatcher Dispatcher = 4;
 }
 
 message Dispatcher {
     DispatcherType Type = 1;
-    string WorldId = 2;
-    string NodeId = 3;
+    string ServerId = 2; //最新的逻辑服ID
+    string NodeId = 3; //最新的节点ID
 }
 
 enum DispatcherType {
@@ -26,20 +43,3 @@ enum DispatcherType {
     DISPATCHER_TYPE_IN_REGION = 1; // 区域分组
     DISPATCHER_TYPE_RANDOM = 2; // 随机分组 
 }
-
-message RequestMessage {
-    string ActorName = 1;
-    repeated bytes Message = 2;
-}
-
-message RequestMessageResponse {
-    MessageType Type = 1;
-    bytes Message = 2;
-}
-
-enum MessageType {
-    MESSAGE_TYPE_CALL = 0;
-    MESSAGE_TYPE_CAST = 1;
-    MESSAGE_TYPE_FORWARD = 2;
-}
-
