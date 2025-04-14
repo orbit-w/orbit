@@ -84,6 +84,7 @@ func (af *ActorSystem) Stop(ctx context.Context) error {
 // 实现细节:
 //   - 使用GracefulShutdownManager确保所有supervisor正确停止
 //   - 要求所有supervisor连续5次成功报告完成才视为停止成功
+//   - 设置最大尝试次数为100，防止永远无法达到成功阈值时的无限重试
 //   - 当所有supervisor停止后，将系统状态设置为Stopped
 func (af *ActorSystem) stop(ctx context.Context) error {
 	if ctx == nil {
@@ -92,7 +93,13 @@ func (af *ActorSystem) stop(ctx context.Context) error {
 
 	ActorFacadeStopping.Store(true)
 
-	shutdownManager := NewGracefulShutdownManager(5, func() bool {
+	// 创建一个有最大尝试次数限制的关闭管理器
+	const (
+		successThreshold = 5   // 需要连续成功的次数
+		maxAttempts      = 100 // 最大尝试次数，防止无限循环
+	)
+
+	shutdownManager := NewGracefulShutdownManagerWithMaxAttempts(successThreshold, maxAttempts, func() bool {
 		for lv := LevelNormal; lv < LevelMaxLimit; lv++ {
 			completed, err := af.stopSupervisor(lv)
 			if err != nil {
@@ -112,10 +119,12 @@ func (af *ActorSystem) stop(ctx context.Context) error {
 		return true
 	})
 
-	shutdownManager.Shutdown(ctx)
+	err := shutdownManager.Shutdown(ctx)
 
+	// 无论结果如何，都将状态设置为Stopped
 	af.state.CompareAndSwap(ActorSystemStateStopping, ActorSystemStateStopped)
-	return nil
+
+	return err
 }
 
 func (af *ActorSystem) ActorSystem() *actor.ActorSystem {
@@ -290,6 +299,8 @@ type GracefulShutdownManager struct {
 	successCount atomic.Int32
 	// 总尝试次数，用于监控和调试
 	attemptCount atomic.Int32
+	// 最大尝试次数，超过此次数后不再重试，0表示无限重试
+	maxAttempts int32
 	// 关闭操作的实际执行函数，返回操作是否成功
 	shutdownOperation func() bool
 	// 通知通道，用于发出关闭完成的信号
@@ -301,10 +312,20 @@ type GracefulShutdownManager struct {
 //   - successThreshold: 确认操作完成所需的连续成功次数
 //   - shutdownOperation: 实际执行关闭操作并返回是否成功的函数
 func NewGracefulShutdownManager(successThreshold int32, shutdownOperation func() bool) *GracefulShutdownManager {
+	return NewGracefulShutdownManagerWithMaxAttempts(successThreshold, 0, shutdownOperation)
+}
+
+// NewGracefulShutdownManagerWithMaxAttempts 创建一个有最大尝试次数限制的优雅关闭管理器
+// 参数:
+//   - successThreshold: 确认操作完成所需的连续成功次数
+//   - maxAttempts: 最大尝试次数，0表示无限重试
+//   - shutdownOperation: 实际执行关闭操作并返回是否成功的函数
+func NewGracefulShutdownManagerWithMaxAttempts(successThreshold int32, maxAttempts int32, shutdownOperation func() bool) *GracefulShutdownManager {
 	return &GracefulShutdownManager{
 		successThreshold:  successThreshold,
 		successCount:      atomic.Int32{},
 		attemptCount:      atomic.Int32{},
+		maxAttempts:       maxAttempts,
 		shutdownOperation: shutdownOperation,
 		completionSignal:  make(chan struct{}, 1),
 	}
@@ -340,6 +361,15 @@ func (g *GracefulShutdownManager) Shutdown(ctx context.Context) error {
 		defer g.signalCompletion()
 
 		for g.successCount.Load() < g.successThreshold {
+			// 检查最大尝试次数
+			if g.maxAttempts > 0 && g.attemptCount.Load() >= g.maxAttempts {
+				logger.GetLogger().Warn("reached maximum attempt count without success",
+					zap.Int32("maxAttempts", g.maxAttempts),
+					zap.Int32("successCount", g.successCount.Load()),
+					zap.Int32("successThreshold", g.successThreshold))
+				return
+			}
+
 			// 检查 context 是否已取消
 			select {
 			case <-shutdownCtx.Done():
@@ -380,10 +410,16 @@ func (g *GracefulShutdownManager) Shutdown(ctx context.Context) error {
 		default:
 		}
 
-		logger.GetLogger().Info("shutdown completed successfully",
-			zap.Int32("attempts", g.attemptCount.Load()),
-			zap.Int32("successCount", g.successCount.Load()))
-		return nil
+		// 检查是否达到了成功阈值或是因为达到最大尝试次数而退出
+		if g.successCount.Load() >= g.successThreshold {
+			logger.GetLogger().Info("shutdown completed successfully",
+				zap.Int32("attempts", g.attemptCount.Load()),
+				zap.Int32("successCount", g.successCount.Load()))
+			return nil
+		} else {
+			return fmt.Errorf("shutdown operation failed after %d attempts, only reached %d/%d consecutive successes",
+				g.attemptCount.Load(), g.successCount.Load(), g.successThreshold)
+		}
 	case <-ctx.Done():
 		return fmt.Errorf("shutdown operation canceled: %w", ctx.Err())
 	}

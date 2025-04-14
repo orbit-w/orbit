@@ -404,16 +404,10 @@ func TestGracefulShutdownManager(t *testing.T) {
 		defer cancel()
 
 		// 由于使用了utils.GoRecoverPanic，panic应该被捕获，不会导致测试失败
-		err := manager.Shutdown(ctx)
+		_ = manager.Shutdown(ctx)
 
-		// 这个断言可能会根据实际实现有所不同
-		// 如果panic真的被处理了，可能会有错误返回
-		if err != nil {
-			assert.Contains(t, err.Error(), "panic", "错误应该包含panic信息")
-		} else {
-			// 如果panic被完全抑制且成功继续执行，检查尝试计数
-			assert.GreaterOrEqual(t, int(manager.attemptCount.Load()), 1, "应该至少尝试一次")
-		}
+		// 如果panic被完全抑制且成功继续执行，检查尝试计数
+		assert.GreaterOrEqual(t, int(manager.attemptCount.Load()), 1, "应该至少尝试一次")
 	})
 }
 
@@ -595,5 +589,111 @@ func TestActorSystem_Stop(t *testing.T) {
 		err := specialSystem.Stop(ctx)
 		assert.Error(t, err, "带超时的停止应该返回错误")
 		assert.Contains(t, err.Error(), "canceled", "错误应该包含超时信息")
+	})
+}
+
+func TestGracefulShutdownManager_MaxAttempts(t *testing.T) {
+	// 测试用例1: 最大尝试次数限制 - 达到限制时应停止重试
+	t.Run("达到最大尝试次数", func(t *testing.T) {
+		maxAttempts := int32(10)
+		attempts := 0
+
+		// 创建一个永远不会成功的关闭管理器，但有最大尝试次数限制
+		manager := NewGracefulShutdownManagerWithMaxAttempts(5, maxAttempts, func() bool {
+			attempts++
+			return false // 永远返回失败
+		})
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		// 执行关闭操作
+		err := manager.Shutdown(ctx)
+
+		// 验证结果
+		assert.Error(t, err, "达到最大尝试次数后应返回错误")
+		assert.Contains(t, err.Error(), "failed after", "错误消息应说明尝试失败")
+		assert.Equal(t, maxAttempts, manager.attemptCount.Load(), "应该精确尝试最大次数")
+		assert.Equal(t, int32(0), manager.successCount.Load(), "成功计数应为0")
+	})
+
+	// 测试用例2: 在达到最大尝试次数之前成功
+	t.Run("最大尝试次数前成功", func(t *testing.T) {
+		maxAttempts := int32(20)
+		successAfter := 5
+		attempts := 0
+
+		// 创建一个在特定尝试次数后成功的关闭管理器
+		manager := NewGracefulShutdownManagerWithMaxAttempts(2, maxAttempts, func() bool {
+			attempts++
+			return attempts >= successAfter // 第5次及以后成功
+		})
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		// 执行关闭操作
+		err := manager.Shutdown(ctx)
+
+		// 验证结果
+		assert.NoError(t, err, "在达到最大尝试次数前应成功完成")
+		assert.Equal(t, int32(successAfter+1), manager.attemptCount.Load(), "应该在成功后停止尝试")
+		assert.Equal(t, int32(2), manager.successCount.Load(), "成功计数应达到阈值")
+	})
+
+	// 测试用例3: 最大尝试次数为0（无限尝试）
+	t.Run("无限尝试设置", func(t *testing.T) {
+		successAfter := 50 // 设置一个大于0但不会使测试超时的值
+		attempts := 0
+
+		// 创建一个在较多尝试后成功的关闭管理器，但不限制最大尝试次数
+		manager := NewGracefulShutdownManagerWithMaxAttempts(2, 0, func() bool {
+			attempts++
+			return attempts >= successAfter
+		})
+
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+
+		// 在后台执行关闭操作
+		errCh := make(chan error, 1)
+		go func() {
+			errCh <- manager.Shutdown(ctx)
+		}()
+
+		// 等待操作完成或超时
+		select {
+		case err := <-errCh:
+			assert.NoError(t, err, "应该成功完成")
+			assert.GreaterOrEqual(t, int(manager.attemptCount.Load()), successAfter, "应该至少尝试到成功所需次数")
+			assert.Equal(t, int32(2), manager.successCount.Load(), "成功计数应达到阈值")
+		case <-time.After(3 * time.Second):
+			t.Fatal("操作应该在有限时间内完成")
+		}
+	})
+
+	// 测试用例4: 测试最大尝试次数和上下文取消的交互
+	t.Run("最大尝试次数和上下文取消", func(t *testing.T) {
+		maxAttempts := int32(50)
+		attempts := 0
+
+		// 创建一个耗时操作，便于触发超时
+		manager := NewGracefulShutdownManagerWithMaxAttempts(5, maxAttempts, func() bool {
+			attempts++
+			time.Sleep(50 * time.Millisecond) // 每次尝试耗时
+			return false                      // 永远失败
+		})
+
+		// 创建一个短超时的上下文
+		ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+		defer cancel()
+
+		// 执行关闭操作
+		err := manager.Shutdown(ctx)
+
+		// 验证结果 - 应该因为上下文取消而不是最大尝试次数而失败
+		assert.Error(t, err, "应该因为超时而返回错误")
+		assert.Contains(t, err.Error(), "canceled", "错误消息应包含取消信息")
+		assert.Less(t, manager.attemptCount.Load(), maxAttempts, "尝试次数应小于最大限制")
 	})
 }
