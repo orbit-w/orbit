@@ -6,6 +6,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"gitee.com/orbit-w/meteor/bases/misc/utils"
 	"gitee.com/orbit-w/orbit/lib/logger"
 	"github.com/asynkron/protoactor-go/actor"
 	"go.uber.org/zap"
@@ -44,6 +45,8 @@ func GenManagerName(level Level) string {
 
 // Receive handles messages sent to the ActorManager
 func (m *ActorSupervision) Receive(context actor.Context) {
+	defer utils.RecoverPanic()
+
 	switch msg := context.Message().(type) {
 	case *actor.Started:
 		// Start the garbage collection routine
@@ -66,6 +69,9 @@ func (m *ActorSupervision) Receive(context actor.Context) {
 
 	case *StopAllRequest:
 		m.handleStoppingAll(context)
+
+	case *actor.Stopped:
+		m.handleStopped(context)
 
 	default:
 		logger.GetLogger().Error("ActorManager received unknown message", zap.Any("Message", msg))
@@ -93,7 +99,7 @@ func (m *ActorSupervision) handleStartActor(context actor.Context, msg *StartAct
 		if m.restarting.Exists(msg.ActorName) {
 			m.restarting.PushFuture(msg.ActorName, msg.Future)
 		} else {
-			m.restarting.Insert(msg.ActorName, NewItem(msg.ActorName, msg.Pattern, nil, msg.Props), time.Now().UnixNano())
+			m.restarting.Insert(msg.ActorName, NewItem(msg.ActorName, msg.Pattern, nil, msg.Props, msg.Future), time.Now().UnixNano())
 		}
 		context.Respond(startActorWaitMessage)
 		return
@@ -111,8 +117,7 @@ func (m *ActorSupervision) handleStartActor(context actor.Context, msg *StartAct
 	}
 
 	// 将Actor添加到正在启动的列表中
-	item := NewItem(msg.ActorName, msg.Pattern, pid, msg.Props)
-	item.AddFuture(msg.Future)
+	item := NewItem(msg.ActorName, msg.Pattern, pid, msg.Props, msg.Future)
 	m.starting.Insert(msg.ActorName, item, time.Now().UnixNano())
 
 	context.Respond(startActorWaitMessage)
@@ -150,9 +155,12 @@ func (m *ActorSupervision) handleStopActor(context actor.Context, msg *StopActor
 	}
 
 	m.stopActor(context, msg.ActorName, msg.Pattern, pid)
+	context.Respond(nil)
 }
 
 // Pid 属于需要停止的目标Actor
+// 异步停止，当发送Poison信号后立即返回调用者，
+// 而不是等到Supervisor收到目标Actor Terminated的信号后才返回调用者
 func (m *ActorSupervision) stopActor(context actor.Context, actorName, pattern string, pid *actor.PID) {
 	// Stop the actor
 	context.Poison(pid)
@@ -163,8 +171,6 @@ func (m *ActorSupervision) stopActor(context actor.Context, actorName, pattern s
 
 	// 从缓存中删除Actor
 	actorsCache.Delete(actorName)
-
-	context.Respond(nil)
 }
 
 // handleActorStopped handles notification that an actor has stopped
@@ -173,7 +179,7 @@ func (m *ActorSupervision) handleActorStopped(context actor.Context, actorName s
 		actorsCache.Delete(actorName)
 	}()
 
-	item, ok := m.stopping.Pop(actorName)
+	_, ok := m.stopping.Pop(actorName)
 	if !ok {
 		if m.state.Load() < StateActorSupervisionStopping {
 			logger.GetLogger().Error("Actor stopped notification received for unknown actor", zap.String("ActorName", actorName))
@@ -191,31 +197,14 @@ func (m *ActorSupervision) handleActorStopped(context actor.Context, actorName s
 		pid, err := m.startActor(context, watching.Pattern, actorName, watching.Props)
 		if err != nil {
 			logger.GetLogger().Error("Failed to start actor", zap.String("ActorName", actorName), zap.Error(err))
-			for i := range item.Future {
-				target := item.Future[i]
+			for i := range watching.Future {
+				target := watching.Future[i]
 				context.Send(target, err)
 			}
 			return
 		}
 
-		newItem := NewItem(actorName, watching.Pattern, pid, watching.Props)
-		newItem.AddFuture(watching.Future...)
-		m.starting.Insert(actorName, newItem, time.Now().UnixNano())
-	}
-
-	if item != nil && item.FuturesNum() > 0 {
-		pid, err := m.startActor(context, item.Pattern, actorName, item.Props)
-		if err != nil {
-			logger.GetLogger().Error("Failed to start actor", zap.String("ActorName", actorName), zap.Error(err))
-			for i := range item.Future {
-				target := item.Future[i]
-				context.Send(target, err)
-			}
-			return
-		}
-		item.Child = pid
-		newItem := NewItem(actorName, item.Pattern, pid, item.Props)
-		newItem.AddFuture(item.Future...)
+		newItem := NewItem(actorName, watching.Pattern, pid, watching.Props, watching.Future...)
 		m.starting.Insert(actorName, newItem, time.Now().UnixNano())
 	}
 }
@@ -258,6 +247,12 @@ func (m *ActorSupervision) handleStoppingAll(context actor.Context) {
 			logger.GetLogger().Error("StoppingAll child not found", zap.String("ActorName", name))
 		}
 	}
+
+	if !m.starting.Empty() || !m.stopping.Empty() || !m.restarting.Empty() {
+		context.Respond(&StopAllResponse{Complete: false})
+		return
+	}
+
 	complete := len(context.Children()) == 0
 	if complete {
 		m.state.Store(StateActorSupervisionStopped)
@@ -265,22 +260,11 @@ func (m *ActorSupervision) handleStoppingAll(context actor.Context) {
 	context.Respond(&StopAllResponse{Complete: complete})
 }
 
-// 新增方法：检查Actor是否处于活跃状态（非stopping）
-func (m *ActorSupervision) isActorAlive(pid *actor.PID) bool {
-	// 使用Touch消息测试Actor是否响应
-	// Touch是一种特殊消息，如果Actor活跃会回复Touched消息
-	future := m.actorSystem.Root.RequestFuture(pid, &actor.Touch{}, 100*time.Millisecond)
-
-	// 如果能够获得响应，说明Actor是活跃的
-	result, err := future.Result()
-	if err != nil {
-		// 超时或其他错误，说明Actor可能已停止或正在停止
-		return false
-	}
-
-	// 检查返回值是否为Touched消息
-	_, ok := result.(*actor.Touched)
-	return ok
+func (m *ActorSupervision) handleStopped(_ actor.Context) {
+	// 释放队列
+	m.stopping.Free()
+	m.restarting.Free()
+	m.starting.Free()
 }
 
 func (m *ActorSupervision) isAllActorStopped() bool {

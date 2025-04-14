@@ -7,8 +7,8 @@ import (
 var logger = mlog.NewFileLogger(mlog.WithLevel("info"),
 	mlog.WithFormat("console"),
 	mlog.WithRotation(500, 7, 3, false),
-	mlog.WithInitialFields(map[string]any{"app": "content-moderation"}),
-	mlog.WithOutputPaths("logs/content-moderation.log"))
+	mlog.WithInitialFields(map[string]any{"app": "orbit-server"}),
+	mlog.WithOutputPaths("logs/orbit.log"))
 
 func SetLogger(log *mlog.Logger) {
 	logger = log

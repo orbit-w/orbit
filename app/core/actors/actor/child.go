@@ -1,6 +1,7 @@
 package actor
 
 import (
+	"gitee.com/orbit-w/meteor/bases/misc/utils"
 	"gitee.com/orbit-w/orbit/lib/logger"
 	"github.com/asynkron/protoactor-go/actor"
 	"go.uber.org/zap"
@@ -44,6 +45,7 @@ func (state *ChildActor) GetContext() IContext {
 
 // Receive 处理接收到的消息
 func (state *ChildActor) Receive(context actor.Context) {
+	defer utils.RecoverPanic()
 	switch msg := context.Message().(type) {
 	case *actor.Started:
 		state.SetActorContext(context)

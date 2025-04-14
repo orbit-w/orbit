@@ -17,6 +17,9 @@ func NewProps() *Props {
 }
 
 func (pp *Props) GetInitHandler() func() error {
+	if pp == nil {
+		return nil
+	}
 	if pp.InitHandler == nil {
 		return nil
 	}
@@ -24,6 +27,9 @@ func (pp *Props) GetInitHandler() func() error {
 }
 
 func (pp *Props) GetMeta() *Meta {
+	if pp == nil {
+		return nil
+	}
 	if pp.Meta == nil {
 		return nil
 	}
@@ -31,6 +37,9 @@ func (pp *Props) GetMeta() *Meta {
 }
 
 func (pp *Props) GetKvs(iter func(k string, v any)) {
+	if pp == nil {
+		return
+	}
 	if pp.kvs == nil {
 		return
 	}

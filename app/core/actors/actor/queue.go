@@ -13,21 +13,27 @@ type Item struct {
 	Props     *Props
 }
 
-func NewItem(actorName, pattern string, child *actor.PID, props *Props) *Item {
-	return &Item{
+func NewItem(actorName, pattern string, child *actor.PID, props *Props, future ...*actor.PID) *Item {
+	item := &Item{
 		ActorName: actorName,
 		Pattern:   pattern,
 		Future:    make([]*actor.PID, 0),
 		Child:     child,
+		Props:     props,
 	}
+	item.AddFuture(future...)
+	return item
 }
 
-func (i *Item) AddFuture(future ...*actor.PID) {
+func (i *Item) AddFuture(futures ...*actor.PID) {
 	if i.Future == nil {
 		i.Future = make([]*actor.PID, 0)
 	}
-	if future != nil {
-		i.Future = append(i.Future, future...)
+	for j := range futures {
+		f := futures[j]
+		if f != nil {
+			i.Future = append(i.Future, f)
+		}
 	}
 }
 
@@ -98,4 +104,12 @@ func (q *Queue) PopAndRangeWithKey(key string, iter func(name, pattern string, c
 		}
 	}
 	return v, true
+}
+
+func (q *Queue) Empty() bool {
+	return q.pq.Empty()
+}
+
+func (q *Queue) Free() {
+	q.pq.Free()
 }
