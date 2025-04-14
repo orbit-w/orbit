@@ -49,13 +49,13 @@ func (pp *Props) getOrCreateActorPID(name, pattern string) *actor.PID {
 
 type PropsOption func(pp *Props)
 
-func WrapperInitHandler(handler func() error) PropsOption {
+func WithInitHandler(handler func() error) PropsOption {
 	return func(pp *Props) {
 		pp.InitHandler = handler
 	}
 }
 
-func WrapperMeta(meta *Meta) PropsOption {
+func WithMeta(meta *Meta) PropsOption {
 	return func(pp *Props) {
 		pp.Meta = meta
 	}

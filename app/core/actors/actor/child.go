@@ -19,7 +19,10 @@ type Behavior interface {
 // 实现了InitNotifiable接口，允许在初始化完成后发送通知
 type ChildActor struct {
 	Behavior
-	IContext
+	metaData     *Meta
+	context      actor.Context
+	actorName    string
+	pattern      string
 	initialized  bool
 	initCallback func(err error) error
 }
@@ -27,29 +30,31 @@ type ChildActor struct {
 // NewChildActor 创建一个新的子Actor
 func NewChildActor(behavior Behavior, name, pattern string, meta *Meta, initCB func(err error) error) *ChildActor {
 	return &ChildActor{
-		IContext:     NewContext(meta, name, pattern),
+		metaData:     meta,
+		actorName:    name,
+		pattern:      pattern,
 		Behavior:     behavior,
 		initCallback: initCB,
 	}
 }
 
 func (state *ChildActor) GetContext() IContext {
-	return state.IContext
+	return state
 }
 
 // Receive 处理接收到的消息
 func (state *ChildActor) Receive(context actor.Context) {
 	switch msg := context.Message().(type) {
 	case *actor.Started:
-		state.GetContext().SetActorContext(context)
+		state.SetActorContext(context)
 		// 执行初始化逻辑
-		state.HandleInit(state.GetContext(), context)
+		state.HandleInit(context)
 
 	case *actor.Stopping:
-		_ = state.HandleStopping(state.GetContext())
+		_ = state.HandleStopping(context)
 
 	case *actor.Stopped:
-		state.HandleStopped(state.GetContext())
+		state.HandleStopped(context)
 
 	case *actor.Restarting:
 		logger.GetLogger().Info("Child actor restarting", zap.String("ActorName", state.GetContext().GetActorName()))
@@ -57,7 +62,7 @@ func (state *ChildActor) Receive(context actor.Context) {
 		//state.HandleInit(context)
 
 	case *RequestMessage:
-		state.handleMessage(state.GetContext(), msg)
+		state.handleMessage(context, msg)
 
 	default:
 		logger.GetLogger().Info("Child actor received invalid message", zap.String("ActorName", state.GetContext().GetActorName()), zap.Any("Message", msg))
@@ -65,33 +70,33 @@ func (state *ChildActor) Receive(context actor.Context) {
 }
 
 // handleMessage 处理常规消息
-func (state *ChildActor) handleMessage(ctx IContext, msg *RequestMessage) {
+func (state *ChildActor) handleMessage(context actor.Context, msg *RequestMessage) {
 	switch msg.MsgType {
 	case MessageTypeRequest:
-		result, err := state.HandleRequest(ctx, msg.Message)
+		result, err := state.HandleRequest(state, msg.Message)
 		if err != nil {
-			ctx.GetActorContext().Respond(err)
+			context.Respond(err)
 		} else {
-			ctx.GetActorContext().Respond(result)
+			context.Respond(result)
 		}
 	case MessageTypeSend:
-		state.HandleSend(ctx, msg.Message)
+		state.HandleSend(state, msg.Message)
 	case MessageTypeForward:
-		state.HandleForward(ctx, msg.Message)
+		state.HandleForward(state, msg.Message)
 	}
 }
 
 // HandleInit 在Actor启动时执行的初始化逻辑
 // 返回nil表示成功，否则返回错误
-func (state *ChildActor) HandleInit(ctx IContext, actorContext actor.Context) {
+func (state *ChildActor) HandleInit(actorContext actor.Context) {
 	if state.initialized {
 		return
 	}
 
 	// 执行初始化逻辑
-	err := state.Behavior.HandleInit(ctx)
+	err := state.Behavior.HandleInit(state)
 	if err != nil {
-		logger.GetLogger().Error("Child actor initialization failed", zap.String("ActorName", ctx.GetActorName()), zap.Error(err))
+		logger.GetLogger().Error("Child actor initialization failed", zap.String("ActorName", state.GetActorName()), zap.Error(err))
 	}
 
 	// 初始化完成后，通知父进程
@@ -101,28 +106,59 @@ func (state *ChildActor) HandleInit(ctx IContext, actorContext actor.Context) {
 
 	state.initialized = true
 	if err == nil {
-		logger.GetLogger().Info("Child actor started", zap.String("ActorName", ctx.GetActorName()))
+		logger.GetLogger().Info("Child actor started", zap.String("ActorName", state.GetActorName()))
 	}
 }
 
-func (state *ChildActor) HandleStopping(ctx IContext) error {
-	err := state.Behavior.HandleStopping(ctx)
+func (state *ChildActor) HandleStopping(context actor.Context) error {
+	err := state.Behavior.HandleStopping(state)
 	if err != nil {
-		logger.GetLogger().Error("Child actor stopping failed", zap.String("ActorName", ctx.GetActorName()), zap.Error(err))
+		logger.GetLogger().Error("Child actor stopping failed", zap.String("ActorName", state.GetActorName()), zap.Error(err))
 	} else {
-		logger.GetLogger().Info("Child actor stopping", zap.String("ActorName", ctx.GetActorName()))
+		logger.GetLogger().Info("Child actor stopping", zap.String("ActorName", state.GetActorName()))
 	}
 	return err
 }
 
-func (state *ChildActor) HandleStopped(ctx IContext) {
+func (state *ChildActor) HandleStopped(context actor.Context) {
 	// 执行初始化逻辑
-	err := state.Behavior.HandleStopped(ctx)
+	err := state.Behavior.HandleStopped(state)
 	if err != nil {
-		logger.GetLogger().Error("Child actor stopped failed", zap.String("ActorName", ctx.GetActorName()), zap.Error(err))
+		logger.GetLogger().Error("Child actor stopped failed", zap.String("ActorName", state.GetActorName()), zap.Error(err))
 	} else {
-		logger.GetLogger().Info("Child actor stopped", zap.String("ActorName", ctx.GetActorName()))
+		logger.GetLogger().Info("Child actor stopped", zap.String("ActorName", state.GetActorName()))
 	}
 
-	actorsCache.CompareAndSwap(ctx.GetActorName(), StateNone, StateStopped)
+	actorsCache.CompareAndSwap(state.GetActorName(), StateNone, StateStopped)
+}
+
+func (state *ChildActor) SetMetaData(meta *Meta) {
+	state.metaData = meta
+}
+
+func (state *ChildActor) GetMetaData() *Meta {
+	return state.metaData
+}
+
+func (state *ChildActor) GetActorName() string {
+	return state.actorName
+}
+
+func (state *ChildActor) GetPattern() string {
+	return state.pattern
+}
+
+func (state *ChildActor) GetActorContext() actor.Context {
+	return state.context
+}
+
+func (state *ChildActor) SetActorContext(context actor.Context) {
+	state.context = context
+}
+
+func (state *ChildActor) GetServerId() string {
+	if state.metaData == nil {
+		return ""
+	}
+	return state.metaData.ServerId
 }

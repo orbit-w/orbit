@@ -25,6 +25,15 @@ import (
 	}
 */
 
+func NewMeta(name, pattern, serverId string, dispatcher *Dispatcher) *Meta {
+	return &Meta{
+		ActorName:  name,
+		Pattern:    pattern,
+		ServerId:   serverId,
+		Dispatcher: dispatcher,
+	}
+}
+
 type ActorMetaCache struct {
 	cli   *redis.Client
 	cache cmap.ConcurrentMap

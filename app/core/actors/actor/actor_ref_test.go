@@ -8,7 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestStopActor(t *testing.T) {
+// 校验停止Actor是否正确
+func Test_StopActor(t *testing.T) {
 	const testPattern = "test-stopping-pattern"
 	// Setup
 	service := setup(testPattern)
@@ -31,8 +32,11 @@ func TestStopActor(t *testing.T) {
 	service.Stop()
 }
 
-// TestMessageLossDuringStopping demonstrates that messages sent to an actor during its stopping phase may be lost
-func TestMessageLossDuringStopping(t *testing.T) {
+// 校验停止Actor时，消息是否丢失
+// 场景：
+//  1. 由于向正在停止过程中的 Actor 发送消息而导致消息丢失
+//  2. 由于向已经停止的 Actor 发送消息而导致消息丢失
+func Test_MessageLossDuringStopping(t *testing.T) {
 	const testPattern = "test-stopping-pattern"
 	// Setup
 	service := setup(testPattern)
@@ -74,4 +78,67 @@ func TestMessageLossDuringStopping(t *testing.T) {
 	<-messageSent
 
 	service.Stop()
+}
+
+// 校验Props传递的参数是否正确
+func Test_ActorRefPropsContent(t *testing.T) {
+	pattern := "content-pattern"
+	service := setup(pattern)
+
+	// Register a test pattern
+	RegFactory(pattern, func(actorName string) Behavior {
+		return &ContentBehavior{
+			actorName: actorName,
+		}
+	})
+
+	name := "test-actor"
+	meta := NewMeta(name, pattern, "1", nil)
+	actorRef := NewActorRef(NewProps(), name, pattern, WithMeta(meta))
+	actorRef.Send("initial-message")
+	actorRef.Send("second-message")
+	actorRef.Stop()
+	time.Sleep(time.Second * 10)
+	service.Stop()
+}
+
+type ContentBehavior struct {
+	actorName string
+}
+
+func (b *ContentBehavior) HandleRequest(ctx IContext, msg any) (any, error) {
+	v, ok := msg.(string)
+	if !ok {
+		return nil, fmt.Errorf("unknown message type: %T", msg)
+	}
+	fmt.Printf("HandleCall message: %s\n", v)
+	return v, nil
+}
+
+func (b *ContentBehavior) HandleSend(ctx IContext, msg any) error {
+	v, ok := msg.(string)
+	if !ok {
+		return fmt.Errorf("unknown message type: %T", msg)
+	}
+	fmt.Printf("HandleCast message: %s\n", v)
+	return nil
+}
+
+func (b *ContentBehavior) HandleForward(ctx IContext, _ any) error {
+	return nil
+}
+
+func (b *ContentBehavior) HandleInit(ctx IContext) error {
+	fmt.Printf("Initializing actor with ID: %s, serverId: %s\n", b.actorName, ctx.GetServerId())
+	return nil
+}
+
+func (b *ContentBehavior) HandleStopping(ctx IContext) error {
+	fmt.Printf("Stopping actor with ID: %s, serverId: %s\n", b.actorName, ctx.GetServerId())
+	return nil
+}
+
+func (b *ContentBehavior) HandleStopped(ctx IContext) error {
+	fmt.Printf("Stopped actor with ID: %s, serverId: %s\n", b.actorName, ctx.GetServerId())
+	return nil
 }
