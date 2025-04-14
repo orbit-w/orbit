@@ -1,6 +1,7 @@
 package actor
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -31,7 +32,7 @@ func Test_StopActor(t *testing.T) {
 	err := StopActor(actorName, testPattern)
 	assert.NoError(t, err)
 	time.Sleep(time.Second * 10)
-	service.Stop()
+	service.Stop(context.Background())
 }
 
 // 校验停止Actor时，消息是否丢失
@@ -79,7 +80,7 @@ func Test_MessageLossDuringStopping(t *testing.T) {
 	// Wait for the message to be sent
 	<-messageSent
 
-	service.Stop()
+	service.Stop(context.Background())
 }
 
 // 校验Props传递的参数是否正确
@@ -101,7 +102,7 @@ func Test_ActorRefPropsContent(t *testing.T) {
 	actorRef.Send("second-message")
 	actorRef.Stop()
 	time.Sleep(time.Second * 10)
-	service.Stop()
+	service.Stop(context.Background())
 }
 
 func Test_ActorRefStartAndStop(t *testing.T) {
@@ -136,7 +137,7 @@ func Test_ActorRefStartAndStop(t *testing.T) {
 
 	wg.Wait()
 	time.Sleep(time.Second * 5)
-	_ = service.Stop()
+	_ = service.Stop(context.Background())
 }
 
 type ContentBehavior struct {
@@ -187,14 +188,14 @@ type CountBehavior struct {
 
 func (b *CountBehavior) HandleRequest(ctx IContext, msg any) (any, error) {
 	v := msg.(string)
-	fmt.Printf("HandleCall message: %s\n", v)
+	//fmt.Printf("HandleCall message: %s\n", v)
 	b.count.Add(1)
 	return v, nil
 }
 
 func (b *CountBehavior) HandleSend(ctx IContext, msg any) error {
-	v := msg.(string)
-	fmt.Printf("HandleCast message: %s\n", v)
+	// v := msg.(string)
+	// fmt.Printf("HandleCast message: %s\n", v)
 	b.count.Add(1)
 	return nil
 }

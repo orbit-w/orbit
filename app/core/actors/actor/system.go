@@ -1,18 +1,25 @@
 package actor
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"gitee.com/orbit-w/meteor/bases/misc/utils"
 	"gitee.com/orbit-w/orbit/lib/logger"
-
 	"github.com/asynkron/protoactor-go/actor"
+	"go.uber.org/zap"
 )
 
 const (
 	ManagerName = "system-actor-supervision"
+
+	ActorSystemStateRunning  = 0
+	ActorSystemStateStopping = 1
+	ActorSystemStateStopped  = 2
 )
 
 var (
@@ -29,11 +36,12 @@ func init() {
 
 type IService interface {
 	Start() error
-	Stop() error
+	Stop(ctx context.Context) error
 }
 
 // ActorSystem provides a simplified interface for managing actors
 type ActorSystem struct {
+	state       atomic.Int32
 	actorSystem *actor.ActorSystem
 	supervisors []*actor.PID
 }
@@ -49,19 +57,64 @@ func (af *ActorSystem) Start() error {
 	return nil
 }
 
-func (af *ActorSystem) Stop() error {
-	ActorFacadeStopping.Store(true)
-	for lv := LevelNormal; lv < LevelMaxLimit; {
-		completed, err := af.stopSupervisor(lv)
-		if err != nil {
-			return err
-		}
-		if completed {
-			lv++
-		}
+// Stop 开始ActorSystem的优雅关闭流程
+// 参数:
+//   - ctx: 用于控制停止操作超时和取消的上下文
+//
+// 返回:
+//   - 如果系统已在关闭或关闭成功则返回nil，如果发生错误则返回错误
+//
+// 说明:
+//   - 此方法只有在系统处于运行状态时才会进行实际关闭
+//   - 使用CAS操作确保只有一个goroutine能够触发系统关闭
+func (af *ActorSystem) Stop(ctx context.Context) error {
+	if af.state.CompareAndSwap(ActorSystemStateRunning, ActorSystemStateStopping) {
+		return af.stop(ctx)
+	}
+	return nil
+}
+
+// stop 负责处理ActorSystem的优雅关闭流程
+// 参数:
+//   - ctx: 用于控制停止操作超时和取消的上下文
+//
+// 返回:
+//   - 如果停止操作成功完成则返回nil，如果发生错误则返回错误
+//
+// 实现细节:
+//   - 使用GracefulShutdownManager确保所有supervisor正确停止
+//   - 要求所有supervisor连续5次成功报告完成才视为停止成功
+//   - 当所有supervisor停止后，将系统状态设置为Stopped
+func (af *ActorSystem) stop(ctx context.Context) error {
+	if ctx == nil {
+		ctx = context.Background()
 	}
 
-	logger.GetLogger().Info("ActorSystem stopped complete")
+	ActorFacadeStopping.Store(true)
+
+	shutdownManager := NewGracefulShutdownManager(5, func() bool {
+		for lv := LevelNormal; lv < LevelMaxLimit; lv++ {
+			completed, err := af.stopSupervisor(lv)
+			if err != nil {
+				logger.GetLogger().Error("Failed to stop supervisor",
+					zap.Int32("level", int32(lv)),
+					zap.Error(err))
+				return false
+			}
+
+			if !completed {
+				logger.GetLogger().Info("supervisor not completed",
+					zap.Int32("level", int32(lv)))
+				return false
+			}
+		}
+		logger.GetLogger().Info("All supervisors stopped complete")
+		return true
+	})
+
+	shutdownManager.Shutdown(ctx)
+
+	af.state.CompareAndSwap(ActorSystemStateStopping, ActorSystemStateStopped)
 	return nil
 }
 
@@ -213,4 +266,125 @@ func retry(fn func() (any, error), retryCount int) (any, error) {
 		lastErr = err
 	}
 	return nil, errors.New("max retry attempts reached: " + lastErr.Error())
+}
+
+// StopWithTimeout is a convenience method that stops the actor system with a timeout
+// It creates a context with the specified timeout and calls Stop
+func (af *ActorSystem) StopWithTimeout(timeout time.Duration) error {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	return af.Stop(ctx)
+}
+
+// StopWithDefaultTimeout is a convenience method that stops the actor system with a default timeout of 60 seconds
+func (af *ActorSystem) StopWithDefaultTimeout() error {
+	return af.StopWithTimeout(60 * time.Second)
+}
+
+// GracefulShutdownManager 负责管理优雅关闭过程，通过反复尝试特定操作直到连续成功达到阈值次数
+// 用于确保系统组件可以安全、可靠地关闭，即使在分布式或并发环境中
+type GracefulShutdownManager struct {
+	// 需要连续成功的次数，达到此阈值表示操作完全成功
+	successThreshold int32
+	// 当前连续成功的次数
+	successCount atomic.Int32
+	// 总尝试次数，用于监控和调试
+	attemptCount atomic.Int32
+	// 关闭操作的实际执行函数，返回操作是否成功
+	shutdownOperation func() bool
+	// 通知通道，用于发出关闭完成的信号
+	completionSignal chan struct{}
+}
+
+// NewGracefulShutdownManager 创建一个新的优雅关闭管理器
+// 参数:
+//   - successThreshold: 确认操作完成所需的连续成功次数
+//   - shutdownOperation: 实际执行关闭操作并返回是否成功的函数
+func NewGracefulShutdownManager(successThreshold int32, shutdownOperation func() bool) *GracefulShutdownManager {
+	return &GracefulShutdownManager{
+		successThreshold:  successThreshold,
+		successCount:      atomic.Int32{},
+		attemptCount:      atomic.Int32{},
+		shutdownOperation: shutdownOperation,
+		completionSignal:  make(chan struct{}, 1),
+	}
+}
+
+// done 返回一个接收通道，在关闭完成时会被关闭
+// 可用于等待关闭过程完成
+func (g *GracefulShutdownManager) done() <-chan struct{} {
+	return g.completionSignal
+}
+
+// signalCompletion 关闭完成信号通道，表示关闭过程已完成
+func (g *GracefulShutdownManager) signalCompletion() {
+	close(g.completionSignal)
+}
+
+// Shutdown 开始并管理关闭过程
+// 参数:
+//   - ctx: 用于控制关闭超时和取消的上下文
+//
+// 返回:
+//   - 如果关闭成功完成则返回nil，否则返回错误
+//
+// 注意:
+//   - 此方法会阻塞直到关闭完成或上下文被取消
+//   - 内部使用goroutine执行反复尝试的关闭操作，避免阻塞主线程
+func (g *GracefulShutdownManager) Shutdown(ctx context.Context) error {
+	// 创建一个衍生的 context，在函数退出时可以取消，确保 goroutine 不会泄漏
+	shutdownCtx, cancelFunc := context.WithCancel(ctx)
+	defer cancelFunc() // 确保在函数退出时取消 context
+
+	utils.GoRecoverPanic(func() {
+		defer g.signalCompletion()
+
+		for g.successCount.Load() < g.successThreshold {
+			// 检查 context 是否已取消
+			select {
+			case <-shutdownCtx.Done():
+				return
+			default:
+				// 继续执行
+			}
+
+			g.attemptCount.Add(1)
+
+			// 执行实际的关闭操作
+			operationSucceeded := g.shutdownOperation()
+
+			if operationSucceeded {
+				// 如果操作成功，增加连续成功计数
+				g.successCount.Add(1)
+			} else {
+				// 如果操作失败，重置连续成功计数
+				g.successCount.Store(0)
+				// 短暂等待后再次尝试，给系统一些恢复时间
+				select {
+				case <-shutdownCtx.Done():
+					return
+				case <-time.After(50 * time.Millisecond):
+					// 继续尝试
+				}
+			}
+		}
+	})
+
+	// 等待关闭完成或上下文取消
+	select {
+	case <-g.done():
+		// 检查上下文是否已取消
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("shutdown operation canceled: %w", ctx.Err())
+		default:
+		}
+
+		logger.GetLogger().Info("shutdown completed successfully",
+			zap.Int32("attempts", g.attemptCount.Load()),
+			zap.Int32("successCount", g.successCount.Load()))
+		return nil
+	case <-ctx.Done():
+		return fmt.Errorf("shutdown operation canceled: %w", ctx.Err())
+	}
 }
