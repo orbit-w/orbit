@@ -2,6 +2,8 @@ package actor
 
 import (
 	"fmt"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -102,6 +104,41 @@ func Test_ActorRefPropsContent(t *testing.T) {
 	service.Stop()
 }
 
+func Test_ActorRefStartAndStop(t *testing.T) {
+	pattern := "start-and-stop-pattern"
+	service := setup(pattern)
+
+	// Register a test pattern
+	RegFactory(pattern, func(actorName string) Behavior {
+		return &CountBehavior{
+			actorName: actorName,
+		}
+	})
+
+	name := "test-actor"
+	meta := NewMeta(name, pattern, "1", nil)
+	actorRef := NewActorRef(NewProps(), name, pattern, WithMeta(meta))
+	wg := sync.WaitGroup{}
+	var count atomic.Int32
+	for i := 0; i < 1000; i++ {
+		wg.Add(1)
+		go func() {
+			actorRef.Send(fmt.Sprintf("message-%d", count.Add(1)))
+			wg.Done()
+		}()
+	}
+
+	wg.Add(1)
+	go func() {
+		actorRef.Stop()
+		wg.Done()
+	}()
+
+	wg.Wait()
+	time.Sleep(time.Second * 5)
+	_ = service.Stop()
+}
+
 type ContentBehavior struct {
 	actorName string
 }
@@ -140,5 +177,41 @@ func (b *ContentBehavior) HandleStopping(ctx IContext) error {
 
 func (b *ContentBehavior) HandleStopped(ctx IContext) error {
 	fmt.Printf("Stopped actor with ID: %s, serverId: %s\n", b.actorName, ctx.GetServerId())
+	return nil
+}
+
+type CountBehavior struct {
+	actorName string
+	count     atomic.Int32
+}
+
+func (b *CountBehavior) HandleRequest(ctx IContext, msg any) (any, error) {
+	v := msg.(string)
+	fmt.Printf("HandleCall message: %s\n", v)
+	b.count.Add(1)
+	return v, nil
+}
+
+func (b *CountBehavior) HandleSend(ctx IContext, msg any) error {
+	v := msg.(string)
+	fmt.Printf("HandleCast message: %s\n", v)
+	b.count.Add(1)
+	return nil
+}
+
+func (b *CountBehavior) HandleForward(ctx IContext, _ any) error {
+	return nil
+}
+
+func (b *CountBehavior) HandleInit(ctx IContext) error {
+	return nil
+}
+
+func (b *CountBehavior) HandleStopping(ctx IContext) error {
+	return nil
+}
+
+func (b *CountBehavior) HandleStopped(ctx IContext) error {
+	fmt.Printf("Stopped actor with ID: %s, serverId: %s, count: %d\n", b.actorName, ctx.GetServerId(), b.count.Load())
 	return nil
 }
