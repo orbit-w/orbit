@@ -9,8 +9,8 @@ import (
 
 type Behavior interface {
 	HandleRequest(ctx IContext, msg any) (any, error)
-	HandleSend(ctx IContext, msg any) error
-	HandleForward(ctx IContext, msg any) error
+	HandleSend(ctx IContext, msg any)
+	HandleForward(ctx IContext, msg any)
 	HandleInit(ctx IContext) error
 	HandleStopping(ctx IContext) error
 	HandleStopped(ctx IContext) error

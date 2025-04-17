@@ -22,7 +22,7 @@ type IBaseContext interface {
 }
 
 type ITimerContext interface {
-	AddTimerRepeat(key string, duration time.Duration, msg any) *Timer
+	AddSystemTimer(key string, duration time.Duration, msg any) *Timer
 	AddTimerOnce(key string, duration time.Duration, msg any) *Timer
 	RemoveTimer(key string)
 }

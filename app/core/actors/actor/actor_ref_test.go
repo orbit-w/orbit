@@ -153,17 +153,16 @@ func (b *ContentBehavior) HandleRequest(ctx IContext, msg any) (any, error) {
 	return v, nil
 }
 
-func (b *ContentBehavior) HandleSend(ctx IContext, msg any) error {
+func (b *ContentBehavior) HandleSend(ctx IContext, msg any) {
 	v, ok := msg.(string)
 	if !ok {
-		return fmt.Errorf("unknown message type: %T", msg)
+		return
 	}
 	fmt.Printf("HandleCast message: %s\n", v)
-	return nil
+	return
 }
 
-func (b *ContentBehavior) HandleForward(ctx IContext, _ any) error {
-	return nil
+func (b *ContentBehavior) HandleForward(ctx IContext, _ any) {
 }
 
 func (b *ContentBehavior) HandleInit(ctx IContext) error {
@@ -193,15 +192,13 @@ func (b *CountBehavior) HandleRequest(ctx IContext, msg any) (any, error) {
 	return v, nil
 }
 
-func (b *CountBehavior) HandleSend(ctx IContext, msg any) error {
+func (b *CountBehavior) HandleSend(ctx IContext, msg any) {
 	// v := msg.(string)
 	// fmt.Printf("HandleCast message: %s\n", v)
 	b.count.Add(1)
-	return nil
 }
 
-func (b *CountBehavior) HandleForward(ctx IContext, _ any) error {
-	return nil
+func (b *CountBehavior) HandleForward(ctx IContext, _ any) {
 }
 
 func (b *CountBehavior) HandleInit(ctx IContext) error {

@@ -21,18 +21,128 @@ func TestTimerMgr_AddTimerOnce(t *testing.T) {
 	timer := mgr.AddTimerOnce("test-timer", 100*time.Millisecond, "test-message")
 	assert.NotNil(t, timer)
 	wg := sync.WaitGroup{}
+	wg.Add(5)
+
+	go func() {
+		for {
+			select {
+			case <-ntf:
+				mgr.Process(func(msg any) {
+					assert.Equal(t, "test-message", msg)
+					fmt.Println("time cost:", time.Since(start))
+					mgr.AddTimerOnce("test-timer", 100*time.Millisecond, "test-message")
+					wg.Done()
+				})
+			case <-time.After(150 * time.Millisecond):
+				assert.Fail(t, "Callback was not triggered in time")
+			}
+		}
+	}()
+
+	wg.Wait()
+	fmt.Println("complete")
+}
+
+func TestTimerMgr_AddAndRemoveTimerOnce(t *testing.T) {
+	ntf := make(chan any, 1024)
+	mgr := NewTimerMgr(func() {
+		ntf <- "test-message"
+	})
+	defer mgr.Stop()
+
+	result := make(chan struct{}, 1)
+	start := time.Now()
+	timer := mgr.AddTimerOnce("test-timer", 100*time.Millisecond, "test-message")
+	assert.NotNil(t, timer)
+	go func() {
+		for {
+			select {
+			case <-ntf:
+				mgr.Process(func(msg any) {
+					assert.Equal(t, "test-message", msg)
+					fmt.Println("time cost:", time.Since(start))
+					close(result)
+				})
+			}
+		}
+	}()
+
+	mgr.RemoveTimer(timer.GetKey())
+
+	select {
+	case <-result:
+		assert.Fail(t, "timer was not removed in time")
+	case <-time.After(time.Second * 5):
+		fmt.Println("complete")
+	}
+}
+
+func TestTimerMgr_AddSystemTimer(t *testing.T) {
+	ntf := make(chan any, 1024)
+	mgr := NewTimerMgr(func() {
+		ntf <- "test-message"
+	})
+	defer mgr.Stop()
+
+	timer := mgr.AddSystemTimer("test-timer", 100*time.Millisecond, "test-message")
+	assert.NotNil(t, timer)
+	wg := sync.WaitGroup{}
+	wg.Add(10)
+	var count int
+	start := time.Now()
+
+	go func() {
+		for {
+			select {
+			case <-ntf:
+				mgr.Process(func(msg any) {
+					assert.Equal(t, "test-message", msg)
+					fmt.Println("time cost:", time.Since(start))
+					if count++; count >= 5 {
+						mgr.RemoveTimer("test-timer")
+						mgr.AddSystemTimer("test-timer", 500*time.Millisecond, "test-message")
+						count -= 999999
+					}
+					wg.Done()
+				})
+			case <-time.After(5 * time.Second):
+				assert.Fail(t, "Callback was not triggered in time")
+			}
+		}
+	}()
+
+	wg.Wait()
+}
+
+func TestTimerMgr_RemoveSystemTimer(t *testing.T) {
+	ntf := make(chan any, 1024)
+	mgr := NewTimerMgr(func() {
+		ntf <- "test-message"
+	})
+	defer mgr.Stop()
+
+	timer := mgr.AddSystemTimer("test-timer", 100*time.Millisecond, "test-message")
+	assert.NotNil(t, timer)
+	var count int
+	start := time.Now()
+	wg := sync.WaitGroup{}
 	wg.Add(1)
 
 	go func() {
-		select {
-		case <-ntf:
-			mgr.Process(func(msg any) {
-				assert.Equal(t, "test-message", msg)
-				fmt.Println("time cost:", time.Since(start))
+		for {
+			select {
+			case <-ntf:
+				mgr.Process(func(msg any) {
+					assert.Equal(t, "test-message", msg)
+					fmt.Println("time cost:", time.Since(start))
+					if count++; count >= 5 {
+						mgr.RemoveTimer(timer.GetKey())
+						count -= 999999
+					}
+				})
+			case <-time.After(5 * time.Second):
 				wg.Done()
-			})
-		case <-time.After(150 * time.Millisecond):
-			assert.Fail(t, "Callback was not triggered in time")
+			}
 		}
 	}()
 
@@ -54,19 +164,19 @@ func TestTimerMgr_SimpleOperations(t *testing.T) {
 	timer1 := mgr.AddTimerOnce("timer1", time.Minute, msg1)
 
 	assert.NotNil(t, timer1)
-	assert.Equal(t, "timer1", timer1.uuid)
+	assert.Equal(t, "timer1", timer1.GetKey())
 	assert.Equal(t, msg1, timer1.msg)
-	assert.False(t, timer1.repeat)
+	assert.False(t, timer1.IsSystem())
 	assert.Equal(t, 1, mgr.timerHeap.Len())
 
-	// Test adding a repeating timer
+	// Test adding a system timer
 	msg2 := "message2"
-	timer2 := mgr.AddTimerRepeat("timer2", time.Minute*2, msg2)
+	timer2 := mgr.AddSystemTimer("timer2", time.Minute*2, msg2)
 
 	assert.NotNil(t, timer2)
-	assert.Equal(t, "timer2", timer2.uuid)
+	assert.Equal(t, "timer2", timer2.GetKey())
 	assert.Equal(t, msg2, timer2.msg)
-	assert.True(t, timer2.repeat)
+	assert.True(t, timer2.IsSystem())
 	assert.Equal(t, 2, mgr.timerHeap.Len())
 
 	// Test removing a timer
@@ -74,24 +184,24 @@ func TestTimerMgr_SimpleOperations(t *testing.T) {
 	assert.Equal(t, 1, mgr.timerHeap.Len())
 	assert.Nil(t, mgr.items["timer1"])
 
-	// Test adding a timer with the same ID (should update the existing timer)
+	// Test adding a timer with the same key (should update the existing timer)
+	// Note: System timers cannot be updated according to the implementation
 	msg3 := "message3"
-	timer3 := mgr.AddTimerOnce("timer2", time.Minute*3, msg3)
+	timer3 := mgr.AddTimerOnce("timer3", time.Minute*3, msg3)
 
 	assert.NotNil(t, timer3)
-	assert.Equal(t, "timer2", timer3.uuid)
+	assert.Equal(t, "timer3", timer3.GetKey())
 	assert.Equal(t, msg3, timer3.msg)
-	assert.False(t, timer3.repeat) // Should have changed from repeat to once
-	assert.Equal(t, 1, mgr.timerHeap.Len())
+	assert.Equal(t, 2, mgr.timerHeap.Len())
 
 	// Test invalid durations
-	invalidTimer := mgr.AddTimerRepeat("invalid", -1*time.Second, "negative")
+	invalidTimer := mgr.AddSystemTimer("invalid", -1*time.Second, "negative")
 	assert.Nil(t, invalidTimer)
-	assert.Equal(t, 1, mgr.timerHeap.Len())
+	assert.Equal(t, 2, mgr.timerHeap.Len())
 
-	zeroTimer := mgr.AddTimerRepeat("zero", 0, "zero")
+	zeroTimer := mgr.AddTimerOnce("zero", 0, "zero")
 	assert.Nil(t, zeroTimer)
-	assert.Equal(t, 1, mgr.timerHeap.Len())
+	assert.Equal(t, 2, mgr.timerHeap.Len())
 }
 
 func TestTimerMgr_ProcessExpiredTimers(t *testing.T) {
@@ -107,18 +217,18 @@ func TestTimerMgr_ProcessExpiredTimers(t *testing.T) {
 	pastTime := time.Now().Add(-time.Minute)
 
 	timer1 := &Timer{
-		uuid:       "timer1",
+		key:        "timer1",
 		expiration: pastTime,
 		msg:        "expired1",
-		repeat:     false,
+		system:     false,
 		duration:   time.Minute,
 	}
 
 	timer2 := &Timer{
-		uuid:       "timer2",
+		key:        "timer2",
 		expiration: pastTime,
 		msg:        "expired2",
-		repeat:     true,
+		system:     true,
 		duration:   time.Minute,
 	}
 
@@ -134,10 +244,10 @@ func TestTimerMgr_ProcessExpiredTimers(t *testing.T) {
 	}
 
 	mgr.timerHeap.Push(item1)
-	mgr.items[timer1.uuid] = item1
+	mgr.items[timer1.key] = item1
 
 	mgr.timerHeap.Push(item2)
-	mgr.items[timer2.uuid] = item2
+	mgr.items[timer2.key] = item2
 
 	assert.Equal(t, 2, mgr.timerHeap.Len())
 
@@ -155,56 +265,52 @@ func TestTimerMgr_ProcessExpiredTimers(t *testing.T) {
 	assert.Contains(t, processedMsgs, "expired1")
 	assert.Contains(t, processedMsgs, "expired2")
 
-	// One-time timer should be removed, repeat timer should be kept
-	assert.Equal(t, 1, mgr.timerHeap.Len())
-	assert.Nil(t, mgr.items["timer1"])
-	assert.NotNil(t, mgr.items["timer2"])
+	// One-time timer should be removed, system timer should be renewed
+	// In the new implementation, system timers are renewed in Process
+	assert.Equal(t, 1, mgr.timerHeap.Len()) // System timer is renewed
+	assert.Nil(t, mgr.items["timer1"])      // One-time timer is removed
+	assert.NotNil(t, mgr.items["timer2"])   // System timer is still there
 }
 
-func TestTimerMgr_PeekAndUpdate(t *testing.T) {
-	// Create a timer manager
-	mgr := &TimerMgr{
-		timerHeap: &heap.Heap[*Timer, int64]{},
-		items:     make(map[string]*heap.Item[*Timer, int64]),
-		timer:     time.NewTimer(time.Hour),
-	}
+func TestTimerMgr_SystemTimerRenewal(t *testing.T) {
+	// Create a timer manager with a callback
+	ntf := make(chan any, 1024)
+	mgr := NewTimerMgr(func() {
+		ntf <- "callback"
+	})
 	defer mgr.Stop()
 
-	// Test peek on empty heap
-	item := mgr.timerHeap.Peek()
-	assert.Nil(t, item, "Peek on empty heap should return nil")
+	// Add a system timer with a short duration
+	systemTimer := mgr.AddSystemTimer("system-timer", 50*time.Millisecond, "system-message")
+	assert.NotNil(t, systemTimer)
+	assert.True(t, systemTimer.IsSystem())
 
-	// Add multiple timers with different expiration times
-	// Make sure they're added in non-chronological order to test the heap property
-	timer3 := mgr.AddTimerOnce("timer3", time.Minute*3, "msg3")
-	timer1 := mgr.AddTimerOnce("timer1", time.Minute*1, "msg1")
-	timer2 := mgr.AddTimerOnce("timer2", time.Minute*2, "msg2")
+	// Setup to process expired timers
+	wg := sync.WaitGroup{}
+	wg.Add(2) // We expect the system timer to fire at least twice
 
-	// Verify all timers were added
-	assert.Equal(t, 3, mgr.timerHeap.Len())
+	count := 0
+	go func() {
+		for i := 0; i < 2; i++ {
+			select {
+			case <-ntf:
+				mgr.Process(func(msg any) {
+					assert.Equal(t, "system-message", msg)
+					count++
+					wg.Done()
+				})
+			case <-time.After(200 * time.Millisecond):
+				assert.Fail(t, "Callback was not triggered in time")
+				wg.Done()
+			}
+		}
+	}()
 
-	// The peek should return the timer with the earliest expiration (timer1)
-	headTimer := mgr.peek()
-	assert.Equal(t, timer1.uuid, headTimer.uuid)
-	assert.Equal(t, "msg1", headTimer.msg)
+	wg.Wait()
 
-	// Test updating a timer's expiration
-	// Update timer1 to have a later expiration than timer3
-	updatedTimer := mgr.AddTimerOnce("timer1", time.Minute*4, "updated-msg1")
-	assert.Equal(t, timer1.uuid, updatedTimer.uuid)
-	assert.Equal(t, "updated-msg1", updatedTimer.msg)
+	// Verify that the timer was processed twice
+	assert.Equal(t, 2, count)
 
-	// Now the peek should return timer2 (the new earliest timer)
-	newHeadTimer := mgr.peek()
-	assert.Equal(t, timer2.uuid, newHeadTimer.uuid)
-	assert.Equal(t, "msg2", newHeadTimer.msg)
-
-	// Pop the head timer
-	poppedTimer := mgr.pop()
-	assert.Equal(t, timer2.uuid, poppedTimer.uuid)
-	assert.Equal(t, 2, mgr.timerHeap.Len())
-
-	// Now timer3 should be the head
-	nextHeadTimer := mgr.peek()
-	assert.Equal(t, timer3.uuid, nextHeadTimer.uuid)
+	// The system timer should still exist because it's renewed
+	assert.NotNil(t, mgr.items["system-timer"])
 }

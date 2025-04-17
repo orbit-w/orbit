@@ -27,12 +27,10 @@ func (b *MockBehavior) HandleRequest(ctx IContext, _ any) (any, error) {
 	return nil, nil
 }
 
-func (b *MockBehavior) HandleSend(ctx IContext, _ any) error {
-	return nil
+func (b *MockBehavior) HandleSend(ctx IContext, _ any) {
 }
 
-func (b *MockBehavior) HandleForward(ctx IContext, _ any) error {
-	return nil
+func (b *MockBehavior) HandleForward(ctx IContext, _ any) {
 }
 
 func (b *MockBehavior) HandleInit(ctx IContext) error {
@@ -247,17 +245,15 @@ func (b *StoppingBehavior) HandleRequest(ctx IContext, msg any) (any, error) {
 	return v, nil
 }
 
-func (b *StoppingBehavior) HandleSend(ctx IContext, msg any) error {
+func (b *StoppingBehavior) HandleSend(ctx IContext, msg any) {
 	v, ok := msg.(string)
 	if !ok {
-		return fmt.Errorf("unknown message type: %T", msg)
+		return
 	}
 	fmt.Printf("HandleCast message: %s\n", v)
-	return nil
 }
 
-func (b *StoppingBehavior) HandleForward(ctx IContext, _ any) error {
-	return nil
+func (b *StoppingBehavior) HandleForward(ctx IContext, _ any) {
 }
 
 func (b *StoppingBehavior) HandleInit(ctx IContext) error {
