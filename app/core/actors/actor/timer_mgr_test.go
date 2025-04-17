@@ -1,12 +1,44 @@
 package actor
 
 import (
+	"fmt"
+	"sync"
 	"testing"
 	"time"
 
 	"gitee.com/orbit-w/meteor/bases/container/heap"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestTimerMgr_AddTimerOnce(t *testing.T) {
+	ntf := make(chan any, 1024)
+	mgr := NewTimerMgr(func() {
+		ntf <- "test-message"
+	})
+	defer mgr.Stop()
+
+	start := time.Now()
+	timer := mgr.AddTimerOnce("test-timer", 100*time.Millisecond, "test-message")
+	assert.NotNil(t, timer)
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+
+	go func() {
+		select {
+		case <-ntf:
+			mgr.Process(func(msg any) {
+				assert.Equal(t, "test-message", msg)
+				fmt.Println("time cost:", time.Since(start))
+				wg.Done()
+			})
+		case <-time.After(150 * time.Millisecond):
+			assert.Fail(t, "Callback was not triggered in time")
+		}
+	}()
+
+	wg.Wait()
+	fmt.Println("complete")
+}
 
 func TestTimerMgr_SimpleOperations(t *testing.T) {
 	// Create a timer manager with a simple callback

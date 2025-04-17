@@ -1,6 +1,7 @@
 package actor
 
 import (
+	"errors"
 	"sync/atomic"
 	"time"
 
@@ -41,10 +42,19 @@ func NewTimerMgr(callback func()) *TimerMgr {
 	mgr := &TimerMgr{
 		timerHeap: &heap.Heap[*Timer, int64]{},
 		timer:     time.AfterFunc(0, callback),
+		items:     make(map[string]*heap.Item[*Timer, int64]),
 	}
 
 	mgr.id.Store(0)
 	return mgr
+}
+
+// renewalTimer 续租一个定时器
+func (t *TimerMgr) renewalTimer(key string, duration time.Duration, msg any, repeat bool) (*Timer, error) {
+	if _, exist := t.items[key]; exist {
+		return nil, errors.New("renewal timer failed, timer already exists")
+	}
+	return t.addTimer(key, duration, msg, repeat), nil
 }
 
 // AddTimer 添加一个新的定时器
@@ -58,8 +68,8 @@ func (t *TimerMgr) addTimer(key string, duration time.Duration, msg any, repeat 
 	}
 
 	var (
-		item   *heap.Item[*Timer, int64]
-		inited bool
+		item *heap.Item[*Timer, int64]
+		init bool
 	)
 
 	if item = t.items[key]; item != nil {
@@ -72,11 +82,11 @@ func (t *TimerMgr) addTimer(key string, duration time.Duration, msg any, repeat 
 			Priority: timer.expiration.Unix(),
 		}
 		t.push(item)
-		inited = true
+		init = true
 	}
 
 	head := t.peek()
-	if inited && !head.Equal(timer) {
+	if init && !head.Equal(timer) {
 		return timer
 	}
 
@@ -125,7 +135,11 @@ func (t *TimerMgr) update(item *heap.Item[*Timer, int64]) {
 }
 
 func (t *TimerMgr) peek() *Timer {
-	return t.timerHeap.Peek().Value
+	head := t.timerHeap.Peek()
+	if head == nil {
+		return nil
+	}
+	return head.Value
 }
 
 func (t *TimerMgr) pop() *Timer {
@@ -149,15 +163,12 @@ func (t *TimerMgr) resetTimer(duration time.Duration) {
 }
 
 func (t *TimerMgr) stopSystemTimer() {
-	if !t.timer.Stop() {
-		<-t.timer.C
-	}
+	t.timer.Stop()
 }
 
 func (t *TimerMgr) Process(delegate func(msg any)) {
 	var (
 		repeated []*Timer
-		process  bool
 	)
 
 	for {
@@ -171,24 +182,22 @@ func (t *TimerMgr) Process(delegate func(msg any)) {
 		if !timer.expired() {
 			break
 		}
-		process = true
+
+		t.pop()
 		delegate(timer.msg)
 
 		if timer.repeat {
 			timer.expiration = timer.expiration.Add(timer.duration)
 			repeated = append(repeated, timer)
 		}
-		t.pop()
 	}
 
 	for i := range repeated {
 		timer := repeated[i]
-		t.addTimer(timer.uuid, timer.duration, timer.msg, timer.repeat)
+		t.renewalTimer(timer.uuid, timer.duration, timer.msg, timer.repeat)
 	}
 
-	if process {
-		if head := t.peek(); head != nil {
-			t.resetTimer(time.Until(head.expiration))
-		}
+	if head := t.peek(); head != nil {
+		t.resetTimer(time.Until(head.expiration))
 	}
 }
