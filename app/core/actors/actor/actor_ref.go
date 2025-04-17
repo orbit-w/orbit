@@ -6,6 +6,8 @@ import (
 	actor "github.com/asynkron/protoactor-go/actor"
 )
 
+// ActorRef为Actor的代理。它主要的作用是支持向它所代表的Actor发送消息，
+// 从而实现Actor之间的通信。通过ActorRef，可以避免直接访问或操作Actor的内部信息和状态。
 func NewActorRef(props *Props, actorName, pattern string, ops ...PropsOption) *ActorRef {
 	if props == nil {
 		props = NewProps()

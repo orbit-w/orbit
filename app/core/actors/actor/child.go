@@ -20,6 +20,7 @@ type Behavior interface {
 // 实现了InitNotifiable接口，允许在初始化完成后发送通知
 type ChildActor struct {
 	Behavior
+	*TimerMgr
 	metaData     *Meta
 	context      actor.Context
 	actorName    string
@@ -66,6 +67,11 @@ func (state *ChildActor) Receive(context actor.Context) {
 	case *RequestMessage:
 		state.handleMessage(context, msg)
 
+	case *TimerMessage:
+		state.Process(func(msg any) {
+			state.HandleSend(state, msg)
+		})
+
 	default:
 		logger.GetLogger().Info("Child actor received invalid message", zap.String("ActorName", state.GetContext().GetActorName()), zap.Any("Message", msg))
 	}
@@ -90,7 +96,7 @@ func (state *ChildActor) handleMessage(context actor.Context, msg *RequestMessag
 
 // HandleInit 在Actor启动时执行的初始化逻辑
 // 返回nil表示成功，否则返回错误
-func (state *ChildActor) HandleInit(actorContext actor.Context) {
+func (state *ChildActor) HandleInit(context actor.Context) {
 	if state.initialized {
 		return
 	}
@@ -110,6 +116,11 @@ func (state *ChildActor) HandleInit(actorContext actor.Context) {
 	if err == nil {
 		logger.GetLogger().Info("Child actor started", zap.String("ActorName", state.GetActorName()))
 	}
+
+	// 初始化定时器
+	state.TimerMgr = NewTimerMgr(func() {
+		context.Send(context.Self(), &TimerMessage{})
+	})
 }
 
 func (state *ChildActor) HandleStopping(context actor.Context) error {

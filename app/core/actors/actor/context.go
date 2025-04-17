@@ -1,9 +1,14 @@
 package actor
 
-import actor "github.com/asynkron/protoactor-go/actor"
+import (
+	"time"
+
+	actor "github.com/asynkron/protoactor-go/actor"
+)
 
 type IContext interface {
 	IBaseContext
+	ITimerContext
 }
 
 type IBaseContext interface {
@@ -14,4 +19,10 @@ type IBaseContext interface {
 	GetActorContext() actor.Context
 	SetActorContext(context actor.Context)
 	GetServerId() string
+}
+
+type ITimerContext interface {
+	AddTimerRepeat(key string, duration time.Duration, msg any) *Timer
+	AddTimerOnce(key string, duration time.Duration, msg any) *Timer
+	RemoveTimer(key string)
 }

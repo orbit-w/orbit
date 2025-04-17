@@ -63,6 +63,8 @@ type StopAllResponse struct {
 	Complete bool
 }
 
+type TimerMessage struct{}
+
 var (
 	startActorWaitMessage = &StartActorWait{}
 )
