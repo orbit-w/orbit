@@ -121,10 +121,13 @@ func Test_ActorRefStartAndStop(t *testing.T) {
 	actorRef := NewActorRef(NewProps(), name, pattern, WithMeta(meta))
 	wg := sync.WaitGroup{}
 	var count atomic.Int32
+	var errCount atomic.Int32
 	for i := 0; i < 1000; i++ {
 		wg.Add(1)
 		go func() {
-			actorRef.Send(fmt.Sprintf("message-%d", count.Add(1)))
+			if err := actorRef.Send(fmt.Sprintf("message-%d", count.Add(1))); err != nil {
+				errCount.Add(1)
+			}
 			wg.Done()
 		}()
 	}
@@ -137,6 +140,7 @@ func Test_ActorRefStartAndStop(t *testing.T) {
 
 	wg.Wait()
 	time.Sleep(time.Second * 5)
+	fmt.Printf("errCount: %d\n", errCount.Load())
 	_ = service.Stop(context.Background())
 }
 

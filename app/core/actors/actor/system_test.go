@@ -70,12 +70,12 @@ func TestGetOrStartActor(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			pid, err := GetOrStartActor(actorName, testPattern, nil)
+			actor, err := GetOrStartActor(actorName, testPattern, nil)
 			if err != nil {
 				panic(err)
 			}
 			fmt.Println("receive pid")
-			name := ExtractActorName(pid)
+			name := ExtractActorName(actor.PID)
 			if name != actorName {
 				panic(fmt.Sprintf("actor name invalid: %s", name))
 			}

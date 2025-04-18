@@ -2,8 +2,6 @@ package actor
 
 import (
 	"time"
-
-	actor "github.com/asynkron/protoactor-go/actor"
 )
 
 // ActorRef为Actor的代理。它主要的作用是支持向它所代表的Actor发送消息，
@@ -24,31 +22,12 @@ func NewActorRef(props *Props, actorName, pattern string, ops ...PropsOption) *A
 	}
 }
 
-func (actorRef *ActorRef) Send(msg any) {
-	pid := actorRef.ref()
-	System.ActorSystem().Root.Send(pid, &RequestMessage{
-		MsgType: MessageTypeSend,
-		Message: msg,
-	})
+func (actorRef *ActorRef) Send(msg any) error {
+	return actorRef.ref().Send(msg)
 }
 
 func (actorRef *ActorRef) RequestFuture(msg any, timeout ...time.Duration) (any, error) {
-	pid := actorRef.ref()
-	future := System.ActorSystem().Root.RequestFuture(pid, &RequestMessage{
-		MsgType: MessageTypeRequest,
-		Message: msg,
-	}, parseTimeout(timeout...))
-	result, err := future.Result()
-	if err != nil {
-		return nil, err
-	}
-
-	switch v := result.(type) {
-	case error:
-		return nil, v
-	default:
-		return v, nil
-	}
+	return actorRef.ref().RequestFuture(msg, timeout...)
 }
 
 // Stop 停止当前Actor
@@ -66,6 +45,6 @@ func (actorRef *ActorRef) Stop() {
 //   - *actor.PID: 返回当前ActorRef的PID引用
 //
 // 注意: 此方法通常用于内部实现，获取底层Actor系统需要的PID引用
-func (actorRef *ActorRef) ref() *actor.PID {
+func (actorRef *ActorRef) ref() *ActorProcess {
 	return actorRef.Props.getOrCreateActorPID(actorRef.ActorName, actorRef.Pattern)
 }

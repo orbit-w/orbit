@@ -1,9 +1,5 @@
 package actor
 
-import (
-	actor "github.com/asynkron/protoactor-go/actor"
-)
-
 type Props struct {
 	InitHandler func() error
 	Meta        *Meta
@@ -48,12 +44,12 @@ func (pp *Props) GetKvs(iter func(k string, v any)) {
 	}
 }
 
-func (pp *Props) getOrCreateActorPID(name, pattern string) *actor.PID {
-	pid, err := GetOrStartActor(name, pattern, pp)
+func (pp *Props) getOrCreateActorPID(name, pattern string) *ActorProcess {
+	p, err := GetOrStartActor(name, pattern, pp)
 	if err != nil {
 		panic(err)
 	}
-	return pid
+	return p
 }
 
 type PropsOption func(pp *Props)

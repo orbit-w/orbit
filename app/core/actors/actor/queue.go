@@ -1,6 +1,8 @@
 package actor
 
 import (
+	"fmt"
+
 	"gitee.com/orbit-w/meteor/bases/container/priority_queue"
 	"github.com/asynkron/protoactor-go/actor"
 )
@@ -66,12 +68,13 @@ func NewPriorityQueue() *Queue {
 	}
 }
 
-func (q *Queue) Insert(actorName string, item *Item, priority int64) {
+func (q *Queue) Insert(actorName string, item *Item, priority int64) error {
 	ok := q.pq.Exist(actorName)
 	if ok {
-		return
+		return fmt.Errorf("actor %s already exists", actorName)
 	}
 	q.pq.Push(actorName, item, priority)
+	return nil
 }
 
 func (q *Queue) PushFuture(actorName string, future *actor.PID) {

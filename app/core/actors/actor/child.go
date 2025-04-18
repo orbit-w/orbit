@@ -141,8 +141,6 @@ func (state *ChildActor) HandleStopped(context actor.Context) {
 	} else {
 		logger.GetLogger().Info("Child actor stopped", zap.String("ActorName", state.GetActorName()))
 	}
-
-	actorsCache.CompareAndSwap(state.GetActorName(), StateNone, StateStopped)
 }
 
 func (state *ChildActor) SetMetaData(meta *Meta) {

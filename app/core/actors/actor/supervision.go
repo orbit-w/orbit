@@ -82,8 +82,8 @@ func (m *ActorSupervision) Receive(context actor.Context) {
 // 异步启动Actor
 func (m *ActorSupervision) handleStartActor(context actor.Context, msg *StartActorRequest) {
 	// 如果Actor已经存在，则直接返回
-	if pid, exists := actorsCache.Get(msg.ActorName); exists {
-		context.Respond(pid)
+	if p, exists := actorsCache.Get(msg.ActorName); exists {
+		context.Respond(p)
 		return
 	}
 
@@ -118,7 +118,12 @@ func (m *ActorSupervision) handleStartActor(context actor.Context, msg *StartAct
 
 	// 将Actor添加到正在启动的列表中
 	item := NewItem(msg.ActorName, msg.Pattern, pid, msg.Props, msg.Future)
-	m.starting.Insert(msg.ActorName, item, time.Now().UnixNano())
+	err = m.starting.Insert(msg.ActorName, item, time.Now().UnixNano())
+	if err != nil {
+		logger.GetLogger().Error("[StartActor] Failed to insert starting queue", zap.String("ActorName", msg.ActorName), zap.Error(err))
+		context.Respond(err)
+		return
+	}
 
 	context.Respond(startActorWaitMessage)
 }
@@ -148,13 +153,13 @@ func (m *ActorSupervision) startActor(context actor.Context, pattern, actorName 
 
 // handleStopActor handles stopping an actor
 func (m *ActorSupervision) handleStopActor(context actor.Context, msg *StopActorMessage) {
-	pid, exists := actorsCache.Get(msg.ActorName)
+	p, exists := actorsCache.Get(msg.ActorName)
 	if !exists {
 		context.Respond(nil)
 		return
 	}
 
-	m.stopActor(context, msg.ActorName, msg.Pattern, pid)
+	m.stopActor(context, msg.ActorName, msg.Pattern, p.GetPID())
 	context.Respond(nil)
 }
 
@@ -205,17 +210,17 @@ func (m *ActorSupervision) handleActorStopped(context actor.Context, actorName s
 		}
 
 		newItem := NewItem(actorName, watching.Pattern, pid, watching.Props, watching.Future...)
-		m.starting.Insert(actorName, newItem, time.Now().UnixNano())
+		if err := m.starting.Insert(actorName, newItem, time.Now().UnixNano()); err != nil {
+			logger.GetLogger().Error("[HandleActorRestart] Failed to insert starting queue", zap.String("ActorName", actorName), zap.Error(err))
+		}
 	}
 }
 
 func (m *ActorSupervision) handleNotifyChildStarted(context actor.Context, msg *ChildStartedNotification) {
+	//TODO: 需要修复逻辑顺序问题
+	watchers := make([]*actor.PID, 0)
 	item, ok := m.starting.PopAndRangeWithKey(msg.ActorName, func(name, pattern string, child, future *actor.PID) bool {
-		if msg.Error != nil {
-			context.Send(future, msg.Error)
-		} else {
-			context.Send(future, child)
-		}
+		watchers = append(watchers, future)
 		return true
 	})
 
@@ -225,9 +230,20 @@ func (m *ActorSupervision) handleNotifyChildStarted(context actor.Context, msg *
 	}
 
 	if msg.Error == nil {
-		actorsCache.Set(msg.ActorName, item.Pattern, item.Child)
+		logger.GetLogger().Info("Child actor started", zap.String("ActorName", msg.ActorName))
+		p := NewActorProcess(msg.ActorName, item.Pattern, item.Child, item.Props)
+		actorsCache.Set(msg.ActorName, p)
+		for i := range watchers {
+			w := watchers[i]
+			context.Send(w, p)
+		}
 	} else {
+		logger.GetLogger().Error("Child actor started with error", zap.String("ActorName", msg.ActorName), zap.Error(msg.Error))
 		m.stopActor(context, msg.ActorName, item.Pattern, item.Child)
+		for i := range watchers {
+			w := watchers[i]
+			context.Send(w, msg.Error)
+		}
 	}
 }
 
@@ -240,9 +256,9 @@ func (m *ActorSupervision) handleStoppingAll(context actor.Context) {
 		if m.stopping.Exists(name) {
 			continue
 		}
-		item, exists := actorsCache.GetItem(name)
+		p, exists := actorsCache.Get(name)
 		if exists {
-			m.stopActor(context, name, item.Pattern, child)
+			m.stopActor(context, name, p.Pattern, p.GetPID())
 		} else {
 			logger.GetLogger().Error("StoppingAll child not found", zap.String("ActorName", name))
 		}
