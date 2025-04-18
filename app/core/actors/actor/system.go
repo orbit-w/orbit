@@ -223,9 +223,9 @@ func GetOrStartActor(actorName, pattern string, props *Props) (*ActorProcess, er
 // StopActor stops the actor with the given ID
 func StopActor(actorName, pattern string) error {
 	// First check if manager already has this actor
-	if actor, exists := actorsCache.Get(actorName); exists {
-		if actor.PID != nil {
-			actor.Stop()
+	if p, exists := actorsCache.Get(actorName); exists {
+		if p.PID != nil {
+			p.Stop()
 		}
 	}
 

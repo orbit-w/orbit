@@ -27,9 +27,10 @@ func Test_StopActor(t *testing.T) {
 	// Create our test actor
 	actorName := "test-actor-stopping"
 	actorRef := NewActorRef(NewProps(), actorName, testPattern)
-	actorRef.Send("initial-message")
+	err := actorRef.Send("initial-message")
+	assert.NoError(t, err)
 	// Stop the actor which will trigger the stopping phase
-	err := StopActor(actorName, testPattern)
+	err = StopActor(actorName, testPattern)
 	assert.NoError(t, err)
 	time.Sleep(time.Second * 10)
 	service.Stop(context.Background())
@@ -66,10 +67,8 @@ func Test_MessageLossDuringStopping(t *testing.T) {
 
 		// Send a message while the actor is stopping
 		res, err := actorRef.RequestFuture("stopping-phase-message")
-		if err != nil {
-			panic(err)
-		}
-		fmt.Printf("receive response: %v\n", res)
+		assert.Error(t, err)
+		assert.Nil(t, res)
 		messageSent <- true
 	}()
 
@@ -98,21 +97,24 @@ func Test_ActorRefPropsContent(t *testing.T) {
 	name := "test-actor"
 	meta := NewMeta(name, pattern, "1", nil)
 	actorRef := NewActorRef(NewProps(), name, pattern, WithMeta(meta))
-	actorRef.Send("initial-message")
-	actorRef.Send("second-message")
+	err := actorRef.Send("initial-message")
+	assert.NoError(t, err)
+	err = actorRef.Send("second-message")
+	assert.NoError(t, err)
 	actorRef.Stop()
 	time.Sleep(time.Second * 10)
-	service.Stop(context.Background())
+	_ = service.Stop(context.Background())
 }
 
 func Test_ActorRefStartAndStop(t *testing.T) {
 	pattern := "start-and-stop-pattern"
 	service := setup(pattern)
-
+	var count atomic.Int32
 	// Register a test pattern
 	RegFactory(pattern, func(actorName string) Behavior {
 		return &CountBehavior{
 			actorName: actorName,
+			count:     &count,
 		}
 	})
 
@@ -120,12 +122,12 @@ func Test_ActorRefStartAndStop(t *testing.T) {
 	meta := NewMeta(name, pattern, "1", nil)
 	actorRef := NewActorRef(NewProps(), name, pattern, WithMeta(meta))
 	wg := sync.WaitGroup{}
-	var count atomic.Int32
+	var msgCount atomic.Int32
 	var errCount atomic.Int32
 	for i := 0; i < 1000; i++ {
 		wg.Add(1)
 		go func() {
-			if err := actorRef.Send(fmt.Sprintf("message-%d", count.Add(1))); err != nil {
+			if err := actorRef.Send(fmt.Sprintf("message-%d", msgCount.Add(1))); err != nil {
 				errCount.Add(1)
 			}
 			wg.Done()
@@ -141,6 +143,7 @@ func Test_ActorRefStartAndStop(t *testing.T) {
 	wg.Wait()
 	time.Sleep(time.Second * 5)
 	fmt.Printf("errCount: %d\n", errCount.Load())
+	assert.Equal(t, errCount.Load()+count.Load(), int32(1000))
 	_ = service.Stop(context.Background())
 }
 
@@ -186,7 +189,7 @@ func (b *ContentBehavior) HandleStopped(ctx IContext) error {
 
 type CountBehavior struct {
 	actorName string
-	count     atomic.Int32
+	count     *atomic.Int32
 }
 
 func (b *CountBehavior) HandleRequest(ctx IContext, msg any) (any, error) {

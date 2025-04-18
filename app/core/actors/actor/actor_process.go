@@ -35,14 +35,17 @@ func NewActorProcess(actorName, pattern string, child *actor.PID, props *Props) 
 func (p *ActorProcess) IsStopped() bool {
 	p.rw.RLock()
 	defer p.rw.RUnlock()
+	return p.stopped()
+}
+
+func (p *ActorProcess) stopped() bool {
 	return p.State == StateStopped
 }
 
-func (p *ActorProcess) Stop() bool {
+func (p *ActorProcess) Stop() {
 	p.rw.Lock()
 	defer p.rw.Unlock()
 	p.State = StateStopped
-	return true
 }
 
 func (p *ActorProcess) GetPID() *actor.PID {
@@ -51,7 +54,7 @@ func (p *ActorProcess) GetPID() *actor.PID {
 
 func (p *ActorProcess) RequestFuture(msg any, timeout ...time.Duration) (any, error) {
 	p.rw.RLock()
-	if p.State != StateStopped {
+	if p.stopped() {
 		p.rw.RUnlock()
 		return nil, ErrActorStopped
 	}
@@ -79,7 +82,7 @@ func (p *ActorProcess) RequestFuture(msg any, timeout ...time.Duration) (any, er
 func (p *ActorProcess) Send(msg any) error {
 	p.rw.RLock()
 	defer p.rw.RUnlock()
-	if p.State != StateStopped {
+	if p.stopped() {
 		return ErrActorStopped
 	}
 
