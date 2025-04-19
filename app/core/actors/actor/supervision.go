@@ -158,7 +158,7 @@ func (m *ActorSupervision) handleStopActor(context actor.Context, msg *StopActor
 		context.Respond(nil)
 		return
 	}
-
+	p.Stop()
 	m.stopActor(context, msg.ActorName, msg.Pattern, p.GetPID())
 	context.Respond(nil)
 }

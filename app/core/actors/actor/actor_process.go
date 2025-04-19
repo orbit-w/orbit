@@ -7,7 +7,7 @@ import (
 	actor "github.com/asynkron/protoactor-go/actor"
 )
 
-type ActorProcess struct {
+type Process struct {
 	State     int8
 	ActorName string
 	Pattern   string
@@ -21,8 +21,8 @@ const (
 	StateStopped
 )
 
-func NewActorProcess(actorName, pattern string, child *actor.PID, props *Props) *ActorProcess {
-	return &ActorProcess{
+func NewActorProcess(actorName, pattern string, child *actor.PID, props *Props) *Process {
+	return &Process{
 		ActorName: actorName,
 		Pattern:   pattern,
 		Props:     props,
@@ -32,27 +32,27 @@ func NewActorProcess(actorName, pattern string, child *actor.PID, props *Props) 
 	}
 }
 
-func (p *ActorProcess) IsStopped() bool {
+func (p *Process) IsStopped() bool {
 	p.rw.RLock()
 	defer p.rw.RUnlock()
 	return p.stopped()
 }
 
-func (p *ActorProcess) stopped() bool {
+func (p *Process) stopped() bool {
 	return p.State == StateStopped
 }
 
-func (p *ActorProcess) Stop() {
+func (p *Process) Stop() {
 	p.rw.Lock()
 	defer p.rw.Unlock()
 	p.State = StateStopped
 }
 
-func (p *ActorProcess) GetPID() *actor.PID {
+func (p *Process) GetPID() *actor.PID {
 	return p.PID
 }
 
-func (p *ActorProcess) RequestFuture(msg any, timeout ...time.Duration) (any, error) {
+func (p *Process) RequestFuture(msg any, timeout ...time.Duration) (any, error) {
 	p.rw.RLock()
 	if p.stopped() {
 		p.rw.RUnlock()
@@ -79,7 +79,7 @@ func (p *ActorProcess) RequestFuture(msg any, timeout ...time.Duration) (any, er
 	}
 }
 
-func (p *ActorProcess) Send(msg any) error {
+func (p *Process) Send(msg any) error {
 	p.rw.RLock()
 	defer p.rw.RUnlock()
 	if p.stopped() {

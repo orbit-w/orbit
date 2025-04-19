@@ -44,7 +44,7 @@ func (pp *Props) GetKvs(iter func(k string, v any)) {
 	}
 }
 
-func (pp *Props) getOrCreateActorPID(name, pattern string) *ActorProcess {
+func (pp *Props) getOrCreateActorPID(name, pattern string) *Process {
 	p, err := GetOrStartActor(name, pattern, pp)
 	if err != nil {
 		panic(err)

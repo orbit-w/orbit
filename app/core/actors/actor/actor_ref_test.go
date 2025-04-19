@@ -127,8 +127,10 @@ func Test_ActorRefStartAndStop(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		wg.Add(1)
 		go func() {
-			if err := actorRef.Send(fmt.Sprintf("message-%d", msgCount.Add(1))); err != nil {
-				errCount.Add(1)
+			for j := 0; j < 10; j++ {
+				if err := actorRef.Send(fmt.Sprintf("message-%d", msgCount.Add(1))); err != nil {
+					errCount.Add(1)
+				}
 			}
 			wg.Done()
 		}()
@@ -141,9 +143,9 @@ func Test_ActorRefStartAndStop(t *testing.T) {
 	}()
 
 	wg.Wait()
-	time.Sleep(time.Second * 5)
+	time.Sleep(time.Second * 2)
 	fmt.Printf("errCount: %d\n", errCount.Load())
-	assert.Equal(t, errCount.Load()+count.Load(), int32(1000))
+	assert.Equal(t, errCount.Load()+count.Load(), int32(10000))
 	_ = service.Stop(context.Background())
 }
 

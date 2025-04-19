@@ -45,6 +45,6 @@ func (actorRef *ActorRef) Stop() {
 //   - *actor.PID: 返回当前ActorRef的PID引用
 //
 // 注意: 此方法通常用于内部实现，获取底层Actor系统需要的PID引用
-func (actorRef *ActorRef) ref() *ActorProcess {
+func (actorRef *ActorRef) ref() *Process {
 	return actorRef.Props.getOrCreateActorPID(actorRef.ActorName, actorRef.Pattern)
 }

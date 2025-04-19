@@ -178,7 +178,7 @@ func newSupervisor(actorSystem *actor.ActorSystem, level Level) *actor.PID {
 }
 
 // GetOrStartActor 获取一个就绪的Actor对象
-func GetOrStartActor(actorName, pattern string, props *Props) (*ActorProcess, error) {
+func GetOrStartActor(actorName, pattern string, props *Props) (*Process, error) {
 	// First check if manager already has this actor
 	if actor, exists := actorsCache.Get(actorName); exists {
 		if !actor.IsStopped() {
@@ -202,7 +202,7 @@ func GetOrStartActor(actorName, pattern string, props *Props) (*ActorProcess, er
 	}
 
 	switch v := result.(type) {
-	case *ActorProcess:
+	case *Process:
 		return v, nil
 	case *StartActorWait:
 		result, err = waitFuture(future)
@@ -210,7 +210,7 @@ func GetOrStartActor(actorName, pattern string, props *Props) (*ActorProcess, er
 			return nil, err
 		}
 		switch v := result.(type) {
-		case *ActorProcess:
+		case *Process:
 			return v, nil
 		default:
 			return nil, errors.New("unknown result type")
@@ -222,13 +222,6 @@ func GetOrStartActor(actorName, pattern string, props *Props) (*ActorProcess, er
 
 // StopActor stops the actor with the given ID
 func StopActor(actorName, pattern string) error {
-	// First check if manager already has this actor
-	if p, exists := actorsCache.Get(actorName); exists {
-		if p.PID != nil {
-			p.Stop()
-		}
-	}
-
 	result, err := System.RequestFuture(pattern, &StopActorMessage{
 		ActorName: actorName,
 		Pattern:   pattern,

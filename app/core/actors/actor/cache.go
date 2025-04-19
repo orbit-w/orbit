@@ -9,12 +9,12 @@ var (
 )
 
 type ActorsCache struct {
-	cache cmap.ConcurrentMap[string, *ActorProcess]
+	cache cmap.ConcurrentMap[string, *Process]
 }
 
 func NewActorsCache() *ActorsCache {
 	return &ActorsCache{
-		cache: cmap.New[*ActorProcess](),
+		cache: cmap.New[*Process](),
 	}
 }
 
@@ -22,7 +22,7 @@ func (c *ActorsCache) Exist(actorName string) bool {
 	return c.cache.Has(actorName)
 }
 
-func (c *ActorsCache) Get(actorName string) (*ActorProcess, bool) {
+func (c *ActorsCache) Get(actorName string) (*Process, bool) {
 	item, ok := c.cache.Get(actorName)
 	if !ok {
 		return nil, false
@@ -30,7 +30,7 @@ func (c *ActorsCache) Get(actorName string) (*ActorProcess, bool) {
 	return item, true
 }
 
-func (c *ActorsCache) Set(actorName string, p *ActorProcess) {
+func (c *ActorsCache) Set(actorName string, p *Process) {
 	c.cache.Set(actorName, p)
 }
 
