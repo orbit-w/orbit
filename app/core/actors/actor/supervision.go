@@ -158,15 +158,24 @@ func (m *ActorSupervision) handleStopActor(context actor.Context, msg *StopActor
 		context.Respond(nil)
 		return
 	}
-	p.Stop()
-	m.stopActor(context, msg.ActorName, msg.Pattern, p.GetPID())
+
+	m.stopActor(context, msg.ActorName, p)
 	context.Respond(nil)
 }
 
 // Pid 属于需要停止的目标Actor
 // 异步停止，当发送Poison信号后立即返回调用者，
 // 而不是等到Supervisor收到目标Actor Terminated的信号后才返回调用者
-func (m *ActorSupervision) stopActor(context actor.Context, actorName, pattern string, pid *actor.PID) {
+func (m *ActorSupervision) stopActor(context actor.Context, name string, p *Process) {
+	// 立刻将Process从缓存中删除
+	actorsCache.Delete(name)
+	// 立刻将Process状态设置为停止状态
+	p.Stop()
+	// 异步停止Actor
+	m.stopActorWithPID(context, name, p.Pattern, p.GetPID(), false)
+}
+
+func (m *ActorSupervision) stopActorWithPID(context actor.Context, actorName, pattern string, pid *actor.PID, clear bool) {
 	// Stop the actor
 	context.Poison(pid)
 
@@ -175,7 +184,9 @@ func (m *ActorSupervision) stopActor(context actor.Context, actorName, pattern s
 	m.stopping.Insert(actorName, item, time.Now().UnixNano())
 
 	// 从缓存中删除Actor
-	actorsCache.Delete(actorName)
+	if clear {
+		actorsCache.Delete(actorName)
+	}
 }
 
 // handleActorStopped handles notification that an actor has stopped
@@ -239,7 +250,7 @@ func (m *ActorSupervision) handleNotifyChildStarted(context actor.Context, msg *
 		}
 	} else {
 		logger.GetLogger().Error("Child actor started with error", zap.String("ActorName", msg.ActorName), zap.Error(msg.Error))
-		m.stopActor(context, msg.ActorName, item.Pattern, item.Child)
+		m.stopActorWithPID(context, msg.ActorName, item.Pattern, item.Child, false)
 		for i := range watchers {
 			w := watchers[i]
 			context.Send(w, msg.Error)
@@ -258,7 +269,7 @@ func (m *ActorSupervision) handleStoppingAll(context actor.Context) {
 		}
 		p, exists := actorsCache.Get(name)
 		if exists {
-			m.stopActor(context, name, p.Pattern, p.GetPID())
+			m.stopActor(context, name, p)
 		} else {
 			logger.GetLogger().Error("StoppingAll child not found", zap.String("ActorName", name))
 		}

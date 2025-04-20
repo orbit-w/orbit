@@ -1,6 +1,7 @@
 package actor
 
 import (
+	"errors"
 	"time"
 )
 
@@ -23,11 +24,28 @@ func NewActorRef(props *Props, actorName, pattern string, ops ...PropsOption) *A
 }
 
 func (actorRef *ActorRef) Send(msg any) error {
-	return actorRef.ref().Send(msg)
+	if err := actorRef.ref().Send(msg); err != nil {
+		if errors.Is(err, ErrActorStopped) {
+			return actorRef.ref().Send(msg)
+		}
+		return err
+	}
+	return nil
 }
 
 func (actorRef *ActorRef) RequestFuture(msg any, timeout ...time.Duration) (any, error) {
-	return actorRef.ref().RequestFuture(msg, timeout...)
+	re, err := actorRef.ref().RequestFuture(msg, timeout...)
+	if err == nil {
+		return re, nil
+	}
+
+	if errors.Is(err, ErrActorStopped) {
+		re, err = actorRef.ref().RequestFuture(msg, timeout...)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return re, err
 }
 
 // Stop 停止当前Actor
@@ -38,13 +56,10 @@ func (actorRef *ActorRef) Stop() {
 	StopActor(actorRef.ActorName, actorRef.Pattern)
 }
 
-// ref 获取Actor的PID引用
-// 此方法返回当前ActorRef对应的Process ID (PID)
-// PID是Actor系统中唯一标识一个Actor的标识符
+// ref 获取Actor的 Process 引用
+// 此方法返回当前ActorRef对应的Process
 // 返回:
-//   - *actor.PID: 返回当前ActorRef的PID引用
-//
-// 注意: 此方法通常用于内部实现，获取底层Actor系统需要的PID引用
+//   - *Process: 返回当前Actor 引用
 func (actorRef *ActorRef) ref() *Process {
 	return actorRef.Props.getOrCreateActorPID(actorRef.ActorName, actorRef.Pattern)
 }
