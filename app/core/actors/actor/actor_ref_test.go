@@ -107,10 +107,19 @@ func Test_ActorRefPropsContent(t *testing.T) {
 }
 
 func Test_ActorRefStartAndStop(t *testing.T) {
-	pattern := "start-and-stop-pattern"
+	// 测试配置
+	const (
+		pattern       = "start-and-stop-pattern"
+		numGoroutines = 1000
+		msgPerRoutine = 10
+		totalMsg      = numGoroutines * msgPerRoutine
+	)
+
+	// 设置测试环境
 	service := setup(pattern)
 	var count atomic.Int32
-	// Register a test pattern
+
+	// 注册测试行为
 	RegFactory(pattern, func(actorName string) Behavior {
 		return &CountBehavior{
 			actorName: actorName,
@@ -118,35 +127,83 @@ func Test_ActorRefStartAndStop(t *testing.T) {
 		}
 	})
 
+	// 创建测试Actor
 	name := "test-actor"
 	meta := NewMeta(name, pattern, "1", nil)
 	actorRef := NewActorRef(NewProps(), name, pattern, WithMeta(meta))
+
+	// 准备测试数据
 	wg := sync.WaitGroup{}
 	var msgCount atomic.Int32
 	var errCount atomic.Int32
-	for i := 0; i < 1000; i++ {
+
+	// 模拟并发向一个正在停止中的Actor发送消息
+	// 验证是否所有消息都被正确处理或记录错误
+	for i := 0; i < numGoroutines; i++ {
 		wg.Add(1)
 		go func() {
-			for j := 0; j < 10; j++ {
+			defer wg.Done()
+			for j := 0; j < msgPerRoutine; j++ {
 				if err := actorRef.Send(fmt.Sprintf("message-%d", msgCount.Add(1))); err != nil {
 					errCount.Add(1)
 				}
 			}
-			wg.Done()
 		}()
 	}
 
+	// 模拟在消息发送过程中停止Actor
 	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		actorRef.Stop()
-		wg.Done()
 	}()
 
+	// 等待所有操作完成
 	wg.Wait()
-	time.Sleep(time.Second * 2)
-	fmt.Printf("errCount: %d\n", errCount.Load())
-	assert.Equal(t, errCount.Load()+count.Load(), int32(10000))
+	time.Sleep(time.Second * 2) // 等待消息处理完成
+
+	// 结果验证
+	successes := count.Load()
+	failures := errCount.Load()
+	total := successes + failures
+
+	fmt.Printf("成功处理: %d, 发送失败: %d, 总计: %d/%d\n",
+		successes, failures, total, totalMsg)
+
+	// 验证所有消息都被正确处理或记录为错误
+	assert.Equal(t, int32(totalMsg), total,
+		"所有消息应该被处理或记录为错误")
+
 	_ = service.Stop(context.Background())
+}
+
+func Test_ActorTimerForFree(t *testing.T) {
+	// 测试配置
+	const (
+		pattern       = "timer_for_free"
+		numGoroutines = 1000
+		msgPerRoutine = 10
+		totalMsg      = numGoroutines * msgPerRoutine
+	)
+
+	// 设置测试环境
+	service := setup(pattern)
+	defer service.Stop(context.Background())
+	ntf := make(chan struct{}, 1)
+
+	// 注册测试行为
+	RegFactory(pattern, func(actorName string) Behavior {
+		return &CheckAliveBehavior{
+			ntf: ntf,
+		}
+	})
+
+	start := time.Now()
+	actorRef := NewActorRef(NewProps(), pattern, pattern, WithAliveTimeout(time.Minute))
+	actorRef.Send("initial-message")
+	<-ntf
+
+	fmt.Printf("test_ActorTimerForFree done, cost: %s\n", time.Since(start))
 }
 
 type ContentBehavior struct {
@@ -220,5 +277,35 @@ func (b *CountBehavior) HandleStopping(ctx IContext) error {
 
 func (b *CountBehavior) HandleStopped(ctx IContext) error {
 	fmt.Printf("Stopped actor with ID: %s, serverId: %s, count: %d\n", b.actorName, ctx.GetServerId(), b.count.Load())
+	return nil
+}
+
+type CheckAliveBehavior struct {
+	ntf chan struct{}
+}
+
+func (b *CheckAliveBehavior) HandleRequest(ctx IContext, msg any) (any, error) {
+	//fmt.Printf("HandleCall message: %s\n", v)
+	return nil, nil
+}
+
+func (b *CheckAliveBehavior) HandleSend(ctx IContext, msg any) {
+	// v := msg.(string)
+	// fmt.Printf("HandleCast message: %s\n", v)
+}
+
+func (b *CheckAliveBehavior) HandleForward(ctx IContext, _ any) {
+}
+
+func (b *CheckAliveBehavior) HandleInit(ctx IContext) error {
+	return nil
+}
+
+func (b *CheckAliveBehavior) HandleStopping(ctx IContext) error {
+	return nil
+}
+
+func (b *CheckAliveBehavior) HandleStopped(ctx IContext) error {
+	close(b.ntf)
 	return nil
 }

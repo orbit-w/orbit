@@ -134,7 +134,7 @@ func (m *ActorSupervision) startActor(context actor.Context, pattern, actorName 
 		behavior := CreateBehaviorWithID(pattern, actorName)
 
 		// 设置初始化完成通知
-		childActor := NewChildActor(behavior, actorName, pattern, props.GetMeta(), func(err error) error {
+		childActor := NewChildActor(behavior, actorName, pattern, props.GetMeta(), props.GetAliveTimeout(), func(err error) error {
 			context.Send(context.Self(), &ChildStartedNotification{ActorName: actorName, Error: err})
 			return nil
 		})

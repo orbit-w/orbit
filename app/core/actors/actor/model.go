@@ -67,6 +67,7 @@ type TimerMessage struct{}
 
 var (
 	startActorWaitMessage = &StartActorWait{}
+	checkAliveMessage     = &CheckAliveMessage{}
 )
 
 type ActorInfo struct {
@@ -84,3 +85,5 @@ type RequestMessage struct {
 	MsgType int8
 	Message any
 }
+
+type CheckAliveMessage struct{}
