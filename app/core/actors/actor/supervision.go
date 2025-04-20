@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"gitee.com/orbit-w/meteor/bases/misc/utils"
+	mlog "gitee.com/orbit-w/meteor/modules/mlog"
 	"gitee.com/orbit-w/orbit/lib/logger"
 	"github.com/asynkron/protoactor-go/actor"
 	"go.uber.org/zap"
@@ -26,6 +27,7 @@ type ActorSupervision struct {
 	starting    *Queue
 	stopping    *Queue
 	restarting  *Queue
+	logger      *mlog.Logger
 }
 
 // NewActorSupervision creates a new instance of ActorManager
@@ -36,6 +38,7 @@ func NewActorSupervision(actorSystem *actor.ActorSystem, level Level) *ActorSupe
 		starting:    NewPriorityQueue(),
 		stopping:    NewPriorityQueue(),
 		restarting:  NewPriorityQueue(),
+		logger:      logger.GetLogger(),
 	}
 }
 
@@ -50,19 +53,19 @@ func (m *ActorSupervision) Receive(context actor.Context) {
 	switch msg := context.Message().(type) {
 	case *actor.Started:
 		// Start the garbage collection routine
-		logger.GetLogger().Info("ActorManager started")
+		m.logger.Info("ActorManager started")
 
 	case *StartActorRequest:
 		m.handleStartActor(context, msg)
 
-	case *StopActorMessage:
-		m.handleStopActor(context, msg)
+	case *PoisonActorMessage:
+		m.handlePoisonActor(context, msg)
 
 	case *actor.Terminated: //system message
 		// msg.Who contains the PID of the terminated actor
 		// Handle child termination here
 		m.handleActorStopped(context, ExtractActorName(msg.Who))
-		logger.GetLogger().Info("Child actor has terminated", zap.String("ActorName", msg.Who.Id), zap.String("Reason", msg.Why.String()))
+		m.logger.Info("Child actor has terminated", zap.String("ActorName", msg.Who.Id), zap.String("Reason", msg.Why.String()))
 
 	case *ChildStartedNotification:
 		m.handleNotifyChildStarted(context, msg)
@@ -74,7 +77,7 @@ func (m *ActorSupervision) Receive(context actor.Context) {
 		m.handleStopped(context)
 
 	default:
-		logger.GetLogger().Error("ActorManager received unknown message", zap.Any("Message", msg))
+		m.logger.Error("ActorManager received unknown message", zap.Any("Message", msg))
 	}
 }
 
@@ -120,7 +123,7 @@ func (m *ActorSupervision) handleStartActor(context actor.Context, msg *StartAct
 	item := NewItem(msg.ActorName, msg.Pattern, pid, msg.Props, msg.Future)
 	err = m.starting.Insert(msg.ActorName, item, time.Now().UnixNano())
 	if err != nil {
-		logger.GetLogger().Error("[StartActor] Failed to insert starting queue", zap.String("ActorName", msg.ActorName), zap.Error(err))
+		m.logger.Error("[StartActor] Failed to insert starting queue", zap.String("ActorName", msg.ActorName), zap.Error(err))
 		context.Respond(err)
 		return
 	}
@@ -152,21 +155,21 @@ func (m *ActorSupervision) startActor(context actor.Context, pattern, actorName 
 }
 
 // handleStopActor handles stopping an actor
-func (m *ActorSupervision) handleStopActor(context actor.Context, msg *StopActorMessage) {
+func (m *ActorSupervision) handlePoisonActor(context actor.Context, msg *PoisonActorMessage) {
 	p, exists := actorsCache.Get(msg.ActorName)
 	if !exists {
 		context.Respond(nil)
 		return
 	}
 
-	m.stopActor(context, msg.ActorName, p)
+	m.poisonActor(context, msg.ActorName, p)
 	context.Respond(nil)
 }
 
 // Pid 属于需要停止的目标Actor
 // 异步停止，当发送Poison信号后立即返回调用者，
 // 而不是等到Supervisor收到目标Actor Terminated的信号后才返回调用者
-func (m *ActorSupervision) stopActor(context actor.Context, name string, p *Process) {
+func (m *ActorSupervision) poisonActor(context actor.Context, name string, p *Process) {
 	// 立刻将Process从缓存中删除
 	actorsCache.Delete(name)
 	// 立刻将Process状态设置为停止状态
@@ -198,7 +201,7 @@ func (m *ActorSupervision) handleActorStopped(context actor.Context, actorName s
 	_, ok := m.stopping.Pop(actorName)
 	if !ok {
 		if m.state.Load() < StateActorSupervisionStopping {
-			logger.GetLogger().Error("Actor stopped notification received for unknown actor", zap.String("ActorName", actorName))
+			m.logger.Error("Actor stopped notification received for unknown actor", zap.String("ActorName", actorName))
 		}
 		return
 	}
@@ -212,7 +215,7 @@ func (m *ActorSupervision) handleActorStopped(context actor.Context, actorName s
 	if ok && watching.FuturesNum() > 0 {
 		pid, err := m.startActor(context, watching.Pattern, actorName, watching.Props)
 		if err != nil {
-			logger.GetLogger().Error("Failed to start actor", zap.String("ActorName", actorName), zap.Error(err))
+			m.logger.Error("Failed to start actor", zap.String("ActorName", actorName), zap.Error(err))
 			for i := range watching.Future {
 				target := watching.Future[i]
 				context.Send(target, err)
@@ -236,12 +239,12 @@ func (m *ActorSupervision) handleNotifyChildStarted(context actor.Context, msg *
 	})
 
 	if !ok {
-		logger.GetLogger().Error("ChildStartedNotification received for unknown actor", zap.String("ActorName", msg.ActorName))
+		m.logger.Error("ChildStartedNotification received for unknown actor", zap.String("ActorName", msg.ActorName))
 		return
 	}
 
 	if msg.Error == nil {
-		logger.GetLogger().Info("Child actor started", zap.String("ActorName", msg.ActorName))
+		m.logger.Info("Child actor started", zap.String("ActorName", msg.ActorName))
 		p := NewActorProcess(msg.ActorName, item.Pattern, item.Child, item.Props)
 		actorsCache.Set(msg.ActorName, p)
 		for i := range watchers {
@@ -249,7 +252,7 @@ func (m *ActorSupervision) handleNotifyChildStarted(context actor.Context, msg *
 			context.Send(w, p)
 		}
 	} else {
-		logger.GetLogger().Error("Child actor started with error", zap.String("ActorName", msg.ActorName), zap.Error(msg.Error))
+		m.logger.Error("Child actor started with error", zap.String("ActorName", msg.ActorName), zap.Error(msg.Error))
 		m.stopActorWithPID(context, msg.ActorName, item.Pattern, item.Child, false)
 		for i := range watchers {
 			w := watchers[i]
@@ -269,9 +272,9 @@ func (m *ActorSupervision) handleStoppingAll(context actor.Context) {
 		}
 		p, exists := actorsCache.Get(name)
 		if exists {
-			m.stopActor(context, name, p)
+			m.poisonActor(context, name, p)
 		} else {
-			logger.GetLogger().Error("StoppingAll child not found", zap.String("ActorName", name))
+			m.logger.Error("StoppingAll child not found", zap.String("ActorName", name))
 		}
 	}
 

@@ -222,7 +222,7 @@ func GetOrStartActor(actorName, pattern string, props *Props) (*Process, error) 
 
 // StopActor stops the actor with the given ID
 func StopActor(actorName, pattern string) error {
-	result, err := System.RequestFuture(pattern, &StopActorMessage{
+	result, err := System.RequestFuture(pattern, &PoisonActorMessage{
 		ActorName: actorName,
 		Pattern:   pattern,
 	}, StopActorTimeout)

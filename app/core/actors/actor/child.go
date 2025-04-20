@@ -164,7 +164,7 @@ func (state *ChildActor) HandleStopped(context actor.Context) {
 // 处理活跃检测
 func (state *ChildActor) handleAliveCheck(context actor.Context) {
 	if time.Since(state.lastActivityTime) > state.aliveTimeout {
-		context.Send(context.Parent(), &StopActorMessage{
+		context.Send(context.Parent(), &PoisonActorMessage{
 			ActorName: state.GetActorName(),
 			Pattern:   state.GetPattern(),
 		})

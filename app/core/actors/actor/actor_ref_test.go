@@ -106,6 +106,7 @@ func Test_ActorRefPropsContent(t *testing.T) {
 	_ = service.Stop(context.Background())
 }
 
+// 校验ActorRef的Start和Stop方法是否正确
 func Test_ActorRefStartAndStop(t *testing.T) {
 	// 测试配置
 	const (
@@ -180,10 +181,7 @@ func Test_ActorRefStartAndStop(t *testing.T) {
 func Test_ActorTimerForFree(t *testing.T) {
 	// 测试配置
 	const (
-		pattern       = "timer_for_free"
-		numGoroutines = 1000
-		msgPerRoutine = 10
-		totalMsg      = numGoroutines * msgPerRoutine
+		pattern = "timer_for_free"
 	)
 
 	// 设置测试环境

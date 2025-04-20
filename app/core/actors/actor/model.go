@@ -51,7 +51,7 @@ type StartActorRequest struct {
 type StartActorWait struct {
 }
 
-type StopActorMessage struct {
+type PoisonActorMessage struct {
 	ActorName string
 	Pattern   string
 }
