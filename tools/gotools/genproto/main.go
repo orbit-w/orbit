@@ -20,7 +20,7 @@ func main() {
 	flag.Parse()
 
 	// Call the combined gluegen tool to generate both protocol IDs and glue code
-	cmd := exec.Command("go", "run", "lib/genproto/cmd/gluegen/main.go",
+	cmd := exec.Command("go", "run", "tools/gotools/genproto/cmd/gluegen/main.go",
 		"-proto_dir", *protoDir,
 		"-output_dir", *outputDir)
 

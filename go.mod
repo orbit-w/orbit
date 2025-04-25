@@ -8,6 +8,7 @@ require (
 	gitee.com/orbit-w/meteor v0.0.0-20250407082516-73b6f3dda3a3
 	github.com/BurntSushi/toml v1.4.0
 	github.com/asynkron/protoactor-go v0.0.0-20240822202345-3c0e61ca19c9
+	github.com/gogo/protobuf v1.3.2
 	github.com/orbit-w/mux-go v0.0.0-20250330080341-4434feaa0de6
 	github.com/orcaman/concurrent-map/v2 v2.0.1
 	github.com/redis/go-redis/v9 v9.7.3
