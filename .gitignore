@@ -25,3 +25,4 @@ bin/
 /bin
 /logs
 /app/core/actors/actor/logs
+.vscode
