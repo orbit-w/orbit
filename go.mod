@@ -1,8 +1,6 @@
 module gitee.com/orbit-w/orbit
 
-go 1.21.0
-
-toolchain go1.21.13
+go 1.22.0
 
 require (
 	gitee.com/orbit-w/meteor v0.0.0-20250407082516-73b6f3dda3a3

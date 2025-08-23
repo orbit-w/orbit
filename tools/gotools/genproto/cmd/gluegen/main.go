@@ -622,28 +622,6 @@ func extractMessageComment(content, messageName string) string {
 	return ""
 }
 
-// 解析消息字段
-func parseMessageFields(message *Message, msgBody string) {
-	// 查找字段和注释
-	fieldRegex := regexp.MustCompile(`(\w+)\s+(\w+)\s*=\s*(\d+);(?:\s*//(.*))?`)
-	fieldMatches := fieldRegex.FindAllStringSubmatch(msgBody, -1)
-
-	for _, fieldMatch := range fieldMatches {
-		field := Field{
-			Type:    fieldMatch[1],
-			Name:    fieldMatch[2],
-			Index:   len(message.Fields) + 1,
-			Comment: "",
-		}
-
-		if len(fieldMatch) > 4 && fieldMatch[4] != "" {
-			field.Comment = strings.TrimSpace(fieldMatch[4])
-		}
-
-		message.Fields = append(message.Fields, field)
-	}
-}
-
 // 提取go_package值
 func extractGoPackage(content string) string {
 	// 正则表达式匹配option go_package = "...";
@@ -678,7 +656,7 @@ func generateRequestGlueCode(messages []Message, packageName, pbDir string) {
 	// 导入必要的包
 	fmt.Fprintf(file, "import (\n")
 	fmt.Fprintf(file, "\t\"fmt\"\n")
-	fmt.Fprintf(file, "\t\"google.golang.org/protobuf/proto\"\n")
+	fmt.Fprintf(file, "\t\"github.com/gogo/protobuf/proto\"\n")
 
 	// 找到该包的proto文件以提取go_package
 	protoFiles, _ := findProtoFiles(*protoDir)
@@ -778,7 +756,7 @@ func generateNotifyGlueCode(messages []Message, packageName, pbDir string) {
 	// 导入必要的包
 	fmt.Fprintf(file, "import (\n")
 	fmt.Fprintf(file, "\t\"fmt\"\n")
-	fmt.Fprintf(file, "\t\"google.golang.org/protobuf/proto\"\n")
+	fmt.Fprintf(file, "\t\"github.com/gogo/protobuf/proto\"\n")
 
 	// 找到该包的proto文件以提取go_package
 	protoFiles, _ := findProtoFiles(*protoDir)
@@ -874,7 +852,7 @@ func generateCommonProtocolMappings(allMappings []ProtocolIDMapping, outputDir s
 	// 导入必要的包
 	fmt.Fprintf(file, "import (\n")
 	fmt.Fprintf(file, "\t\"fmt\"\n")
-	fmt.Fprintf(file, "\t\"google.golang.org/protobuf/proto\"\n")
+	fmt.Fprintf(file, "\t\"github.com/gogo/protobuf/proto\"\n")
 	fmt.Fprintf(file, "\t\"gitee.com/orbit-w/orbit/lib/utils/proto_utils\"\n")
 	fmt.Fprintf(file, ")\n\n")
 

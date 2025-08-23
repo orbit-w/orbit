@@ -2,7 +2,7 @@ package controller
 
 import (
 	"gitee.com/orbit-w/orbit/app/proto/pb/pb_core"
-	"google.golang.org/protobuf/proto"
+	"github.com/gogo/protobuf/proto"
 )
 
 type ExampleController struct {

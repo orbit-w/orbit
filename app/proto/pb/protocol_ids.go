@@ -3,7 +3,7 @@ package pb
 
 import (
 	"fmt"
-	"google.golang.org/protobuf/proto"
+	"github.com/gogo/protobuf/proto"
 	"gitee.com/orbit-w/orbit/lib/utils/proto_utils"
 )
 

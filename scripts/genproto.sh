@@ -84,7 +84,7 @@ generate_protobuf() {
         --proto_path=$GOPATH/bin \
         --proto_path=$GOPATH/pkg/mod \
         --proto_path=./vendor/github.com/asynkron/protoactor-go/actor \
-        --gogofast_out=plugins=grpc:$PROTO_DIR {}
+        --go_out=$PROTO_DIR {}
 }
 
 # Function to clean protocol ID files
