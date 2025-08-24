@@ -102,7 +102,6 @@ func TestUniqueTaskExecutor_ExecuteOnce(t *testing.T) {
 		// 测试panic恢复
 		result = executor.ExecuteOnce("panic-key", func() any {
 			panic("测试panic")
-			return nil // 永远不会执行到
 		})
 
 		err, ok = result.(error)
