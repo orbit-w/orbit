@@ -10,7 +10,7 @@ import (
 	"sort"
 	"strings"
 
-	"gitee.com/orbit-w/orbit/lib/module/protoid"
+	"gitee.com/orbit-w/orbit/lib/base/protoid"
 )
 
 var (
