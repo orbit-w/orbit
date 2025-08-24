@@ -6,6 +6,7 @@ DEBUG=false
 QUIET=true
 GEN_PROTO_CODE=true
 GEN_PROTO_IDS=true
+CS_PROTO_FILE=""
 
 # Function to show usage
 show_usage() {
@@ -13,9 +14,6 @@ show_usage() {
     echo "Options:"
     echo "  --all                Generate all proto related code (default)"
     echo "  --ids-only           Only generate protocol IDs"
-    echo "  --glue-only          Only generate glue code"
-    echo "  --debug              Run in debug mode"
-    echo "  --proto-dir=DIR      Set proto directory (default: app/proto)"
     echo "  --help               Show this help message"
     echo "  PROTO_FILE           Optional path to specific proto file (absolute or relative)"
 }
@@ -33,24 +31,10 @@ for arg in "$@"; do
             GEN_PROTO_IDS=true
             shift
             ;;
-        --glue-only)
-            GEN_PROTO_CODE=true
-            GEN_PROTO_IDS=false
-            shift
-            ;;
-        --debug)
-            DEBUG=true
-            QUIET=false
-            shift
-            ;;
-        --proto-dir=*)
-            CS_PROTO_DIR="${arg#*=}"
-            shift
-            ;;
         --proto-file=*)
-            PROTO_FILE="${arg#*=}"
+            CS_PROTO_FILE="${arg#*=}"
             # Convert to absolute path if relative
-            PROTO_FILE=$(realpath "$PROTO_FILE")
+            CS_PROTO_FILE=$(realpath "$CS_PROTO_FILE")
             shift
             ;;
         --help)
@@ -58,10 +42,10 @@ for arg in "$@"; do
             exit 0
             ;;
         *)
-            if [ -z "$PROTO_FILE" ]; then
-                PROTO_FILE="$arg"
+            if [ -z "$CS_PROTO_FILE" ]; then
+                CS_PROTO_FILE="$arg"
                 # Convert to absolute path if relative
-                PROTO_FILE=$(realpath "$PROTO_FILE")
+                CS_PROTO_FILE=$(realpath "$CS_PROTO_FILE")
             else
                 echo "Unknown option or multiple paths: $arg"
                 show_usage
@@ -72,12 +56,12 @@ for arg in "$@"; do
 done
 
 # After parsing
-if [ -n "$PROTO_FILE" ]; then
-    if [ -d "$PROTO_FILE" ]; then
-        CUSTOM_PROTO_DIR="$PROTO_FILE"
-        PROTO_FILE=""  # Clear since it's a dir
+if [ -n "$CS_PROTO_FILE" ]; then
+    if [ -d "$CS_PROTO_FILE" ]; then
+        CUSTOM_CS_PROTO_DIR="$CS_PROTO_FILE"
+        CS_PROTO_FILE=""  # Clear since it's a dir
     else
-        # It's a file, keep PROTO_FILE
+        # It's a file, keep CS_PROTO_FILE
         :
     fi
 fi
@@ -97,23 +81,23 @@ fi
 # Function to generate protobuf
 generate_protobuf() {
     # If CUSTOM_PROTO_DIR is set, use it, otherwise use CS_PROTO_DIR
-    local target_dir="${CUSTOM_PROTO_DIR:-$CS_PROTO_DIR}"
+    local target_dir="${CUSTOM_CS_PROTO_DIR:-$CS_PROTO_DIR}"
     
-    if [ -z "$CUSTOM_PROTO_DIR" ] && [ -z "$PROTO_FILE" ]; then
+    if [ -z "$CUSTOM_CS_PROTO_DIR" ] && [ -z "$CS_PROTO_FILE" ]; then
         echo "Deleting existing proto files..."
         find $CS_PROTO_DIR/pb -type f -not -path "*/\.*" -delete
     fi
     # For custom dir, perhaps clean specific generated files, but skip for safety
     
     echo "Generating protobuf code..."
-    if [ -n "$PROTO_FILE" ]; then
+    if [ -n "$CS_PROTO_FILE" ]; then
         protoc \
             --proto_path=. \
             --proto_path=$GOPATH/bin \
             --proto_path=$GOPATH/pkg/mod \
             --proto_path=./vendor/github.com/asynkron/protoactor-go/actor \
-            --proto_path="$(dirname "$PROTO_FILE")" \
-            --go_out=$CS_PROTO_DIR "$PROTO_FILE"
+            --proto_path="$(dirname "$CS_PROTO_FILE")" \
+            --go_out=$CS_PROTO_DIR "$CS_PROTO_FILE"
     else
         find "$target_dir" -name "*.proto" -type f | xargs -I{} protoc \
             --proto_path=. \
@@ -142,23 +126,23 @@ clean_glue_code() {
 # Main execution logic
 if [ "$GEN_PROTO_IDS" = false ]; then
     # Only generate glue code (GenGlueCode)
-    if [ -z "$PROTO_FILE" ]; then
+    if [ -z "$CS_PROTO_FILE" ]; then
         clean_glue_code
     fi
     echo "Generating glue code only..."
-    go run tools/gotools/genproto/main.go --proto_dir="${CUSTOM_PROTO_DIR:-$CS_PROTO_DIR}" --gen_proto_ids=false $QUIET_OPT $DEBUG_OPT ${PROTO_FILE:+--proto-file=$PROTO_FILE}
+    go run tools/gotools/genproto/main.go --proto_dir="${CUSTOM_CS_PROTO_DIR:-$CS_PROTO_DIR}" --gen_proto_ids=false $QUIET_OPT $DEBUG_OPT ${CS_PROTO_FILE:+--proto-file=$CS_PROTO_FILE}
 elif [ "$GEN_PROTO_CODE" = false ]; then
     # Only generate protocol IDs (GenProtoID)
-    if [ -z "$PROTO_FILE" ]; then
+    if [ -z "$CS_PROTO_FILE" ]; then
         clean_proto_ids
     fi
     echo "Generating protocol IDs only..."
-    go run tools/gotools/genproto/main.go --proto_dir="${CUSTOM_PROTO_DIR:-$CS_PROTO_DIR}" --gen_proto_code=false $QUIET_OPT $DEBUG_OPT ${PROTO_FILE:+--proto-file=$PROTO_FILE}
+    go run tools/gotools/genproto/main.go --proto_dir="${CUSTOM_CS_PROTO_DIR:-$CS_PROTO_DIR}" --gen_proto_code=false $QUIET_OPT $DEBUG_OPT ${CS_PROTO_FILE:+--proto-file=$CS_PROTO_FILE}
 else
     # Generate all (GenProto or GenProtoDebug)
     generate_protobuf
     echo "Generating protocol IDs and glue code..."
-    go run tools/gotools/genproto/main.go --proto_dir="${CUSTOM_PROTO_DIR:-$CS_PROTO_DIR}" $QUIET_OPT $DEBUG_OPT ${PROTO_FILE:+--proto-file=$PROTO_FILE}
+    go run tools/gotools/genproto/main.go --proto_dir="${CUSTOM_CS_PROTO_DIR:-$CS_PROTO_DIR}" $QUIET_OPT $DEBUG_OPT ${CS_PROTO_FILE:+--proto-file=$CS_PROTO_FILE}
 fi
 
 echo "Proto generation completed."

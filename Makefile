@@ -23,14 +23,6 @@ GenProto:
 GenProtoID:
 	./scripts/genproto.sh --ids-only ${PROTO_FILE:+--proto-file=$(PROTO_FILE)}
 
-# 只生成胶水代码
-GenGlueCode:
-	./scripts/genproto.sh --glue-only ${PROTO_FILE:+--proto-file=$(PROTO_FILE)}
-
-# 调试模式生成所有proto相关代码
-GenProtoDebug:
-	./scripts/genproto.sh --all --debug ${PROTO_FILE:+--proto-file=$(PROTO_FILE)}
-
 # Build for Linux with specified config file
 # Usage: make BuildPackageLinux ENV=prod (or other environment name without the 'config_' prefix and '.toml' suffix)
 # If ENV is not specified, it will use the default config.toml
@@ -54,13 +46,6 @@ help:
 	@echo "  make BuildLinux         - 构建Linux版本"
 	@echo "  make GenProto [PROTO_FILE=path/to/proto] - 生成所有proto相关代码（可选指定文件）"
 	@echo "  make GenProtoID [PROTO_FILE=path/to/proto] - 只生成协议ID（可选指定文件）"
-	@echo "  make GenGlueCode [PROTO_FILE=path/to/proto] - 只生成胶水代码（可选指定文件）"
-	@echo "  make GenProtoDebug [PROTO_FILE=path/to/proto] - 调试模式生成proto代码（可选指定文件）"
-	@echo "  make GenProtoFile PROTO_FILE=proto/path/file.proto - 生成指定proto文件的代码"
 	@echo "  make BuildPackageLinux  - 为Linux打包，用法: make BuildPackageLinux ENV=prod"
 	@echo "  make GoBenchmark        - 运行基准测试"
 	@echo "  make help               - 显示此帮助信息"
-
-# 生成指定proto文件的代码
-GenProtoFile:
-	./scripts/genproto.sh --proto-file=$(PROTO_FILE)
