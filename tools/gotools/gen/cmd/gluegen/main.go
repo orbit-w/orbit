@@ -53,57 +53,59 @@ func main() {
 	rootCmd := &cobra.Command{
 		Use:   "gluegen",
 		Short: "Generate protocol IDs and glue code from proto files",
-		Run: func(cmd *cobra.Command, args []string) {
-			var protoDir string
-			var outputDir string
-			var debugMode bool
-			var quietMode bool
-			var genProtoCode bool
-			var genProtoIDs bool
-			var protoFile string
-
-			cmd.Flags().StringVar(&protoDir, "proto-dir", "app/proto", "Directory containing .proto files")
-			cmd.Flags().StringVar(&outputDir, "output-dir", "app/proto/pb", "Directory for generated files")
-			cmd.Flags().BoolVar(&debugMode, "debug", false, "Enable debug mode")
-			cmd.Flags().BoolVar(&quietMode, "quiet", true, "Quiet mode: only show errors")
-			cmd.Flags().BoolVar(&genProtoCode, "gen-proto-code", true, "Generate glue code for proto messages")
-			cmd.Flags().BoolVar(&genProtoIDs, "gen-proto-ids", true, "Generate protocol IDs for proto messages")
-			cmd.Flags().StringVar(&protoFile, "proto-file", "", "Specific proto file to process (absolute or relative path)")
-
-			// 确保output目录存在
-			if err := ensureOutputDir(outputDir); err != nil {
-				fmt.Printf("Failed to create output directory: %v\n", err)
-				return
-			}
-
-			protoFiles, err := getProtoFiles(protoFile, protoDir)
-			if err != nil {
-				fmt.Printf("Error getting proto files: %v\n", err)
-				return
-			}
-
-			allMappings, err := processProtoFiles(protoFiles, quietMode, debugMode, genProtoIDs, genProtoCode, outputDir, protoDir)
-			if err != nil {
-				fmt.Printf("Error processing proto files: %v\n", err)
-				return
-			}
-
-			if genProtoIDs && len(allMappings) > 0 {
-				if err := generateCommonProtocolMappings(allMappings, outputDir, quietMode); err != nil {
-					fmt.Printf("Error generating protocol mappings: %v\n", err)
-					return
-				}
-			}
-
-			if !quietMode {
-				fmt.Println("All generation completed!")
-			}
-		},
+		Run:   runGluegen,
 	}
+
+	rootCmd.Flags().String("proto-dir", "app/proto", "Directory containing .proto files")
+	rootCmd.Flags().String("output-dir", "app/proto/pb", "Directory for generated files")
+	rootCmd.Flags().Bool("debug", false, "Enable debug mode")
+	rootCmd.Flags().Bool("quiet", true, "Quiet mode: only show errors")
+	rootCmd.Flags().Bool("gen-proto-code", true, "Generate glue code for proto messages")
+	rootCmd.Flags().Bool("gen-proto-ids", true, "Generate protocol IDs for proto messages")
+	rootCmd.Flags().String("proto-file", "", "Specific proto file to process (absolute or relative path)")
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
+	}
+}
+
+func runGluegen(cmd *cobra.Command, args []string) {
+	protoDir, _ := cmd.Flags().GetString("proto-dir")
+	outputDir, _ := cmd.Flags().GetString("output-dir")
+	debugMode, _ := cmd.Flags().GetBool("debug")
+	quietMode, _ := cmd.Flags().GetBool("quiet")
+	genProtoCode, _ := cmd.Flags().GetBool("gen-proto-code")
+	genProtoIDs, _ := cmd.Flags().GetBool("gen-proto-ids")
+	protoFile, _ := cmd.Flags().GetString("proto-file")
+
+	// 确保output目录存在
+	if err := ensureOutputDir(outputDir); err != nil {
+		fmt.Printf("Failed to create output directory: %v\n", err)
+		return
+	}
+
+	protoFiles, err := getProtoFiles(protoFile, protoDir)
+	if err != nil {
+		fmt.Printf("Error getting proto files: %v\n", err)
+		return
+	}
+
+	allMappings, err := processProtoFiles(protoFiles, quietMode, debugMode, genProtoIDs, genProtoCode, outputDir, protoDir)
+	if err != nil {
+		fmt.Printf("Error processing proto files: %v\n", err)
+		return
+	}
+
+	if genProtoIDs && len(allMappings) > 0 {
+		if err := generateCommonProtocolMappings(allMappings, outputDir, quietMode); err != nil {
+			fmt.Printf("Error generating protocol mappings: %v\n", err)
+			return
+		}
+	}
+
+	if !quietMode {
+		fmt.Println("All generation completed!")
 	}
 }
 
