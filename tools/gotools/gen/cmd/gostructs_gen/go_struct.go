@@ -1,8 +1,6 @@
 package cmd
 
-import (
-	"gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/gostruct"
-)
+import "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/gostructs_gen/gostruct"
 
 // ParseProtoToGoStructs 解析proto文件，生成Go结构体信息
 func ParseProtoToGoStructs(ctx *Context, packageName string) ([]*gostruct.GoStruct, error) {
