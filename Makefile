@@ -27,7 +27,7 @@ GenProtoID:
 
 # Generate Go structs using protogen go_structs
 GenGoStructs:
-	go run tools/gotools/gen/main.go go_structs --proto-dir=$(PROTO_DIR) --output-dir=structs --package=pb
+	go run tools/gotools/gen/main.go go_structs --proto-dir=$(PROTO_DIR) --output-dir=app/structs --package=pb
 
 # Build for Linux with specified config file
 # Usage: make BuildPackageLinux ENV=prod (or other environment name without the 'config_' prefix and '.toml' suffix)
