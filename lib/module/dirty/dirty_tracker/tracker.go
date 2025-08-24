@@ -1,4 +1,4 @@
-package dirty
+package dirty_tracker
 
 // ChangeCallback 脏标记变化回调函数类型
 // oldFlag: 变更前的标记值

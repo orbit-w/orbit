@@ -1,6 +1,11 @@
 pwd:=$(shell pwd)
 APP_NAME:=game
 
+# Default proto file (leave empty to process all)
+PROTO_FILE ?=../protocol/cspb/
+# Default proto directory
+PROTO_DIR ?= ../protocol/pt
+
 GoBenchmark:
 	go test ./benchmark/... -v -run=^$ -benchmem -bench=.
 
@@ -12,12 +17,6 @@ BuildLinux:
 	mkdir -p bin
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/$(APP_NAME) main.go
 
-# Default proto file (leave empty to process all)
-PROTO_FILE ?=../protocol/cspb/
-
-# Default proto directory
-PROTO_DIR ?= ../protocol/pt
-
 # 生成所有proto相关的代码（protobuf、协议ID和胶水代码）
 GenProto:
 	./scripts/genproto.sh --all ${PROTO_FILE:+--proto-file=$(PROTO_FILE)}
@@ -28,7 +27,7 @@ GenProtoID:
 
 # Generate Go structs using protogen go_structs
 GenGoStructs:
-	go run tools/gotools/gen/cmds.go go_structs --proto-dir=$(PROTO_DIR) --output-dir=app/proto/pb --package=pb
+	go run tools/gotools/gen/main.go go_structs --proto-dir=$(PROTO_DIR) --output-dir=structs --package=pb
 
 # Build for Linux with specified config file
 # Usage: make BuildPackageLinux ENV=prod (or other environment name without the 'config_' prefix and '.toml' suffix)

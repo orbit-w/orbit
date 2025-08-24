@@ -493,13 +493,14 @@ package %s
 		if needDirty || needXmap || needMgoBuilder {
 			builder.WriteString("import (\n")
 			if needMgoBuilder {
-				builder.WriteString("\t\"protocol/xxx/db/mgo_builder\"\n")
+				builder.WriteString("\t\"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder\"\n")
 			}
 			if needDirty {
-				builder.WriteString("\t\"protocol/xxx/dirty\"\n")
+
+				builder.WriteString("\tdirty\"gitee.com/orbit-w/orbit/lib/module/dirty/dirty_tracker\"\n")
 			}
 			if needXmap {
-				builder.WriteString("\t\"protocol/xxx/xmap\"\n")
+				builder.WriteString("\t\"gitee.com/orbit-w/orbit/lib/module/dirty/xmap\"\n")
 			}
 			builder.WriteString(")\n\n")
 		}
