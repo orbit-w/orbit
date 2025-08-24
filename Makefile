@@ -2,7 +2,7 @@ pwd:=$(shell pwd)
 APP_NAME:=game
 
 # Default proto file (leave empty to process all)
-PROTO_FILE ?=../protocol/cspb/
+CS_PROTO_DIR ?=../protocol/cspb/
 # Default proto directory
 PROTO_DIR ?= ../protocol/pt
 
@@ -19,13 +19,9 @@ BuildLinux:
 
 # 生成所有proto相关的代码（protobuf、协议ID和胶水代码）
 GenProto:
-	./scripts/genproto.sh --all ${PROTO_FILE:+--proto-file=$(PROTO_FILE)}
+	go run tools/gotools/gen/main.go gluegen --proto-dir=$(CS_PROTO_DIR) --output-dir=app/proto/pb ${CS_PROTO_DIR:+--proto-file=$(CS_PROTO_DIR)}
 
-# 只生成协议ID
-GenProtoID:
-	./scripts/genproto.sh --ids-only ${PROTO_FILE:+--proto-file=$(PROTO_FILE)}
-
-# Generate Go structs using protogen go_structs
+# 生成 Go structs
 GenGoStructs:
 	go run tools/gotools/gen/main.go go_structs --proto-dir=$(PROTO_DIR) --output-dir=app/structs --package=pb
 
@@ -50,9 +46,7 @@ help:
 	@echo "可用的make命令："
 	@echo "  make Build              - 构建项目"
 	@echo "  make BuildLinux         - 构建Linux版本"
-	@echo "  make GenProto [PROTO_FILE=path/to/proto] - 生成所有proto相关代码（可选指定文件）"
-	@echo "  make GenProtoID [PROTO_FILE=path/to/proto] - 只生成协议ID（可选指定文件）"
-	@echo "  make GenExtensions      - 生成proto扩展和工具"
+	@echo "  make GenProto [CS_PROTO_DIR=path/to/proto] - 生成所有proto相关代码（可选指定文件）"
 	@echo "  make GenGoStructs       - 生成Go structs从proto"
 	@echo "  make BuildPackageLinux  - 为Linux打包，用法: make BuildPackageLinux ENV=prod"
 	@echo "  make GoBenchmark        - 运行基准测试"

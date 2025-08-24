@@ -1,5 +1,5 @@
 // Package main provides a tool for generating protocol IDs and glue code from proto message definitions
-package main
+package gluegen
 
 import (
 	"fmt"
@@ -14,60 +14,24 @@ import (
 	"gitee.com/orbit-w/orbit/lib/base/protoid"
 )
 
-// ProtocolIDMapping 用于存储协议ID映射
-type ProtocolIDMapping struct {
-	PackageName string
-	MessageIDs  []MessageID
-}
-
-// MessageID 用于存储消息ID
-type MessageID struct {
-	Name string
-	ID   uint32
-}
-
-// Message 消息结构，用于存储消息定义及其注释
-type Message struct {
-	Name     string
-	FullName string // 包含父消息路径的完整名称
-	Comment  string
-	Fields   []Field
-	Response string // 响应消息名称，如果有的话
-}
-
-// Field 字段结构，用于存储字段定义及其注释
-type Field struct {
-	Name    string
-	Type    string
-	Index   int
-	Comment string
-}
-
-// MessageName 用于存储消息名称和完整路径
-type MessageName struct {
-	Name     string
-	FullName string
-}
-
-func main() {
-	rootCmd := &cobra.Command{
+var (
+	genGlueCmd = &cobra.Command{
 		Use:   "gluegen",
 		Short: "Generate protocol IDs and glue code from proto files",
 		Run:   runGluegen,
 	}
+)
 
-	rootCmd.Flags().String("proto-dir", "app/proto", "Directory containing .proto files")
-	rootCmd.Flags().String("output-dir", "app/proto/pb", "Directory for generated files")
-	rootCmd.Flags().Bool("debug", false, "Enable debug mode")
-	rootCmd.Flags().Bool("quiet", true, "Quiet mode: only show errors")
-	rootCmd.Flags().Bool("gen-proto-code", true, "Generate glue code for proto messages")
-	rootCmd.Flags().Bool("gen-proto-ids", true, "Generate protocol IDs for proto messages")
-	rootCmd.Flags().String("proto-file", "", "Specific proto file to process (absolute or relative path)")
+func InitCmd(father *cobra.Command) {
+	genGlueCmd.Flags().String("proto-dir", "app/proto/pb", "Directory containing proto files")
+	genGlueCmd.Flags().String("output-dir", "app/proto/pb", "Output directory for generated files")
+	genGlueCmd.Flags().Bool("debug", false, "Enable debug mode")
+	genGlueCmd.Flags().Bool("quiet", false, "Enable quiet mode")
+	genGlueCmd.Flags().Bool("gen-proto-code", true, "Generate glue code")
+	genGlueCmd.Flags().Bool("gen-proto-ids", true, "Generate protocol IDs")
+	genGlueCmd.Flags().String("proto-file", "", "Specific proto file to process (or directory)")
 
-	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
+	father.AddCommand(genGlueCmd)
 }
 
 func runGluegen(cmd *cobra.Command, args []string) {

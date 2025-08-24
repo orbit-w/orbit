@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/gluegen"
 	cmd "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/gostructs_gen"
 	"github.com/spf13/cobra"
 )
@@ -17,6 +18,7 @@ This tool analyzes proto3 files and generates helper methods for DeltaSyncMap an
 
 func init() {
 	cmd.InitCmd(RootCmd)
+	gluegen.InitCmd(RootCmd)
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
