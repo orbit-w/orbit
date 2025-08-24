@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"gitee.com/orbit-w/orbit/tools/gotools/genproto/cmd/gostruct"
+	"gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/gostruct"
 )
 
 // ParseProtoToGoStructs 解析proto文件，生成Go结构体信息

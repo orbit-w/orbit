@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"gitee.com/orbit-w/orbit/tools/gotools/genproto/cmd/gostruct"
+	"gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/gostruct"
 
 	"github.com/spf13/cobra"
 )
