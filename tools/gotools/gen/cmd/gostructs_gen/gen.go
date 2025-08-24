@@ -9,31 +9,7 @@ import (
 
 	gogoproto "github.com/gogo/protobuf/proto"
 	gogodesc "github.com/gogo/protobuf/protoc-gen-gogo/descriptor"
-	"github.com/spf13/cobra"
 )
-
-var genCmd = &cobra.Command{
-	Use:   "gen",
-	Short: "Generate extension methods and utilities for protocol buffers",
-	Long: `Generate extension methods for DeltaSyncMap and DeltaSyncList containers.
-This command analyzes proto files and creates type-safe helper methods.
-Optionally generates serialization utilities for skip_serialization fields.
-Can also generate plain Go structs mirroring proto messages when --go-structs is set.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		protoDir, _ := cmd.Flags().GetString("proto-dir")
-		outputDir, _ := cmd.Flags().GetString("output-dir")
-		protobufInclude, _ := cmd.Flags().GetString("protobuf-include")
-		includeSerialize, _ := cmd.Flags().GetBool("serialize")
-		genGoStructs, _ := cmd.Flags().GetBool("go-structs")
-		structsPkg, _ := cmd.Flags().GetString("structs-package")
-
-		if err := generateAll(protoDir, outputDir, protobufInclude, includeSerialize, genGoStructs, structsPkg); err != nil {
-			fmt.Printf("Error generating code: %v\n", err)
-			os.Exit(1)
-		}
-		fmt.Println("Successfully generated all code!")
-	},
-}
 
 // generateAll 生成所有代码（扩展方法和序列化工具）
 func generateAll(protoDir, outputDir, protobufInclude string, includeSerialize bool, includeGoStructs bool, structsPackage string) error {

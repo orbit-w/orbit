@@ -32,22 +32,25 @@ Example usage:
 	},
 }
 
-func init() {
-	// 这里可以添加全局标志
-	rootCmd.PersistentFlags().StringP("proto-dir", "p", "pt", "Directory containing proto files")
-	rootCmd.PersistentFlags().StringP("output-dir", "o", "pb", "Directory for generated Go files")
-	rootCmd.PersistentFlags().String("protobuf-include", "", "Path to protobuf include directory (auto-detect if empty)")
+var genCmd = &cobra.Command{
+	Use:   "gen",
+	Short: "Generate extension methods and utilities for protocol buffers",
+	Long: `Generate extension methods for DeltaSyncMap and DeltaSyncList containers.
+This command analyzes proto files and creates type-safe helper methods.
+Optionally generates serialization utilities for skip_serialization fields.
+Can also generate plain Go structs mirroring proto messages when --go-structs is set.`,
+	Run: func(cmd *cobra.Command, args []string) {
+		protoDir, _ := cmd.Flags().GetString("proto-dir")
+		outputDir, _ := cmd.Flags().GetString("output-dir")
+		protobufInclude, _ := cmd.Flags().GetString("protobuf-include")
+		includeSerialize, _ := cmd.Flags().GetBool("serialize")
+		genGoStructs, _ := cmd.Flags().GetBool("go-structs")
+		structsPkg, _ := cmd.Flags().GetString("structs-package")
 
-	// 为 gen 命令添加 serialize 标志
-	genCmd.Flags().BoolP("serialize", "s", false, "Generate serialization utilities for skip_serialization fields")
-	// 为 gen 命令添加生成 Go structs 的标志
-	genCmd.Flags().Bool("go-structs", false, "Also generate Go structs that mirror proto messages")
-	genCmd.Flags().String("structs-package", "structs", "Go package name for generated structs (used with --go-structs)")
-
-	// 为 go_structs 命令添加 package 标志
-	goStructsCmd.Flags().String("package", "structs", "Go package name for generated structs")
-
-	rootCmd.AddCommand(genCmd)
-	rootCmd.AddCommand(structCmd)
-	rootCmd.AddCommand(goStructsCmd)
+		if err := generateAll(protoDir, outputDir, protobufInclude, includeSerialize, genGoStructs, structsPkg); err != nil {
+			fmt.Printf("Error generating code: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Println("Successfully generated all code!")
+	},
 }

@@ -130,19 +130,19 @@ if [ "$GEN_PROTO_IDS" = false ]; then
         clean_glue_code
     fi
     echo "Generating glue code only..."
-    go run tools/gotools/genproto/main.go --proto_dir="${CUSTOM_CS_PROTO_DIR:-$CS_PROTO_DIR}" --gen_proto_ids=false $QUIET_OPT $DEBUG_OPT ${CS_PROTO_FILE:+--proto-file=$CS_PROTO_FILE}
+    go run tools/gotools/gen/main.go gen --proto_dir="${CUSTOM_CS_PROTO_DIR:-$CS_PROTO_DIR}" --gen_proto_ids=false $QUIET_OPT $DEBUG_OPT ${CS_PROTO_FILE:+--proto-file=$CS_PROTO_FILE}
 elif [ "$GEN_PROTO_CODE" = false ]; then
     # Only generate protocol IDs (GenProtoID)
     if [ -z "$CS_PROTO_FILE" ]; then
         clean_proto_ids
     fi
     echo "Generating protocol IDs only..."
-    go run tools/gotools/genproto/main.go --proto_dir="${CUSTOM_CS_PROTO_DIR:-$CS_PROTO_DIR}" --gen_proto_code=false $QUIET_OPT $DEBUG_OPT ${CS_PROTO_FILE:+--proto-file=$CS_PROTO_FILE}
+    go run tools/gotools/gen/main.go gen --proto_dir="${CUSTOM_CS_PROTO_DIR:-$CS_PROTO_DIR}" --gen_proto_code=false $QUIET_OPT $DEBUG_OPT ${CS_PROTO_FILE:+--proto-file=$CS_PROTO_FILE}
 else
     # Generate all (GenProto or GenProtoDebug)
     generate_protobuf
     echo "Generating protocol IDs and glue code..."
-    go run tools/gotools/genproto/main.go --proto_dir="${CUSTOM_CS_PROTO_DIR:-$CS_PROTO_DIR}" $QUIET_OPT $DEBUG_OPT ${CS_PROTO_FILE:+--proto-file=$CS_PROTO_FILE}
+    go run tools/gotools/gen/main.go gen --proto_dir="${CUSTOM_CS_PROTO_DIR:-$CS_PROTO_DIR}" $QUIET_OPT $DEBUG_OPT ${CS_PROTO_FILE:+--proto-file=$CS_PROTO_FILE}
 fi
 
 echo "Proto generation completed."

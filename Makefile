@@ -15,6 +15,9 @@ BuildLinux:
 # Default proto file (leave empty to process all)
 PROTO_FILE ?=../protocol/cspb/
 
+# Default proto directory
+PROTO_DIR ?= ../protocol/pt
+
 # 生成所有proto相关的代码（protobuf、协议ID和胶水代码）
 GenProto:
 	./scripts/genproto.sh --all ${PROTO_FILE:+--proto-file=$(PROTO_FILE)}
@@ -22,6 +25,10 @@ GenProto:
 # 只生成协议ID
 GenProtoID:
 	./scripts/genproto.sh --ids-only ${PROTO_FILE:+--proto-file=$(PROTO_FILE)}
+
+# Generate Go structs using protogen go_structs
+GenGoStructs:
+	go run tools/gotools/gen/cmds.go go_structs --proto-dir=$(PROTO_DIR) --output-dir=app/proto/pb --package=pb
 
 # Build for Linux with specified config file
 # Usage: make BuildPackageLinux ENV=prod (or other environment name without the 'config_' prefix and '.toml' suffix)
@@ -46,6 +53,8 @@ help:
 	@echo "  make BuildLinux         - 构建Linux版本"
 	@echo "  make GenProto [PROTO_FILE=path/to/proto] - 生成所有proto相关代码（可选指定文件）"
 	@echo "  make GenProtoID [PROTO_FILE=path/to/proto] - 只生成协议ID（可选指定文件）"
+	@echo "  make GenExtensions      - 生成proto扩展和工具"
+	@echo "  make GenGoStructs       - 生成Go structs从proto"
 	@echo "  make BuildPackageLinux  - 为Linux打包，用法: make BuildPackageLinux ENV=prod"
 	@echo "  make GoBenchmark        - 运行基准测试"
 	@echo "  make help               - 显示此帮助信息"
