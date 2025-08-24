@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Set default values
-PROTO_DIR="../protocol/cspb"
+CS_PROTO_DIR="app/proto"
 DEBUG=false
 QUIET=true
 GEN_PROTO_CODE=true
@@ -44,7 +44,7 @@ for arg in "$@"; do
             shift
             ;;
         --proto-dir=*)
-            PROTO_DIR="${arg#*=}"
+            CS_PROTO_DIR="${arg#*=}"
             shift
             ;;
         --proto-file=*)
@@ -96,12 +96,12 @@ fi
 
 # Function to generate protobuf
 generate_protobuf() {
-    # If CUSTOM_PROTO_DIR is set, use it, otherwise use PROTO_DIR
-    local target_dir="${CUSTOM_PROTO_DIR:-$PROTO_DIR}"
+    # If CUSTOM_PROTO_DIR is set, use it, otherwise use CS_PROTO_DIR
+    local target_dir="${CUSTOM_PROTO_DIR:-$CS_PROTO_DIR}"
     
     if [ -z "$CUSTOM_PROTO_DIR" ] && [ -z "$PROTO_FILE" ]; then
         echo "Deleting existing proto files..."
-        find $PROTO_DIR/pb -type f -not -path "*/\.*" -delete
+        find $CS_PROTO_DIR/pb -type f -not -path "*/\.*" -delete
     fi
     # For custom dir, perhaps clean specific generated files, but skip for safety
     
@@ -113,7 +113,7 @@ generate_protobuf() {
             --proto_path=$GOPATH/pkg/mod \
             --proto_path=./vendor/github.com/asynkron/protoactor-go/actor \
             --proto_path="$(dirname "$PROTO_FILE")" \
-            --go_out=$PROTO_DIR "$PROTO_FILE"
+            --go_out=$CS_PROTO_DIR "$PROTO_FILE"
     else
         find "$target_dir" -name "*.proto" -type f | xargs -I{} protoc \
             --proto_path=. \
@@ -121,22 +121,22 @@ generate_protobuf() {
             --proto_path=$GOPATH/pkg/mod \
             --proto_path=./vendor/github.com/asynkron/protoactor-go/actor \
             --proto_path="$target_dir" \
-            --go_out=$PROTO_DIR {}
+            --go_out=$CS_PROTO_DIR {}
     fi
 }
 
 # Function to clean protocol ID files
 clean_proto_ids() {
     echo "Deleting old protocol ID files..."
-    find $PROTO_DIR/pb -name "*_protocol_ids.go" -delete
-    find $PROTO_DIR/pb -name "protocol_ids.go" -delete
+    find $CS_PROTO_DIR/pb -name "*_protocol_ids.go" -delete
+    find $CS_PROTO_DIR/pb -name "protocol_ids.go" -delete
 }
 
 # Function to clean glue code files
 clean_glue_code() {
     echo "Deleting old glue code files..."
-    find $PROTO_DIR/pb -name "*_request_glue.go" -delete
-    find $PROTO_DIR/pb -name "*_notify_glue.go" -delete
+    find $CS_PROTO_DIR/pb -name "*_request_glue.go" -delete
+    find $CS_PROTO_DIR/pb -name "*_notify_glue.go" -delete
 }
 
 # Main execution logic
@@ -146,19 +146,19 @@ if [ "$GEN_PROTO_IDS" = false ]; then
         clean_glue_code
     fi
     echo "Generating glue code only..."
-    go run tools/gotools/genproto/main.go --proto_dir="${CUSTOM_PROTO_DIR:-$PROTO_DIR}" --gen_proto_ids=false $QUIET_OPT $DEBUG_OPT ${PROTO_FILE:+--proto-file=$PROTO_FILE}
+    go run tools/gotools/genproto/main.go --proto_dir="${CUSTOM_PROTO_DIR:-$CS_PROTO_DIR}" --gen_proto_ids=false $QUIET_OPT $DEBUG_OPT ${PROTO_FILE:+--proto-file=$PROTO_FILE}
 elif [ "$GEN_PROTO_CODE" = false ]; then
     # Only generate protocol IDs (GenProtoID)
     if [ -z "$PROTO_FILE" ]; then
         clean_proto_ids
     fi
     echo "Generating protocol IDs only..."
-    go run tools/gotools/genproto/main.go --proto_dir="${CUSTOM_PROTO_DIR:-$PROTO_DIR}" --gen_proto_code=false $QUIET_OPT $DEBUG_OPT ${PROTO_FILE:+--proto-file=$PROTO_FILE}
+    go run tools/gotools/genproto/main.go --proto_dir="${CUSTOM_PROTO_DIR:-$CS_PROTO_DIR}" --gen_proto_code=false $QUIET_OPT $DEBUG_OPT ${PROTO_FILE:+--proto-file=$PROTO_FILE}
 else
     # Generate all (GenProto or GenProtoDebug)
     generate_protobuf
     echo "Generating protocol IDs and glue code..."
-    go run tools/gotools/genproto/main.go --proto_dir="${CUSTOM_PROTO_DIR:-$PROTO_DIR}" $QUIET_OPT $DEBUG_OPT ${PROTO_FILE:+--proto-file=$PROTO_FILE}
+    go run tools/gotools/genproto/main.go --proto_dir="${CUSTOM_PROTO_DIR:-$CS_PROTO_DIR}" $QUIET_OPT $DEBUG_OPT ${PROTO_FILE:+--proto-file=$PROTO_FILE}
 fi
 
 echo "Proto generation completed."
