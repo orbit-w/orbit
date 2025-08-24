@@ -4,7 +4,7 @@ package protoid
 import (
 	"strings"
 
-	"gitee.com/orbit-w/orbit/lib/logger"
+	"gitee.com/orbit-w/orbit/lib/module/logger"
 	"gitee.com/orbit-w/orbit/lib/utils"
 )
 

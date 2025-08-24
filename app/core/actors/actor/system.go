@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"gitee.com/orbit-w/meteor/bases/misc/utils"
-	"gitee.com/orbit-w/orbit/lib/logger"
+	"gitee.com/orbit-w/orbit/lib/module/logger"
 	"github.com/asynkron/protoactor-go/actor"
 	"go.uber.org/zap"
 )

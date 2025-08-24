@@ -8,7 +8,7 @@ import (
 
 	"gitee.com/orbit-w/meteor/bases/misc/utils"
 	mlog "gitee.com/orbit-w/meteor/modules/mlog"
-	"gitee.com/orbit-w/orbit/lib/logger"
+	"gitee.com/orbit-w/orbit/lib/module/logger"
 	"github.com/asynkron/protoactor-go/actor"
 	"go.uber.org/zap"
 )
