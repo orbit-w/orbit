@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.6
 // 	protoc        v5.29.3
-// source: app/proto/example.proto
+// source: example.proto
 
 //消息所属的包，需要和文件名相同
 
@@ -32,7 +32,7 @@ type Request struct {
 
 func (x *Request) Reset() {
 	*x = Request{}
-	mi := &file_app_proto_example_proto_msgTypes[0]
+	mi := &file_example_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -44,7 +44,7 @@ func (x *Request) String() string {
 func (*Request) ProtoMessage() {}
 
 func (x *Request) ProtoReflect() protoreflect.Message {
-	mi := &file_app_proto_example_proto_msgTypes[0]
+	mi := &file_example_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -57,7 +57,7 @@ func (x *Request) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Request.ProtoReflect.Descriptor instead.
 func (*Request) Descriptor() ([]byte, []int) {
-	return file_app_proto_example_proto_rawDescGZIP(), []int{0}
+	return file_example_proto_rawDescGZIP(), []int{0}
 }
 
 // -------通知墙，包含的消息只能由服务器发送给客户端
@@ -69,7 +69,7 @@ type Notify struct {
 
 func (x *Notify) Reset() {
 	*x = Notify{}
-	mi := &file_app_proto_example_proto_msgTypes[1]
+	mi := &file_example_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -81,7 +81,7 @@ func (x *Notify) String() string {
 func (*Notify) ProtoMessage() {}
 
 func (x *Notify) ProtoReflect() protoreflect.Message {
-	mi := &file_app_proto_example_proto_msgTypes[1]
+	mi := &file_example_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -94,7 +94,7 @@ func (x *Notify) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Notify.ProtoReflect.Descriptor instead.
 func (*Notify) Descriptor() ([]byte, []int) {
-	return file_app_proto_example_proto_rawDescGZIP(), []int{1}
+	return file_example_proto_rawDescGZIP(), []int{1}
 }
 
 // --------在墙外定义的是单纯的数据结构，无法单独发送
@@ -107,7 +107,7 @@ type Book struct {
 
 func (x *Book) Reset() {
 	*x = Book{}
-	mi := &file_app_proto_example_proto_msgTypes[2]
+	mi := &file_example_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -119,7 +119,7 @@ func (x *Book) String() string {
 func (*Book) ProtoMessage() {}
 
 func (x *Book) ProtoReflect() protoreflect.Message {
-	mi := &file_app_proto_example_proto_msgTypes[2]
+	mi := &file_example_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -132,7 +132,7 @@ func (x *Book) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Book.ProtoReflect.Descriptor instead.
 func (*Book) Descriptor() ([]byte, []int) {
-	return file_app_proto_example_proto_rawDescGZIP(), []int{2}
+	return file_example_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *Book) GetContent() string {
@@ -151,7 +151,7 @@ type OK struct {
 
 func (x *OK) Reset() {
 	*x = OK{}
-	mi := &file_app_proto_example_proto_msgTypes[3]
+	mi := &file_example_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -163,7 +163,7 @@ func (x *OK) String() string {
 func (*OK) ProtoMessage() {}
 
 func (x *OK) ProtoReflect() protoreflect.Message {
-	mi := &file_app_proto_example_proto_msgTypes[3]
+	mi := &file_example_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -176,7 +176,7 @@ func (x *OK) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OK.ProtoReflect.Descriptor instead.
 func (*OK) Descriptor() ([]byte, []int) {
-	return file_app_proto_example_proto_rawDescGZIP(), []int{3}
+	return file_example_proto_rawDescGZIP(), []int{3}
 }
 
 // 通用失败
@@ -189,7 +189,7 @@ type Fail struct {
 
 func (x *Fail) Reset() {
 	*x = Fail{}
-	mi := &file_app_proto_example_proto_msgTypes[4]
+	mi := &file_example_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -201,7 +201,7 @@ func (x *Fail) String() string {
 func (*Fail) ProtoMessage() {}
 
 func (x *Fail) ProtoReflect() protoreflect.Message {
-	mi := &file_app_proto_example_proto_msgTypes[4]
+	mi := &file_example_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -214,7 +214,7 @@ func (x *Fail) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Fail.ProtoReflect.Descriptor instead.
 func (*Fail) Descriptor() ([]byte, []int) {
-	return file_app_proto_example_proto_rawDescGZIP(), []int{4}
+	return file_example_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *Fail) GetReason() string {
@@ -236,7 +236,7 @@ type Request_SearchBook struct {
 
 func (x *Request_SearchBook) Reset() {
 	*x = Request_SearchBook{}
-	mi := &file_app_proto_example_proto_msgTypes[5]
+	mi := &file_example_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -248,7 +248,7 @@ func (x *Request_SearchBook) String() string {
 func (*Request_SearchBook) ProtoMessage() {}
 
 func (x *Request_SearchBook) ProtoReflect() protoreflect.Message {
-	mi := &file_app_proto_example_proto_msgTypes[5]
+	mi := &file_example_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -261,7 +261,7 @@ func (x *Request_SearchBook) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Request_SearchBook.ProtoReflect.Descriptor instead.
 func (*Request_SearchBook) Descriptor() ([]byte, []int) {
-	return file_app_proto_example_proto_rawDescGZIP(), []int{0, 0}
+	return file_example_proto_rawDescGZIP(), []int{0, 0}
 }
 
 func (x *Request_SearchBook) GetQuery() string {
@@ -287,7 +287,7 @@ type Request_HeartBeat struct {
 
 func (x *Request_HeartBeat) Reset() {
 	*x = Request_HeartBeat{}
-	mi := &file_app_proto_example_proto_msgTypes[6]
+	mi := &file_example_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -299,7 +299,7 @@ func (x *Request_HeartBeat) String() string {
 func (*Request_HeartBeat) ProtoMessage() {}
 
 func (x *Request_HeartBeat) ProtoReflect() protoreflect.Message {
-	mi := &file_app_proto_example_proto_msgTypes[6]
+	mi := &file_example_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -312,7 +312,7 @@ func (x *Request_HeartBeat) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Request_HeartBeat.ProtoReflect.Descriptor instead.
 func (*Request_HeartBeat) Descriptor() ([]byte, []int) {
-	return file_app_proto_example_proto_rawDescGZIP(), []int{0, 1}
+	return file_example_proto_rawDescGZIP(), []int{0, 1}
 }
 
 // 该请求的回复消息，名字必须为Rsp，
@@ -326,7 +326,7 @@ type Request_SearchBook_Rsp struct {
 
 func (x *Request_SearchBook_Rsp) Reset() {
 	*x = Request_SearchBook_Rsp{}
-	mi := &file_app_proto_example_proto_msgTypes[7]
+	mi := &file_example_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -338,7 +338,7 @@ func (x *Request_SearchBook_Rsp) String() string {
 func (*Request_SearchBook_Rsp) ProtoMessage() {}
 
 func (x *Request_SearchBook_Rsp) ProtoReflect() protoreflect.Message {
-	mi := &file_app_proto_example_proto_msgTypes[7]
+	mi := &file_example_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -351,7 +351,7 @@ func (x *Request_SearchBook_Rsp) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Request_SearchBook_Rsp.ProtoReflect.Descriptor instead.
 func (*Request_SearchBook_Rsp) Descriptor() ([]byte, []int) {
-	return file_app_proto_example_proto_rawDescGZIP(), []int{0, 0, 0}
+	return file_example_proto_rawDescGZIP(), []int{0, 0, 0}
 }
 
 func (x *Request_SearchBook_Rsp) GetResult() *Book {
@@ -370,7 +370,7 @@ type Notify_BeAttacked struct {
 
 func (x *Notify_BeAttacked) Reset() {
 	*x = Notify_BeAttacked{}
-	mi := &file_app_proto_example_proto_msgTypes[8]
+	mi := &file_example_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -382,7 +382,7 @@ func (x *Notify_BeAttacked) String() string {
 func (*Notify_BeAttacked) ProtoMessage() {}
 
 func (x *Notify_BeAttacked) ProtoReflect() protoreflect.Message {
-	mi := &file_app_proto_example_proto_msgTypes[8]
+	mi := &file_example_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -395,7 +395,7 @@ func (x *Notify_BeAttacked) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Notify_BeAttacked.ProtoReflect.Descriptor instead.
 func (*Notify_BeAttacked) Descriptor() ([]byte, []int) {
-	return file_app_proto_example_proto_rawDescGZIP(), []int{1, 0}
+	return file_example_proto_rawDescGZIP(), []int{1, 0}
 }
 
 func (x *Notify_BeAttacked) GetCurHp() int32 {
@@ -405,11 +405,11 @@ func (x *Notify_BeAttacked) GetCurHp() int32 {
 	return 0
 }
 
-var File_app_proto_example_proto protoreflect.FileDescriptor
+var File_example_proto protoreflect.FileDescriptor
 
-const file_app_proto_example_proto_rawDesc = "" +
+const file_example_proto_rawDesc = "" +
 	"\n" +
-	"\x17app/proto/example.proto\x12\x04Core\"\x85\x01\n" +
+	"\rexample.proto\x12\x04Core\"\x85\x01\n" +
 	"\aRequest\x1am\n" +
 	"\n" +
 	"SearchBook\x12\x14\n" +
@@ -433,19 +433,19 @@ const file_app_proto_example_proto_rawDesc = "" +
 	"pb/pb_coreb\x06proto3"
 
 var (
-	file_app_proto_example_proto_rawDescOnce sync.Once
-	file_app_proto_example_proto_rawDescData []byte
+	file_example_proto_rawDescOnce sync.Once
+	file_example_proto_rawDescData []byte
 )
 
-func file_app_proto_example_proto_rawDescGZIP() []byte {
-	file_app_proto_example_proto_rawDescOnce.Do(func() {
-		file_app_proto_example_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_app_proto_example_proto_rawDesc), len(file_app_proto_example_proto_rawDesc)))
+func file_example_proto_rawDescGZIP() []byte {
+	file_example_proto_rawDescOnce.Do(func() {
+		file_example_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_example_proto_rawDesc), len(file_example_proto_rawDesc)))
 	})
-	return file_app_proto_example_proto_rawDescData
+	return file_example_proto_rawDescData
 }
 
-var file_app_proto_example_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
-var file_app_proto_example_proto_goTypes = []any{
+var file_example_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_example_proto_goTypes = []any{
 	(*Request)(nil),                // 0: Core.Request
 	(*Notify)(nil),                 // 1: Core.Notify
 	(*Book)(nil),                   // 2: Core.Book
@@ -456,7 +456,7 @@ var file_app_proto_example_proto_goTypes = []any{
 	(*Request_SearchBook_Rsp)(nil), // 7: Core.Request.SearchBook.Rsp
 	(*Notify_BeAttacked)(nil),      // 8: Core.Notify.BeAttacked
 }
-var file_app_proto_example_proto_depIdxs = []int32{
+var file_example_proto_depIdxs = []int32{
 	2, // 0: Core.Request.SearchBook.Rsp.Result:type_name -> Core.Book
 	1, // [1:1] is the sub-list for method output_type
 	1, // [1:1] is the sub-list for method input_type
@@ -465,26 +465,26 @@ var file_app_proto_example_proto_depIdxs = []int32{
 	0, // [0:1] is the sub-list for field type_name
 }
 
-func init() { file_app_proto_example_proto_init() }
-func file_app_proto_example_proto_init() {
-	if File_app_proto_example_proto != nil {
+func init() { file_example_proto_init() }
+func file_example_proto_init() {
+	if File_example_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_app_proto_example_proto_rawDesc), len(file_app_proto_example_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_example_proto_rawDesc), len(file_example_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
-		GoTypes:           file_app_proto_example_proto_goTypes,
-		DependencyIndexes: file_app_proto_example_proto_depIdxs,
-		MessageInfos:      file_app_proto_example_proto_msgTypes,
+		GoTypes:           file_example_proto_goTypes,
+		DependencyIndexes: file_example_proto_depIdxs,
+		MessageInfos:      file_example_proto_msgTypes,
 	}.Build()
-	File_app_proto_example_proto = out.File
-	file_app_proto_example_proto_goTypes = nil
-	file_app_proto_example_proto_depIdxs = nil
+	File_example_proto = out.File
+	file_example_proto_goTypes = nil
+	file_example_proto_depIdxs = nil
 }

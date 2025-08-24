@@ -14,6 +14,7 @@ var (
 	quietMode    = flag.Bool("quiet", true, "Quiet mode: only show errors")
 	genProtoCode = flag.Bool("gen_proto_code", true, "Generate glue code for proto messages")
 	genProtoIDs  = flag.Bool("gen_proto_ids", true, "Generate protocol IDs for proto messages")
+	protoFile    = flag.String("proto-file", "", "Specific proto file to process")
 )
 
 func main() {
@@ -38,6 +39,10 @@ func main() {
 
 	if !*genProtoIDs {
 		cmd.Args = append(cmd.Args, "-gen_proto_ids=false")
+	}
+
+	if *protoFile != "" {
+		cmd.Args = append(cmd.Args, "-proto-file", *protoFile)
 	}
 
 	// Set the output to our stdout/stderr

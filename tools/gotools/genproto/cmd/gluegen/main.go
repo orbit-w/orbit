@@ -20,6 +20,7 @@ var (
 	quietMode    = flag.Bool("quiet", true, "Quiet mode: only show errors")
 	genProtoCode = flag.Bool("gen_proto_code", true, "Generate glue code for proto messages")
 	genProtoIDs  = flag.Bool("gen_proto_ids", true, "Generate protocol IDs for proto messages")
+	protoFile    = flag.String("proto-file", "", "Specific proto file to process (absolute or relative path)")
 )
 
 // ProtocolIDMapping 用于存储协议ID映射
@@ -68,11 +69,36 @@ func main() {
 		}
 	}
 
-	// 查找所有proto文件
-	protoFiles, err := findProtoFiles(*protoDir)
-	if err != nil {
-		fmt.Printf("Error finding proto files: %v\n", err)
-		return
+	// Handle protoFile if provided
+	var protoFiles []string
+	var err error
+	if *protoFile != "" {
+		// Resolve relative path to absolute
+		*protoFile, err = filepath.Abs(*protoFile)
+		if err != nil {
+			fmt.Printf("Error resolving proto file path: %v\n", err)
+			return
+		}
+		fileInfo, err := os.Stat(*protoFile)
+		if err != nil {
+			fmt.Printf("Error accessing path: %v\n", err)
+			return
+		}
+		if fileInfo.IsDir() {
+			protoFiles, err = findProtoFiles(*protoFile)
+			if err != nil {
+				fmt.Printf("Error finding proto files in directory: %v\n", err)
+				return
+			}
+		} else {
+			protoFiles = []string{*protoFile}
+		}
+	} else {
+		protoFiles, err = findProtoFiles(*protoDir)
+		if err != nil {
+			fmt.Printf("Error finding proto files: %v\n", err)
+			return
+		}
 	}
 
 	// 收集所有包和消息

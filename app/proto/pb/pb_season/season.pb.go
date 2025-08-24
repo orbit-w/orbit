@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.6
 // 	protoc        v5.29.3
-// source: app/proto/season.proto
+// source: season.proto
 
 package pb_season
 
@@ -29,7 +29,7 @@ type Request struct {
 
 func (x *Request) Reset() {
 	*x = Request{}
-	mi := &file_app_proto_season_proto_msgTypes[0]
+	mi := &file_season_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -41,7 +41,7 @@ func (x *Request) String() string {
 func (*Request) ProtoMessage() {}
 
 func (x *Request) ProtoReflect() protoreflect.Message {
-	mi := &file_app_proto_season_proto_msgTypes[0]
+	mi := &file_season_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -54,7 +54,7 @@ func (x *Request) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Request.ProtoReflect.Descriptor instead.
 func (*Request) Descriptor() ([]byte, []int) {
-	return file_app_proto_season_proto_rawDescGZIP(), []int{0}
+	return file_season_proto_rawDescGZIP(), []int{0}
 }
 
 type Request_SeasonInfo struct {
@@ -67,7 +67,7 @@ type Request_SeasonInfo struct {
 
 func (x *Request_SeasonInfo) Reset() {
 	*x = Request_SeasonInfo{}
-	mi := &file_app_proto_season_proto_msgTypes[1]
+	mi := &file_season_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -79,7 +79,7 @@ func (x *Request_SeasonInfo) String() string {
 func (*Request_SeasonInfo) ProtoMessage() {}
 
 func (x *Request_SeasonInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_app_proto_season_proto_msgTypes[1]
+	mi := &file_season_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -92,7 +92,7 @@ func (x *Request_SeasonInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Request_SeasonInfo.ProtoReflect.Descriptor instead.
 func (*Request_SeasonInfo) Descriptor() ([]byte, []int) {
-	return file_app_proto_season_proto_rawDescGZIP(), []int{0, 0}
+	return file_season_proto_rawDescGZIP(), []int{0, 0}
 }
 
 func (x *Request_SeasonInfo) GetName() string {
@@ -118,7 +118,7 @@ type Request_SeasonInfo_Rsp struct {
 
 func (x *Request_SeasonInfo_Rsp) Reset() {
 	*x = Request_SeasonInfo_Rsp{}
-	mi := &file_app_proto_season_proto_msgTypes[2]
+	mi := &file_season_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -130,7 +130,7 @@ func (x *Request_SeasonInfo_Rsp) String() string {
 func (*Request_SeasonInfo_Rsp) ProtoMessage() {}
 
 func (x *Request_SeasonInfo_Rsp) ProtoReflect() protoreflect.Message {
-	mi := &file_app_proto_season_proto_msgTypes[2]
+	mi := &file_season_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -143,7 +143,7 @@ func (x *Request_SeasonInfo_Rsp) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Request_SeasonInfo_Rsp.ProtoReflect.Descriptor instead.
 func (*Request_SeasonInfo_Rsp) Descriptor() ([]byte, []int) {
-	return file_app_proto_season_proto_rawDescGZIP(), []int{0, 0, 0}
+	return file_season_proto_rawDescGZIP(), []int{0, 0, 0}
 }
 
 func (x *Request_SeasonInfo_Rsp) GetResult() bool {
@@ -153,11 +153,11 @@ func (x *Request_SeasonInfo_Rsp) GetResult() bool {
 	return false
 }
 
-var File_app_proto_season_proto protoreflect.FileDescriptor
+var File_season_proto protoreflect.FileDescriptor
 
-const file_app_proto_season_proto_rawDesc = "" +
+const file_season_proto_rawDesc = "" +
 	"\n" +
-	"\x16app/proto/season.proto\x12\x06Season\"f\n" +
+	"\fseason.proto\x12\x06Season\"f\n" +
 	"\aRequest\x1a[\n" +
 	"\n" +
 	"SeasonInfo\x12\x12\n" +
@@ -167,24 +167,24 @@ const file_app_proto_season_proto_rawDesc = "" +
 	"\x06Result\x18\x01 \x01(\bR\x06ResultB\x0eZ\fpb/pb_seasonb\x06proto3"
 
 var (
-	file_app_proto_season_proto_rawDescOnce sync.Once
-	file_app_proto_season_proto_rawDescData []byte
+	file_season_proto_rawDescOnce sync.Once
+	file_season_proto_rawDescData []byte
 )
 
-func file_app_proto_season_proto_rawDescGZIP() []byte {
-	file_app_proto_season_proto_rawDescOnce.Do(func() {
-		file_app_proto_season_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_app_proto_season_proto_rawDesc), len(file_app_proto_season_proto_rawDesc)))
+func file_season_proto_rawDescGZIP() []byte {
+	file_season_proto_rawDescOnce.Do(func() {
+		file_season_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_season_proto_rawDesc), len(file_season_proto_rawDesc)))
 	})
-	return file_app_proto_season_proto_rawDescData
+	return file_season_proto_rawDescData
 }
 
-var file_app_proto_season_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
-var file_app_proto_season_proto_goTypes = []any{
+var file_season_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_season_proto_goTypes = []any{
 	(*Request)(nil),                // 0: Season.Request
 	(*Request_SeasonInfo)(nil),     // 1: Season.Request.SeasonInfo
 	(*Request_SeasonInfo_Rsp)(nil), // 2: Season.Request.SeasonInfo.Rsp
 }
-var file_app_proto_season_proto_depIdxs = []int32{
+var file_season_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
 	0, // [0:0] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
@@ -192,26 +192,26 @@ var file_app_proto_season_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for field type_name
 }
 
-func init() { file_app_proto_season_proto_init() }
-func file_app_proto_season_proto_init() {
-	if File_app_proto_season_proto != nil {
+func init() { file_season_proto_init() }
+func file_season_proto_init() {
+	if File_season_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_app_proto_season_proto_rawDesc), len(file_app_proto_season_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_season_proto_rawDesc), len(file_season_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
-		GoTypes:           file_app_proto_season_proto_goTypes,
-		DependencyIndexes: file_app_proto_season_proto_depIdxs,
-		MessageInfos:      file_app_proto_season_proto_msgTypes,
+		GoTypes:           file_season_proto_goTypes,
+		DependencyIndexes: file_season_proto_depIdxs,
+		MessageInfos:      file_season_proto_msgTypes,
 	}.Build()
-	File_app_proto_season_proto = out.File
-	file_app_proto_season_proto_goTypes = nil
-	file_app_proto_season_proto_depIdxs = nil
+	File_season_proto = out.File
+	file_season_proto_goTypes = nil
+	file_season_proto_depIdxs = nil
 }
