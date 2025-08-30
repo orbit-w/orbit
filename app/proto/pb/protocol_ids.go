@@ -19,6 +19,7 @@ const (
 
 	// Season 包协议ID
 	PID_Season_Request_SeasonInfo uint32 = 0xd9714656 // Season.Request_SeasonInfo
+	PID_Season_Request_SeasonInfo_Rsp uint32 = 0xff00cb77 // Season.Request_SeasonInfo_Rsp
 
 )
 
@@ -31,6 +32,7 @@ var AllMessageNameToID = map[string]uint32{
 	"Core-Request_SearchBook": PID_Core_Request_SearchBook,
 	"Core-Request_SearchBook_Rsp": PID_Core_Request_SearchBook_Rsp,
 	"Season-Request_SeasonInfo": PID_Season_Request_SeasonInfo,
+	"Season-Request_SeasonInfo_Rsp": PID_Season_Request_SeasonInfo_Rsp,
 }
 
 // AllIDToMessageName 全局ID到消息名称的映射
@@ -42,6 +44,7 @@ var AllIDToMessageName = map[uint32]string{
 	PID_Core_Request_SearchBook: "Core-Request_SearchBook",
 	PID_Core_Request_SearchBook_Rsp: "Core-Request_SearchBook_Rsp",
 	PID_Season_Request_SeasonInfo: "Season-Request_SeasonInfo",
+	PID_Season_Request_SeasonInfo_Rsp: "Season-Request_SeasonInfo_Rsp",
 }
 
 // MessagePackageMap 消息名称到包名的映射
@@ -53,6 +56,7 @@ var MessagePackageMap = map[string]string{
 	"Request_SearchBook": "Core",
 	"Request_SearchBook_Rsp": "Core",
 	"Request_SeasonInfo": "Season",
+	"Request_SeasonInfo_Rsp": "Season",
 }
 
 // GetProtocolID 获取指定消息名称的协议ID
