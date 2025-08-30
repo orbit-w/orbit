@@ -1,5 +1,5 @@
 // Package main provides a tool for generating protocol IDs and glue code from proto message definitions
-package gluegen
+package routergen
 
 import (
 	"fmt"
@@ -16,9 +16,9 @@ import (
 
 var (
 	genGlueCmd = &cobra.Command{
-		Use:   "gluegen",
+		Use:   "routergen",
 		Short: "Generate protocol IDs and glue code from proto files",
-		Run:   runGluegen,
+		Run:   runRouterGluegen,
 	}
 )
 
@@ -34,7 +34,7 @@ func InitCmd(father *cobra.Command) {
 	father.AddCommand(genGlueCmd)
 }
 
-func runGluegen(cmd *cobra.Command, args []string) {
+func runRouterGluegen(cmd *cobra.Command, args []string) {
 	protoDir, _ := cmd.Flags().GetString("proto-dir")
 	outputDir, _ := cmd.Flags().GetString("output-dir")
 	debugMode, _ := cmd.Flags().GetBool("debug")

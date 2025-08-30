@@ -1,4 +1,4 @@
-package gluegen
+package routergen
 
 // ProtocolIDMapping 用于存储协议ID映射
 type ProtocolIDMapping struct {

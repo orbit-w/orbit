@@ -4,21 +4,21 @@ import (
 	"fmt"
 	"os"
 
-	"gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/gluegen"
 	cmd "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/gostructs_gen"
+	"gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/routergen"
 	"github.com/spf13/cobra"
 )
 
 var RootCmd = &cobra.Command{
-	Use:   "protogen",
-	Short: "Protocol buffer extension generator",
-	Long: `A tool to automatically generate extension methods for protocol buffer messages.
-This tool analyzes proto3 files and generates helper methods for DeltaSyncMap and other containers.`,
+	Use:   "gen",
+	Short: "Orbit code generation tools",
+	Long: `A suite of tools for generating code in the Orbit project.
+This includes generating extension methods for protocol buffers (gostructs_gen) and router dispatch code (routergen).`,
 }
 
 func init() {
 	cmd.InitCmd(RootCmd)
-	gluegen.InitCmd(RootCmd)
+	routergen.InitCmd(RootCmd)
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
