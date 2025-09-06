@@ -58,7 +58,9 @@ func runRouterGluegen(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	allMappings, err := processProtoFiles(protoFiles, quietMode, debugMode, genProtoIDs, genProtoCode, outputDir, protoDir)
+	// 创建Context并解析proto文件
+	ctx := NewContext(protoFiles, outputDir, protoDir)
+	allMappings, err := processProtoFiles(ctx, quietMode, debugMode, genProtoIDs, genProtoCode)
 	if err != nil {
 		fmt.Printf("Error processing proto files: %v\n", err)
 		return
@@ -102,11 +104,27 @@ func getProtoFiles(protoFile, protoDir string) ([]string, error) {
 	return findProtoFiles(protoDir)
 }
 
-// parseProtoFile generates a descriptor set for the proto file and parses it
-func parseProtoFile(protoFile string) (*descriptor.FileDescriptorProto, error) {
-	descFile := protoFile + ".desc"
-	protoDir := filepath.Dir(protoFile)
-	cmd := exec.Command("protoc", "--proto_path="+protoDir, "--descriptor_set_out="+descFile, protoFile)
+// parseProtoFiles generates descriptor sets for multiple proto files in one call
+func parseProtoFiles(protoFiles []string) ([]*descriptor.FileDescriptorProto, error) {
+	if len(protoFiles) == 0 {
+		return nil, fmt.Errorf("no proto files provided")
+	}
+
+	descFile := "temp.desc"                 // Use a fixed temp file or make unique if needed
+	protoDir := filepath.Dir(protoFiles[0]) // Assume same dir, or handle multiple
+
+	var cmdArgs []string
+	cmdArgs = append(cmdArgs,
+		"--proto_path=.",
+		"--proto_path="+protoDir,
+		"--proto_path=vendor/github.com/asynkron/protoactor-go/actor",
+		"--proto_path=$GOPATH/pkg/mod",
+		"--descriptor_set_out="+descFile,
+		"--include_imports", // Include all dependencies
+	)
+	cmdArgs = append(cmdArgs, protoFiles...)
+
+	cmd := exec.Command("protoc", cmdArgs...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("protoc failed: %w\nOutput: %s", err, output)
@@ -127,28 +145,38 @@ func parseProtoFile(protoFile string) (*descriptor.FileDescriptorProto, error) {
 		return nil, fmt.Errorf("no files in descriptor set")
 	}
 
-	return fds.File[0], nil
+	return fds.File, nil
 }
 
-func processProtoFiles(protoFiles []string, quietMode, debugMode, genProtoIDs, genProtoCode bool, outputDir, protoDir string) ([]ProtocolIDMapping, error) {
+func processProtoFiles(ctx *Context, quietMode, debugMode, genProtoIDs, genProtoCode bool) ([]ProtocolIDMapping, error) {
 	var allMappings []ProtocolIDMapping
-	for _, protoFile := range protoFiles {
-		if !quietMode || debugMode {
-			fmt.Printf("Processing %s...\n", protoFile)
+
+	fds, err := ctx.ParseProtoFiles()
+	if err != nil {
+		return nil, fmt.Errorf("parsing proto files: %w", err)
+	}
+
+	// Create a set of expected proto file basenames
+	expectedFiles := make(map[string]struct{})
+	for _, p := range ctx.GetProtoFiles() {
+		expectedFiles[filepath.Base(p)] = struct{}{}
+	}
+
+	for _, fd := range fds {
+		fileName := filepath.Base(fd.GetName())
+		if _, ok := expectedFiles[fileName]; !ok {
+			// Skip imported/dependency files
+			continue
 		}
 
-		fd, err := parseProtoFile(protoFile)
-		if err != nil {
-			if !quietMode {
-				fmt.Printf("Error parsing proto file %s: %v\n", protoFile, err)
-			}
-			continue
+		if !quietMode || debugMode {
+			fmt.Printf("Processing %s...\n", fd.GetName())
 		}
 
 		packageName := fd.GetPackage()
 		if packageName == "" {
 			if !quietMode {
-				fmt.Printf("Package name not found in %s\n", protoFile)
+				fmt.Printf("Package name not found in %s\n", fd.GetName())
 			}
 			continue
 		}
@@ -175,7 +203,7 @@ func processProtoFiles(protoFiles []string, quietMode, debugMode, genProtoIDs, g
 						}
 					}
 				}
-				if err := generateRequestGlueCode(requestMessages, packageName, outputDir, quietMode, protoDir); err != nil {
+				if err := generateRequestGlueCode(requestMessages, packageName, ctx, quietMode); err != nil {
 					if !quietMode {
 						fmt.Printf("Error generating request glue code: %v\n", err)
 					}
@@ -195,7 +223,7 @@ func processProtoFiles(protoFiles []string, quietMode, debugMode, genProtoIDs, g
 						}
 					}
 				}
-				if err := generateNotifyGlueCode(notifyMessages, packageName, outputDir, quietMode, protoDir); err != nil {
+				if err := generateNotifyGlueCode(notifyMessages, packageName, ctx, quietMode); err != nil {
 					if !quietMode {
 						fmt.Printf("Error generating notify glue code: %v\n", err)
 					}
@@ -206,6 +234,7 @@ func processProtoFiles(protoFiles []string, quietMode, debugMode, genProtoIDs, g
 			}
 		}
 	}
+
 	return allMappings, nil
 }
 
@@ -542,9 +571,9 @@ func extractGoPackage(fd *descriptor.FileDescriptorProto) string {
 }
 
 // 生成Request消息的胶水代码
-func generateRequestGlueCode(messages []Message, packageName, outputDir string, quietMode bool, protoDir string) error {
+func generateRequestGlueCode(messages []Message, packageName string, ctx *Context, quietMode bool) error {
 	// 构建输出文件名
-	outputFile := filepath.Join(outputDir, strings.ToLower(packageName)+"_request_glue.go")
+	outputFile := filepath.Join(ctx.GetOutputDir(), strings.ToLower(packageName)+"_request_glue.go")
 	file, err := os.Create(outputFile)
 	if err != nil {
 		return fmt.Errorf("creating request glue file: %w", err)
@@ -560,18 +589,15 @@ func generateRequestGlueCode(messages []Message, packageName, outputDir string, 
 	fmt.Fprintf(file, "\t\"fmt\"\n")
 	fmt.Fprintf(file, "\t\"github.com/gogo/protobuf/proto\"\n")
 
-	// 找到该包的proto文件以提取go_package
-	protoFiles, _ := findProtoFiles(protoDir)
+	// 使用Context中缓存的fds数据
 	var goPackage string
-	for _, protoFile := range protoFiles {
-		fd, err := parseProtoFile(protoFile)
-		if err != nil {
-			continue
-		}
-
+	fds, err := ctx.ParseProtoFiles()
+	if err != nil {
+		return fmt.Errorf("getting cached fds for glue code: %w", err)
+	}
+	for _, fd := range fds {
 		extractedPackage := fd.GetPackage()
 		if extractedPackage == packageName {
-			// 找到了匹配的包名，提取go_package
 			goPackage = extractGoPackage(fd)
 			break
 		}
@@ -642,9 +668,9 @@ func generateRequestGlueCode(messages []Message, packageName, outputDir string, 
 }
 
 // 生成Notify消息的胶水代码
-func generateNotifyGlueCode(messages []Message, packageName, outputDir string, quietMode bool, protoDir string) error {
+func generateNotifyGlueCode(messages []Message, packageName string, ctx *Context, quietMode bool) error {
 	// 构建输出文件名
-	outputFile := filepath.Join(outputDir, strings.ToLower(packageName)+"_notify_glue.go")
+	outputFile := filepath.Join(ctx.GetOutputDir(), strings.ToLower(packageName)+"_notify_glue.go")
 	file, err := os.Create(outputFile)
 	if err != nil {
 		return fmt.Errorf("creating notify glue file: %w", err)
@@ -660,18 +686,15 @@ func generateNotifyGlueCode(messages []Message, packageName, outputDir string, q
 	fmt.Fprintf(file, "\t\"fmt\"\n")
 	fmt.Fprintf(file, "\t\"github.com/gogo/protobuf/proto\"\n")
 
-	// 找到该包的proto文件以提取go_package
-	protoFiles, _ := findProtoFiles(protoDir)
+	// 使用Context中缓存的fds数据
 	var goPackage string
-	for _, protoFile := range protoFiles {
-		fd, err := parseProtoFile(protoFile)
-		if err != nil {
-			continue
-		}
-
+	fds, err := ctx.ParseProtoFiles()
+	if err != nil {
+		return fmt.Errorf("getting cached fds for glue code: %w", err)
+	}
+	for _, fd := range fds {
 		extractedPackage := fd.GetPackage()
 		if extractedPackage == packageName {
-			// 找到了匹配的包名，提取go_package
 			goPackage = extractGoPackage(fd)
 			break
 		}
