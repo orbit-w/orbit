@@ -43,6 +43,16 @@ func runRouterGluegen(cmd *cobra.Command, args []string) {
 	genProtoIDs, _ := cmd.Flags().GetBool("gen-proto-ids")
 	protoFile, _ := cmd.Flags().GetString("proto-file")
 
+	// 确定运行模式
+	var mode Mode
+	if debugMode {
+		mode = ModeDebug
+	} else if quietMode {
+		mode = ModeQuiet
+	} else {
+		mode = ModeNormal
+	}
+
 	// 确保output目录存在
 	if err := ensureOutputDir(outputDir); err != nil {
 		fmt.Printf("Failed to create output directory: %v\n", err)
@@ -55,22 +65,26 @@ func runRouterGluegen(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	// 创建Context并解析proto文件
+	// 创建Context并配置选项
 	ctx := NewContext(protoFiles, outputDir, protoDir)
-	allMappings, err := processProtoFiles(ctx, quietMode, debugMode, genProtoIDs, genProtoCode)
+	ctx.SetMode(mode)
+	ctx.SetGenProtoIDs(genProtoIDs)
+	ctx.SetGenProtoCode(genProtoCode)
+
+	allMappings, err := processProtoFiles(ctx)
 	if err != nil {
 		fmt.Printf("Error processing proto files: %v\n", err)
 		return
 	}
 
-	if genProtoIDs && len(allMappings) > 0 {
-		if err := generateCommonProtocolMappings(allMappings, outputDir, quietMode); err != nil {
+	if ctx.GetGenProtoIDs() && len(allMappings) > 0 {
+		if err := generateCommonProtocolMappings(allMappings, outputDir, ctx.GetMode()); err != nil {
 			fmt.Printf("Error generating protocol mappings: %v\n", err)
 			return
 		}
 	}
 
-	if !quietMode {
+	if ctx.GetMode().ShouldPrint() {
 		fmt.Println("All generation completed!")
 	}
 }
@@ -101,7 +115,7 @@ func getProtoFiles(protoFile, protoDir string) ([]string, error) {
 	return findProtoFiles(protoDir)
 }
 
-func processProtoFiles(ctx *Context, quietMode, debugMode, genProtoIDs, genProtoCode bool) ([]ProtocolIDMapping, error) {
+func processProtoFiles(ctx *Context) ([]ProtocolIDMapping, error) {
 	var allMappings []ProtocolIDMapping
 
 	fds, err := ctx.ParseProtoFiles()
@@ -122,9 +136,9 @@ func processProtoFiles(ctx *Context, quietMode, debugMode, genProtoIDs, genProto
 			continue
 		}
 
-		mapping, err := processFileDescriptor(fd, ctx, quietMode, debugMode, genProtoIDs, genProtoCode)
+		mapping, err := processFileDescriptor(fd, ctx)
 		if err != nil {
-			if !quietMode {
+			if ctx.GetMode().ShouldPrint() {
 				fmt.Printf("Error processing %s: %v\n", fd.GetName(), err)
 			}
 			continue
@@ -140,40 +154,40 @@ func processProtoFiles(ctx *Context, quietMode, debugMode, genProtoIDs, genProto
 
 // processFileDescriptor 处理单个文件描述符
 // 返回生成的协议ID映射和可能的错误
-func processFileDescriptor(fd *descriptor.FileDescriptorProto, ctx *Context, quietMode, debugMode, genProtoIDs, genProtoCode bool) (*ProtocolIDMapping, error) {
-	if !quietMode || debugMode {
+func processFileDescriptor(fd *descriptor.FileDescriptorProto, ctx *Context) (*ProtocolIDMapping, error) {
+	if ctx.GetMode().ShouldPrint() {
 		fmt.Printf("Processing %s...\n", fd.GetName())
 	}
 
 	packageName := fd.GetPackage()
 	if packageName == "" {
-		if !quietMode {
+		if ctx.GetMode().ShouldPrint() {
 			fmt.Printf("Package name not found in %s\n", fd.GetName())
 		}
 		return nil, fmt.Errorf("package name not found in %s", fd.GetName())
 	}
 
-	if !quietMode {
+	if ctx.GetMode().ShouldPrint() {
 		fmt.Printf("Found package name: %s\n", packageName)
 	}
 
 	var mapping *ProtocolIDMapping
 
 	// 生成协议ID
-	if genProtoIDs {
-		protoMapping := generateProtocolIDs(fd, packageName, debugMode)
+	if ctx.GetGenProtoIDs() {
+		protoMapping := generateProtocolIDs(fd, packageName, ctx.GetMode())
 		if len(protoMapping.MessageIDs) > 0 {
 			mapping = &protoMapping
 		}
 	}
 
 	// 生成协议代码
-	if genProtoCode {
-		if err := processRequestMessages(fd, packageName, ctx, quietMode, debugMode); err != nil {
+	if ctx.GetGenProtoCode() {
+		if err := processRequestMessages(fd, packageName, ctx); err != nil {
 			return mapping, fmt.Errorf("processing request messages: %w", err)
 		}
 
-		if err := processNotifyMessages(fd, packageName, ctx, quietMode, debugMode); err != nil {
+		if err := processNotifyMessages(fd, packageName, ctx); err != nil {
 			return mapping, fmt.Errorf("processing notify messages: %w", err)
 		}
 	}
@@ -182,59 +196,59 @@ func processFileDescriptor(fd *descriptor.FileDescriptorProto, ctx *Context, qui
 }
 
 // processRequestMessages 处理请求消息
-func processRequestMessages(fd *descriptor.FileDescriptorProto, packageName string, ctx *Context, quietMode, debugMode bool) error {
-	requestMessages := parseRequestMessages(fd, debugMode)
+func processRequestMessages(fd *descriptor.FileDescriptorProto, packageName string, ctx *Context) error {
+	requestMessages := parseRequestMessages(fd, ctx.GetMode())
 	if len(requestMessages) > 0 {
-		if !quietMode {
+		if ctx.GetMode().ShouldPrint() {
 			fmt.Printf("Found %d request messages\n", len(requestMessages))
-			if debugMode {
+			if ctx.GetMode().IsDebug() {
 				for i, msg := range requestMessages {
 					fmt.Printf("  Request %d: Name=%s, FullName=%s\n", i+1, msg.Name, msg.FullName)
 				}
 			}
 		}
-		if err := generateRequestGlueCode(requestMessages, packageName, ctx, quietMode); err != nil {
-			if !quietMode {
+		if err := generateRequestGlueCode(requestMessages, packageName, ctx); err != nil {
+			if ctx.GetMode().ShouldPrint() {
 				fmt.Printf("Error generating request glue code: %v\n", err)
 			}
 			return err
 		}
-	} else if !quietMode {
+	} else if ctx.GetMode().ShouldPrint() {
 		fmt.Printf("No request messages found\n")
 	}
 	return nil
 }
 
 // processNotifyMessages 处理通知消息
-func processNotifyMessages(fd *descriptor.FileDescriptorProto, packageName string, ctx *Context, quietMode, debugMode bool) error {
-	notifyMessages := parseNotifyMessages(fd, debugMode)
+func processNotifyMessages(fd *descriptor.FileDescriptorProto, packageName string, ctx *Context) error {
+	notifyMessages := parseNotifyMessages(fd, ctx.GetMode())
 	if len(notifyMessages) > 0 {
-		if !quietMode {
+		if ctx.GetMode().ShouldPrint() {
 			fmt.Printf("Found %d notify messages\n", len(notifyMessages))
-			if debugMode {
+			if ctx.GetMode().IsDebug() {
 				for i, msg := range notifyMessages {
 					fmt.Printf("  Notify %d: Name=%s, FullName=%s\n", i+1, msg.Name, msg.FullName)
 				}
 			}
 		}
-		if err := generateNotifyGlueCode(notifyMessages, packageName, ctx, quietMode); err != nil {
-			if !quietMode {
+		if err := generateNotifyGlueCode(notifyMessages, packageName, ctx); err != nil {
+			if ctx.GetMode().ShouldPrint() {
 				fmt.Printf("Error generating notify glue code: %v\n", err)
 			}
 			return err
 		}
-	} else if !quietMode {
+	} else if ctx.GetMode().ShouldPrint() {
 		fmt.Printf("No notify messages found\n")
 	}
 	return nil
 }
 
 // generateProtocolIDs 生成协议ID
-func generateProtocolIDs(fd *descriptor.FileDescriptorProto, packageName string, debugMode bool) ProtocolIDMapping {
+func generateProtocolIDs(fd *descriptor.FileDescriptorProto, packageName string, mode Mode) ProtocolIDMapping {
 	// 提取所有消息名称，包括嵌套
 	messageNames := extractMessageNamesFromDescriptor(fd.MessageType, "")
 	if len(messageNames) == 0 {
-		if debugMode {
+		if mode.IsDebug() {
 			fmt.Printf("No message definitions found for %s\n", packageName)
 		}
 		return ProtocolIDMapping{}
@@ -254,7 +268,7 @@ func generateProtocolIDs(fd *descriptor.FileDescriptorProto, packageName string,
 	for _, msg := range messageNames {
 		// 跳过基本类型：Request, Notify
 		if msg.Name == "Request" || msg.Name == "Notify" {
-			if debugMode {
+			if mode.IsDebug() {
 				fmt.Printf("Skipping base message type: %s\n", msg.Name)
 			}
 			continue
@@ -273,7 +287,7 @@ func generateProtocolIDs(fd *descriptor.FileDescriptorProto, packageName string,
 					Name: fmt.Sprintf("Request_%s_Rsp", parentName),
 					ID:   pid,
 				})
-				if debugMode {
+				if mode.IsDebug() {
 					fmt.Printf("Generated PID for response message: %s, ID: 0x%016x\n", fullName, pid)
 				}
 			}
@@ -287,7 +301,7 @@ func generateProtocolIDs(fd *descriptor.FileDescriptorProto, packageName string,
 		isFail := msg.Name == "Fail"
 
 		if !isRequest && !isNotify && !isOK && !isFail {
-			if debugMode {
+			if mode.IsDebug() {
 				fmt.Printf("Skipping non-special message: %s\n", msg.FullName)
 			}
 			continue
@@ -299,7 +313,7 @@ func generateProtocolIDs(fd *descriptor.FileDescriptorProto, packageName string,
 			Name: msg.FullName,
 			ID:   pid,
 		})
-		if debugMode {
+		if mode.IsDebug() {
 			fmt.Printf("Generated PID for special message: %s, ID: 0x%016x\n", fullName, pid)
 		}
 	}
@@ -340,7 +354,7 @@ func extractMessageNamesFromDescriptor(messages []*descriptor.DescriptorProto, p
 }
 
 // 解析Request消息
-func parseRequestMessages(fd *descriptor.FileDescriptorProto, debugMode bool) []Message {
+func parseRequestMessages(fd *descriptor.FileDescriptorProto, mode Mode) []Message {
 	var messages []Message
 
 	// Find the top-level Request message
@@ -352,19 +366,19 @@ func parseRequestMessages(fd *descriptor.FileDescriptorProto, debugMode bool) []
 		}
 	}
 	if requestMsg == nil {
-		if debugMode {
+		if mode.IsDebug() {
 			fmt.Println("DEBUG: Request message not found")
 		}
 		return messages
 	}
 
-	if debugMode {
+	if mode.IsDebug() {
 		fmt.Println("DEBUG: Found Request message")
 	}
 
 	// Extract nested messages from Request
 	allMessageNames := extractMessageNamesFromDescriptor(requestMsg.NestedType, "Request")
-	if debugMode {
+	if mode.IsDebug() {
 		fmt.Printf("DEBUG: Found %d nested messages in Request block\n", len(allMessageNames))
 		for i, msg := range allMessageNames {
 			fmt.Printf("DEBUG:   Message %d: Name=%s, FullName=%s\n", i+1, msg.Name, msg.FullName)
@@ -375,7 +389,7 @@ func parseRequestMessages(fd *descriptor.FileDescriptorProto, debugMode bool) []
 	for _, msgInfo := range allMessageNames {
 		// 忽略Rsp消息和通用的Request类型本身
 		if msgInfo.Name == "Rsp" || msgInfo.Name == "Request" {
-			if debugMode {
+			if mode.IsDebug() {
 				fmt.Printf("DEBUG: Skipping base message type: %s\n", msgInfo.Name)
 			}
 			continue
@@ -387,7 +401,7 @@ func parseRequestMessages(fd *descriptor.FileDescriptorProto, debugMode bool) []
 			fullName = "Request_" + fullName
 		}
 
-		if debugMode {
+		if mode.IsDebug() {
 			fmt.Printf("DEBUG: Processing request message '%s'\n", fullName)
 		}
 
@@ -429,7 +443,7 @@ func parseRequestMessages(fd *descriptor.FileDescriptorProto, debugMode bool) []
 
 		if rspExists {
 			message.Response = rspFullName
-			if debugMode {
+			if mode.IsDebug() {
 				fmt.Printf("DEBUG: Found Rsp message for %s: %s\n", message.Name, message.Response)
 			}
 		} else {
@@ -468,7 +482,7 @@ func extractFieldCommentFromDescriptor(fd *descriptor.FileDescriptorProto, field
 }
 
 // 解析Notify消息
-func parseNotifyMessages(fd *descriptor.FileDescriptorProto, debugMode bool) []Message {
+func parseNotifyMessages(fd *descriptor.FileDescriptorProto, mode Mode) []Message {
 	var messages []Message
 
 	// Find the top-level Notify message
@@ -480,19 +494,19 @@ func parseNotifyMessages(fd *descriptor.FileDescriptorProto, debugMode bool) []M
 		}
 	}
 	if notifyMsg == nil {
-		if debugMode {
+		if mode.IsDebug() {
 			fmt.Println("DEBUG: Notify message not found")
 		}
 		return messages
 	}
 
-	if debugMode {
+	if mode.IsDebug() {
 		fmt.Println("DEBUG: Found Notify message")
 	}
 
 	// Extract nested messages from Notify
 	allMessageNames := extractMessageNamesFromDescriptor(notifyMsg.NestedType, "Notify")
-	if debugMode {
+	if mode.IsDebug() {
 		fmt.Printf("DEBUG: Found %d nested messages in Notify block\n", len(allMessageNames))
 		for i, msg := range allMessageNames {
 			fmt.Printf("DEBUG:   Message %d: Name=%s, FullName=%s\n", i+1, msg.Name, msg.FullName)
@@ -503,7 +517,7 @@ func parseNotifyMessages(fd *descriptor.FileDescriptorProto, debugMode bool) []M
 	for _, msgInfo := range allMessageNames {
 		// 忽略通用的Notify类型本身
 		if msgInfo.Name == "Notify" {
-			if debugMode {
+			if mode.IsDebug() {
 				fmt.Printf("DEBUG: Skipping base message type: %s\n", msgInfo.Name)
 			}
 			continue
@@ -515,7 +529,7 @@ func parseNotifyMessages(fd *descriptor.FileDescriptorProto, debugMode bool) []M
 			fullName = "Notify_" + fullName
 		}
 
-		if debugMode {
+		if mode.IsDebug() {
 			fmt.Printf("DEBUG: Processing notify message '%s'\n", fullName)
 		}
 
@@ -562,7 +576,7 @@ func extractGoPackage(fd *descriptor.FileDescriptorProto) string {
 }
 
 // 生成Request消息的胶水代码
-func generateRequestGlueCode(messages []Message, packageName string, ctx *Context, quietMode bool) error {
+func generateRequestGlueCode(messages []Message, packageName string, ctx *Context) error {
 	// 构建输出文件名
 	outputFile := filepath.Join(ctx.GetOutputDir(), strings.ToLower(packageName)+"_request_glue.go")
 	file, err := os.Create(outputFile)
@@ -652,14 +666,14 @@ func generateRequestGlueCode(messages []Message, packageName string, ctx *Contex
 	fmt.Fprintf(file, "\treturn response, responsePid, nil\n")
 	fmt.Fprintf(file, "}\n")
 
-	if !quietMode {
+	if ctx.GetMode().ShouldPrint() {
 		fmt.Printf("Generated request glue code in %s\n", outputFile)
 	}
 	return nil
 }
 
 // 生成Notify消息的胶水代码
-func generateNotifyGlueCode(messages []Message, packageName string, ctx *Context, quietMode bool) error {
+func generateNotifyGlueCode(messages []Message, packageName string, ctx *Context) error {
 	// 构建输出文件名
 	outputFile := filepath.Join(ctx.GetOutputDir(), strings.ToLower(packageName)+"_notify_glue.go")
 	file, err := os.Create(outputFile)
@@ -745,14 +759,14 @@ func generateNotifyGlueCode(messages []Message, packageName string, ctx *Context
 		fmt.Fprintf(file, "}\n\n")
 	}
 
-	if !quietMode {
+	if ctx.GetMode().ShouldPrint() {
 		fmt.Printf("Generated notify glue code in %s\n", outputFile)
 	}
 	return nil
 }
 
 // generateCommonProtocolMappings 生成公共的协议ID映射文件
-func generateCommonProtocolMappings(allMappings []ProtocolIDMapping, outputDir string, quietMode bool) error {
+func generateCommonProtocolMappings(allMappings []ProtocolIDMapping, outputDir string, mode Mode) error {
 	outputFile := filepath.Join(outputDir, "protocol_ids.go")
 
 	file, err := os.Create(outputFile)
@@ -853,7 +867,7 @@ func generateCommonProtocolMappings(allMappings []ProtocolIDMapping, outputDir s
 	fmt.Fprintf(file, "\treturn pid\n")
 	fmt.Fprintf(file, "}\n")
 
-	if !quietMode {
+	if mode.ShouldPrint() {
 		fmt.Printf("Generated common protocol ID mappings in %s\n", outputFile)
 	}
 	return nil
