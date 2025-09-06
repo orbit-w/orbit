@@ -122,73 +122,111 @@ func processProtoFiles(ctx *Context, quietMode, debugMode, genProtoIDs, genProto
 			continue
 		}
 
-		if !quietMode || debugMode {
-			fmt.Printf("Processing %s...\n", fd.GetName())
-		}
-
-		packageName := fd.GetPackage()
-		if packageName == "" {
+		mapping, err := processFileDescriptor(fd, ctx, quietMode, debugMode, genProtoIDs, genProtoCode)
+		if err != nil {
 			if !quietMode {
-				fmt.Printf("Package name not found in %s\n", fd.GetName())
+				fmt.Printf("Error processing %s: %v\n", fd.GetName(), err)
 			}
 			continue
 		}
 
-		if !quietMode {
-			fmt.Printf("Found package name: %s\n", packageName)
-		}
-
-		if genProtoIDs {
-			mapping := generateProtocolIDs(fd, packageName, debugMode)
-			if len(mapping.MessageIDs) > 0 {
-				allMappings = append(allMappings, mapping)
-			}
-		}
-
-		if genProtoCode {
-			requestMessages := parseRequestMessages(fd, debugMode)
-			if len(requestMessages) > 0 {
-				if !quietMode {
-					fmt.Printf("Found %d request messages\n", len(requestMessages))
-					if debugMode {
-						for i, msg := range requestMessages {
-							fmt.Printf("  Request %d: Name=%s, FullName=%s\n", i+1, msg.Name, msg.FullName)
-						}
-					}
-				}
-				if err := generateRequestGlueCode(requestMessages, packageName, ctx, quietMode); err != nil {
-					if !quietMode {
-						fmt.Printf("Error generating request glue code: %v\n", err)
-					}
-					continue
-				}
-			} else if !quietMode {
-				fmt.Printf("No request messages found\n")
-			}
-
-			notifyMessages := parseNotifyMessages(fd, debugMode)
-			if len(notifyMessages) > 0 {
-				if !quietMode {
-					fmt.Printf("Found %d notify messages\n", len(notifyMessages))
-					if debugMode {
-						for i, msg := range notifyMessages {
-							fmt.Printf("  Notify %d: Name=%s, FullName=%s\n", i+1, msg.Name, msg.FullName)
-						}
-					}
-				}
-				if err := generateNotifyGlueCode(notifyMessages, packageName, ctx, quietMode); err != nil {
-					if !quietMode {
-						fmt.Printf("Error generating notify glue code: %v\n", err)
-					}
-					continue
-				}
-			} else if !quietMode {
-				fmt.Printf("No notify messages found\n")
-			}
+		if mapping != nil && len(mapping.MessageIDs) > 0 {
+			allMappings = append(allMappings, *mapping)
 		}
 	}
 
 	return allMappings, nil
+}
+
+// processFileDescriptor 处理单个文件描述符
+// 返回生成的协议ID映射和可能的错误
+func processFileDescriptor(fd *descriptor.FileDescriptorProto, ctx *Context, quietMode, debugMode, genProtoIDs, genProtoCode bool) (*ProtocolIDMapping, error) {
+	if !quietMode || debugMode {
+		fmt.Printf("Processing %s...\n", fd.GetName())
+	}
+
+	packageName := fd.GetPackage()
+	if packageName == "" {
+		if !quietMode {
+			fmt.Printf("Package name not found in %s\n", fd.GetName())
+		}
+		return nil, fmt.Errorf("package name not found in %s", fd.GetName())
+	}
+
+	if !quietMode {
+		fmt.Printf("Found package name: %s\n", packageName)
+	}
+
+	var mapping *ProtocolIDMapping
+
+	// 生成协议ID
+	if genProtoIDs {
+		protoMapping := generateProtocolIDs(fd, packageName, debugMode)
+		if len(protoMapping.MessageIDs) > 0 {
+			mapping = &protoMapping
+		}
+	}
+
+	// 生成协议代码
+	if genProtoCode {
+		if err := processRequestMessages(fd, packageName, ctx, quietMode, debugMode); err != nil {
+			return mapping, fmt.Errorf("processing request messages: %w", err)
+		}
+
+		if err := processNotifyMessages(fd, packageName, ctx, quietMode, debugMode); err != nil {
+			return mapping, fmt.Errorf("processing notify messages: %w", err)
+		}
+	}
+
+	return mapping, nil
+}
+
+// processRequestMessages 处理请求消息
+func processRequestMessages(fd *descriptor.FileDescriptorProto, packageName string, ctx *Context, quietMode, debugMode bool) error {
+	requestMessages := parseRequestMessages(fd, debugMode)
+	if len(requestMessages) > 0 {
+		if !quietMode {
+			fmt.Printf("Found %d request messages\n", len(requestMessages))
+			if debugMode {
+				for i, msg := range requestMessages {
+					fmt.Printf("  Request %d: Name=%s, FullName=%s\n", i+1, msg.Name, msg.FullName)
+				}
+			}
+		}
+		if err := generateRequestGlueCode(requestMessages, packageName, ctx, quietMode); err != nil {
+			if !quietMode {
+				fmt.Printf("Error generating request glue code: %v\n", err)
+			}
+			return err
+		}
+	} else if !quietMode {
+		fmt.Printf("No request messages found\n")
+	}
+	return nil
+}
+
+// processNotifyMessages 处理通知消息
+func processNotifyMessages(fd *descriptor.FileDescriptorProto, packageName string, ctx *Context, quietMode, debugMode bool) error {
+	notifyMessages := parseNotifyMessages(fd, debugMode)
+	if len(notifyMessages) > 0 {
+		if !quietMode {
+			fmt.Printf("Found %d notify messages\n", len(notifyMessages))
+			if debugMode {
+				for i, msg := range notifyMessages {
+					fmt.Printf("  Notify %d: Name=%s, FullName=%s\n", i+1, msg.Name, msg.FullName)
+				}
+			}
+		}
+		if err := generateNotifyGlueCode(notifyMessages, packageName, ctx, quietMode); err != nil {
+			if !quietMode {
+				fmt.Printf("Error generating notify glue code: %v\n", err)
+			}
+			return err
+		}
+	} else if !quietMode {
+		fmt.Printf("No notify messages found\n")
+	}
+	return nil
 }
 
 // generateProtocolIDs 生成协议ID
