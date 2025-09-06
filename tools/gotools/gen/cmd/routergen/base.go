@@ -10,6 +10,7 @@ type ProtocolIDMapping struct {
 type MessageName struct {
 	Name     string
 	FullName string
+	MsgWall  string //消息墙名称
 }
 
 // MessageID 用于存储消息ID

@@ -337,16 +337,17 @@ func findProtoFiles(dir string) ([]string, error) {
 }
 
 // extractMessageNamesFromDescriptor recursively extracts message names from descriptor
-func extractMessageNamesFromDescriptor(messages []*descriptor.DescriptorProto, parent string) []MessageName {
+func extractMessageNamesFromDescriptor(messages []*descriptor.DescriptorProto, msgWall string) []MessageName {
 	var names []MessageName
 	for _, msg := range messages {
 		fullName := msg.GetName()
-		if parent != "" {
-			fullName = parent + "_" + fullName
+		if msgWall != "" {
+			fullName = msgWall + "_" + fullName
 		}
 		names = append(names, MessageName{
 			Name:     msg.GetName(),
 			FullName: fullName,
+			MsgWall:  msgWall,
 		})
 		names = append(names, extractMessageNamesFromDescriptor(msg.NestedType, fullName)...)
 	}
@@ -377,7 +378,7 @@ func parseRequestMessages(fd *descriptor.FileDescriptorProto, mode Mode) []Messa
 	}
 
 	// Extract nested messages from Request
-	allMessageNames := extractMessageNamesFromDescriptor(requestMsg.NestedType, "Request")
+	allMessageNames := extractMessageNamesFromDescriptor(requestMsg.NestedType, MsgWallReq)
 	if mode.IsDebug() {
 		fmt.Printf("DEBUG: Found %d nested messages in Request block\n", len(allMessageNames))
 		for i, msg := range allMessageNames {
@@ -388,7 +389,7 @@ func parseRequestMessages(fd *descriptor.FileDescriptorProto, mode Mode) []Messa
 	// 过滤出Request_前缀的消息
 	for _, msgInfo := range allMessageNames {
 		// 忽略Rsp消息和通用的Request类型本身
-		if msgInfo.Name == "Rsp" || msgInfo.Name == "Request" {
+		if msgInfo.Name == MsgWallRsp || msgInfo.Name == MsgWallReq {
 			if mode.IsDebug() {
 				fmt.Printf("DEBUG: Skipping base message type: %s\n", msgInfo.Name)
 			}
