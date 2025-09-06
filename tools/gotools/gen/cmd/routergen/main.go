@@ -10,10 +10,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"os/exec"
-
 	"gitee.com/orbit-w/orbit/lib/base/protoid"
-	"github.com/gogo/protobuf/proto"
 	descriptor "github.com/gogo/protobuf/protoc-gen-gogo/descriptor"
 )
 
@@ -102,50 +99,6 @@ func getProtoFiles(protoFile, protoDir string) ([]string, error) {
 		return []string{protoFile}, nil
 	}
 	return findProtoFiles(protoDir)
-}
-
-// parseProtoFiles generates descriptor sets for multiple proto files in one call
-func parseProtoFiles(protoFiles []string) ([]*descriptor.FileDescriptorProto, error) {
-	if len(protoFiles) == 0 {
-		return nil, fmt.Errorf("no proto files provided")
-	}
-
-	descFile := "temp.desc"                 // Use a fixed temp file or make unique if needed
-	protoDir := filepath.Dir(protoFiles[0]) // Assume same dir, or handle multiple
-
-	var cmdArgs []string
-	cmdArgs = append(cmdArgs,
-		"--proto_path=.",
-		"--proto_path="+protoDir,
-		"--proto_path=vendor/github.com/asynkron/protoactor-go/actor",
-		"--proto_path=$GOPATH/pkg/mod",
-		"--descriptor_set_out="+descFile,
-		"--include_imports", // Include all dependencies
-	)
-	cmdArgs = append(cmdArgs, protoFiles...)
-
-	cmd := exec.Command("protoc", cmdArgs...)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return nil, fmt.Errorf("protoc failed: %w\nOutput: %s", err, output)
-	}
-	defer os.Remove(descFile)
-
-	data, err := os.ReadFile(descFile)
-	if err != nil {
-		return nil, fmt.Errorf("reading descriptor: %w", err)
-	}
-
-	var fds descriptor.FileDescriptorSet
-	if err := proto.Unmarshal(data, &fds); err != nil {
-		return nil, fmt.Errorf("unmarshaling descriptor: %w", err)
-	}
-
-	if len(fds.File) == 0 {
-		return nil, fmt.Errorf("no files in descriptor set")
-	}
-
-	return fds.File, nil
 }
 
 func processProtoFiles(ctx *Context, quietMode, debugMode, genProtoIDs, genProtoCode bool) ([]ProtocolIDMapping, error) {
