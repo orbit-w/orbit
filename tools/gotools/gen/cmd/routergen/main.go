@@ -242,6 +242,7 @@ func genRequestMessageNamesFromDescriptor(dp, father *descriptor.DescriptorProto
 		Type: MessageTypeRequest,
 	}
 	ReqfullName := father.GetName() + "_" + dp.GetName()
+	msgInfo.Name = dp.GetName()
 	msgInfo.ReqFullName = ReqfullName
 	msgInfo.MsgWall = father.GetName()
 	msgInfo.SetPackageName(packageName)
@@ -263,6 +264,7 @@ func genNotifyMessageNamesFromDescriptor(dp, father *descriptor.DescriptorProto,
 	NotifyfullName := father.GetName() + "_" + dp.GetName()
 	msgInfo.NotifyFullName = NotifyfullName
 	msgInfo.SetPackageName(packageName)
+	msgInfo.Name = dp.GetName()
 	msgInfo.MsgWall = father.GetName()
 	msgInfo.DP = dp
 	return msgInfo
@@ -270,7 +272,8 @@ func genNotifyMessageNamesFromDescriptor(dp, father *descriptor.DescriptorProto,
 
 func extractMessageNamesFromDescriptorByMsgWall(messages []*descriptor.DescriptorProto, msgWall string, packageName string) []MessageName {
 	var names []MessageName
-	for _, msg := range messages {
+	for i := range messages {
+		msg := messages[i]
 		name := msg.GetName()
 		if name != msgWall {
 			continue
@@ -367,19 +370,6 @@ func parseNotifyMessages(ctx *Context, fd *descriptor.FileDescriptorProto, mode 
 	}
 }
 
-// 提取go_package值
-func extractGoPackage(fd *descriptor.FileDescriptorProto) string {
-	goPkg := fd.Options.GetGoPackage()
-	if goPkg == "" {
-		return ""
-	}
-	parts := strings.Split(goPkg, "/")
-	if len(parts) > 0 {
-		return parts[len(parts)-1]
-	}
-	return goPkg
-}
-
 // 生成Request消息的胶水代码
 func generateRequestGlueCode(ctx *Context) error {
 	// 构建输出文件名
@@ -405,7 +395,9 @@ func generateRequestGlueCode(ctx *Context) error {
 	fmt.Fprintf(file, "// RequestHandler 处理包的请求消息\n")
 	fmt.Fprintf(file, "type RequestHandler interface {\n")
 	messages := ctx.GetReqMessage()
-	for _, msg := range messages {
+	fmt.Println("messages", messages)
+	for i := range messages {
+		msg := messages[i]
 		fmt.Fprintf(file, "\t// Handle%s 处理%s请求\n", msg.Name, msg.Name)
 		if msg.Comment != "" {
 			fmt.Fprintf(file, "\t// %s\n", msg.Comment)
@@ -420,10 +412,10 @@ func generateRequestGlueCode(ctx *Context) error {
 	fmt.Fprintf(file, "\tvar response proto.Message\n")
 	fmt.Fprintf(file, "\tswitch pid {\n")
 
-	for _, msg := range messages {
+	for i := range messages {
+		msg := messages[i]
 		// 生成pid以供参考
 		_ = protoid.HashProtoMessage(msg.FullName)
-		fmt.Println("msg.FullName", msg.FullName)
 
 		fmt.Fprintf(file, "\tcase PID_%s: // %s\n", msg.FullName, msg.FullName)
 		fmt.Fprintf(file, "\t\treq := &%s{}\n", msg.FullName)
@@ -483,7 +475,6 @@ func generateNotifyGlueCode(ctx *Context) error {
 
 		// 生成pid以供参考
 		_ = protoid.HashProtoMessage(msg.FullName)
-		fmt.Println("msg.FullName", msg.FullName)
 
 		fmt.Fprintf(file, "\tcase PID_%s: // %s\n", msg.FullName, msg.FullName)
 		fmt.Fprintf(file, "\t\tnotify := &%s{}\n", msg.FullName)
@@ -565,15 +556,6 @@ func generateCommonProtocolMappings(allMappings ProtocolIDMapping, outputDir str
 	fmt.Fprintf(file, "var AllIDToMessageName = map[uint32]string{\n")
 	for _, msgID := range allMappings.MessageIDs {
 		fmt.Fprintf(file, "\tPID_%s: \"%s\",\n",
-			msgID.Name, msgID.Name)
-	}
-	fmt.Fprintf(file, "}\n\n")
-
-	// 生成 MessagePackageMap 映射
-	fmt.Fprintf(file, "// MessagePackageMap 消息名称到包名的映射\n")
-	fmt.Fprintf(file, "var MessagePackageMap = map[string]string{\n")
-	for _, msgID := range allMappings.MessageIDs {
-		fmt.Fprintf(file, "\t\"%s\": \"%s\",\n",
 			msgID.Name, msgID.Name)
 	}
 	fmt.Fprintf(file, "}\n\n")

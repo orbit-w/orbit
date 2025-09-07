@@ -20,8 +20,8 @@ func ParseNotifyByID(pid uint32, data []byte) (proto.Message, uint32, error) {
 	}
 }
 
-// Marshal 序列化通知消息
-func Marshal(notify *Notify_BeAttacked) ([]byte, uint32, error) {
+// MarshalBeAttacked 序列化BeAttacked通知消息
+func MarshalBeAttacked(notify *Notify_BeAttacked) ([]byte, uint32, error) {
 	data, err := proto.Marshal(notify)
 	return data, PID_Notify_BeAttacked, err
 }

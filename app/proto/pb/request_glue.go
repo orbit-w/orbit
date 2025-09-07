@@ -8,12 +8,32 @@ import (
 
 // RequestHandler 处理包的请求消息
 type RequestHandler interface {
+	// HandleSearchBook 处理SearchBook请求
+	HandleSearchBook(req *Request_SearchBook) proto.Message
+	// HandleHeartBeat 处理HeartBeat请求
+	HandleHeartBeat(req *Request_HeartBeat) proto.Message
 }
 
 // DispatchRequestByID 根据协议ID分发请求到对应处理函数
 func DispatchRequestByID(handler RequestHandler, pid uint32, data []byte) (proto.Message, uint32, error) {
 	var response proto.Message
 	switch pid {
+	case PID_Request_SearchBook: // Request_SearchBook
+		req := &Request_SearchBook{}
+		if err := proto.Unmarshal(data, req); err != nil {
+			return nil, 0, fmt.Errorf("unmarshal Request_SearchBook failed: %w", err)
+		}
+
+		response = handler.HandleSearchBook(req)
+	
+	case PID_Request_HeartBeat: // Request_HeartBeat
+		req := &Request_HeartBeat{}
+		if err := proto.Unmarshal(data, req); err != nil {
+			return nil, 0, fmt.Errorf("unmarshal Request_HeartBeat failed: %w", err)
+		}
+
+		response = handler.HandleHeartBeat(req)
+	
 	default:
 		return nil, 0, fmt.Errorf("unknown request protocol ID: 0x%08x", pid)
 	}

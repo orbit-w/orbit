@@ -10,22 +10,26 @@ import (
 // 所有协议ID常量
 const (
 	PID_Notify_BeAttacked uint32 = 0x63a16597 // Notify_BeAttacked
+	PID_Request_HeartBeat uint32 = 0x751e20c7 // Request_HeartBeat
+	PID_Request_SearchBook uint32 = 0x73601d6f // Request_SearchBook
+	PID_Request_SearchBook_Rsp uint32 = 0x7c102692 // Request_SearchBook_Rsp
 
 )
 
 // AllMessageNameToID 全局消息名称到ID的映射
 var AllMessageNameToID = map[string]uint32{
 	"Notify_BeAttacked": PID_Notify_BeAttacked,
+	"Request_HeartBeat": PID_Request_HeartBeat,
+	"Request_SearchBook": PID_Request_SearchBook,
+	"Request_SearchBook_Rsp": PID_Request_SearchBook_Rsp,
 }
 
 // AllIDToMessageName 全局ID到消息名称的映射
 var AllIDToMessageName = map[uint32]string{
 	PID_Notify_BeAttacked: "Notify_BeAttacked",
-}
-
-// MessagePackageMap 消息名称到包名的映射
-var MessagePackageMap = map[string]string{
-	"Notify_BeAttacked": "Notify_BeAttacked",
+	PID_Request_HeartBeat: "Request_HeartBeat",
+	PID_Request_SearchBook: "Request_SearchBook",
+	PID_Request_SearchBook_Rsp: "Request_SearchBook_Rsp",
 }
 
 // GetProtocolID 获取指定消息名称的协议ID
