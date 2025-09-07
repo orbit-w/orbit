@@ -326,39 +326,6 @@ func compileProtoFiles(protoDir string, protoFiles []string, protobufInclude str
 	return &descriptorSet, nil
 }
 
-// extractMessagesFromDescriptor 从文件描述符中提取消息信息
-func extractMessagesFromDescriptor(_ interface{}) []ProtoMessage {
-	return nil
-}
-
-// extractNestedMessages 递归提取嵌套消息
-func extractNestedMessages(_ interface{}) []ProtoMessage { return nil }
-
-// extractMessageInfo 从消息描述符中提取信息
-func extractMessageInfo(_ interface{}) *ProtoMessage {
-	return nil
-}
-
-// extractFieldInfo 从字段描述符中提取字段信息
-func extractFieldInfo(_ interface{}) ProtoField {
-	return ProtoField{}
-}
-
-// extractMapFieldInfo 提取 DeltaSyncMap 字段的详细信息
-func extractMapFieldInfo(_ interface{}, _ map[string]string) MapFieldInfo {
-	return MapFieldInfo{}
-}
-
-// getFieldTypeName 获取字段类型名称
-func getFieldTypeName(_ interface{}) string {
-	return ""
-}
-
-// extractTagsFromComments 从注释中提取标签信息
-func extractTagsFromComments(_ interface{}) map[string]string {
-	return map[string]string{}
-}
-
 // generateExtensionCode 生成扩展代码
 func generateExtensionCode(ctx *Context) string {
 	var builder strings.Builder
