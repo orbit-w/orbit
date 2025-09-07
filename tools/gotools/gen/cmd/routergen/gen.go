@@ -156,9 +156,28 @@ func processProtoFiles(ctx *Context) error {
 			}
 			continue
 		}
-
 	}
 
+	// 添加通用Response 消息结构
+	// 添加Rsp_OK消息
+	ctx.AddRspMessage(Message{
+		Type:        MessageTypeRsp,
+		Name:        CommonRspOK,
+		FullName:    CommonRspOK,
+		PackageName: "pb",
+		PidName:     CommonRspOK,
+	})
+
+	// 添加Rsp_Fail消息
+	ctx.AddRspMessage(Message{
+		Type:        MessageTypeRsp,
+		Name:        CommonRspFail,
+		FullName:    CommonRspFail,
+		PackageName: "pb",
+		PidName:     CommonRspFail,
+	})
+
+	// 生成Request消息的胶水代码
 	if err := generateRequestGlueCode(ctx); err != nil {
 		if ctx.GetMode().ShouldPrint() {
 			fmt.Printf("Error generating request glue code: %v\n", err)
@@ -166,6 +185,7 @@ func processProtoFiles(ctx *Context) error {
 		return err
 	}
 
+	// 生成Notify消息的胶水代码
 	if err := generateNotifyGlueCode(ctx); err != nil {
 		if ctx.GetMode().ShouldPrint() {
 			fmt.Printf("Error generating notify glue code: %v\n", err)
@@ -218,18 +238,6 @@ func generateProtocolIDs(ctx *Context) ProtocolIDMapping {
 			ID:   pid,
 		})
 	}
-
-	// 添加Rsp_OK消息
-	mapping.MessageIDs = append(mapping.MessageIDs, MessageID{
-		Name: CommonRspOK,
-		ID:   protoid.HashProtoMessage(CommonRspOK),
-	})
-
-	// 添加Rsp_Fail消息
-	mapping.MessageIDs = append(mapping.MessageIDs, MessageID{
-		Name: CommonRspFail,
-		ID:   protoid.HashProtoMessage(CommonRspFail),
-	})
 	return mapping
 }
 
