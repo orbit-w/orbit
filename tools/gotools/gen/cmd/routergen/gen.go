@@ -395,7 +395,6 @@ func generateRequestGlueCode(ctx *Context) error {
 	fmt.Fprintf(file, "// RequestHandler 处理包的请求消息\n")
 	fmt.Fprintf(file, "type RequestHandler interface {\n")
 	messages := ctx.GetReqMessage()
-	fmt.Println("messages", messages)
 	for i := range messages {
 		msg := messages[i]
 		fmt.Fprintf(file, "\t// Handle%s 处理%s请求\n", msg.Name, msg.Name)
