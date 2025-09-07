@@ -192,11 +192,9 @@ func parseFileDescriptor(fd *descriptor.FileDescriptorProto, ctx *Context) error
 	}
 
 	// 解析协议消息
-	if ctx.GetGenProtoCode() {
-		parseRequestMessages(ctx, fd, packageName)
+	parseRequestMessages(ctx, fd, packageName)
 
-		parseNotifyMessages(ctx, fd, ctx.GetMode(), packageName)
-	}
+	parseNotifyMessages(ctx, fd, ctx.GetMode(), packageName)
 
 	return nil
 }
@@ -300,7 +298,8 @@ func extractMessageNamesFromDescriptorByMsgWall(messages []*descriptor.Descripto
 func parseRequestMessages(ctx *Context, fd *descriptor.FileDescriptorProto, packageName string) {
 	// Extract nested messages from Request
 	allMessageNames := extractMessageNamesFromDescriptorByMsgWall(fd.MessageType, MsgWallReq, packageName)
-	for _, msgInfo := range allMessageNames {
+	for i := range allMessageNames {
+		msgInfo := allMessageNames[i]
 		req := Message{
 			Type:        msgInfo.Type,
 			Name:        msgInfo.Name,
@@ -320,6 +319,8 @@ func parseRequestMessages(ctx *Context, fd *descriptor.FileDescriptorProto, pack
 			req.Fields = append(req.Fields, field)
 		}
 
+		ctx.AddReqMessage(req)
+
 		if msgInfo.RspFullName != "" {
 			// 生成Rsp消息
 			rsp := Message{
@@ -331,8 +332,6 @@ func parseRequestMessages(ctx *Context, fd *descriptor.FileDescriptorProto, pack
 			}
 			ctx.AddRspMessage(rsp)
 		}
-
-		ctx.AddReqMessage(req)
 	}
 }
 
@@ -407,9 +406,6 @@ func generateRequestGlueCode(ctx *Context) error {
 	fmt.Fprintf(file, "type RequestHandler interface {\n")
 	messages := ctx.GetReqMessage()
 	for _, msg := range messages {
-		if msg.Name == "Request" {
-			continue
-		}
 		fmt.Fprintf(file, "\t// Handle%s 处理%s请求\n", msg.Name, msg.Name)
 		if msg.Comment != "" {
 			fmt.Fprintf(file, "\t// %s\n", msg.Comment)
@@ -425,11 +421,6 @@ func generateRequestGlueCode(ctx *Context) error {
 	fmt.Fprintf(file, "\tswitch pid {\n")
 
 	for _, msg := range messages {
-		// 跳过不符合条件的消息
-		if msg.Name == "Request" {
-			continue
-		}
-
 		// 生成pid以供参考
 		_ = protoid.HashProtoMessage(msg.FullName)
 		fmt.Println("msg.FullName", msg.FullName)

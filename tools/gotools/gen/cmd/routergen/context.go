@@ -175,5 +175,9 @@ func (c *Context) AddRspMessage(msg Message) {
 }
 
 func (c *Context) AllNetMessages() []Message {
-	return append(append(c.ReqMessage, c.RspMessages...), c.NotifyMessage...)
+	result := make([]Message, 0, len(c.ReqMessage)+len(c.RspMessages)+len(c.NotifyMessage))
+	result = append(result, c.ReqMessage...)
+	result = append(result, c.RspMessages...)
+	result = append(result, c.NotifyMessage...)
+	return result
 }
