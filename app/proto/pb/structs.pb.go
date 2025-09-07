@@ -2,9 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.6
 // 	protoc        v5.29.3
-// source: messages.proto
-
-// 定义RPC通信协议包名
+// source: structs.proto
 
 package pb
 
@@ -36,7 +34,7 @@ type RpcHelloRequest struct {
 
 func (x *RpcHelloRequest) Reset() {
 	*x = RpcHelloRequest{}
-	mi := &file_messages_proto_msgTypes[0]
+	mi := &file_structs_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -48,7 +46,7 @@ func (x *RpcHelloRequest) String() string {
 func (*RpcHelloRequest) ProtoMessage() {}
 
 func (x *RpcHelloRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_messages_proto_msgTypes[0]
+	mi := &file_structs_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -61,7 +59,7 @@ func (x *RpcHelloRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RpcHelloRequest.ProtoReflect.Descriptor instead.
 func (*RpcHelloRequest) Descriptor() ([]byte, []int) {
-	return file_messages_proto_rawDescGZIP(), []int{0}
+	return file_structs_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *RpcHelloRequest) GetSender() *actor.PID {
@@ -83,7 +81,7 @@ type RpcHelloResponse struct {
 
 func (x *RpcHelloResponse) Reset() {
 	*x = RpcHelloResponse{}
-	mi := &file_messages_proto_msgTypes[1]
+	mi := &file_structs_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -95,7 +93,7 @@ func (x *RpcHelloResponse) String() string {
 func (*RpcHelloResponse) ProtoMessage() {}
 
 func (x *RpcHelloResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_messages_proto_msgTypes[1]
+	mi := &file_structs_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -108,7 +106,7 @@ func (x *RpcHelloResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RpcHelloResponse.ProtoReflect.Descriptor instead.
 func (*RpcHelloResponse) Descriptor() ([]byte, []int) {
-	return file_messages_proto_rawDescGZIP(), []int{1}
+	return file_structs_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *RpcHelloResponse) GetMessage() string {
@@ -118,37 +116,85 @@ func (x *RpcHelloResponse) GetMessage() string {
 	return ""
 }
 
-var File_messages_proto protoreflect.FileDescriptor
+// --------在墙外定义的是单纯的数据结构，无法单独发送
+type Book struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Content       string                 `protobuf:"bytes,1,opt,name=Content,proto3" json:"Content,omitempty"` //这行注释会被胶水代码读取
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
 
-const file_messages_proto_rawDesc = "" +
+func (x *Book) Reset() {
+	*x = Book{}
+	mi := &file_structs_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Book) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Book) ProtoMessage() {}
+
+func (x *Book) ProtoReflect() protoreflect.Message {
+	mi := &file_structs_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Book.ProtoReflect.Descriptor instead.
+func (*Book) Descriptor() ([]byte, []int) {
+	return file_structs_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *Book) GetContent() string {
+	if x != nil {
+		return x.Content
+	}
+	return ""
+}
+
+var File_structs_proto protoreflect.FileDescriptor
+
+const file_structs_proto_rawDesc = "" +
 	"\n" +
-	"\x0emessages.proto\x12\x02pb\x1a\vactor.proto\"5\n" +
+	"\rstructs.proto\x12\x02pb\x1a\vactor.proto\"5\n" +
 	"\x0fRpcHelloRequest\x12\"\n" +
 	"\x06Sender\x18\x01 \x01(\v2\n" +
 	".actor.PIDR\x06Sender\",\n" +
 	"\x10RpcHelloResponse\x12\x18\n" +
-	"\aMessage\x18\x01 \x01(\tR\aMessageB&Z$gitee.com/orbit-w/orbit/app/proto/pbb\x06proto3"
+	"\aMessage\x18\x01 \x01(\tR\aMessage\" \n" +
+	"\x04Book\x12\x18\n" +
+	"\aContent\x18\x01 \x01(\tR\aContentB&Z$gitee.com/orbit-w/orbit/app/proto/pbb\x06proto3"
 
 var (
-	file_messages_proto_rawDescOnce sync.Once
-	file_messages_proto_rawDescData []byte
+	file_structs_proto_rawDescOnce sync.Once
+	file_structs_proto_rawDescData []byte
 )
 
-func file_messages_proto_rawDescGZIP() []byte {
-	file_messages_proto_rawDescOnce.Do(func() {
-		file_messages_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_messages_proto_rawDesc), len(file_messages_proto_rawDesc)))
+func file_structs_proto_rawDescGZIP() []byte {
+	file_structs_proto_rawDescOnce.Do(func() {
+		file_structs_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_structs_proto_rawDesc), len(file_structs_proto_rawDesc)))
 	})
-	return file_messages_proto_rawDescData
+	return file_structs_proto_rawDescData
 }
 
-var file_messages_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
-var file_messages_proto_goTypes = []any{
+var file_structs_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_structs_proto_goTypes = []any{
 	(*RpcHelloRequest)(nil),  // 0: pb.RpcHelloRequest
 	(*RpcHelloResponse)(nil), // 1: pb.RpcHelloResponse
-	(*actor.PID)(nil),        // 2: actor.PID
+	(*Book)(nil),             // 2: pb.Book
+	(*actor.PID)(nil),        // 3: actor.PID
 }
-var file_messages_proto_depIdxs = []int32{
-	2, // 0: pb.RpcHelloRequest.Sender:type_name -> actor.PID
+var file_structs_proto_depIdxs = []int32{
+	3, // 0: pb.RpcHelloRequest.Sender:type_name -> actor.PID
 	1, // [1:1] is the sub-list for method output_type
 	1, // [1:1] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
@@ -156,26 +202,26 @@ var file_messages_proto_depIdxs = []int32{
 	0, // [0:1] is the sub-list for field type_name
 }
 
-func init() { file_messages_proto_init() }
-func file_messages_proto_init() {
-	if File_messages_proto != nil {
+func init() { file_structs_proto_init() }
+func file_structs_proto_init() {
+	if File_structs_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_messages_proto_rawDesc), len(file_messages_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_structs_proto_rawDesc), len(file_structs_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
-		GoTypes:           file_messages_proto_goTypes,
-		DependencyIndexes: file_messages_proto_depIdxs,
-		MessageInfos:      file_messages_proto_msgTypes,
+		GoTypes:           file_structs_proto_goTypes,
+		DependencyIndexes: file_structs_proto_depIdxs,
+		MessageInfos:      file_structs_proto_msgTypes,
 	}.Build()
-	File_messages_proto = out.File
-	file_messages_proto_goTypes = nil
-	file_messages_proto_depIdxs = nil
+	File_structs_proto = out.File
+	file_structs_proto_goTypes = nil
+	file_structs_proto_depIdxs = nil
 }
