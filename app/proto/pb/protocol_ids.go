@@ -55,14 +55,9 @@ func GetResponsePID(response proto.Message) uint32 {
 		return 0
 	}
 
-	// 从映射表中查找包名
-	packageName, ok := MessagePackageMap[messageName]
+	pid, ok := GetProtocolID(messageName)
 	if !ok {
-		// 找不到包名直接panic
-		panic(fmt.Sprintf("消息 %s 未在映射表中找到对应的包名", messageName))
+		panic(fmt.Sprintf("消息 %!s(MISSING) 未找到协议ID", messageName))
 	}
-
-	fullName := packageName + "-" + messageName
-	pid, _ := GetProtocolID(fullName)
 	return pid
 }

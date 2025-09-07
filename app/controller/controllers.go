@@ -12,7 +12,7 @@ var (
 
 // Manager 消息分发管理器
 type Manager struct {
-	pb.CoreRequestHandler
+	pb.RequestHandler
 	// 可以扩展添加其他包的处理器
 }
 
@@ -37,6 +37,6 @@ func GlobalManager() *Manager {
 
 func NewManager() *Manager {
 	return &Manager{
-		CoreRequestHandler: GExampleController,
+		RequestHandler: GExampleController,
 	}
 }

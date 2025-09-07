@@ -7,5 +7,5 @@ import (
 )
 
 func Dispatch(pid uint32, data []byte) (proto.Message, uint32, error) {
-	return pb.DispatchCoreRequestByID(controller.GlobalManager(), pid, data)
+	return pb.DispatchRequestByID(controller.GlobalManager(), pid, data)
 }
