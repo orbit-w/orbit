@@ -4,7 +4,7 @@
 // 	protoc        v5.29.3
 // source: season.proto
 
-package pb_season
+package pb
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -21,26 +21,26 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type Request struct {
+type SeasonRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Request) Reset() {
-	*x = Request{}
+func (x *SeasonRequest) Reset() {
+	*x = SeasonRequest{}
 	mi := &file_season_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Request) String() string {
+func (x *SeasonRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Request) ProtoMessage() {}
+func (*SeasonRequest) ProtoMessage() {}
 
-func (x *Request) ProtoReflect() protoreflect.Message {
+func (x *SeasonRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_season_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -52,12 +52,12 @@ func (x *Request) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Request.ProtoReflect.Descriptor instead.
-func (*Request) Descriptor() ([]byte, []int) {
+// Deprecated: Use SeasonRequest.ProtoReflect.Descriptor instead.
+func (*SeasonRequest) Descriptor() ([]byte, []int) {
 	return file_season_proto_rawDescGZIP(), []int{0}
 }
 
-type Request_SeasonInfo struct {
+type SeasonRequest_SeasonInfo struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=Name,proto3" json:"Name,omitempty"`
 	Duration      int32                  `protobuf:"varint,2,opt,name=Duration,proto3" json:"Duration,omitempty"`
@@ -65,20 +65,20 @@ type Request_SeasonInfo struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Request_SeasonInfo) Reset() {
-	*x = Request_SeasonInfo{}
+func (x *SeasonRequest_SeasonInfo) Reset() {
+	*x = SeasonRequest_SeasonInfo{}
 	mi := &file_season_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Request_SeasonInfo) String() string {
+func (x *SeasonRequest_SeasonInfo) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Request_SeasonInfo) ProtoMessage() {}
+func (*SeasonRequest_SeasonInfo) ProtoMessage() {}
 
-func (x *Request_SeasonInfo) ProtoReflect() protoreflect.Message {
+func (x *SeasonRequest_SeasonInfo) ProtoReflect() protoreflect.Message {
 	mi := &file_season_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -90,46 +90,46 @@ func (x *Request_SeasonInfo) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Request_SeasonInfo.ProtoReflect.Descriptor instead.
-func (*Request_SeasonInfo) Descriptor() ([]byte, []int) {
+// Deprecated: Use SeasonRequest_SeasonInfo.ProtoReflect.Descriptor instead.
+func (*SeasonRequest_SeasonInfo) Descriptor() ([]byte, []int) {
 	return file_season_proto_rawDescGZIP(), []int{0, 0}
 }
 
-func (x *Request_SeasonInfo) GetName() string {
+func (x *SeasonRequest_SeasonInfo) GetName() string {
 	if x != nil {
 		return x.Name
 	}
 	return ""
 }
 
-func (x *Request_SeasonInfo) GetDuration() int32 {
+func (x *SeasonRequest_SeasonInfo) GetDuration() int32 {
 	if x != nil {
 		return x.Duration
 	}
 	return 0
 }
 
-type Request_SeasonInfo_Rsp struct {
+type SeasonRequest_SeasonInfo_Rsp struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Result        bool                   `protobuf:"varint,1,opt,name=Result,proto3" json:"Result,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Request_SeasonInfo_Rsp) Reset() {
-	*x = Request_SeasonInfo_Rsp{}
+func (x *SeasonRequest_SeasonInfo_Rsp) Reset() {
+	*x = SeasonRequest_SeasonInfo_Rsp{}
 	mi := &file_season_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Request_SeasonInfo_Rsp) String() string {
+func (x *SeasonRequest_SeasonInfo_Rsp) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Request_SeasonInfo_Rsp) ProtoMessage() {}
+func (*SeasonRequest_SeasonInfo_Rsp) ProtoMessage() {}
 
-func (x *Request_SeasonInfo_Rsp) ProtoReflect() protoreflect.Message {
+func (x *SeasonRequest_SeasonInfo_Rsp) ProtoReflect() protoreflect.Message {
 	mi := &file_season_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -141,12 +141,12 @@ func (x *Request_SeasonInfo_Rsp) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Request_SeasonInfo_Rsp.ProtoReflect.Descriptor instead.
-func (*Request_SeasonInfo_Rsp) Descriptor() ([]byte, []int) {
+// Deprecated: Use SeasonRequest_SeasonInfo_Rsp.ProtoReflect.Descriptor instead.
+func (*SeasonRequest_SeasonInfo_Rsp) Descriptor() ([]byte, []int) {
 	return file_season_proto_rawDescGZIP(), []int{0, 0, 0}
 }
 
-func (x *Request_SeasonInfo_Rsp) GetResult() bool {
+func (x *SeasonRequest_SeasonInfo_Rsp) GetResult() bool {
 	if x != nil {
 		return x.Result
 	}
@@ -157,14 +157,14 @@ var File_season_proto protoreflect.FileDescriptor
 
 const file_season_proto_rawDesc = "" +
 	"\n" +
-	"\fseason.proto\x12\x06Season\"f\n" +
-	"\aRequest\x1a[\n" +
+	"\fseason.proto\x12\x02pb\"l\n" +
+	"\rSeasonRequest\x1a[\n" +
 	"\n" +
 	"SeasonInfo\x12\x12\n" +
 	"\x04Name\x18\x01 \x01(\tR\x04Name\x12\x1a\n" +
 	"\bDuration\x18\x02 \x01(\x05R\bDuration\x1a\x1d\n" +
 	"\x03Rsp\x12\x16\n" +
-	"\x06Result\x18\x01 \x01(\bR\x06ResultB\x0eZ\fpb/pb_seasonb\x06proto3"
+	"\x06Result\x18\x01 \x01(\bR\x06ResultB&Z$gitee.com/orbit-w/orbit/app/proto/pbb\x06proto3"
 
 var (
 	file_season_proto_rawDescOnce sync.Once
@@ -180,9 +180,9 @@ func file_season_proto_rawDescGZIP() []byte {
 
 var file_season_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_season_proto_goTypes = []any{
-	(*Request)(nil),                // 0: Season.Request
-	(*Request_SeasonInfo)(nil),     // 1: Season.Request.SeasonInfo
-	(*Request_SeasonInfo_Rsp)(nil), // 2: Season.Request.SeasonInfo.Rsp
+	(*SeasonRequest)(nil),                // 0: pb.SeasonRequest
+	(*SeasonRequest_SeasonInfo)(nil),     // 1: pb.SeasonRequest.SeasonInfo
+	(*SeasonRequest_SeasonInfo_Rsp)(nil), // 2: pb.SeasonRequest.SeasonInfo.Rsp
 }
 var file_season_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type

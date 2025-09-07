@@ -19,7 +19,8 @@ BuildLinux:
 
 # 生成所有proto相关的代码（protobuf、协议ID和胶水代码）
 GenProto:
-	go run tools/gotools/gen/main.go routergen --proto-dir=$(CS_PROTO_DIR) --output-dir=app/proto/pb ${CS_PROTO_DIR:+--proto-file=$(CS_PROTO_DIR)}
+	@echo "Generating proto files from $(CS_PROTO_DIR) to app/proto/pb..."
+	go run tools/gotools/gen/main.go routergen --proto-dir=$(CS_PROTO_DIR) --output-dir=app/proto/pb --gen-pb-go=true --gen-proto-code=true --gen-proto-ids=true ${CS_PROTO_DIR:+--proto-file=$(CS_PROTO_DIR)}
 
 # 生成 Go structs
 GenGoStructs:
@@ -46,7 +47,7 @@ help:
 	@echo "可用的make命令："
 	@echo "  make Build              - 构建项目"
 	@echo "  make BuildLinux         - 构建Linux版本"
-	@echo "  make GenProto [CS_PROTO_DIR=path/to/proto] - 使用routergen生成proto相关代码（可选指定文件）"
+	@echo "  make GenProto [CS_PROTO_DIR=path/to/proto] - 生成pb.go文件、协议ID和胶水代码（可选指定文件）"
 	@echo "  make GenGoStructs       - 生成Go structs从proto"
 	@echo "  make BuildPackageLinux  - 为Linux打包，用法: make BuildPackageLinux ENV=prod"
 	@echo "  make GoBenchmark        - 运行基准测试"

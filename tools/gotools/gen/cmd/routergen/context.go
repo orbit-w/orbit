@@ -11,15 +11,19 @@ import (
 )
 
 type Context struct {
+	fdsParsed       bool // 标记是否已经解析过fds
+	mode            Mode
+	genProtoIDs     bool
+	genProtoCode    bool
 	outputDir       string
 	protobufInclude string
 	descFile        string
 	protoFiles      []string
 	fds             descriptor.FileDescriptorSet
-	fdsParsed       bool // 标记是否已经解析过fds
-	mode            Mode
-	genProtoIDs     bool
-	genProtoCode    bool
+	ReqMessage      []Message
+	NotifyMessage   []Message
+	StructMessage   []Message
+	RspMessages     []Message
 }
 
 func NewContext(protoFiles []string, outputDir, protobufInclude string) *Context {
@@ -30,6 +34,10 @@ func NewContext(protoFiles []string, outputDir, protobufInclude string) *Context
 		mode:            ModeNormal,
 		genProtoIDs:     true,
 		genProtoCode:    true,
+		ReqMessage:      []Message{},
+		NotifyMessage:   []Message{},
+		StructMessage:   []Message{},
+		RspMessages:     []Message{},
 	}
 }
 
@@ -136,4 +144,36 @@ func (c *Context) SetGenProtoCode(gen bool) {
 // GetGenProtoCode 获取是否生成协议代码
 func (c *Context) GetGenProtoCode() bool {
 	return c.genProtoCode
+}
+
+func (c *Context) GetReqMessage() []Message {
+	return c.ReqMessage
+}
+
+func (c *Context) GetNotifyMessage() []Message {
+	return c.NotifyMessage
+}
+
+func (c *Context) GetStructMessage() []Message {
+	return c.StructMessage
+}
+
+func (c *Context) AddReqMessage(msg Message) {
+	c.ReqMessage = append(c.ReqMessage, msg)
+}
+
+func (c *Context) AddNotifyMessage(msg Message) {
+	c.NotifyMessage = append(c.NotifyMessage, msg)
+}
+
+func (c *Context) AddStructMessage(msg Message) {
+	c.StructMessage = append(c.StructMessage, msg)
+}
+
+func (c *Context) AddRspMessage(msg Message) {
+	c.RspMessages = append(c.RspMessages, msg)
+}
+
+func (c *Context) AllNetMessages() []Message {
+	return append(append(c.ReqMessage, c.RspMessages...), c.NotifyMessage...)
 }

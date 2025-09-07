@@ -4,6 +4,11 @@ const (
 	MsgWallPrefix = "pb"
 
 	MsgWallReq    = "Request"
-	MsgWallRsp    = "Response"
 	MsgWallNotify = "Notify"
+
+	SuffixRsp      = "Rsp"
+	SuffixResponse = "Response"
+
+	CommonRspOK   = "OK"
+	CommonRspFail = "Fail"
 )

@@ -4,6 +4,7 @@ package routergen
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -29,6 +30,7 @@ func InitCmd(father *cobra.Command) {
 	genGlueCmd.Flags().Bool("quiet", false, "Enable quiet mode")
 	genGlueCmd.Flags().Bool("gen-proto-code", true, "Generate glue code")
 	genGlueCmd.Flags().Bool("gen-proto-ids", true, "Generate protocol IDs")
+	genGlueCmd.Flags().Bool("gen-pb-go", true, "Generate pb.go files using protoc")
 	genGlueCmd.Flags().String("proto-file", "", "Specific proto file to process (or directory)")
 
 	father.AddCommand(genGlueCmd)
@@ -41,6 +43,7 @@ func runRouterGluegen(cmd *cobra.Command, args []string) {
 	quietMode, _ := cmd.Flags().GetBool("quiet")
 	genProtoCode, _ := cmd.Flags().GetBool("gen-proto-code")
 	genProtoIDs, _ := cmd.Flags().GetBool("gen-proto-ids")
+	genPbGo, _ := cmd.Flags().GetBool("gen-pb-go")
 	protoFile, _ := cmd.Flags().GetString("proto-file")
 
 	// 确定运行模式
@@ -65,20 +68,31 @@ func runRouterGluegen(cmd *cobra.Command, args []string) {
 		return
 	}
 
+	// 首先生成 pb.go 文件
+	if genPbGo {
+		if err := generatePbGoFiles(protoFiles, outputDir, mode); err != nil {
+			fmt.Printf("Error generating pb.go files: %v\n", err)
+			return
+		}
+	}
+
 	// 创建Context并配置选项
 	ctx := NewContext(protoFiles, outputDir, protoDir)
 	ctx.SetMode(mode)
 	ctx.SetGenProtoIDs(genProtoIDs)
 	ctx.SetGenProtoCode(genProtoCode)
 
-	allMappings, err := processProtoFiles(ctx)
+	// 解析proto文件, 并生成请求和通知的胶水代码
+	err = processProtoFiles(ctx)
 	if err != nil {
 		fmt.Printf("Error processing proto files: %v\n", err)
 		return
 	}
 
-	if ctx.GetGenProtoIDs() && len(allMappings) > 0 {
-		if err := generateCommonProtocolMappings(allMappings, outputDir, ctx.GetMode()); err != nil {
+	// 生成协议ID
+	if ctx.GetGenProtoIDs() {
+		protoMapping := generateProtocolIDs(ctx)
+		if err := generateCommonProtocolMappings(protoMapping, outputDir, ctx.GetMode()); err != nil {
 			fmt.Printf("Error generating protocol mappings: %v\n", err)
 			return
 		}
@@ -115,12 +129,10 @@ func getProtoFiles(protoFile, protoDir string) ([]string, error) {
 	return findProtoFiles(protoDir)
 }
 
-func processProtoFiles(ctx *Context) ([]ProtocolIDMapping, error) {
-	var allMappings []ProtocolIDMapping
-
+func processProtoFiles(ctx *Context) error {
 	fds, err := ctx.ParseProtoFiles()
 	if err != nil {
-		return nil, fmt.Errorf("parsing proto files: %w", err)
+		return fmt.Errorf("parsing proto files: %w", err)
 	}
 
 	// Create a set of expected proto file basenames
@@ -129,14 +141,15 @@ func processProtoFiles(ctx *Context) ([]ProtocolIDMapping, error) {
 		expectedFiles[filepath.Base(p)] = struct{}{}
 	}
 
-	for _, fd := range fds {
+	for i := range fds {
+		fd := fds[i]
 		fileName := filepath.Base(fd.GetName())
 		if _, ok := expectedFiles[fileName]; !ok {
 			// Skip imported/dependency files
 			continue
 		}
 
-		mapping, err := processFileDescriptor(fd, ctx)
+		err := parseFileDescriptor(fd, ctx)
 		if err != nil {
 			if ctx.GetMode().ShouldPrint() {
 				fmt.Printf("Error processing %s: %v\n", fd.GetName(), err)
@@ -144,17 +157,28 @@ func processProtoFiles(ctx *Context) ([]ProtocolIDMapping, error) {
 			continue
 		}
 
-		if mapping != nil && len(mapping.MessageIDs) > 0 {
-			allMappings = append(allMappings, *mapping)
-		}
 	}
 
-	return allMappings, nil
+	if err := generateRequestGlueCode(ctx); err != nil {
+		if ctx.GetMode().ShouldPrint() {
+			fmt.Printf("Error generating request glue code: %v\n", err)
+		}
+		return err
+	}
+
+	if err := generateNotifyGlueCode(ctx); err != nil {
+		if ctx.GetMode().ShouldPrint() {
+			fmt.Printf("Error generating notify glue code: %v\n", err)
+		}
+		return err
+	}
+
+	return nil
 }
 
-// processFileDescriptor 处理单个文件描述符
+// parseFileDescriptor 处理单个文件描述符
 // 返回生成的协议ID映射和可能的错误
-func processFileDescriptor(fd *descriptor.FileDescriptorProto, ctx *Context) (*ProtocolIDMapping, error) {
+func parseFileDescriptor(fd *descriptor.FileDescriptorProto, ctx *Context) error {
 	if ctx.GetMode().ShouldPrint() {
 		fmt.Printf("Processing %s...\n", fd.GetName())
 	}
@@ -164,158 +188,37 @@ func processFileDescriptor(fd *descriptor.FileDescriptorProto, ctx *Context) (*P
 		if ctx.GetMode().ShouldPrint() {
 			fmt.Printf("Package name not found in %s\n", fd.GetName())
 		}
-		return nil, fmt.Errorf("package name not found in %s", fd.GetName())
+		return fmt.Errorf("package name not found in %s", fd.GetName())
 	}
 
-	if ctx.GetMode().ShouldPrint() {
-		fmt.Printf("Found package name: %s\n", packageName)
-	}
-
-	var mapping *ProtocolIDMapping
-
-	// 生成协议ID
-	if ctx.GetGenProtoIDs() {
-		protoMapping := generateProtocolIDs(fd, packageName, ctx.GetMode())
-		if len(protoMapping.MessageIDs) > 0 {
-			mapping = &protoMapping
-		}
-	}
-
-	// 生成协议代码
+	// 解析协议消息
 	if ctx.GetGenProtoCode() {
-		if err := processRequestMessages(fd, packageName, ctx); err != nil {
-			return mapping, fmt.Errorf("processing request messages: %w", err)
-		}
+		parseRequestMessages(ctx, fd, packageName)
 
-		if err := processNotifyMessages(fd, packageName, ctx); err != nil {
-			return mapping, fmt.Errorf("processing notify messages: %w", err)
-		}
+		parseNotifyMessages(ctx, fd, ctx.GetMode(), packageName)
 	}
 
-	return mapping, nil
-}
-
-// processRequestMessages 处理请求消息
-func processRequestMessages(fd *descriptor.FileDescriptorProto, packageName string, ctx *Context) error {
-	requestMessages := parseRequestMessages(fd, ctx.GetMode())
-	if len(requestMessages) > 0 {
-		if ctx.GetMode().ShouldPrint() {
-			fmt.Printf("Found %d request messages\n", len(requestMessages))
-			if ctx.GetMode().IsDebug() {
-				for i, msg := range requestMessages {
-					fmt.Printf("  Request %d: Name=%s, FullName=%s\n", i+1, msg.Name, msg.FullName)
-				}
-			}
-		}
-		if err := generateRequestGlueCode(requestMessages, packageName, ctx); err != nil {
-			if ctx.GetMode().ShouldPrint() {
-				fmt.Printf("Error generating request glue code: %v\n", err)
-			}
-			return err
-		}
-	} else if ctx.GetMode().ShouldPrint() {
-		fmt.Printf("No request messages found\n")
-	}
-	return nil
-}
-
-// processNotifyMessages 处理通知消息
-func processNotifyMessages(fd *descriptor.FileDescriptorProto, packageName string, ctx *Context) error {
-	notifyMessages := parseNotifyMessages(fd, ctx.GetMode())
-	if len(notifyMessages) > 0 {
-		if ctx.GetMode().ShouldPrint() {
-			fmt.Printf("Found %d notify messages\n", len(notifyMessages))
-			if ctx.GetMode().IsDebug() {
-				for i, msg := range notifyMessages {
-					fmt.Printf("  Notify %d: Name=%s, FullName=%s\n", i+1, msg.Name, msg.FullName)
-				}
-			}
-		}
-		if err := generateNotifyGlueCode(notifyMessages, packageName, ctx); err != nil {
-			if ctx.GetMode().ShouldPrint() {
-				fmt.Printf("Error generating notify glue code: %v\n", err)
-			}
-			return err
-		}
-	} else if ctx.GetMode().ShouldPrint() {
-		fmt.Printf("No notify messages found\n")
-	}
 	return nil
 }
 
 // generateProtocolIDs 生成协议ID
-func generateProtocolIDs(fd *descriptor.FileDescriptorProto, packageName string, mode Mode) ProtocolIDMapping {
-	// 提取所有消息名称，包括嵌套
-	messageNames := extractMessageNamesFromDescriptor(fd.MessageType, "")
-	if len(messageNames) == 0 {
-		if mode.IsDebug() {
-			fmt.Printf("No message definitions found for %s\n", packageName)
-		}
-		return ProtocolIDMapping{}
-	}
-
+func generateProtocolIDs(ctx *Context) ProtocolIDMapping {
 	// 生成协议ID映射
-	mapping := ProtocolIDMapping{
-		PackageName: packageName,
-	}
+	mapping := ProtocolIDMapping{}
+
+	messages := ctx.AllNetMessages()
 
 	// 按名称排序以得到一致的输出
-	sort.Slice(messageNames, func(i, j int) bool {
-		return messageNames[i].FullName < messageNames[j].FullName
+	sort.Slice(messages, func(i, j int) bool {
+		return messages[i].FullName < messages[j].FullName
 	})
 
-	// 为每个消息生成ID，只处理特定类型的消息
-	for _, msg := range messageNames {
-		// 跳过基本类型：Request, Notify
-		if msg.Name == "Request" || msg.Name == "Notify" {
-			if mode.IsDebug() {
-				fmt.Printf("Skipping base message type: %s\n", msg.Name)
-			}
-			continue
-		}
-
-		// 处理响应消息
-		if msg.Name == "Rsp" {
-			// 从父消息名称中提取请求名称
-			parentName := strings.TrimSuffix(msg.FullName, "_Rsp")
-			if strings.HasPrefix(parentName, "Request_") {
-				parentName = strings.TrimPrefix(parentName, "Request_")
-				// 使用Core-Request_SearchBook_Rsp格式的消息名称计算PID
-				fullName := fmt.Sprintf("%s-Request_%s_Rsp", packageName, parentName)
-				pid := protoid.HashProtoMessage(fullName)
-				mapping.MessageIDs = append(mapping.MessageIDs, MessageID{
-					Name: fmt.Sprintf("Request_%s_Rsp", parentName),
-					ID:   pid,
-				})
-				if mode.IsDebug() {
-					fmt.Printf("Generated PID for response message: %s, ID: 0x%016x\n", fullName, pid)
-				}
-			}
-			continue
-		}
-
-		// 只处理特定类型的消息
-		isRequest := strings.HasPrefix(msg.FullName, "Request_")
-		isNotify := strings.HasPrefix(msg.FullName, "Notify_")
-		isOK := msg.Name == "OK"
-		isFail := msg.Name == "Fail"
-
-		if !isRequest && !isNotify && !isOK && !isFail {
-			if mode.IsDebug() {
-				fmt.Printf("Skipping non-special message: %s\n", msg.FullName)
-			}
-			continue
-		}
-
-		fullName := fmt.Sprintf("%s-%s", packageName, msg.FullName)
-		pid := protoid.HashProtoMessage(fullName)
+	for _, msg := range messages {
+		pid := protoid.HashProtoMessage(msg.PidName)
 		mapping.MessageIDs = append(mapping.MessageIDs, MessageID{
 			Name: msg.FullName,
 			ID:   pid,
 		})
-		if mode.IsDebug() {
-			fmt.Printf("Generated PID for special message: %s, ID: 0x%016x\n", fullName, pid)
-		}
 	}
 
 	return mapping
@@ -336,231 +239,133 @@ func findProtoFiles(dir string) ([]string, error) {
 	return files, err
 }
 
-// extractMessageNamesFromDescriptor recursively extracts message names from descriptor
-func extractMessageNamesFromDescriptor(messages []*descriptor.DescriptorProto, msgWall string) []MessageName {
+func genRequestMessageNamesFromDescriptor(dp, father *descriptor.DescriptorProto, packageName string) MessageName {
+	msgInfo := MessageName{
+		Type: MessageTypeRequest,
+	}
+	ReqfullName := father.GetName() + "_" + dp.GetName()
+	msgInfo.ReqFullName = ReqfullName
+	msgInfo.MsgWall = father.GetName()
+	msgInfo.SetPackageName(packageName)
+	msgInfo.DP = dp
+
+	// 解析NestedType，如果NestedType中存在Rsp，则设置RspFullName
+	for _, nested := range dp.NestedType {
+		if nested.GetName() == SuffixRsp || nested.GetName() == SuffixResponse {
+			msgInfo.RspFullName = ReqfullName + "_" + SuffixRsp
+		}
+	}
+	return msgInfo
+}
+
+func genNotifyMessageNamesFromDescriptor(dp, father *descriptor.DescriptorProto, packageName string) MessageName {
+	msgInfo := MessageName{
+		Type: MessageTypeNotify,
+	}
+	NotifyfullName := father.GetName() + "_" + dp.GetName()
+	msgInfo.NotifyFullName = NotifyfullName
+	msgInfo.SetPackageName(packageName)
+	msgInfo.MsgWall = father.GetName()
+	msgInfo.DP = dp
+	return msgInfo
+}
+
+func extractMessageNamesFromDescriptorByMsgWall(messages []*descriptor.DescriptorProto, msgWall string, packageName string) []MessageName {
 	var names []MessageName
 	for _, msg := range messages {
-		fullName := msg.GetName()
-		if msgWall != "" {
-			fullName = msgWall + "_" + fullName
+		name := msg.GetName()
+		if name != msgWall {
+			continue
 		}
-		names = append(names, MessageName{
-			Name:     msg.GetName(),
-			FullName: fullName,
-			MsgWall:  msgWall,
-		})
-		names = append(names, extractMessageNamesFromDescriptor(msg.NestedType, fullName)...)
+
+		switch msgWall {
+		case MsgWallReq:
+			for i := range msg.NestedType {
+				msgInfo := genRequestMessageNamesFromDescriptor(msg.NestedType[i], msg, packageName)
+				names = append(names, msgInfo)
+			}
+		case MsgWallNotify:
+			for i := range msg.NestedType {
+				msgInfo := genNotifyMessageNamesFromDescriptor(msg.NestedType[i], msg, packageName)
+				names = append(names, msgInfo)
+			}
+		default:
+			panic(fmt.Sprintf("unknown msgWall: %s", msgWall))
+		}
 	}
 	return names
 }
 
 // 解析Request消息
-func parseRequestMessages(fd *descriptor.FileDescriptorProto, mode Mode) []Message {
-	var messages []Message
-
-	// Find the top-level Request message
-	var requestMsg *descriptor.DescriptorProto
-	for _, msg := range fd.MessageType {
-		if msg.GetName() == "Request" {
-			requestMsg = msg
-			break
-		}
-	}
-	if requestMsg == nil {
-		if mode.IsDebug() {
-			fmt.Println("DEBUG: Request message not found")
-		}
-		return messages
-	}
-
-	if mode.IsDebug() {
-		fmt.Println("DEBUG: Found Request message")
-	}
-
+func parseRequestMessages(ctx *Context, fd *descriptor.FileDescriptorProto, packageName string) {
 	// Extract nested messages from Request
-	allMessageNames := extractMessageNamesFromDescriptor(requestMsg.NestedType, MsgWallReq)
-	if mode.IsDebug() {
-		fmt.Printf("DEBUG: Found %d nested messages in Request block\n", len(allMessageNames))
-		for i, msg := range allMessageNames {
-			fmt.Printf("DEBUG:   Message %d: Name=%s, FullName=%s\n", i+1, msg.Name, msg.FullName)
-		}
-	}
-
-	// 过滤出Request_前缀的消息
+	allMessageNames := extractMessageNamesFromDescriptorByMsgWall(fd.MessageType, MsgWallReq, packageName)
 	for _, msgInfo := range allMessageNames {
-		// 忽略Rsp消息和通用的Request类型本身
-		if msgInfo.Name == MsgWallRsp || msgInfo.Name == MsgWallReq {
-			if mode.IsDebug() {
-				fmt.Printf("DEBUG: Skipping base message type: %s\n", msgInfo.Name)
-			}
-			continue
-		}
-
-		fullName := msgInfo.FullName
-		if !strings.HasPrefix(fullName, "Request_") {
-			// 确保消息名称有正确的前缀
-			fullName = "Request_" + fullName
-		}
-
-		if mode.IsDebug() {
-			fmt.Printf("DEBUG: Processing request message '%s'\n", fullName)
-		}
-
-		// Find the corresponding DescriptorProto
-		msgDesc := findMessageDescriptor(requestMsg.NestedType, msgInfo.Name)
-		if msgDesc == nil {
-			continue
-		}
-
-		message := Message{
-			Name:     msgInfo.Name,
-			Comment:  extractMessageCommentFromDescriptor(fd, msgDesc), // Implement this if needed
-			FullName: fullName,
+		req := Message{
+			Type:        msgInfo.Type,
+			Name:        msgInfo.Name,
+			FullName:    msgInfo.ReqFullName,
+			Response:    msgInfo.RspFullName,
+			PackageName: packageName,
+			PidName:     msgInfo.GetReqPidName(),
 		}
 
 		// Parse fields
-		for i, f := range msgDesc.Field {
+		for i, f := range msgInfo.DP.Field {
 			field := Field{
-				Type:    f.GetTypeName(), // Or resolve properly
-				Name:    f.GetName(),
-				Index:   i + 1,
-				Comment: extractFieldCommentFromDescriptor(fd, f), // Implement if needed
+				Type:  f.GetTypeName(), // Or resolve properly
+				Name:  f.GetName(),
+				Index: i + 1,
 			}
-			message.Fields = append(message.Fields, field)
+			req.Fields = append(req.Fields, field)
 		}
 
-		// 检查是否有对应的Rsp消息
-		rspFullName := fullName + "_Rsp"
-		rspExists := false
-
-		// 查找是否存在Rsp消息
-		for _, rspInfo := range allMessageNames {
-			if rspInfo.FullName == rspFullName ||
-				(rspInfo.Name == "Rsp" && strings.HasPrefix(rspInfo.FullName, fullName)) {
-				rspExists = true
-				break
+		if msgInfo.RspFullName != "" {
+			// 生成Rsp消息
+			rsp := Message{
+				Type:        MessageTypeRsp,
+				Name:        msgInfo.Name,
+				FullName:    msgInfo.RspFullName,
+				PackageName: packageName,
+				PidName:     msgInfo.GetRspPidName(),
 			}
+			ctx.AddRspMessage(rsp)
 		}
 
-		if rspExists {
-			message.Response = rspFullName
-			if mode.IsDebug() {
-				fmt.Printf("DEBUG: Found Rsp message for %s: %s\n", message.Name, message.Response)
-			}
-		} else {
-			message.Response = "OK" // 默认使用通用成功OK
-		}
-
-		messages = append(messages, message)
+		ctx.AddReqMessage(req)
 	}
-
-	return messages
-}
-
-// findMessageDescriptor finds a message descriptor by name in nested types
-func findMessageDescriptor(messages []*descriptor.DescriptorProto, name string) *descriptor.DescriptorProto {
-	for _, msg := range messages {
-		if msg.GetName() == name {
-			return msg
-		}
-		if nested := findMessageDescriptor(msg.NestedType, name); nested != nil {
-			return nested
-		}
-	}
-	return nil
-}
-
-// extractMessageCommentFromDescriptor extracts comment for a message (stub, implement if needed)
-func extractMessageCommentFromDescriptor(fd *descriptor.FileDescriptorProto, msg *descriptor.DescriptorProto) string {
-	// Use fd.SourceCodeInfo to get comments
-	// This is a stub; implement proper extraction if comments are crucial
-	return ""
-}
-
-// extractFieldCommentFromDescriptor extracts comment for a field (stub)
-func extractFieldCommentFromDescriptor(fd *descriptor.FileDescriptorProto, field *descriptor.FieldDescriptorProto) string {
-	return ""
 }
 
 // 解析Notify消息
-func parseNotifyMessages(fd *descriptor.FileDescriptorProto, mode Mode) []Message {
-	var messages []Message
-
-	// Find the top-level Notify message
-	var notifyMsg *descriptor.DescriptorProto
-	for _, msg := range fd.MessageType {
-		if msg.GetName() == "Notify" {
-			notifyMsg = msg
-			break
-		}
-	}
-	if notifyMsg == nil {
-		if mode.IsDebug() {
-			fmt.Println("DEBUG: Notify message not found")
-		}
-		return messages
-	}
-
-	if mode.IsDebug() {
-		fmt.Println("DEBUG: Found Notify message")
-	}
-
+func parseNotifyMessages(ctx *Context, fd *descriptor.FileDescriptorProto, mode Mode, packageName string) {
 	// Extract nested messages from Notify
-	allMessageNames := extractMessageNamesFromDescriptor(notifyMsg.NestedType, "Notify")
-	if mode.IsDebug() {
-		fmt.Printf("DEBUG: Found %d nested messages in Notify block\n", len(allMessageNames))
-		for i, msg := range allMessageNames {
-			fmt.Printf("DEBUG:   Message %d: Name=%s, FullName=%s\n", i+1, msg.Name, msg.FullName)
-		}
-	}
-
+	allMessageNames := extractMessageNamesFromDescriptorByMsgWall(fd.MessageType, MsgWallNotify, packageName)
 	// 过滤出Notify_前缀的消息
 	for _, msgInfo := range allMessageNames {
-		// 忽略通用的Notify类型本身
-		if msgInfo.Name == "Notify" {
-			if mode.IsDebug() {
-				fmt.Printf("DEBUG: Skipping base message type: %s\n", msgInfo.Name)
-			}
-			continue
-		}
-
-		fullName := msgInfo.FullName
-		if !strings.HasPrefix(fullName, "Notify_") {
-			// 确保消息名称有正确的前缀
-			fullName = "Notify_" + fullName
-		}
-
 		if mode.IsDebug() {
-			fmt.Printf("DEBUG: Processing notify message '%s'\n", fullName)
-		}
-
-		// Find the corresponding DescriptorProto
-		msgDesc := findMessageDescriptor(notifyMsg.NestedType, msgInfo.Name)
-		if msgDesc == nil {
-			continue
+			fmt.Printf("DEBUG: Processing notify message '%s'\n", msgInfo.NotifyFullName)
 		}
 
 		message := Message{
-			Name:     msgInfo.Name,
-			Comment:  extractMessageCommentFromDescriptor(fd, msgDesc),
-			FullName: fullName,
+			Type:        msgInfo.Type,
+			Name:        msgInfo.Name,
+			FullName:    msgInfo.NotifyFullName,
+			PackageName: packageName,
+			PidName:     msgInfo.GetNotifyPidName(),
 		}
 
 		// Parse fields
-		for i, f := range msgDesc.Field {
+		for i, f := range msgInfo.DP.Field {
 			field := Field{
-				Type:    f.GetTypeName(),
-				Name:    f.GetName(),
-				Index:   i + 1,
-				Comment: extractFieldCommentFromDescriptor(fd, f),
+				Type:  f.GetTypeName(),
+				Name:  f.GetName(),
+				Index: i + 1,
 			}
 			message.Fields = append(message.Fields, field)
 		}
 
-		messages = append(messages, message)
+		ctx.AddNotifyMessage(message)
 	}
-
-	return messages
 }
 
 // 提取go_package值
@@ -577,9 +382,9 @@ func extractGoPackage(fd *descriptor.FileDescriptorProto) string {
 }
 
 // 生成Request消息的胶水代码
-func generateRequestGlueCode(messages []Message, packageName string, ctx *Context) error {
+func generateRequestGlueCode(ctx *Context) error {
 	// 构建输出文件名
-	outputFile := filepath.Join(ctx.GetOutputDir(), strings.ToLower(packageName)+"_request_glue.go")
+	outputFile := filepath.Join(ctx.GetOutputDir(), "request_glue.go")
 	file, err := os.Create(outputFile)
 	if err != nil {
 		return fmt.Errorf("creating request glue file: %w", err)
@@ -595,33 +400,12 @@ func generateRequestGlueCode(messages []Message, packageName string, ctx *Contex
 	fmt.Fprintf(file, "\t\"fmt\"\n")
 	fmt.Fprintf(file, "\t\"github.com/gogo/protobuf/proto\"\n")
 
-	// 使用Context中缓存的fds数据
-	var goPackage string
-	fds, err := ctx.ParseProtoFiles()
-	if err != nil {
-		return fmt.Errorf("getting cached fds for glue code: %w", err)
-	}
-	for _, fd := range fds {
-		extractedPackage := fd.GetPackage()
-		if extractedPackage == packageName {
-			goPackage = extractGoPackage(fd)
-			break
-		}
-	}
-
-	// 如果找不到go_package，使用默认的包名
-	if goPackage == "" {
-		goPackage = strings.ToLower(packageName)
-		fmt.Fprintf(file, "\t\"gitee.com/orbit-w/orbit/app/proto/pb/%s\"\n", goPackage)
-	} else {
-		fmt.Fprintf(file, "\t\"gitee.com/orbit-w/orbit/app/proto/pb/%s\"\n", goPackage)
-	}
-
 	fmt.Fprintf(file, ")\n\n")
 
 	// 写入请求处理器接口
-	fmt.Fprintf(file, "// %sRequestHandler 处理%s包的请求消息\n", packageName, packageName)
-	fmt.Fprintf(file, "type %sRequestHandler interface {\n", packageName)
+	fmt.Fprintf(file, "// RequestHandler 处理包的请求消息\n")
+	fmt.Fprintf(file, "type RequestHandler interface {\n")
+	messages := ctx.GetReqMessage()
 	for _, msg := range messages {
 		if msg.Name == "Request" {
 			continue
@@ -630,13 +414,13 @@ func generateRequestGlueCode(messages []Message, packageName string, ctx *Contex
 		if msg.Comment != "" {
 			fmt.Fprintf(file, "\t// %s\n", msg.Comment)
 		}
-		fmt.Fprintf(file, "\tHandle%s(req *%s.%s) proto.Message\n", msg.Name, goPackage, msg.FullName)
+		fmt.Fprintf(file, "\tHandle%s(req *%s) proto.Message\n", msg.Name, msg.FullName)
 	}
 	fmt.Fprintf(file, "}\n\n")
 
 	// 生成分发函数
-	fmt.Fprintf(file, "// Dispatch%sRequestByID 根据协议ID分发请求到对应处理函数\n", packageName)
-	fmt.Fprintf(file, "func Dispatch%sRequestByID(handler %sRequestHandler, pid uint32, data []byte) (proto.Message, uint32, error) {\n", packageName, packageName)
+	fmt.Fprintf(file, "// DispatchRequestByID 根据协议ID分发请求到对应处理函数\n")
+	fmt.Fprintf(file, "func DispatchRequestByID(handler RequestHandler, pid uint32, data []byte) (proto.Message, uint32, error) {\n")
 	fmt.Fprintf(file, "\tvar response proto.Message\n")
 	fmt.Fprintf(file, "\tswitch pid {\n")
 
@@ -647,11 +431,11 @@ func generateRequestGlueCode(messages []Message, packageName string, ctx *Contex
 		}
 
 		// 生成pid以供参考
-		fullName := fmt.Sprintf("%s-%s", packageName, msg.FullName)
-		_ = protoid.HashProtoMessage(fullName)
+		_ = protoid.HashProtoMessage(msg.FullName)
+		fmt.Println("msg.FullName", msg.FullName)
 
-		fmt.Fprintf(file, "\tcase PID_%s_%s: // %s\n", packageName, msg.FullName, msg.FullName)
-		fmt.Fprintf(file, "\t\treq := &%s.%s{}\n", goPackage, msg.FullName)
+		fmt.Fprintf(file, "\tcase PID_%s: // %s\n", msg.FullName, msg.FullName)
+		fmt.Fprintf(file, "\t\treq := &%s{}\n", msg.FullName)
 		fmt.Fprintf(file, "\t\tif err := proto.Unmarshal(data, req); err != nil {\n")
 		fmt.Fprintf(file, "\t\t\treturn nil, 0, fmt.Errorf(\"unmarshal %s failed: %%w\", err)\n", msg.FullName)
 		fmt.Fprintf(file, "\t\t}\n\n")
@@ -674,9 +458,9 @@ func generateRequestGlueCode(messages []Message, packageName string, ctx *Contex
 }
 
 // 生成Notify消息的胶水代码
-func generateNotifyGlueCode(messages []Message, packageName string, ctx *Context) error {
+func generateNotifyGlueCode(ctx *Context) error {
 	// 构建输出文件名
-	outputFile := filepath.Join(ctx.GetOutputDir(), strings.ToLower(packageName)+"_notify_glue.go")
+	outputFile := filepath.Join(ctx.GetOutputDir(), "notify_glue.go")
 	file, err := os.Create(outputFile)
 	if err != nil {
 		return fmt.Errorf("creating notify glue file: %w", err)
@@ -692,34 +476,13 @@ func generateNotifyGlueCode(messages []Message, packageName string, ctx *Context
 	fmt.Fprintf(file, "\t\"fmt\"\n")
 	fmt.Fprintf(file, "\t\"github.com/gogo/protobuf/proto\"\n")
 
-	// 使用Context中缓存的fds数据
-	var goPackage string
-	fds, err := ctx.ParseProtoFiles()
-	if err != nil {
-		return fmt.Errorf("getting cached fds for glue code: %w", err)
-	}
-	for _, fd := range fds {
-		extractedPackage := fd.GetPackage()
-		if extractedPackage == packageName {
-			goPackage = extractGoPackage(fd)
-			break
-		}
-	}
-
-	// 如果找不到go_package，使用默认的包名
-	if goPackage == "" {
-		goPackage = strings.ToLower(packageName)
-		fmt.Fprintf(file, "\t\"gitee.com/orbit-w/orbit/app/proto/pb/%s\"\n", goPackage)
-	} else {
-		fmt.Fprintf(file, "\t\"gitee.com/orbit-w/orbit/app/proto/pb/%s\"\n", goPackage)
-	}
-
 	fmt.Fprintf(file, ")\n\n")
 
 	// 生成分发函数
-	fmt.Fprintf(file, "// Parse%sNotifyByID 根据协议ID解析通知消息\n", packageName)
-	fmt.Fprintf(file, "func Parse%sNotifyByID(pid uint32, data []byte) (proto.Message, uint32, error) {\n", packageName)
+	fmt.Fprintf(file, "// ParseNotifyByID 根据协议ID解析通知消息\n")
+	fmt.Fprintf(file, "func ParseNotifyByID(pid uint32, data []byte) (proto.Message, uint32, error) {\n")
 	fmt.Fprintf(file, "\tswitch pid {\n")
+	messages := ctx.GetNotifyMessage()
 
 	for _, msg := range messages {
 		// 跳过不符合条件的消息
@@ -728,11 +491,11 @@ func generateNotifyGlueCode(messages []Message, packageName string, ctx *Context
 		}
 
 		// 生成pid以供参考
-		fullName := fmt.Sprintf("%s-%s", packageName, msg.FullName)
-		_ = protoid.HashProtoMessage(fullName)
+		_ = protoid.HashProtoMessage(msg.FullName)
+		fmt.Println("msg.FullName", msg.FullName)
 
-		fmt.Fprintf(file, "\tcase PID_%s_%s: // %s\n", packageName, msg.FullName, msg.FullName)
-		fmt.Fprintf(file, "\t\tnotify := &%s.%s{}\n", goPackage, msg.FullName)
+		fmt.Fprintf(file, "\tcase PID_%s: // %s\n", msg.FullName, msg.FullName)
+		fmt.Fprintf(file, "\t\tnotify := &%s{}\n", msg.FullName)
 		fmt.Fprintf(file, "\t\tif err := proto.Unmarshal(data, notify); err != nil {\n")
 		fmt.Fprintf(file, "\t\t\treturn nil, 0, fmt.Errorf(\"unmarshal %s failed: %%w\", err)\n", msg.FullName)
 		fmt.Fprintf(file, "\t\t}\n")
@@ -754,9 +517,9 @@ func generateNotifyGlueCode(messages []Message, packageName string, ctx *Context
 		if msg.Comment != "" {
 			fmt.Fprintf(file, "// %s\n", msg.Comment)
 		}
-		fmt.Fprintf(file, "func Marshal%s(notify *%s.%s) ([]byte, uint32, error) {\n", msg.Name, goPackage, msg.FullName)
+		fmt.Fprintf(file, "func Marshal%s(notify *%s) ([]byte, uint32, error) {\n", msg.Name, msg.FullName)
 		fmt.Fprintf(file, "\tdata, err := proto.Marshal(notify)\n")
-		fmt.Fprintf(file, "\treturn data, PID_%s_%s, err\n", packageName, msg.FullName)
+		fmt.Fprintf(file, "\treturn data, PID_%s, err\n", msg.FullName)
 		fmt.Fprintf(file, "}\n\n")
 	}
 
@@ -767,7 +530,7 @@ func generateNotifyGlueCode(messages []Message, packageName string, ctx *Context
 }
 
 // generateCommonProtocolMappings 生成公共的协议ID映射文件
-func generateCommonProtocolMappings(allMappings []ProtocolIDMapping, outputDir string, mode Mode) error {
+func generateCommonProtocolMappings(allMappings ProtocolIDMapping, outputDir string, mode Mode) error {
 	outputFile := filepath.Join(outputDir, "protocol_ids.go")
 
 	file, err := os.Create(outputFile)
@@ -790,46 +553,37 @@ func generateCommonProtocolMappings(allMappings []ProtocolIDMapping, outputDir s
 	// 生成所有协议ID常量
 	fmt.Fprintf(file, "// 所有协议ID常量\n")
 	fmt.Fprintf(file, "const (\n")
-	for _, mapping := range allMappings {
-		fmt.Fprintf(file, "\t// %s 包协议ID\n", mapping.PackageName)
-		for _, msgID := range mapping.MessageIDs {
-			fmt.Fprintf(file, "\tPID_%s_%s uint32 = 0x%08x // %s.%s\n",
-				mapping.PackageName, msgID.Name, msgID.ID, mapping.PackageName, msgID.Name)
-		}
-		fmt.Fprintf(file, "\n")
+	for _, msgID := range allMappings.MessageIDs {
+		fmt.Fprintf(file, "\tPID_%s uint32 = 0x%08x // %s\n",
+			msgID.Name, msgID.ID, msgID.Name)
 	}
+	fmt.Fprintf(file, "\n")
 	fmt.Fprintf(file, ")\n\n")
 
 	// 生成全局的 MessageNameToID 映射
 	fmt.Fprintf(file, "// AllMessageNameToID 全局消息名称到ID的映射\n")
 	fmt.Fprintf(file, "var AllMessageNameToID = map[string]uint32{\n")
-	for _, mapping := range allMappings {
-		for _, msgID := range mapping.MessageIDs {
-			fmt.Fprintf(file, "\t\"%s-%s\": PID_%s_%s,\n",
-				mapping.PackageName, msgID.Name, mapping.PackageName, msgID.Name)
-		}
+	for _, msgID := range allMappings.MessageIDs {
+		fmt.Fprintf(file, "\t\"%s\": PID_%s,\n",
+			msgID.Name, msgID.Name)
 	}
 	fmt.Fprintf(file, "}\n\n")
 
 	// 生成全局的 IDToMessageName 映射
 	fmt.Fprintf(file, "// AllIDToMessageName 全局ID到消息名称的映射\n")
 	fmt.Fprintf(file, "var AllIDToMessageName = map[uint32]string{\n")
-	for _, mapping := range allMappings {
-		for _, msgID := range mapping.MessageIDs {
-			fmt.Fprintf(file, "\tPID_%s_%s: \"%s-%s\",\n",
-				mapping.PackageName, msgID.Name, mapping.PackageName, msgID.Name)
-		}
+	for _, msgID := range allMappings.MessageIDs {
+		fmt.Fprintf(file, "\tPID_%s: \"%s\",\n",
+			msgID.Name, msgID.Name)
 	}
 	fmt.Fprintf(file, "}\n\n")
 
 	// 生成 MessagePackageMap 映射
 	fmt.Fprintf(file, "// MessagePackageMap 消息名称到包名的映射\n")
 	fmt.Fprintf(file, "var MessagePackageMap = map[string]string{\n")
-	for _, mapping := range allMappings {
-		for _, msgID := range mapping.MessageIDs {
-			fmt.Fprintf(file, "\t\"%s\": \"%s\",\n",
-				msgID.Name, mapping.PackageName)
-		}
+	for _, msgID := range allMappings.MessageIDs {
+		fmt.Fprintf(file, "\t\"%s\": \"%s\",\n",
+			msgID.Name, msgID.Name)
 	}
 	fmt.Fprintf(file, "}\n\n")
 
@@ -871,5 +625,52 @@ func generateCommonProtocolMappings(allMappings []ProtocolIDMapping, outputDir s
 	if mode.ShouldPrint() {
 		fmt.Printf("Generated common protocol ID mappings in %s\n", outputFile)
 	}
+	return nil
+}
+
+// generatePbGoFiles 使用 protoc 生成 pb.go 文件
+func generatePbGoFiles(protoFiles []string, outputDir string, mode Mode) error {
+	if len(protoFiles) == 0 {
+		return fmt.Errorf("no proto files to process")
+	}
+
+	// 获取第一个proto文件的目录作为基础目录
+	protoDir := filepath.Dir(protoFiles[0])
+
+	// 确保输出目录存在
+	if err := ensureOutputDir(outputDir); err != nil {
+		return fmt.Errorf("failed to create output directory %s: %w", outputDir, err)
+	}
+
+	// 为每个proto文件生成pb.go文件到同一个目录
+	for _, protoFile := range protoFiles {
+		if mode.ShouldPrint() {
+			fmt.Printf("Generating pb.go for %s...\n", protoFile)
+		}
+
+		// 构建protoc命令参数
+		var cmdArgs []string
+		cmdArgs = append(cmdArgs,
+			"--proto_path=.",
+			"--proto_path="+protoDir,
+			"--proto_path=vendor/github.com/asynkron/protoactor-go/actor",
+			"--proto_path=$GOPATH/pkg/mod",
+			"--go_out="+outputDir,
+			"--go_opt=paths=source_relative",
+		)
+		cmdArgs = append(cmdArgs, protoFile)
+
+		// 执行protoc命令
+		cmd := exec.Command("protoc", cmdArgs...)
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("protoc failed for %s: %w\nOutput: %s", protoFile, err, output)
+		}
+
+		if mode.ShouldPrint() {
+			fmt.Printf("Generated pb.go file for %s in %s\n", filepath.Base(protoFile), outputDir)
+		}
+	}
+
 	return nil
 }

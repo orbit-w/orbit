@@ -6,7 +6,7 @@
 
 //消息所属的包，需要和文件名相同
 
-package pb_core
+package pb
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -24,26 +24,26 @@ const (
 )
 
 // ------发送墙，包含的消息可以由客户端发送，由服务端回复rsp
-type Request struct {
+type CoreRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Request) Reset() {
-	*x = Request{}
+func (x *CoreRequest) Reset() {
+	*x = CoreRequest{}
 	mi := &file_example_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Request) String() string {
+func (x *CoreRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Request) ProtoMessage() {}
+func (*CoreRequest) ProtoMessage() {}
 
-func (x *Request) ProtoReflect() protoreflect.Message {
+func (x *CoreRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_example_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -55,8 +55,8 @@ func (x *Request) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Request.ProtoReflect.Descriptor instead.
-func (*Request) Descriptor() ([]byte, []int) {
+// Deprecated: Use CoreRequest.ProtoReflect.Descriptor instead.
+func (*CoreRequest) Descriptor() ([]byte, []int) {
 	return file_example_proto_rawDescGZIP(), []int{0}
 }
 
@@ -142,91 +142,9 @@ func (x *Book) GetContent() string {
 	return ""
 }
 
-// 通用成功
-type OK struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *OK) Reset() {
-	*x = OK{}
-	mi := &file_example_proto_msgTypes[3]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *OK) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*OK) ProtoMessage() {}
-
-func (x *OK) ProtoReflect() protoreflect.Message {
-	mi := &file_example_proto_msgTypes[3]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use OK.ProtoReflect.Descriptor instead.
-func (*OK) Descriptor() ([]byte, []int) {
-	return file_example_proto_rawDescGZIP(), []int{3}
-}
-
-// 通用失败
-type Fail struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Reason        string                 `protobuf:"bytes,1,opt,name=Reason,proto3" json:"Reason,omitempty"` //Reason建议命名：error_墙名_消息名_Reason
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *Fail) Reset() {
-	*x = Fail{}
-	mi := &file_example_proto_msgTypes[4]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *Fail) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Fail) ProtoMessage() {}
-
-func (x *Fail) ProtoReflect() protoreflect.Message {
-	mi := &file_example_proto_msgTypes[4]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Fail.ProtoReflect.Descriptor instead.
-func (*Fail) Descriptor() ([]byte, []int) {
-	return file_example_proto_rawDescGZIP(), []int{4}
-}
-
-func (x *Fail) GetReason() string {
-	if x != nil {
-		return x.Reason
-	}
-	return ""
-}
-
 // 只有直接放在消息前的注释会被胶水代码读取
 // 名字可以随便取，同一个包内不能重名
-type Request_SearchBook struct {
+type CoreRequest_SearchBook struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Query         string                 `protobuf:"bytes,1,opt,name=Query,proto3" json:"Query,omitempty"` //这行注释会被胶水代码读取
 	PageNumber    int32                  `protobuf:"varint,2,opt,name=PageNumber,proto3" json:"PageNumber,omitempty"`
@@ -234,21 +152,21 @@ type Request_SearchBook struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Request_SearchBook) Reset() {
-	*x = Request_SearchBook{}
-	mi := &file_example_proto_msgTypes[5]
+func (x *CoreRequest_SearchBook) Reset() {
+	*x = CoreRequest_SearchBook{}
+	mi := &file_example_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Request_SearchBook) String() string {
+func (x *CoreRequest_SearchBook) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Request_SearchBook) ProtoMessage() {}
+func (*CoreRequest_SearchBook) ProtoMessage() {}
 
-func (x *Request_SearchBook) ProtoReflect() protoreflect.Message {
-	mi := &file_example_proto_msgTypes[5]
+func (x *CoreRequest_SearchBook) ProtoReflect() protoreflect.Message {
+	mi := &file_example_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -259,19 +177,19 @@ func (x *Request_SearchBook) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Request_SearchBook.ProtoReflect.Descriptor instead.
-func (*Request_SearchBook) Descriptor() ([]byte, []int) {
+// Deprecated: Use CoreRequest_SearchBook.ProtoReflect.Descriptor instead.
+func (*CoreRequest_SearchBook) Descriptor() ([]byte, []int) {
 	return file_example_proto_rawDescGZIP(), []int{0, 0}
 }
 
-func (x *Request_SearchBook) GetQuery() string {
+func (x *CoreRequest_SearchBook) GetQuery() string {
 	if x != nil {
 		return x.Query
 	}
 	return ""
 }
 
-func (x *Request_SearchBook) GetPageNumber() int32 {
+func (x *CoreRequest_SearchBook) GetPageNumber() int32 {
 	if x != nil {
 		return x.PageNumber
 	}
@@ -279,27 +197,27 @@ func (x *Request_SearchBook) GetPageNumber() int32 {
 }
 
 // 心跳
-type Request_HeartBeat struct {
+type CoreRequest_HeartBeat struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Request_HeartBeat) Reset() {
-	*x = Request_HeartBeat{}
-	mi := &file_example_proto_msgTypes[6]
+func (x *CoreRequest_HeartBeat) Reset() {
+	*x = CoreRequest_HeartBeat{}
+	mi := &file_example_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Request_HeartBeat) String() string {
+func (x *CoreRequest_HeartBeat) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Request_HeartBeat) ProtoMessage() {}
+func (*CoreRequest_HeartBeat) ProtoMessage() {}
 
-func (x *Request_HeartBeat) ProtoReflect() protoreflect.Message {
-	mi := &file_example_proto_msgTypes[6]
+func (x *CoreRequest_HeartBeat) ProtoReflect() protoreflect.Message {
+	mi := &file_example_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -310,35 +228,35 @@ func (x *Request_HeartBeat) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Request_HeartBeat.ProtoReflect.Descriptor instead.
-func (*Request_HeartBeat) Descriptor() ([]byte, []int) {
+// Deprecated: Use CoreRequest_HeartBeat.ProtoReflect.Descriptor instead.
+func (*CoreRequest_HeartBeat) Descriptor() ([]byte, []int) {
 	return file_example_proto_rawDescGZIP(), []int{0, 1}
 }
 
 // 该请求的回复消息，名字必须为Rsp，
 // 如果没有，则默认回复为通用成功OK
-type Request_SearchBook_Rsp struct {
+type CoreRequest_SearchBook_Rsp struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Result        *Book                  `protobuf:"bytes,1,opt,name=Result,proto3" json:"Result,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Request_SearchBook_Rsp) Reset() {
-	*x = Request_SearchBook_Rsp{}
-	mi := &file_example_proto_msgTypes[7]
+func (x *CoreRequest_SearchBook_Rsp) Reset() {
+	*x = CoreRequest_SearchBook_Rsp{}
+	mi := &file_example_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Request_SearchBook_Rsp) String() string {
+func (x *CoreRequest_SearchBook_Rsp) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Request_SearchBook_Rsp) ProtoMessage() {}
+func (*CoreRequest_SearchBook_Rsp) ProtoMessage() {}
 
-func (x *Request_SearchBook_Rsp) ProtoReflect() protoreflect.Message {
-	mi := &file_example_proto_msgTypes[7]
+func (x *CoreRequest_SearchBook_Rsp) ProtoReflect() protoreflect.Message {
+	mi := &file_example_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -349,12 +267,12 @@ func (x *Request_SearchBook_Rsp) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Request_SearchBook_Rsp.ProtoReflect.Descriptor instead.
-func (*Request_SearchBook_Rsp) Descriptor() ([]byte, []int) {
+// Deprecated: Use CoreRequest_SearchBook_Rsp.ProtoReflect.Descriptor instead.
+func (*CoreRequest_SearchBook_Rsp) Descriptor() ([]byte, []int) {
 	return file_example_proto_rawDescGZIP(), []int{0, 0, 0}
 }
 
-func (x *Request_SearchBook_Rsp) GetResult() *Book {
+func (x *CoreRequest_SearchBook_Rsp) GetResult() *Book {
 	if x != nil {
 		return x.Result
 	}
@@ -370,7 +288,7 @@ type Notify_BeAttacked struct {
 
 func (x *Notify_BeAttacked) Reset() {
 	*x = Notify_BeAttacked{}
-	mi := &file_example_proto_msgTypes[8]
+	mi := &file_example_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -382,7 +300,7 @@ func (x *Notify_BeAttacked) String() string {
 func (*Notify_BeAttacked) ProtoMessage() {}
 
 func (x *Notify_BeAttacked) ProtoReflect() protoreflect.Message {
-	mi := &file_example_proto_msgTypes[8]
+	mi := &file_example_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -409,28 +327,23 @@ var File_example_proto protoreflect.FileDescriptor
 
 const file_example_proto_rawDesc = "" +
 	"\n" +
-	"\rexample.proto\x12\x04Core\"\x85\x01\n" +
-	"\aRequest\x1am\n" +
+	"\rexample.proto\x12\x02pb\"\x87\x01\n" +
+	"\vCoreRequest\x1ak\n" +
 	"\n" +
 	"SearchBook\x12\x14\n" +
 	"\x05Query\x18\x01 \x01(\tR\x05Query\x12\x1e\n" +
 	"\n" +
 	"PageNumber\x18\x02 \x01(\x05R\n" +
-	"PageNumber\x1a)\n" +
-	"\x03Rsp\x12\"\n" +
-	"\x06Result\x18\x01 \x01(\v2\n" +
-	".Core.BookR\x06Result\x1a\v\n" +
+	"PageNumber\x1a'\n" +
+	"\x03Rsp\x12 \n" +
+	"\x06Result\x18\x01 \x01(\v2\b.pb.BookR\x06Result\x1a\v\n" +
 	"\tHeartBeat\",\n" +
 	"\x06Notify\x1a\"\n" +
 	"\n" +
 	"BeAttacked\x12\x14\n" +
 	"\x05CurHp\x18\x01 \x01(\x05R\x05CurHp\" \n" +
 	"\x04Book\x12\x18\n" +
-	"\aContent\x18\x01 \x01(\tR\aContent\"\x04\n" +
-	"\x02OK\"\x1e\n" +
-	"\x04Fail\x12\x16\n" +
-	"\x06Reason\x18\x01 \x01(\tR\x06ReasonB\fZ\n" +
-	"pb/pb_coreb\x06proto3"
+	"\aContent\x18\x01 \x01(\tR\aContentB&Z$gitee.com/orbit-w/orbit/app/proto/pbb\x06proto3"
 
 var (
 	file_example_proto_rawDescOnce sync.Once
@@ -444,20 +357,18 @@ func file_example_proto_rawDescGZIP() []byte {
 	return file_example_proto_rawDescData
 }
 
-var file_example_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_example_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_example_proto_goTypes = []any{
-	(*Request)(nil),                // 0: Core.Request
-	(*Notify)(nil),                 // 1: Core.Notify
-	(*Book)(nil),                   // 2: Core.Book
-	(*OK)(nil),                     // 3: Core.OK
-	(*Fail)(nil),                   // 4: Core.Fail
-	(*Request_SearchBook)(nil),     // 5: Core.Request.SearchBook
-	(*Request_HeartBeat)(nil),      // 6: Core.Request.HeartBeat
-	(*Request_SearchBook_Rsp)(nil), // 7: Core.Request.SearchBook.Rsp
-	(*Notify_BeAttacked)(nil),      // 8: Core.Notify.BeAttacked
+	(*CoreRequest)(nil),                // 0: pb.CoreRequest
+	(*Notify)(nil),                     // 1: pb.Notify
+	(*Book)(nil),                       // 2: pb.Book
+	(*CoreRequest_SearchBook)(nil),     // 3: pb.CoreRequest.SearchBook
+	(*CoreRequest_HeartBeat)(nil),      // 4: pb.CoreRequest.HeartBeat
+	(*CoreRequest_SearchBook_Rsp)(nil), // 5: pb.CoreRequest.SearchBook.Rsp
+	(*Notify_BeAttacked)(nil),          // 6: pb.Notify.BeAttacked
 }
 var file_example_proto_depIdxs = []int32{
-	2, // 0: Core.Request.SearchBook.Rsp.Result:type_name -> Core.Book
+	2, // 0: pb.CoreRequest.SearchBook.Rsp.Result:type_name -> pb.Book
 	1, // [1:1] is the sub-list for method output_type
 	1, // [1:1] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
@@ -476,7 +387,7 @@ func file_example_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_example_proto_rawDesc), len(file_example_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

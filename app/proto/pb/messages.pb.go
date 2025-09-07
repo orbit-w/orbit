@@ -6,7 +6,7 @@
 
 // 定义RPC通信协议包名
 
-package messages
+package pb
 
 import (
 	actor "github.com/asynkron/protoactor-go/actor"
@@ -122,12 +122,12 @@ var File_messages_proto protoreflect.FileDescriptor
 
 const file_messages_proto_rawDesc = "" +
 	"\n" +
-	"\x0emessages.proto\x12\bmessages\x1a\vactor.proto\"5\n" +
+	"\x0emessages.proto\x12\x02pb\x1a\vactor.proto\"5\n" +
 	"\x0fRpcHelloRequest\x12\"\n" +
 	"\x06Sender\x18\x01 \x01(\v2\n" +
 	".actor.PIDR\x06Sender\",\n" +
 	"\x10RpcHelloResponse\x12\x18\n" +
-	"\aMessage\x18\x01 \x01(\tR\aMessageB\rZ\vpb/messagesb\x06proto3"
+	"\aMessage\x18\x01 \x01(\tR\aMessageB&Z$gitee.com/orbit-w/orbit/app/proto/pbb\x06proto3"
 
 var (
 	file_messages_proto_rawDescOnce sync.Once
@@ -143,12 +143,12 @@ func file_messages_proto_rawDescGZIP() []byte {
 
 var file_messages_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_messages_proto_goTypes = []any{
-	(*RpcHelloRequest)(nil),  // 0: messages.RpcHelloRequest
-	(*RpcHelloResponse)(nil), // 1: messages.RpcHelloResponse
+	(*RpcHelloRequest)(nil),  // 0: pb.RpcHelloRequest
+	(*RpcHelloResponse)(nil), // 1: pb.RpcHelloResponse
 	(*actor.PID)(nil),        // 2: actor.PID
 }
 var file_messages_proto_depIdxs = []int32{
-	2, // 0: messages.RpcHelloRequest.Sender:type_name -> actor.PID
+	2, // 0: pb.RpcHelloRequest.Sender:type_name -> actor.PID
 	1, // [1:1] is the sub-list for method output_type
 	1, // [1:1] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
