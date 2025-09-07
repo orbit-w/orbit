@@ -9,6 +9,6 @@ const (
 	SuffixRsp      = "Rsp"
 	SuffixResponse = "Response"
 
-	CommonRspOK   = "OK"
-	CommonRspFail = "Fail"
+	CommonRspOK   = "Rsp_OK"
+	CommonRspFail = "Rsp_Fail"
 )

@@ -219,6 +219,17 @@ func generateProtocolIDs(ctx *Context) ProtocolIDMapping {
 		})
 	}
 
+	// 添加Rsp_OK消息
+	mapping.MessageIDs = append(mapping.MessageIDs, MessageID{
+		Name: CommonRspOK,
+		ID:   protoid.HashProtoMessage(CommonRspOK),
+	})
+
+	// 添加Rsp_Fail消息
+	mapping.MessageIDs = append(mapping.MessageIDs, MessageID{
+		Name: CommonRspFail,
+		ID:   protoid.HashProtoMessage(CommonRspFail),
+	})
 	return mapping
 }
 
