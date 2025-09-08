@@ -405,29 +405,16 @@ func generateRequestGlueCode(ctx *Context) error {
 
 	// 导入必要的包
 	fmt.Fprintf(file, "import (\n")
-	fmt.Fprintf(file, "\t\"fmt\"\n")
+	fmt.Fprintf(file, "\t\"fmt\"\n\n")
 	fmt.Fprintf(file, "\t\"github.com/gogo/protobuf/proto\"\n")
-
 	fmt.Fprintf(file, ")\n\n")
 
-	// 写入请求处理器接口
-	fmt.Fprintf(file, "// RequestHandler 处理包的请求消息\n")
-	fmt.Fprintf(file, "type RequestHandler interface {\n")
 	messages := ctx.GetReqMessage()
-	for i := range messages {
-		msg := messages[i]
-		fmt.Fprintf(file, "\t// Handle%s 处理%s请求\n", msg.Name, msg.Name)
-		if msg.Comment != "" {
-			fmt.Fprintf(file, "\t// %s\n", msg.Comment)
-		}
-		fmt.Fprintf(file, "\tHandle%s(req *%s) proto.Message\n", msg.Name, msg.FullName)
-	}
-	fmt.Fprintf(file, "}\n\n")
 
-	// 生成分发函数
-	fmt.Fprintf(file, "// DispatchRequestByID 根据协议ID分发请求到对应处理函数\n")
-	fmt.Fprintf(file, "func DispatchRequestByID(handler RequestHandler, pid uint32, data []byte) (proto.Message, uint32, error) {\n")
-	fmt.Fprintf(file, "\tvar response proto.Message\n")
+	// 生成UnmarshalRequest函数
+	fmt.Fprintf(file, "// UnmarshalRequest 根据协议ID分发请求到对应处理函数\n")
+	fmt.Fprintf(file, "func UnmarshalRequest(pid uint32, data []byte) (proto.Message, error) {\n")
+	fmt.Fprintf(file, "\tvar req proto.Message\n")
 	fmt.Fprintf(file, "\tswitch pid {\n")
 
 	for i := range messages {
@@ -436,21 +423,17 @@ func generateRequestGlueCode(ctx *Context) error {
 		_ = protoid.HashProtoMessage(msg.FullName)
 
 		fmt.Fprintf(file, "\tcase PID_%s: // %s\n", msg.FullName, msg.FullName)
-		fmt.Fprintf(file, "\t\treq := &%s{}\n", msg.FullName)
+		fmt.Fprintf(file, "\t\treq = &%s{}\n", msg.FullName)
 		fmt.Fprintf(file, "\t\tif err := proto.Unmarshal(data, req); err != nil {\n")
-		fmt.Fprintf(file, "\t\t\treturn nil, 0, fmt.Errorf(\"unmarshal %s failed: %%w\", err)\n", msg.FullName)
-		fmt.Fprintf(file, "\t\t}\n\n")
-		fmt.Fprintf(file, "\t\tresponse = handler.Handle%s(req)\n", msg.Name)
-		fmt.Fprintf(file, "\t\n")
+		fmt.Fprintf(file, "\t\t\treturn nil, fmt.Errorf(\"unmarshal %s failed: %%w\", err)\n", msg.FullName)
+		fmt.Fprintf(file, "\t\t}\n")
 	}
 
 	fmt.Fprintf(file, "\tdefault:\n")
-	fmt.Fprintf(file, "\t\treturn nil, 0, fmt.Errorf(\"unknown request protocol ID: 0x%%08x\", pid)\n")
-	fmt.Fprintf(file, "\t}\n\n")
-	fmt.Fprintf(file, "\t// 使用公共映射文件获取响应ID\n")
-	fmt.Fprintf(file, "\tresponsePid := GetResponsePID(response)\n")
-	fmt.Fprintf(file, "\treturn response, responsePid, nil\n")
-	fmt.Fprintf(file, "}\n")
+	fmt.Fprintf(file, "\t\treturn nil, fmt.Errorf(\"unknown request protocol ID: 0x%%08x\", pid)\n")
+	fmt.Fprintf(file, "\t}\n")
+	fmt.Fprintf(file, "\treturn req, nil\n")
+	fmt.Fprintf(file, "}\n\n")
 
 	if ctx.GetMode().ShouldPrint() {
 		fmt.Printf("Generated request glue code in %s\n", outputFile)

@@ -5,6 +5,10 @@ import (
 	"github.com/gogo/protobuf/proto"
 )
 
+var (
+	GExampleController = &ExampleController{}
+)
+
 type ExampleController struct {
 }
 
