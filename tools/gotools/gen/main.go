@@ -5,7 +5,8 @@ import (
 	"os"
 
 	cmd "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/gostructs_gen"
-	"gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/routergen"
+	"gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/protocolgen"
+	router_gen "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/router_gen"
 	"github.com/spf13/cobra"
 )
 
@@ -18,7 +19,8 @@ This includes generating extension methods for protocol buffers (gostructs_gen) 
 
 func init() {
 	cmd.InitCmd(RootCmd)
-	routergen.InitCmd(RootCmd)
+	protocolgen.InitCmd(RootCmd)
+	router_gen.InitCmd(RootCmd)
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

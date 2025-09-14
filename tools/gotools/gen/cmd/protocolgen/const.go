@@ -1,4 +1,4 @@
-package routergen
+package protocolgen
 
 const (
 	MsgWallPrefix = "pb"

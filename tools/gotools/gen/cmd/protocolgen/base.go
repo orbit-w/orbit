@@ -1,4 +1,4 @@
-package routergen
+package protocolgen
 
 import descriptor "github.com/gogo/protobuf/protoc-gen-gogo/descriptor"
 

@@ -1,5 +1,5 @@
 // Package main provides a tool for generating protocol IDs and glue code from proto message definitions
-package routergen
+package protocolgen
 
 import (
 	"fmt"
@@ -17,7 +17,7 @@ import (
 
 var (
 	genGlueCmd = &cobra.Command{
-		Use:   "routergen",
+		Use:   "protocolgen",
 		Short: "Generate protocol IDs and glue code from proto files",
 		Run:   runRouterGluegen,
 	}

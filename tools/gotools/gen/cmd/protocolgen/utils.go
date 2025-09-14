@@ -1,4 +1,4 @@
-package routergen
+package protocolgen
 
 import "unicode"
 

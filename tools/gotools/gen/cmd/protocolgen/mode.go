@@ -1,4 +1,4 @@
-package routergen
+package protocolgen
 
 // Mode 定义运行模式
 type Mode int

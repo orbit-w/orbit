@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"gitee.com/orbit-w/orbit/app/core/dispatch"
+// "gitee.com/orbit-w/orbit/app/core/dispatch"
 )
 
 /*
@@ -10,7 +10,7 @@ import (
 @2025 9月 周一 14:45
 */
 func init() {
-	if err := dispatch.RegisterController(GExampleController); err != nil {
-		panic(err)
-	}
+	// if err := dispatch.RegisterController(GExampleController); err != nil {
+	// 	panic(err)
+	// }
 }
