@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"gitee.com/orbit-w/orbit/app/proto/pb"
+	"gitee.com/orbit-w/orbit/lib/base/protoid"
 	"github.com/gogo/protobuf/proto"
 )
 
@@ -19,13 +20,13 @@ type MethodInfo struct {
 // ReflectionRouter 反射路由器，实现了 pb.RequestHandler 接口
 type ReflectionRouter struct {
 	// methodMap 存储协议ID到方法信息的映射
-	methodMap map[string]*MethodInfo
+	methodMap map[uint32]*MethodInfo
 }
 
 // NewReflectionRouter 创建新的反射路由器
 func NewReflectionRouter() *ReflectionRouter {
 	router := &ReflectionRouter{
-		methodMap: make(map[string]*MethodInfo),
+		methodMap: make(map[uint32]*MethodInfo),
 	}
 	return router
 }
@@ -55,8 +56,10 @@ func (r *ReflectionRouter) RegisterController(controller any) error {
 		// 根据请求类型名称获取协议ID
 		requestTypeName := r.getRequestTypeName(requestType)
 
+		pid := protoid.HashProtoMessage(requestTypeName)
+
 		// 注册方法信息
-		r.methodMap[requestTypeName] = &MethodInfo{
+		r.methodMap[pid] = &MethodInfo{
 			Method:      method,
 			Controller:  controllerValue,
 			RequestType: requestType.Elem(), // 去掉指针类型
@@ -110,20 +113,15 @@ func (r *ReflectionRouter) getRequestTypeName(requestType reflect.Type) string {
 
 // Dispatch 根据协议ID分发请求到对应的方法
 func (r *ReflectionRouter) Dispatch(pid uint32, data []byte) (proto.Message, uint32, error) {
-	name, ok := pb.GetMessageName(pid)
-	if !ok {
-		return nil, 0, fmt.Errorf("get message name failed: %w", pid)
-	}
-
 	req, err := pb.UnmarshalRequest(pid, data)
 	if err != nil {
 		return nil, 0, fmt.Errorf("unmarshal request failed: %w", err)
 	}
 
 	// 查找对应的方法信息
-	methodInfo, ok := r.methodMap[name]
+	methodInfo, ok := r.methodMap[pid]
 	if !ok {
-		return nil, 0, fmt.Errorf("no handler found for protocol ID: 0x%08x", name)
+		return nil, 0, fmt.Errorf("no handler found for protocol ID: %d", pid)
 	}
 
 	// 调用处理方法
