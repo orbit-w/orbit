@@ -1,22 +1,219 @@
 package routergen
 
-import "github.com/spf13/cobra"
+import (
+	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+	"text/template"
+
+	"gitee.com/orbit-w/orbit/lib/base/protoid"
+	"github.com/spf13/cobra"
+)
+
+// RouteInfo holds information about a single route
+type RouteInfo struct {
+	PID            uint32
+	MethodName     string
+	ControllerName string
+	RequestType    string
+	ResponseType   string
+}
+
+// ControllerInfo holds information about a controller
+type ControllerInfo struct {
+	Name    string
+	Package string // assume "controller" for now
+}
 
 var (
 	genRouterCmd = &cobra.Command{
-		Use:   "protocolgen",
+		Use:   "routergen",
 		Short: "Generate router code from proto files",
 		Run:   runRouterGluegen,
 	}
 )
 
 func runRouterGluegen(cmd *cobra.Command, args []string) {
+	outputDir, _ := cmd.Flags().GetString("output-dir")
+	controllerDir, _ := cmd.Flags().GetString("controller-dir")
+	debug, _ := cmd.Flags().GetBool("debug")
 
+	// Collect route info
+	var routes []RouteInfo
+	var controllers map[string]ControllerInfo = make(map[string]ControllerInfo)
+
+	err := filepath.Walk(controllerDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() || !strings.HasSuffix(info.Name(), ".go") {
+			return nil
+		}
+
+		fset := token.NewFileSet()
+		f, err := parser.ParseFile(fset, path, nil, 0)
+		if err != nil {
+			return err
+		}
+
+		for _, decl := range f.Decls {
+			if fn, ok := decl.(*ast.FuncDecl); ok {
+				if fn.Recv == nil || len(fn.Recv.List) == 0 {
+					continue
+				}
+
+				// Get receiver type
+				recvTypeExpr := fn.Recv.List[0].Type
+				var controllerName string
+				switch t := recvTypeExpr.(type) {
+				case *ast.StarExpr:
+					controllerName = t.X.(*ast.Ident).Name
+				case *ast.Ident:
+					controllerName = t.Name
+				default:
+					continue
+				}
+
+				if !strings.HasPrefix(fn.Name.Name, "Handle") {
+					continue
+				}
+
+				// Check params: expect one param
+				if len(fn.Type.Params.List) != 1 {
+					continue
+				}
+
+				paramType := getTypeName(fn.Type.Params.List[0].Type)
+				if !strings.HasPrefix(paramType, "*pb.") {
+					continue
+				}
+				requestType := strings.TrimPrefix(paramType, "*pb.")
+
+				// Check returns: expect one return
+				if len(fn.Type.Results.List) != 1 {
+					continue
+				}
+
+				resultType := getTypeName(fn.Type.Results.List[0].Type)
+
+				// Handle both concrete types and proto.Message interface
+				var responseType string
+				if strings.HasPrefix(resultType, "*pb.") {
+					responseType = strings.TrimPrefix(resultType, "*pb.")
+				} else if resultType == "proto.Message" {
+					// For proto.Message interface, infer response type from request type
+					responseType = requestType + "_Rsp"
+				} else {
+					continue
+				}
+
+				// Compute PID
+				pid := protoid.HashProtoMessage(requestType)
+
+				routes = append(routes, RouteInfo{
+					PID:            pid,
+					MethodName:     fn.Name.Name,
+					ControllerName: controllerName,
+					RequestType:    requestType,
+					ResponseType:   responseType,
+				})
+
+				// Add controller
+				controllers[controllerName] = ControllerInfo{Name: controllerName, Package: "controller"}
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		fmt.Printf("Error walking controller dir: %v\n", err)
+		return
+	}
+
+	// Prepare data for template
+	type TemplateData struct {
+		Controllers []ControllerInfo
+		Routes      []RouteInfo
+	}
+	data := TemplateData{
+		Routes: routes,
+	}
+	for _, c := range controllers {
+		data.Controllers = append(data.Controllers, c)
+	}
+
+	// Sort for consistency
+	sort.Slice(data.Controllers, func(i, j int) bool { return data.Controllers[i].Name < data.Controllers[j].Name })
+
+	// Generate file
+	outputFile := filepath.Join(outputDir, "routers.go")
+	file, err := os.Create(outputFile)
+	if err != nil {
+		fmt.Printf("Error creating output file: %v\n", err)
+		return
+	}
+	defer file.Close()
+
+	err = routerTmpl.Execute(file, data)
+	if err != nil {
+		fmt.Printf("Error executing template: %v\n", err)
+		return
+	}
+
+	if debug {
+		fmt.Println("Generated router at " + outputFile)
+	}
+}
+
+// getTypeName gets the string representation of a type expression
+func getTypeName(expr ast.Expr) string {
+	switch t := expr.(type) {
+	case *ast.StarExpr:
+		return "*" + getTypeName(t.X)
+	case *ast.SelectorExpr:
+		return getTypeName(t.X) + "." + t.Sel.Name
+	case *ast.Ident:
+		return t.Name
+	default:
+		return ""
+	}
+}
+
+var routerTmpl = template.Must(template.New("router").Funcs(template.FuncMap{"toLower": toLower}).Parse(`
+package routers
+
+import (
+	"gitee.com/orbit-w/orbit/app/controller"
+	"gitee.com/orbit-w/orbit/app/core/dispatch"
+	"gitee.com/orbit-w/orbit/app/proto/pb"
+	"github.com/gogo/protobuf/proto"
+)
+
+func init() {
+{{range .Routes}}
+	dispatch.Register(pb.PID_{{.RequestType}}, func(data []byte) (proto.Message, uint32, error) {
+		req := &pb.{{.RequestType}}{}
+		if err := proto.Unmarshal(data, req); err != nil {
+			return nil, 0, err
+		}
+		return controller.G{{.ControllerName}}.{{.MethodName}}(req), pb.PID_{{.ResponseType}}, nil
+	})
+{{end}}
+}
+`))
+
+func toLower(s string) string {
+	return strings.ToLower(s[0:1]) + s[1:]
 }
 
 func InitCmd(father *cobra.Command) {
 	genRouterCmd.Flags().String("proto-dir", "app/proto/pb", "Directory containing proto files")
 	genRouterCmd.Flags().String("output-dir", "app/proto/pb", "Output directory for generated files")
+	genRouterCmd.Flags().String("controller-dir", "app/controller", "Directory containing controller files")
 	genRouterCmd.Flags().Bool("debug", false, "Enable debug mode")
 	genRouterCmd.Flags().Bool("quiet", false, "Enable quiet mode")
 

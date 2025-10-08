@@ -12,7 +12,7 @@ var (
 type ExampleController struct {
 }
 
-//go:generate routergen -gen-route
+//go:generate go run ../../tools/gotools/gen/main.go routergen --controller-dir=. --output-dir=../routers --debug=true
 func (e *ExampleController) HandleSearchBook(req *pb.Request_SearchBook) proto.Message {
 	return &pb.Request_SearchBook_Rsp{
 		Result: &pb.Book{
