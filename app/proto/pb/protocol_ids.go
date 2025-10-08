@@ -3,39 +3,40 @@ package pb
 
 import (
 	"fmt"
-	"github.com/gogo/protobuf/proto"
+
 	"gitee.com/orbit-w/orbit/lib/utils/proto_utils"
+	"github.com/gogo/protobuf/proto"
 )
 
 // 所有协议ID常量
 const (
-	PID_Notify_BeAttacked uint32 = 0x63a16597 // Notify_BeAttacked
-	PID_Request_HeartBeat uint32 = 0x751e20c7 // Request_HeartBeat
-	PID_Request_SearchBook uint32 = 0x73601d6f // Request_SearchBook
+	PID_Notify_BeAttacked      uint32 = 0x63a16597 // Notify_BeAttacked
+	PID_Request_HeartBeat      uint32 = 0x751e20c7 // Request_HeartBeat
+	PID_Request_SearchBook     uint32 = 0x73601d6f // Request_SearchBook
 	PID_Request_SearchBook_Rsp uint32 = 0x7c102692 // Request_SearchBook_Rsp
-	PID_Rsp_Fail uint32 = 0x52833174 // Rsp_Fail
-	PID_Rsp_OK uint32 = 0x76d2290e // Rsp_OK
+	PID_Rsp_Fail               uint32 = 0x52833174 // Rsp_Fail
+	PID_Rsp_OK                 uint32 = 0x76d2290e // Rsp_OK
 
 )
 
 // AllMessageNameToID 全局消息名称到ID的映射
 var AllMessageNameToID = map[string]uint32{
-	"Notify_BeAttacked": PID_Notify_BeAttacked,
-	"Request_HeartBeat": PID_Request_HeartBeat,
-	"Request_SearchBook": PID_Request_SearchBook,
+	"Notify_BeAttacked":      PID_Notify_BeAttacked,
+	"Request_HeartBeat":      PID_Request_HeartBeat,
+	"Request_SearchBook":     PID_Request_SearchBook,
 	"Request_SearchBook_Rsp": PID_Request_SearchBook_Rsp,
-	"Rsp_Fail": PID_Rsp_Fail,
-	"Rsp_OK": PID_Rsp_OK,
+	"Rsp_Fail":               PID_Rsp_Fail,
+	"Rsp_OK":                 PID_Rsp_OK,
 }
 
 // AllIDToMessageName 全局ID到消息名称的映射
 var AllIDToMessageName = map[uint32]string{
-	PID_Notify_BeAttacked: "Notify_BeAttacked",
-	PID_Request_HeartBeat: "Request_HeartBeat",
-	PID_Request_SearchBook: "Request_SearchBook",
+	PID_Notify_BeAttacked:      "Notify_BeAttacked",
+	PID_Request_HeartBeat:      "Request_HeartBeat",
+	PID_Request_SearchBook:     "Request_SearchBook",
 	PID_Request_SearchBook_Rsp: "Request_SearchBook_Rsp",
-	PID_Rsp_Fail: "Rsp_Fail",
-	PID_Rsp_OK: "Rsp_OK",
+	PID_Rsp_Fail:               "Rsp_Fail",
+	PID_Rsp_OK:                 "Rsp_OK",
 }
 
 // GetProtocolID 获取指定消息名称的协议ID

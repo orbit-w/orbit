@@ -15,21 +15,21 @@ import (
 func init() {
 
 	// Register route for Request_SearchBook -> Request_SearchBook_Rsp
-	dispatch.Register(pb.PID_Request_SearchBook, func(data []byte) (proto.Message, uint32, error) {
+	dispatch.Register(pb.PID_Request_SearchBook, func(data []byte) (proto.Message, error) {
 		req := &pb.Request_SearchBook{}
 		if err := proto.Unmarshal(data, req); err != nil {
-			return nil, 0, err
+			return nil, err
 		}
-		return controller.GExampleController.HandleSearchBook(req), pb.PID_Request_SearchBook_Rsp, nil
+		return controller.GExampleController.HandleSearchBook(req), nil
 	})
 
 	// Register route for Request_HeartBeat -> Request_HeartBeat_Rsp
-	dispatch.Register(pb.PID_Request_HeartBeat, func(data []byte) (proto.Message, uint32, error) {
+	dispatch.Register(pb.PID_Request_HeartBeat, func(data []byte) (proto.Message, error) {
 		req := &pb.Request_HeartBeat{}
 		if err := proto.Unmarshal(data, req); err != nil {
-			return nil, 0, err
+			return nil, err
 		}
-		return controller.GExampleController.HandleHeartBeat(req), pb.PID_Request_HeartBeat_Rsp, nil
+		return controller.GExampleController.HandleHeartBeat(req), nil
 	})
 
 }

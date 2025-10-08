@@ -200,12 +200,12 @@ import (
 func init() {
 {{range .Routes}}
 	// Register route for {{.RequestType}} -> {{.ResponseType}}
-	dispatch.Register(pb.PID_{{.RequestType}}, func(data []byte) (proto.Message, uint32, error) {
+	dispatch.Register(pb.PID_{{.RequestType}}, func(data []byte) (proto.Message, error) {
 		req := &pb.{{.RequestType}}{}
 		if err := proto.Unmarshal(data, req); err != nil {
-			return nil, 0, err
+			return nil, err
 		}
-		return controller.G{{.ControllerName}}.{{.MethodName}}(req), pb.PID_{{.ResponseType}}, nil
+		return controller.G{{.ControllerName}}.{{.MethodName}}(req), nil
 	})
 {{end}}
 }

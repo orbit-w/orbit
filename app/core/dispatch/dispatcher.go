@@ -3,6 +3,7 @@ package dispatch
 import (
 	"sync"
 
+	"gitee.com/orbit-w/orbit/app/proto/pb"
 	"github.com/gogo/protobuf/proto"
 )
 
@@ -21,7 +22,7 @@ func Init() {
 	})
 }
 
-func Register(pid uint32, callback func(data []byte) (proto.Message, uint32, error)) {
+func Register(pid uint32, callback func(data []byte) (proto.Message, error)) {
 	globalRouter.Register(pid, callback)
 }
 
@@ -31,5 +32,10 @@ func Dispatch(pid uint32, data []byte) (proto.Message, uint32, error) {
 		Init()
 	}
 
-	return globalRouter.Dispatch(pid, data)
+	rsp, err := globalRouter.Dispatch(pid, data)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return rsp, pb.GetResponsePID(rsp), nil
 }
