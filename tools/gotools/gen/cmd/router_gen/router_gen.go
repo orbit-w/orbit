@@ -206,12 +206,12 @@ import (
 func init() {
 {{range .Routes}}
 	// Register route for {{.RequestType}} -> {{.ResponseType}}
-	dispatch.Register(pb.PID_{{.RequestType}}, func(data []byte) (proto.Message, error) {
+	dispatch.Register(pb.PID_{{.RequestType}}, func(data []byte) (proto.Message, string, error) {
 		req := &pb.{{.RequestType}}{}
 		if err := proto.Unmarshal(data, req); err != nil {
-			return nil, err
+			return nil, "", err
 		}
-		return controller.G{{.ControllerName}}.{{.MethodName}}(req), nil
+		return controller.G{{.ControllerName}}.{{.MethodName}}(req), "{{.ResponseType}}", nil
 	})
 {{end}}
 }

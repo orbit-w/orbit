@@ -1,6 +1,7 @@
 package dispatch
 
 import (
+	"fmt"
 	"sync"
 
 	"gitee.com/orbit-w/orbit/app/proto/pb"
@@ -22,8 +23,8 @@ func Init() {
 	})
 }
 
-func Register(pid uint32, callback func(data []byte) (proto.Message, error)) {
-	globalRouter.Register(pid, callback)
+func Register(pid uint32, router func(data []byte) (proto.Message, string, error)) {
+	globalRouter.Register(pid, router)
 }
 
 // Dispatch 分发请求到对应的处理方法
@@ -32,10 +33,14 @@ func Dispatch(pid uint32, data []byte) (proto.Message, uint32, error) {
 		Init()
 	}
 
-	rsp, err := globalRouter.Dispatch(pid, data)
+	rsp, rspName, err := globalRouter.Dispatch(pid, data)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	return rsp, pb.GetResponsePID(rsp), nil
+	pid, ok := pb.GetProtocolID(rspName)
+	if !ok {
+		return nil, 0, fmt.Errorf("no response pid found for %s", rspName)
+	}
+	return rsp, pid, nil
 }

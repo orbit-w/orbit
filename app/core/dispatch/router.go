@@ -7,28 +7,28 @@ import (
 )
 
 type Router struct {
-	funcMap map[uint32]func(data []byte) (proto.Message, error)
+	funcMap map[uint32]func(data []byte) (proto.Message, string, error)
 }
 
 func NewRouter() *Router {
 	return &Router{
-		funcMap: make(map[uint32]func(data []byte) (proto.Message, error)),
+		funcMap: make(map[uint32]func(data []byte) (proto.Message, string, error)),
 	}
 }
 
-func (r *Router) Register(pid uint32, callback func(data []byte) (proto.Message, error)) {
+func (r *Router) Register(pid uint32, router func(data []byte) (proto.Message, string, error)) {
 	if _, ok := r.funcMap[pid]; ok {
 		panic(fmt.Sprintf("pid %d already registered", pid))
 	}
 
-	r.funcMap[pid] = callback
+	r.funcMap[pid] = router
 }
 
-func (r *Router) Dispatch(pid uint32, data []byte) (proto.Message, error) {
-	callback, ok := r.funcMap[pid]
+func (r *Router) Dispatch(pid uint32, data []byte) (proto.Message, string, error) {
+	router, ok := r.funcMap[pid]
 	if !ok {
-		return nil, fmt.Errorf("no callback found for pid %d", pid)
+		return nil, "", fmt.Errorf("no callback found for pid %d", pid)
 	}
 
-	return callback(data)
+	return router(data)
 }
