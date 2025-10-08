@@ -8,7 +8,7 @@ import (
 
 var (
 	// 全局反射路由器实例
-	globalRouter *ReflectionRouter
+	globalRouter *Router
 
 	// 确保全局实例只初始化一次
 	routerOnce sync.Once
@@ -17,12 +17,12 @@ var (
 // Init 初始化分发器，注册所有控制器
 func Init() {
 	routerOnce.Do(func() {
-		globalRouter = NewReflectionRouter()
+		globalRouter = NewRouter()
 	})
 }
 
-func RegisterController(controller any) error {
-	return globalRouter.RegisterController(controller)
+func Register(pid uint32, callback func(data []byte) (proto.Message, uint32, error)) {
+	globalRouter.Register(pid, callback)
 }
 
 // Dispatch 分发请求到对应的处理方法
@@ -31,11 +31,5 @@ func Dispatch(pid uint32, data []byte) (proto.Message, uint32, error) {
 		Init()
 	}
 
-	// 方式1: 直接使用反射路由器的Dispatch方法（推荐）
 	return globalRouter.Dispatch(pid, data)
-}
-
-// GetGlobalRouter 获取全局路由器实例（用于调试）
-func GetGlobalRouter() *ReflectionRouter {
-	return globalRouter
 }
