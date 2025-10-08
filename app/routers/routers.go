@@ -23,7 +23,7 @@ func init() {
 		return controller.GExampleController.HandleSearchBook(req), nil
 	})
 
-	// Register route for Request_HeartBeat -> Request_HeartBeat_Rsp
+	// Register route for Request_HeartBeat -> Rsp_OK
 	dispatch.Register(pb.PID_Request_HeartBeat, func(data []byte) (proto.Message, error) {
 		req := &pb.Request_HeartBeat{}
 		if err := proto.Unmarshal(data, req); err != nil {

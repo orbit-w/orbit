@@ -106,8 +106,14 @@ func runRouterGluegen(cmd *cobra.Command, args []string) {
 				if strings.HasPrefix(resultType, "*pb.") {
 					responseType = strings.TrimPrefix(resultType, "*pb.")
 				} else if resultType == "proto.Message" {
-					// For proto.Message interface, infer response type from request type
-					responseType = requestType + "_Rsp"
+					// For proto.Message interface, try to infer response type from method body
+					responseType = inferResponseTypeFromMethod(fn, requestType)
+					if responseType == "" {
+						if debug {
+							fmt.Printf("  Skipping %s: could not infer response type from method body\n", fn.Name.Name)
+						}
+						continue
+					}
 				} else {
 					continue
 				}
@@ -210,6 +216,37 @@ func init() {
 {{end}}
 }
 `))
+
+// inferResponseTypeFromMethod analyzes the method body to find the actual return type
+func inferResponseTypeFromMethod(fn *ast.FuncDecl, requestType string) string {
+	// Look for return statements in the method body
+	if fn.Body == nil {
+		return ""
+	}
+
+	for _, stmt := range fn.Body.List {
+		if returnStmt, ok := stmt.(*ast.ReturnStmt); ok {
+			if len(returnStmt.Results) > 0 {
+				// Get the first return expression
+				expr := returnStmt.Results[0]
+
+				// Handle &pb.Type{} pattern
+				if unaryExpr, ok := expr.(*ast.UnaryExpr); ok && unaryExpr.Op == token.AND {
+					if compositeLit, ok := unaryExpr.X.(*ast.CompositeLit); ok {
+						if selectorExpr, ok := compositeLit.Type.(*ast.SelectorExpr); ok {
+							if ident, ok := selectorExpr.X.(*ast.Ident); ok && ident.Name == "pb" {
+								return selectorExpr.Sel.Name
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// Fallback: try the old heuristic
+	return requestType + "_Rsp"
+}
 
 func toLower(s string) string {
 	return strings.ToLower(s[0:1]) + s[1:]
