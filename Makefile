@@ -43,10 +43,10 @@ BuildPackageLinux:
 
 # 生成mechanisms.proto的pb.go文件到app/proto/mme目录
 g:
-	@echo "Generating mechanisms.proto to app/proto/mme..."
-	protoc --proto_path=protocol \
-		--gogo_out=paths=import:app/proto/mme \
-		protocol/mechanisms.proto
+	@echo "Generating proto files to app/proto/mme..."
+	protoc --proto_path=. \
+		--go_out=app/proto \
+		protocol/common.proto protocol/mechanisms.proto
 
 # 帮助信息
 .PHONY: help
