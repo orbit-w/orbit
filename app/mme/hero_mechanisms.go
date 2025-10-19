@@ -4,6 +4,7 @@ import (
 	"gitee.com/orbit-w/orbit/app/proto/mme"
 	"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder"
 	"gitee.com/orbit-w/orbit/lib/module/dirty/dirty_tracker"
+	"github.com/gogo/protobuf/proto"
 )
 
 // Dirty bits for component fields
@@ -60,6 +61,15 @@ func (m *HeroMechanism) SetCreateTime(v int64) {
 	m.MarkDirty(LevelUpMechanismDirtyCreateTimeBit)
 }
 
+func (m *HeroMechanism) GetSkills() map[int32]int32 {
+	return m.Skills
+}
+
+func (m *HeroMechanism) SetSkills(v map[int32]int32) {
+	m.Skills = v
+	m.MarkDirty(LevelUpMechanismDirtySkillsBit)
+}
+
 // ClearAllDirtyFlags 清除所有脏标记位
 func (m *HeroMechanism) ClearAllDirtyFlags() {
 	m.DirtyTracker.ClearAllDirty()
@@ -88,12 +98,21 @@ func (m *HeroMechanism) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder
 		}
 	}
 	{
-		path := "equipment"
+		path := "use_times"
 		if prefix != "" {
 			path = prefix + "." + path
 		}
 		if m.IsDirty(LevelUpMechanismDirtyUseTimesBit) {
 			builder.Set(path, m.UseTimes)
+		}
+	}
+	{
+		path := "skills"
+		if prefix != "" {
+			path = prefix + "." + path
+		}
+		if m.IsDirty(LevelUpMechanismDirtySkillsBit) {
+			builder.Set(path, m.Skills)
 		}
 	}
 	{
@@ -121,4 +140,48 @@ func (s *HeroMechanism) DeepCopy(co *HeroMechanism) {
 			co.Skills[k] = v
 		}
 	}
+}
+
+// PB 根据脏标记位构建增量数据的 protoMessage
+// 只返回标记为脏的字段数据，用于增量同步
+func (m *HeroMechanism) PB() proto.Message {
+	if m == nil {
+		return nil
+	}
+
+	// 如果没有脏标记，返回 nil
+	if !m.HasAnyDirty() {
+		return nil
+	}
+
+	incremental := &mme.HeroMechanism{}
+
+	// 根据脏标记位设置对应的字段
+	if m.IsDirty(LevelUpMechanismDirtyIdBit) {
+		incremental.Id = m.Id
+	}
+
+	if m.IsDirty(LevelUpMechanismDirtyConfIdBit) {
+		incremental.ConfId = m.ConfId
+	}
+
+	if m.IsDirty(LevelUpMechanismDirtyCreateTimeBit) {
+		incremental.CreateTime = m.CreateTime
+	}
+
+	if m.IsDirty(LevelUpMechanismDirtyUseTimesBit) {
+		incremental.UseTimes = m.UseTimes
+	}
+
+	if m.IsDirty(LevelUpMechanismDirtySkillsBit) {
+		// 深拷贝 Skills map
+		if m.Skills != nil {
+			incremental.Skills = make(map[int32]int32, len(m.Skills))
+			for k, v := range m.Skills {
+				incremental.Skills[k] = v
+			}
+		}
+	}
+
+	return incremental
 }
