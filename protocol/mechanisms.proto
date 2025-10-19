@@ -32,7 +32,7 @@ message HeroMechanism {
 message SkillXXXChange {
   common.ChangeType ChangeType = 1;
   int32 Key = 2;
-  optional int32 Value = 3; 
+  int32 Value = 3; 
 }
 
 // 手动解锁机制

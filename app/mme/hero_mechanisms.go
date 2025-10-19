@@ -177,7 +177,7 @@ func (m *HeroMechanism) PB() proto.Message {
 				v, _ := m.SkillsAccessor.Get(key)
 				incremental.SkillChanges = append(incremental.SkillChanges, &mme.SkillXXXChange{
 					Key:   key,
-					Value: &v,
+					Value: v,
 				})
 			case xmap.DeleteOperation:
 				incremental.SkillChanges = append(incremental.SkillChanges, &mme.SkillXXXChange{

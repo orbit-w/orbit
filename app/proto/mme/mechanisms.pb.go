@@ -217,7 +217,7 @@ type SkillXXXChange struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ChangeType    ChangeType             `protobuf:"varint,1,opt,name=ChangeType,proto3,enum=common.ChangeType" json:"ChangeType,omitempty"`
 	Key           int32                  `protobuf:"varint,2,opt,name=Key,proto3" json:"Key,omitempty"`
-	Value         *int32                 `protobuf:"varint,3,opt,name=Value,proto3,oneof" json:"Value,omitempty"`
+	Value         int32                  `protobuf:"varint,3,opt,name=Value,proto3" json:"Value,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -267,8 +267,8 @@ func (x *SkillXXXChange) GetKey() int32 {
 }
 
 func (x *SkillXXXChange) GetValue() int32 {
-	if x != nil && x.Value != nil {
-		return *x.Value
+	if x != nil {
+		return x.Value
 	}
 	return 0
 }
@@ -402,14 +402,13 @@ const file_protocol_mechanisms_proto_rawDesc = "" +
 	"\x03_IdB\t\n" +
 	"\a_ConfIdB\r\n" +
 	"\v_CreateTimeB\v\n" +
-	"\t_UseTimes\"{\n" +
+	"\t_UseTimes\"l\n" +
 	"\x0eSkillXXXChange\x122\n" +
 	"\n" +
 	"ChangeType\x18\x01 \x01(\x0e2\x12.common.ChangeTypeR\n" +
 	"ChangeType\x12\x10\n" +
-	"\x03Key\x18\x02 \x01(\x05R\x03Key\x12\x19\n" +
-	"\x05Value\x18\x03 \x01(\x05H\x00R\x05Value\x88\x01\x01B\b\n" +
-	"\x06_Value\"\xa5\x01\n" +
+	"\x03Key\x18\x02 \x01(\x05R\x03Key\x12\x14\n" +
+	"\x05Value\x18\x03 \x01(\x05R\x05Value\"\xa5\x01\n" +
 	"\x15ManualUnlockMechanism\x12N\n" +
 	"\tUnlockMap\x18\x01 \x03(\v20.mechanisms.ManualUnlockMechanism.UnlockMapEntryR\tUnlockMap\x1a<\n" +
 	"\x0eUnlockMapEntry\x12\x10\n" +
@@ -470,7 +469,6 @@ func file_protocol_mechanisms_proto_init() {
 	file_protocol_mechanisms_proto_msgTypes[0].OneofWrappers = []any{}
 	file_protocol_mechanisms_proto_msgTypes[1].OneofWrappers = []any{}
 	file_protocol_mechanisms_proto_msgTypes[2].OneofWrappers = []any{}
-	file_protocol_mechanisms_proto_msgTypes[3].OneofWrappers = []any{}
 	file_protocol_mechanisms_proto_msgTypes[5].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
