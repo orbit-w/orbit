@@ -8,8 +8,9 @@ type DirtyMarker interface {
 
 // MapAccessor abstracts the access to a specific map field and its dirty marker.
 type MapAccessor[K comparable, V any] struct {
-	zero V
-	m    *map[K]V
+	zero          V
+	m             *map[K]V
+	changeTracker *FinegrainedChangeTracker[K]
 	// Backward-compatible ad-hoc dirty callback
 	markDirty func()
 	// Preferred: interface-based marker to avoid closure allocations
@@ -26,7 +27,7 @@ func NewMapAccessor[K comparable, V any](m *map[K]V, markDirty func()) MapAccess
 // NewMapAccessorWithMarker creates an accessor bound to a component field map pointer
 // and a DirtyMarker with a concrete dirty bit. This avoids closure allocations.
 func NewMapAccessorWithMarker[K comparable, V any](m *map[K]V, marker DirtyMarker, dirtyBit int64) MapAccessor[K, V] {
-	return MapAccessor[K, V]{m: m, marker: marker, dirtyBit: dirtyBit}
+	return MapAccessor[K, V]{m: m, marker: marker, dirtyBit: dirtyBit, changeTracker: NewFinegrainedChangeTracker[K]()}
 }
 
 func (op MapAccessor[K, V]) Get(key K) (V, bool) {
@@ -50,8 +51,7 @@ func (op MapAccessor[K, V]) ensureMapNoDirty() {
 		return
 	}
 	if *op.m == nil {
-		tmp := make(map[K]V)
-		*op.m = tmp
+		*op.m = make(map[K]V)
 	}
 }
 
@@ -59,6 +59,7 @@ func (op MapAccessor[K, V]) Set(key K, value V) {
 	op.ensureMapNoDirty()
 	if op.m != nil {
 		(*op.m)[key] = value
+		op.changeTracker.TrackSet(key)
 		op.doMarkDirty()
 	}
 }
@@ -71,6 +72,7 @@ func (op MapAccessor[K, V]) Upsert(key K, value V) (V, bool) {
 	}
 	prev, existed := (*op.m)[key]
 	(*op.m)[key] = value
+	op.changeTracker.TrackSet(key)
 	op.doMarkDirty()
 	return prev, existed
 }
@@ -81,6 +83,7 @@ func (op MapAccessor[K, V]) Delete(key K) {
 	}
 	if _, ok := (*op.m)[key]; ok {
 		delete(*op.m, key)
+		op.changeTracker.TrackUnset(key)
 		op.doMarkDirty()
 	}
 }
@@ -91,7 +94,9 @@ func (op MapAccessor[K, V]) Clear() {
 	}
 	for k := range *op.m {
 		delete(*op.m, k)
+		op.changeTracker.TrackUnset(k)
 	}
+
 	op.doMarkDirty()
 }
 
@@ -135,24 +140,8 @@ func (op MapAccessor[K, V]) SetAll(entries map[K]V) {
 	}
 	for k, v := range entries {
 		(*op.m)[k] = v
+		op.changeTracker.TrackSet(k)
 	}
-	op.doMarkDirty()
-}
-
-func (op MapAccessor[K, V]) ReplaceAll(entries map[K]V) {
-	if op.m == nil {
-		return
-	}
-	if entries == nil {
-		*op.m = nil
-		op.doMarkDirty()
-		return
-	}
-	newMap := make(map[K]V, len(entries))
-	for k, v := range entries {
-		newMap[k] = v
-	}
-	*op.m = newMap
 	op.doMarkDirty()
 }
 
@@ -164,6 +153,7 @@ func (op MapAccessor[K, V]) DeleteAll(keys ...K) int {
 	for _, k := range keys {
 		if _, ok := (*op.m)[k]; ok {
 			delete(*op.m, k)
+			op.changeTracker.TrackUnset(k)
 			count++
 		}
 	}
@@ -173,7 +163,7 @@ func (op MapAccessor[K, V]) DeleteAll(keys ...K) int {
 	return count
 }
 
-func (op MapAccessor[K, V]) Copy() map[K]V {
+func (op MapAccessor[K, V]) DeepCopy() map[K]V {
 	if op.m == nil || *op.m == nil {
 		return nil
 	}
@@ -184,16 +174,6 @@ func (op MapAccessor[K, V]) Copy() map[K]V {
 	return dup
 }
 
-func (op MapAccessor[K, V]) GetOrDefault(k K, def V) V {
-	if op.m == nil || *op.m == nil {
-		return def
-	}
-	if v, ok := (*op.m)[k]; ok {
-		return v
-	}
-	return def
-}
-
 func (op MapAccessor[K, V]) Pop(k K) (V, bool) {
 	if op.m == nil || *op.m == nil {
 		return op.zero, false
@@ -201,23 +181,10 @@ func (op MapAccessor[K, V]) Pop(k K) (V, bool) {
 	v, ok := (*op.m)[k]
 	if ok {
 		delete(*op.m, k)
+		op.changeTracker.TrackUnset(k)
 		op.doMarkDirty()
 	}
 	return v, ok
-}
-
-func (op MapAccessor[K, V]) EnsureAndGet(k K, initFn func() V) V {
-	op.ensureMapNoDirty()
-	if op.m == nil {
-		return op.zero
-	}
-	if v, ok := (*op.m)[k]; ok {
-		return v
-	}
-	v := initFn()
-	(*op.m)[k] = v
-	op.doMarkDirty()
-	return v
 }
 
 func (op MapAccessor[K, V]) Keys() []K {
