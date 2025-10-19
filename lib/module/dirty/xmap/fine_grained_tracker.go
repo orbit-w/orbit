@@ -16,32 +16,31 @@ type MapOperation[K comparable] struct {
 
 // FinegrainedChangeTracker 细粒度变更跟踪器
 // 用于跟踪 Map 字段的具体键级别变更，支持高效的 MongoDB 增量更新
-type FinegrainedChangeTracker[K comparable, V any] struct {
+type FinegrainedChangeTracker[K comparable] struct {
 	operations     map[K]MapOperation[K] // 统一的操作记录，只记录操作类型和键
 	isTrackingMode bool                  // 是否启用细粒度跟踪模式
-	hasFullReplace bool                  // 是否有完整替换操作
 }
 
 // NewFinegrainedChangeTracker 创建新的细粒度变更跟踪器
-func NewFinegrainedChangeTracker[K comparable, V any]() *FinegrainedChangeTracker[K, V] {
-	return &FinegrainedChangeTracker[K, V]{
+func NewFinegrainedChangeTracker[K comparable]() *FinegrainedChangeTracker[K] {
+	return &FinegrainedChangeTracker[K]{
 		operations:     make(map[K]MapOperation[K]),
 		isTrackingMode: true,
 	}
 }
 
 // EnableTracking 启用细粒度跟踪模式
-func (t *FinegrainedChangeTracker[K, V]) EnableTracking() {
+func (t *FinegrainedChangeTracker[K]) EnableTracking() {
 	t.isTrackingMode = true
 }
 
 // DisableTracking 禁用细粒度跟踪模式
-func (t *FinegrainedChangeTracker[K, V]) DisableTracking() {
+func (t *FinegrainedChangeTracker[K]) DisableTracking() {
 	t.isTrackingMode = false
 }
 
 // TrackSet 跟踪设置操作
-func (t *FinegrainedChangeTracker[K, V]) TrackSet(key K, value V) {
+func (t *FinegrainedChangeTracker[K]) TrackSet(key K) {
 	if !t.isTrackingMode {
 		return
 	}
@@ -53,7 +52,7 @@ func (t *FinegrainedChangeTracker[K, V]) TrackSet(key K, value V) {
 }
 
 // TrackUnset 跟踪删除操作
-func (t *FinegrainedChangeTracker[K, V]) TrackUnset(key K) {
+func (t *FinegrainedChangeTracker[K]) TrackUnset(key K) {
 	if !t.isTrackingMode {
 		return
 	}
@@ -65,18 +64,18 @@ func (t *FinegrainedChangeTracker[K, V]) TrackUnset(key K) {
 }
 
 // TrackFullReplace 跟踪完整替换操作
-func (t *FinegrainedChangeTracker[K, V]) TrackFullReplace() {
-	t.hasFullReplace = true
+func (t *FinegrainedChangeTracker[K]) TrackFullReplace() {
+
 	t.clear()
 }
 
 // clear 清空所有跟踪的操作
-func (t *FinegrainedChangeTracker[K, V]) clear() {
+func (t *FinegrainedChangeTracker[K]) clear() {
 	t.operations = make(map[K]MapOperation[K])
 }
 
 // RangeOperations 遍历所有跟踪的map写操作
-func (t *FinegrainedChangeTracker[K, V]) RangeOperations(f func(key K, operation MapOperation[K]) bool) {
+func (t *FinegrainedChangeTracker[K]) RangeOperations(f func(key K, operation MapOperation[K]) bool) {
 	for key, operation := range t.operations {
 		if !f(key, operation) {
 			break
@@ -85,7 +84,7 @@ func (t *FinegrainedChangeTracker[K, V]) RangeOperations(f func(key K, operation
 }
 
 // GetSetOperations 获取设置操作的键
-func (t *FinegrainedChangeTracker[K, V]) GetSetOperations() []K {
+func (t *FinegrainedChangeTracker[K]) GetSetOperations() []K {
 	var setKeys []K
 	for _, op := range t.operations {
 		if op.Type == SetOperation {
@@ -96,7 +95,7 @@ func (t *FinegrainedChangeTracker[K, V]) GetSetOperations() []K {
 }
 
 // GetUnsetKeys 获取删除操作的键
-func (t *FinegrainedChangeTracker[K, V]) GetUnsetKeys() []K {
+func (t *FinegrainedChangeTracker[K]) GetUnsetKeys() []K {
 	var unsetKeys []K
 	for _, op := range t.operations {
 		if op.Type == DeleteOperation {
@@ -107,17 +106,11 @@ func (t *FinegrainedChangeTracker[K, V]) GetUnsetKeys() []K {
 }
 
 // HasChanges 检查是否有变更
-func (t *FinegrainedChangeTracker[K, V]) HasChanges() bool {
-	return len(t.operations) > 0 || t.hasFullReplace
-}
-
-// HasFullReplace 检查是否有完整替换
-func (t *FinegrainedChangeTracker[K, V]) HasFullReplace() bool {
-	return t.hasFullReplace
+func (t *FinegrainedChangeTracker[K]) HasChanges() bool {
+	return len(t.operations) > 0
 }
 
 // Reset 重置跟踪器
-func (t *FinegrainedChangeTracker[K, V]) Reset() {
+func (t *FinegrainedChangeTracker[K]) Reset() {
 	t.clear()
-	t.hasFullReplace = false
 }
