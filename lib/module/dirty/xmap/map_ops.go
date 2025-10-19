@@ -223,3 +223,7 @@ func (op MapAccessor[K, V]) RangeOperations(f func(key K, operation MapOperation
 func (op MapAccessor[K, V]) ResetOperations() {
 	op.changeTracker.Reset()
 }
+
+func (op MapAccessor[K, V]) HasChanges() bool {
+	return op.changeTracker.HasChanges()
+}
