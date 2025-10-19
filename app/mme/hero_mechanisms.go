@@ -42,6 +42,11 @@ func (m *HeroMechanism) Link(parent *dirty_tracker.DirtyTracker, parentBit int64
 	m.DirtyTracker.Link(parent, parentBit)
 }
 
+func (m *HeroMechanism) SetId(v int64) {
+	m.Id = &v
+	m.MarkDirty(LevelUpMechanismDirtyIdBit)
+}
+
 func (m *HeroMechanism) SetConfId(v int32) {
 	m.ConfId = &v
 	m.MarkDirty(LevelUpMechanismDirtyConfIdBit)
