@@ -18,12 +18,6 @@ type MapAccessor[K comparable, V any] struct {
 	dirtyBit int64
 }
 
-// NewMapAccessor creates an accessor bound to a component field map pointer.
-// All write operations will modify the underlying field map and invoke markDirty (if provided).
-func NewMapAccessor[K comparable, V any](m *map[K]V, markDirty func()) MapAccessor[K, V] {
-	return MapAccessor[K, V]{m: m, markDirty: markDirty}
-}
-
 // NewMapAccessorWithMarker creates an accessor bound to a component field map pointer
 // and a DirtyMarker with a concrete dirty bit. This avoids closure allocations.
 func NewMapAccessorWithMarker[K comparable, V any](m *map[K]V, marker DirtyMarker, dirtyBit int64) MapAccessor[K, V] {
@@ -218,4 +212,14 @@ func (op MapAccessor[K, V]) doMarkDirty() {
 	if op.markDirty != nil {
 		op.markDirty()
 	}
+}
+
+// RangeOperations 遍历所有跟踪的操作
+func (op MapAccessor[K, V]) RangeOperations(f func(key K, operation MapOperation[K]) bool) {
+	op.changeTracker.RangeOperations(f)
+}
+
+// ResetOperations 重置所有跟踪的操作
+func (op MapAccessor[K, V]) ResetOperations() {
+	op.changeTracker.Reset()
 }
