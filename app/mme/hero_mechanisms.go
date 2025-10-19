@@ -4,6 +4,7 @@ import (
 	"gitee.com/orbit-w/orbit/app/proto/mme"
 	"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder"
 	"gitee.com/orbit-w/orbit/lib/module/dirty/dirty_tracker"
+	"gitee.com/orbit-w/orbit/lib/module/dirty/xmap"
 	"github.com/gogo/protobuf/proto"
 )
 
@@ -17,12 +18,19 @@ const (
 )
 
 type HeroMechanism struct {
-	mme.HeroMechanism
+	*mme.HeroMechanism
 	dirty_tracker.DirtyTracker
+
+	SkillsAccessor xmap.MapAccessor[int32, int32]
 }
 
 func NewHeroMechanism() *HeroMechanism {
-	return &HeroMechanism{}
+	hm := &HeroMechanism{
+		HeroMechanism: new(mme.HeroMechanism),
+	}
+
+	hm.SkillsAccessor = xmap.NewMapAccessorWithMarker(&hm.Skills, hm, LevelUpMechanismDirtySkillsBit)
+	return hm
 }
 
 // 机制唯一名称
@@ -34,40 +42,23 @@ func (m *HeroMechanism) Link(parent *dirty_tracker.DirtyTracker, parentBit int64
 	m.DirtyTracker.Link(parent, parentBit)
 }
 
-func (m *HeroMechanism) GetConfId() int32 {
-	return m.ConfId
-}
-
 func (m *HeroMechanism) SetConfId(v int32) {
-	m.ConfId = v
+	m.ConfId = &v
 	m.MarkDirty(LevelUpMechanismDirtyConfIdBit)
 }
 
-func (m *HeroMechanism) GetUseTimes() int32 {
-	return m.UseTimes
-}
-
 func (m *HeroMechanism) SetUseTimes(v int32) {
-	m.UseTimes = v
+	m.UseTimes = &v
 	m.MarkDirty(LevelUpMechanismDirtyUseTimesBit)
 }
 
-func (m *HeroMechanism) GetCreateTime() int64 {
-	return m.CreateTime
-}
-
 func (m *HeroMechanism) SetCreateTime(v int64) {
-	m.CreateTime = v
+	m.CreateTime = &v
 	m.MarkDirty(LevelUpMechanismDirtyCreateTimeBit)
 }
 
-func (m *HeroMechanism) GetSkills() map[int32]int32 {
-	return m.Skills
-}
-
-func (m *HeroMechanism) SetSkills(v map[int32]int32) {
-	m.Skills = v
-	m.MarkDirty(LevelUpMechanismDirtySkillsBit)
+func (m *HeroMechanism) GetSkillAccessor() xmap.MapAccessor[int32, int32] {
+	return m.SkillsAccessor
 }
 
 // ClearAllDirtyFlags 清除所有脏标记位
@@ -174,13 +165,22 @@ func (m *HeroMechanism) PB() proto.Message {
 	}
 
 	if m.IsDirty(LevelUpMechanismDirtySkillsBit) {
-		// 深拷贝 Skills map
-		if m.Skills != nil {
-			incremental.Skills = make(map[int32]int32, len(m.Skills))
-			for k, v := range m.Skills {
-				incremental.Skills[k] = v
+		incremental.SkillChanges = make([]*mme.SkillXXXChange, 0)
+		m.SkillsAccessor.RangeOperations(func(key int32, operation xmap.MapOperation[int32]) bool {
+			switch operation.Type {
+			case xmap.SetOperation:
+				v, _ := m.SkillsAccessor.Get(key)
+				incremental.SkillChanges = append(incremental.SkillChanges, &mme.SkillXXXChange{
+					Key:   key,
+					Value: &v,
+				})
+			case xmap.DeleteOperation:
+				incremental.SkillChanges = append(incremental.SkillChanges, &mme.SkillXXXChange{
+					Key: key,
+				})
 			}
-		}
+			return true
+		})
 	}
 
 	return incremental

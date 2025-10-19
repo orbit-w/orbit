@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package common;
+option go_package = "./mme";
+
+enum ChangeType {
+  CHANGE_TYPE_NONE = 0;
+  CHANGE_TYPE_SET = 1;
+  CHANGE_TYPE_DELETE = 2;
+}
