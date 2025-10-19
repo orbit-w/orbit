@@ -1,0 +1,8 @@
+#实体定义蓝图
+---
+#------Entity蓝图
+#Player实例
+Entity:
+  - PlayerEntity:
+      #英雄模块
+      HeroManager HeroManager: 1

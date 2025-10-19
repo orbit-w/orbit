@@ -41,6 +41,13 @@ BuildPackageLinux:
 	fi
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o package/$(APP_NAME) main.go
 
+# 生成mechanisms.proto的pb.go文件到app/proto/mme目录
+g:
+	@echo "Generating mechanisms.proto to app/proto/mme..."
+	protoc --proto_path=protocol \
+		--gogo_out=paths=import:app/proto/mme \
+		protocol/mechanisms.proto
+
 # 帮助信息
 .PHONY: help
 help:

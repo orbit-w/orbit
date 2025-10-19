@@ -1,0 +1,20 @@
+#模块定义蓝图
+---
+#------模块蓝图 
+# 模块是游戏中的一个独立对象单元，可以包含多个机制
+Modules:
+  #英雄模块
+  - HeroModule:
+      #基本数据
+      - HeroMechanism Base: 1
+        Settings:
+          activeSync: true
+      #英雄升级
+      - LevelUpMechanism LevelUp: 2
+        Settings:
+          readOnly: true
+          AutoLevelUp: true
+      #天赋解锁
+      - ManualUnlockMechanism TalentUnlock: 3
+      #时装穿戴
+      - WearMechanism SkinWear: 4

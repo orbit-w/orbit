@@ -1,0 +1,34 @@
+#字段选项定义蓝图
+---
+#------通用字段，各层级类默认继承的字段和它的默认值
+#实体通用字段（Entity层级）
+- EntityFields:
+
+#模块通用字段（Module层级）
+- ModuleFields:
+  #是否包含在登陆时的全量数据请求中
+  bool includeInLoginData: false
+- ModuleStorageOption:
+    Choices:
+      - Single
+      - Dictionary
+#机制通用字段（Mechanism层级）
+- MechanismFields:
+  #是否前端只读，只读机制不能被前端修改
+  bool readOnly: false
+  #是否为主动同步机制，如果是则后端会主动同步数据到客户端，否则需要客户端主动请求数据
+  bool activeSync: false
+#机制数据结构定义，指的是Data字段的后面的[]内容，用,分隔，用不填表示默认值，例如：[ServerOnly]
+- MechanismDataFieldOption:
+  - access:
+      Default: all
+      Description: 数据访问权限，all表示客户端和服务端都可以访问，s表示只有服务端可以访问，c表示只有客户端可以访问
+      Choices:
+        - all
+        - s
+        - c
+#通用数据结构，这里定义的数据结构可以被其他MME文件使用，例如Common.MMELocation
+- CommonDataStruct:
+  - Fish:
+      int32 FishId: 1
+      map<int32, int32> BodyMap: 2 # 鱼身
