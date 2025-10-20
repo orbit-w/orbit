@@ -1,6 +1,8 @@
 package mme
 
 import (
+	"strings"
+
 	"gitee.com/orbit-w/orbit/app/proto/mme"
 	"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder"
 	"gitee.com/orbit-w/orbit/lib/module/dirty/dirty_tracker"
@@ -76,49 +78,41 @@ func (m *HeroMechanism) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder
 	if m == nil {
 		return
 	}
-	{
-		path := "_id"
-		if prefix != "" {
-			path = prefix + "." + path
-		}
-		if m.IsDirty(LevelUpMechanismDirtyIdBit) {
-			builder.Set(path, m.Id)
-		}
+
+	// 定义字段配置，避免重复代码
+	fieldConfigs := []struct {
+		fieldName string
+		dirtyBit  int64
+		value     any
+	}{
+		{"_id", LevelUpMechanismDirtyIdBit, m.Id},
+		{"conf_id", LevelUpMechanismDirtyConfIdBit, m.ConfId},
+		{"create_time", LevelUpMechanismDirtyCreateTimeBit, m.CreateTime},
+		{"use_times", LevelUpMechanismDirtyUseTimesBit, m.UseTimes},
+		{"skills", LevelUpMechanismDirtySkillsBit, m.Skills},
 	}
-	{
-		path := "conf_id"
-		if prefix != "" {
-			path = prefix + "." + path
-		}
-		if m.IsDirty(LevelUpMechanismDirtyConfIdBit) {
-			builder.Set(path, m.ConfId)
-		}
+
+	// 使用 strings.Builder 优化路径构建性能
+	var pathBuilder strings.Builder
+	hasPrefix := prefix != ""
+
+	// 预分配容量，减少内存重新分配
+	if hasPrefix {
+		pathBuilder.Grow(len(prefix) + 20) // 预估最大路径长度
 	}
-	{
-		path := "create_time"
-		if prefix != "" {
-			path = prefix + "." + path
-		}
-		if m.IsDirty(LevelUpMechanismDirtyCreateTimeBit) {
-			builder.Set(path, m.CreateTime)
-		}
-	}
-	{
-		path := "use_times"
-		if prefix != "" {
-			path = prefix + "." + path
-		}
-		if m.IsDirty(LevelUpMechanismDirtyUseTimesBit) {
-			builder.Set(path, m.UseTimes)
-		}
-	}
-	{
-		path := "skills"
-		if prefix != "" {
-			path = prefix + "." + path
-		}
-		if m.IsDirty(LevelUpMechanismDirtySkillsBit) {
-			builder.Set(path, m.Skills)
+
+	// 批量处理字段更新
+	for _, config := range fieldConfigs {
+		if m.IsDirty(config.dirtyBit) {
+			pathBuilder.Reset()
+
+			if hasPrefix {
+				pathBuilder.WriteString(prefix)
+				pathBuilder.WriteByte('.')
+			}
+			pathBuilder.WriteString(config.fieldName)
+
+			builder.Set(pathBuilder.String(), config.value)
 		}
 	}
 }
