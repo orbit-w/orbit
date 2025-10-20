@@ -3,10 +3,10 @@ package mme
 import (
 	"strings"
 
+	"gitee.com/orbit-w/meteor/bases/dirty/dirty_tracker"
+	"gitee.com/orbit-w/meteor/bases/dirty/xmap"
 	"gitee.com/orbit-w/orbit/app/proto/mme"
 	"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder"
-	"gitee.com/orbit-w/orbit/lib/module/dirty/dirty_tracker"
-	"gitee.com/orbit-w/orbit/lib/module/dirty/xmap"
 	"github.com/gogo/protobuf/proto"
 )
 
