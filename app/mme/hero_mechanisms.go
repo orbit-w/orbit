@@ -12,8 +12,8 @@ import (
 const (
 	LevelUpMechanismDirtyIdBit         int64 = 1 << 0
 	LevelUpMechanismDirtyConfIdBit     int64 = 1 << 1
-	LevelUpMechanismDirtyUseTimesBit   int64 = 1 << 2
-	LevelUpMechanismDirtyCreateTimeBit int64 = 1 << 3
+	LevelUpMechanismDirtyCreateTimeBit int64 = 1 << 2
+	LevelUpMechanismDirtyUseTimesBit   int64 = 1 << 3
 	LevelUpMechanismDirtySkillsBit     int64 = 1 << 4
 )
 
@@ -71,6 +71,7 @@ func (m *HeroMechanism) ClearAllDirtyFlags() {
 	m.DirtyTracker.ClearAllDirty()
 }
 
+// BuildMongoUpdate 构建MongoDB更新操作
 func (m *HeroMechanism) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder, prefix string) {
 	if m == nil {
 		return
@@ -94,6 +95,15 @@ func (m *HeroMechanism) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder
 		}
 	}
 	{
+		path := "create_time"
+		if prefix != "" {
+			path = prefix + "." + path
+		}
+		if m.IsDirty(LevelUpMechanismDirtyCreateTimeBit) {
+			builder.Set(path, m.CreateTime)
+		}
+	}
+	{
 		path := "use_times"
 		if prefix != "" {
 			path = prefix + "." + path
@@ -109,15 +119,6 @@ func (m *HeroMechanism) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder
 		}
 		if m.IsDirty(LevelUpMechanismDirtySkillsBit) {
 			builder.Set(path, m.Skills)
-		}
-	}
-	{
-		path := "create_time"
-		if prefix != "" {
-			path = prefix + "." + path
-		}
-		if m.IsDirty(LevelUpMechanismDirtyCreateTimeBit) {
-			builder.Set(path, m.CreateTime)
 		}
 	}
 }
@@ -138,9 +139,9 @@ func (s *HeroMechanism) DeepCopy(co *HeroMechanism) {
 	}
 }
 
-// PB 根据脏标记位构建增量数据的 protoMessage
+// ToIncrementalProto 根据脏标记位构建增量数据的 protoMessage
 // 只返回标记为脏的字段数据，用于增量同步
-func (m *HeroMechanism) PB() proto.Message {
+func (m *HeroMechanism) ToIncrementalProto() proto.Message {
 	if m == nil {
 		return nil
 	}
