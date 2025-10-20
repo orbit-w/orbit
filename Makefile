@@ -41,12 +41,12 @@ BuildPackageLinux:
 	fi
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o package/$(APP_NAME) main.go
 
-# 生成mechanisms.proto的pb.go文件到app/proto/mme目录
+# 生成protocol目录下所有proto文件的pb.go文件到app/proto/mme目录
 g:
 	@echo "Generating proto files to app/proto/mme..."
 	protoc --proto_path=. \
 		--go_out=app/proto \
-		protocol/common.proto protocol/mechanisms.proto
+		protocol/*.proto
 
 # 帮助信息
 .PHONY: help
