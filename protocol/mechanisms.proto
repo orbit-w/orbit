@@ -12,7 +12,7 @@ message LevelUpMechanism {
   optional int32 CurExp = 3;    // 当前经验值
   optional int32 ConfId = 4;    // 走哪套升级配置
 
-  int32 XXXId = 10000; // 自动化生成MechanismId，范式，不可修改。
+  int64 XXXId = 10000; // 自动化生成MechanismId，范式，不可修改。
 }
 
 // 英雄机制
@@ -26,7 +26,7 @@ message HeroMechanism {
 
   repeated XXXChange_Skills XXXChange_Skills = 1005; // 技能变化
 
-  int32 XXXId = 10000; // 自动化生成MechanismId，范式，不可修改。
+  int64 XXXId = 10000; // 自动化生成MechanismId，范式，不可修改。
 }
 
 //XXXChange_{Skills} 是根据HeroMechanism结构体中Skills字段自动化生成的。结构模式固定，不要修改。
@@ -40,7 +40,7 @@ message XXXChange_Skills {
 message ManualUnlockMechanism {
   map<int32, bool> UnlockMap = 1;  // 解锁状态
 
-  int32 XXXId = 10000; // 自动化生成MechanismId，范式，不可修改。
+  int64 XXXId = 10000; // 自动化生成MechanismId，范式，不可修改。
 }
 
 // 穿戴机制
@@ -48,5 +48,5 @@ message WearMechanism {
   map<int32, int32> WearMap = 1;  // 穿戴状态
   optional int32 ConfId = 2;               // 走哪套穿戴配置
 
-  int32 XXXId = 10000; // 自动化生成MechanismId，范式，不可修改。
+  int64 XXXId = 10000; // 自动化生成MechanismId，范式，不可修改。
 }

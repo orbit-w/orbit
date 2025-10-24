@@ -333,7 +333,7 @@ message Notify  { message ExpChange { int32 Exp = 1; Core.MMELocation Loc = 1000
 -       3) 字段名称是Value，类型根据xmap中指定的value类型设置。
 -   3.在结构体末尾生成对应的变化记录字段：`repeated MessageName MessageName = 1000 + id;`。
 - 对于Entity对象，自动生成唯一Id字段，类型是int64： `int64 XXXId = 10000;`
-- 对于Module/Manager/Mechanism对象，自动生成唯一Id字段，类型是int64： `int32 XXXId = 10000;`
+- 对于Module/Manager/Mechanism对象，自动生成唯一Id字段，类型是int64： `int64 XXXId = 10000;`
 
 示例1：
 ```yaml
@@ -392,7 +392,7 @@ message HeroMechanism {
 
   repeated XXXChange_Skills XXXChange_Skills = 1005; // 技能变化
 
-  int32 XXXId = 10000; // 自动化生成MechanismId，范式，不可修改。
+  int64 XXXId = 10000; // 自动化生成MechanismId，范式，不可修改。
 }
 
 //XXXChange_{Skills} 是根据HeroMechanism结构体中Skills字段自动化生成的。结构模式固定，不要修改。
