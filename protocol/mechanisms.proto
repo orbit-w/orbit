@@ -7,10 +7,9 @@ import "protocol/common.proto";
 
 // 升级机制
 message LevelUpMechanism {
-  optional int64 Id = 1;         // 升级实例唯一Id
-  optional int32 CurLevel = 2;  // 当前等级
-  optional int32 CurExp = 3;    // 当前经验值
-  optional int32 ConfId = 4;    // 走哪套升级配置
+  optional int32 CurLevel = 1;  // 当前等级
+  optional int32 CurExp = 2;    // 当前经验值
+  optional int32 ConfId = 3;    // 走哪套升级配置
 
   int64 XXXId = 10000; // 自动化生成MechanismId，范式，不可修改。
 }

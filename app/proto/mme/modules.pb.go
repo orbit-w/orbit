@@ -25,8 +25,7 @@ type HeroModule struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Base          *HeroMechanism         `protobuf:"bytes,1,opt,name=Base,proto3" json:"Base,omitempty"`
 	LevelUp       *LevelUpMechanism      `protobuf:"bytes,2,opt,name=LevelUp,proto3" json:"LevelUp,omitempty"`
-	TalentUnlock  *ManualUnlockMechanism `protobuf:"bytes,3,opt,name=TalentUnlock,proto3" json:"TalentUnlock,omitempty"`
-	SkinWear      *WearMechanism         `protobuf:"bytes,4,opt,name=SkinWear,proto3" json:"SkinWear,omitempty"`
+	XXXId         int64                  `protobuf:"varint,10000,opt,name=XXXId,proto3" json:"XXXId,omitempty"` // 自动化生成ModuleId，范式，不可修改。
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -75,31 +74,23 @@ func (x *HeroModule) GetLevelUp() *LevelUpMechanism {
 	return nil
 }
 
-func (x *HeroModule) GetTalentUnlock() *ManualUnlockMechanism {
+func (x *HeroModule) GetXXXId() int64 {
 	if x != nil {
-		return x.TalentUnlock
+		return x.XXXId
 	}
-	return nil
-}
-
-func (x *HeroModule) GetSkinWear() *WearMechanism {
-	if x != nil {
-		return x.SkinWear
-	}
-	return nil
+	return 0
 }
 
 var File_protocol_modules_proto protoreflect.FileDescriptor
 
 const file_protocol_modules_proto_rawDesc = "" +
 	"\n" +
-	"\x16protocol/modules.proto\x12\amodules\x1a\x19protocol/mechanisms.proto\"\xf1\x01\n" +
+	"\x16protocol/modules.proto\x12\amodules\x1a\x19protocol/mechanisms.proto\"\x8a\x01\n" +
 	"\n" +
 	"HeroModule\x12-\n" +
 	"\x04Base\x18\x01 \x01(\v2\x19.mechanisms.HeroMechanismR\x04Base\x126\n" +
-	"\aLevelUp\x18\x02 \x01(\v2\x1c.mechanisms.LevelUpMechanismR\aLevelUp\x12E\n" +
-	"\fTalentUnlock\x18\x03 \x01(\v2!.mechanisms.ManualUnlockMechanismR\fTalentUnlock\x125\n" +
-	"\bSkinWear\x18\x04 \x01(\v2\x19.mechanisms.WearMechanismR\bSkinWearB\aZ\x05./mmeb\x06proto3"
+	"\aLevelUp\x18\x02 \x01(\v2\x1c.mechanisms.LevelUpMechanismR\aLevelUp\x12\x15\n" +
+	"\x05XXXId\x18\x90N \x01(\x03R\x05XXXIdB\aZ\x05./mmeb\x06proto3"
 
 var (
 	file_protocol_modules_proto_rawDescOnce sync.Once
@@ -115,22 +106,18 @@ func file_protocol_modules_proto_rawDescGZIP() []byte {
 
 var file_protocol_modules_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
 var file_protocol_modules_proto_goTypes = []any{
-	(*HeroModule)(nil),            // 0: modules.HeroModule
-	(*HeroMechanism)(nil),         // 1: mechanisms.HeroMechanism
-	(*LevelUpMechanism)(nil),      // 2: mechanisms.LevelUpMechanism
-	(*ManualUnlockMechanism)(nil), // 3: mechanisms.ManualUnlockMechanism
-	(*WearMechanism)(nil),         // 4: mechanisms.WearMechanism
+	(*HeroModule)(nil),       // 0: modules.HeroModule
+	(*HeroMechanism)(nil),    // 1: mechanisms.HeroMechanism
+	(*LevelUpMechanism)(nil), // 2: mechanisms.LevelUpMechanism
 }
 var file_protocol_modules_proto_depIdxs = []int32{
 	1, // 0: modules.HeroModule.Base:type_name -> mechanisms.HeroMechanism
 	2, // 1: modules.HeroModule.LevelUp:type_name -> mechanisms.LevelUpMechanism
-	3, // 2: modules.HeroModule.TalentUnlock:type_name -> mechanisms.ManualUnlockMechanism
-	4, // 3: modules.HeroModule.SkinWear:type_name -> mechanisms.WearMechanism
-	4, // [4:4] is the sub-list for method output_type
-	4, // [4:4] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	2, // [2:2] is the sub-list for method output_type
+	2, // [2:2] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_protocol_modules_proto_init() }

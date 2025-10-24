@@ -25,11 +25,10 @@ const (
 // 升级机制
 type LevelUpMechanism struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            *int64                 `protobuf:"varint,1,opt,name=Id,proto3,oneof" json:"Id,omitempty"`             // 升级实例唯一Id
-	CurLevel      *int32                 `protobuf:"varint,2,opt,name=CurLevel,proto3,oneof" json:"CurLevel,omitempty"` // 当前等级
-	CurExp        *int32                 `protobuf:"varint,3,opt,name=CurExp,proto3,oneof" json:"CurExp,omitempty"`     // 当前经验值
-	ConfId        *int32                 `protobuf:"varint,4,opt,name=ConfId,proto3,oneof" json:"ConfId,omitempty"`     // 走哪套升级配置
-	XXXId         int32                  `protobuf:"varint,10000,opt,name=XXXId,proto3" json:"XXXId,omitempty"`         // 自动化生成MechanismId，范式，不可修改。
+	CurLevel      *int32                 `protobuf:"varint,1,opt,name=CurLevel,proto3,oneof" json:"CurLevel,omitempty"` // 当前等级
+	CurExp        *int32                 `protobuf:"varint,2,opt,name=CurExp,proto3,oneof" json:"CurExp,omitempty"`     // 当前经验值
+	ConfId        *int32                 `protobuf:"varint,3,opt,name=ConfId,proto3,oneof" json:"ConfId,omitempty"`     // 走哪套升级配置
+	XXXId         int64                  `protobuf:"varint,10000,opt,name=XXXId,proto3" json:"XXXId,omitempty"`         // 自动化生成MechanismId，范式，不可修改。
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -64,13 +63,6 @@ func (*LevelUpMechanism) Descriptor() ([]byte, []int) {
 	return file_protocol_mechanisms_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *LevelUpMechanism) GetId() int64 {
-	if x != nil && x.Id != nil {
-		return *x.Id
-	}
-	return 0
-}
-
 func (x *LevelUpMechanism) GetCurLevel() int32 {
 	if x != nil && x.CurLevel != nil {
 		return *x.CurLevel
@@ -92,7 +84,7 @@ func (x *LevelUpMechanism) GetConfId() int32 {
 	return 0
 }
 
-func (x *LevelUpMechanism) GetXXXId() int32 {
+func (x *LevelUpMechanism) GetXXXId() int64 {
 	if x != nil {
 		return x.XXXId
 	}
@@ -109,7 +101,7 @@ type HeroMechanism struct {
 	UseTimes         *int32                 `protobuf:"varint,4,opt,name=UseTimes,proto3,oneof" json:"UseTimes,omitempty"`                                                                  // 英雄被使用次数
 	Skills           map[int32]int32        `protobuf:"bytes,5,rep,name=Skills,proto3" json:"Skills,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"` // 技能
 	XXXChange_Skills []*XXXChange_Skills    `protobuf:"bytes,1005,rep,name=XXXChange_Skills,json=XXXChangeSkills,proto3" json:"XXXChange_Skills,omitempty"`                                 // 技能变化
-	XXXId            int32                  `protobuf:"varint,10000,opt,name=XXXId,proto3" json:"XXXId,omitempty"`                                                                          // 自动化生成MechanismId，范式，不可修改。
+	XXXId            int64                  `protobuf:"varint,10000,opt,name=XXXId,proto3" json:"XXXId,omitempty"`                                                                          // 自动化生成MechanismId，范式，不可修改。
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -186,7 +178,7 @@ func (x *HeroMechanism) GetXXXChange_Skills() []*XXXChange_Skills {
 	return nil
 }
 
-func (x *HeroMechanism) GetXXXId() int32 {
+func (x *HeroMechanism) GetXXXId() int64 {
 	if x != nil {
 		return x.XXXId
 	}
@@ -258,7 +250,7 @@ func (x *XXXChange_Skills) GetValue() int32 {
 type ManualUnlockMechanism struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	UnlockMap     map[int32]bool         `protobuf:"bytes,1,rep,name=UnlockMap,proto3" json:"UnlockMap,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"` // 解锁状态
-	XXXId         int32                  `protobuf:"varint,10000,opt,name=XXXId,proto3" json:"XXXId,omitempty"`                                                                                // 自动化生成MechanismId，范式，不可修改。
+	XXXId         int64                  `protobuf:"varint,10000,opt,name=XXXId,proto3" json:"XXXId,omitempty"`                                                                                // 自动化生成MechanismId，范式，不可修改。
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -300,7 +292,7 @@ func (x *ManualUnlockMechanism) GetUnlockMap() map[int32]bool {
 	return nil
 }
 
-func (x *ManualUnlockMechanism) GetXXXId() int32 {
+func (x *ManualUnlockMechanism) GetXXXId() int64 {
 	if x != nil {
 		return x.XXXId
 	}
@@ -312,7 +304,7 @@ type WearMechanism struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	WearMap       map[int32]int32        `protobuf:"bytes,1,rep,name=WearMap,proto3" json:"WearMap,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"` // 穿戴状态
 	ConfId        *int32                 `protobuf:"varint,2,opt,name=ConfId,proto3,oneof" json:"ConfId,omitempty"`                                                                        // 走哪套穿戴配置
-	XXXId         int32                  `protobuf:"varint,10000,opt,name=XXXId,proto3" json:"XXXId,omitempty"`                                                                            // 自动化生成MechanismId，范式，不可修改。
+	XXXId         int64                  `protobuf:"varint,10000,opt,name=XXXId,proto3" json:"XXXId,omitempty"`                                                                            // 自动化生成MechanismId，范式，不可修改。
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -361,7 +353,7 @@ func (x *WearMechanism) GetConfId() int32 {
 	return 0
 }
 
-func (x *WearMechanism) GetXXXId() int32 {
+func (x *WearMechanism) GetXXXId() int64 {
 	if x != nil {
 		return x.XXXId
 	}
@@ -373,14 +365,12 @@ var File_protocol_mechanisms_proto protoreflect.FileDescriptor
 const file_protocol_mechanisms_proto_rawDesc = "" +
 	"\n" +
 	"\x19protocol/mechanisms.proto\x12\n" +
-	"mechanisms\x1a\x15protocol/common.proto\"\xc3\x01\n" +
-	"\x10LevelUpMechanism\x12\x13\n" +
-	"\x02Id\x18\x01 \x01(\x03H\x00R\x02Id\x88\x01\x01\x12\x1f\n" +
-	"\bCurLevel\x18\x02 \x01(\x05H\x01R\bCurLevel\x88\x01\x01\x12\x1b\n" +
-	"\x06CurExp\x18\x03 \x01(\x05H\x02R\x06CurExp\x88\x01\x01\x12\x1b\n" +
-	"\x06ConfId\x18\x04 \x01(\x05H\x03R\x06ConfId\x88\x01\x01\x12\x15\n" +
-	"\x05XXXId\x18\x90N \x01(\x05R\x05XXXIdB\x05\n" +
-	"\x03_IdB\v\n" +
+	"mechanisms\x1a\x15protocol/common.proto\"\xa7\x01\n" +
+	"\x10LevelUpMechanism\x12\x1f\n" +
+	"\bCurLevel\x18\x01 \x01(\x05H\x00R\bCurLevel\x88\x01\x01\x12\x1b\n" +
+	"\x06CurExp\x18\x02 \x01(\x05H\x01R\x06CurExp\x88\x01\x01\x12\x1b\n" +
+	"\x06ConfId\x18\x03 \x01(\x05H\x02R\x06ConfId\x88\x01\x01\x12\x15\n" +
+	"\x05XXXId\x18\x90N \x01(\x03R\x05XXXIdB\v\n" +
 	"\t_CurLevelB\t\n" +
 	"\a_CurExpB\t\n" +
 	"\a_ConfId\"\x90\x03\n" +
@@ -393,7 +383,7 @@ const file_protocol_mechanisms_proto_rawDesc = "" +
 	"\bUseTimes\x18\x04 \x01(\x05H\x03R\bUseTimes\x88\x01\x01\x12=\n" +
 	"\x06Skills\x18\x05 \x03(\v2%.mechanisms.HeroMechanism.SkillsEntryR\x06Skills\x12H\n" +
 	"\x10XXXChange_Skills\x18\xed\a \x03(\v2\x1c.mechanisms.XXXChange_SkillsR\x0fXXXChangeSkills\x12\x15\n" +
-	"\x05XXXId\x18\x90N \x01(\x05R\x05XXXId\x1a9\n" +
+	"\x05XXXId\x18\x90N \x01(\x03R\x05XXXId\x1a9\n" +
 	"\vSkillsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\x05R\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01B\x05\n" +
@@ -409,14 +399,14 @@ const file_protocol_mechanisms_proto_rawDesc = "" +
 	"\x05Value\x18\x03 \x01(\x05R\x05Value\"\xbc\x01\n" +
 	"\x15ManualUnlockMechanism\x12N\n" +
 	"\tUnlockMap\x18\x01 \x03(\v20.mechanisms.ManualUnlockMechanism.UnlockMapEntryR\tUnlockMap\x12\x15\n" +
-	"\x05XXXId\x18\x90N \x01(\x05R\x05XXXId\x1a<\n" +
+	"\x05XXXId\x18\x90N \x01(\x03R\x05XXXId\x1a<\n" +
 	"\x0eUnlockMapEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\x05R\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\bR\x05value:\x028\x01\"\xcc\x01\n" +
 	"\rWearMechanism\x12@\n" +
 	"\aWearMap\x18\x01 \x03(\v2&.mechanisms.WearMechanism.WearMapEntryR\aWearMap\x12\x1b\n" +
 	"\x06ConfId\x18\x02 \x01(\x05H\x00R\x06ConfId\x88\x01\x01\x12\x15\n" +
-	"\x05XXXId\x18\x90N \x01(\x05R\x05XXXId\x1a:\n" +
+	"\x05XXXId\x18\x90N \x01(\x03R\x05XXXId\x1a:\n" +
 	"\fWearMapEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\x05R\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01B\t\n" +
