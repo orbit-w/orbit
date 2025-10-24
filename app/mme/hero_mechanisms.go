@@ -12,11 +12,12 @@ import (
 
 // Dirty bits for Mechanism fields
 const (
-	HeroMechanismDirtyIdBit         int64 = 1 << 0
-	HeroMechanismDirtyConfIdBit     int64 = 1 << 1
-	HeroMechanismDirtyCreateTimeBit int64 = 1 << 2
-	HeroMechanismDirtyUseTimesBit   int64 = 1 << 3
-	HeroMechanismDirtySkillsBit     int64 = 1 << 4
+	HeroMechanismDirtyXXXIdBit      int64 = 1 << 0
+	HeroMechanismDirtyIdBit         int64 = 1 << 1
+	HeroMechanismDirtyConfIdBit     int64 = 1 << 2
+	HeroMechanismDirtyCreateTimeBit int64 = 1 << 3
+	HeroMechanismDirtyUseTimesBit   int64 = 1 << 4
+	HeroMechanismDirtySkillsBit     int64 = 1 << 5
 )
 
 type HeroMechanism struct {
@@ -117,20 +118,66 @@ func (m *HeroMechanism) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder
 	}
 }
 
-// DeepCopy creates a deep copy of LevelUpMechanism
-func (s *HeroMechanism) DeepCopy(co *HeroMechanism) {
-	if s == nil {
+// DeepCopy creates a deep copy of HeroMechanism
+func (m *HeroMechanism) DeepCopy(co *HeroMechanism) {
+	if m == nil {
 		return
 	}
 
-	*co = *s
+	// 创建新的 protobuf 对象
+	co.HeroMechanism = &mme.HeroMechanism{}
 
-	if s.Skills != nil {
-		co.Skills = make(map[int32]int32, len(s.Skills))
-		for k, v := range s.Skills {
+	// 深拷贝指针字段
+	if m.Id != nil {
+		v := *m.Id
+		co.Id = &v
+	}
+
+	if m.ConfId != nil {
+		v := *m.ConfId
+		co.ConfId = &v
+	}
+
+	if m.CreateTime != nil {
+		v := *m.CreateTime
+		co.CreateTime = &v
+	}
+
+	if m.UseTimes != nil {
+		v := *m.UseTimes
+		co.UseTimes = &v
+	}
+
+	// 深拷贝 Skills map
+	if m.Skills != nil {
+		co.Skills = make(map[int32]int32, len(m.Skills))
+		for k, v := range m.Skills {
 			co.Skills[k] = v
 		}
 	}
+
+	// 深拷贝 XXXChange_Skills slice
+	if m.XXXChange_Skills != nil {
+		co.XXXChange_Skills = make([]*mme.XXXChange_Skills, len(m.XXXChange_Skills))
+		for i, skill := range m.XXXChange_Skills {
+			if skill != nil {
+				co.XXXChange_Skills[i] = &mme.XXXChange_Skills{
+					ChangeType: skill.ChangeType,
+					Key:        skill.Key,
+					Value:      skill.Value,
+				}
+			}
+		}
+	}
+
+	// 拷贝 XXXId（非指针）
+	co.XXXId = m.XXXId
+
+	// 重新创建 SkillsAccessor
+	co.SkillsAccessor = xmap.NewMapAccessorWithMarker(&co.Skills, co, HeroMechanismDirtySkillsBit)
+
+	// 拷贝 DirtyTracker 状态
+	co.DirtyTracker = m.DirtyTracker
 }
 
 // ToIncrementalProto 根据脏标记位构建增量数据的 protoMessage
@@ -146,6 +193,10 @@ func (m *HeroMechanism) ToIncrementalProto() proto.Message {
 	}
 
 	incremental := &mme.HeroMechanism{}
+
+	if m.IsDirty(HeroMechanismDirtyXXXIdBit) {
+		incremental.XXXId = m.XXXId
+	}
 
 	// 根据脏标记位设置对应的字段
 	if m.IsDirty(HeroMechanismDirtyIdBit) {
