@@ -193,9 +193,6 @@ NetWall:
 ## 字段与编号规范
 
 - 支持基础类型与 `proto3` 对齐：`int32`, `int64`, `string`, `bool`, `float`, `double`, `map<k,v>`, `repeated`，以及自定义结构。
-- 通用结构：
--   xmap(增量同步map)：
--     根据
 - 每个字段必须有唯一编号；从 1 递增；不重复，不随意修改。
 - 字段选项必须在 `headfile.yaml` 的 `MechanismDataFieldOption` 中事先声明，使用格式 `[blueprint:"optionName=value"]`。支持多个选项，以逗号分隔。
 - `ModuleStorageOption` 定义模块存储形态（Single/Dictionary），由生成器或上层使用方诠释具体意义。
@@ -328,7 +325,13 @@ message Notify  { message ExpChange { int32 Exp = 1; Core.MMELocation Loc = 1000
 ### 5. 数据结构转换（MME）
 
 - 除 NetWall 外，MME 相关结构体的普通字段均生成为 `optional`（`proto3` 语义下的可选）以提升演进兼容性；`map` 与 `repeated` 不使用 `optional`。
-- 对于 `map<key, value> field = id`，在结构体末尾生成对应的删除记录字段：`repeated key field_delete = 1000 + id;`。
+- 对于 `xmap<key, value> Field = id`，具体操作步骤：
+-   1.按照范式XXXChange_{Field}，生成MessageName
+-   1.生成 message MessageName , 包含三个字段：
+-       1) common.ChangeType ChangeType = 1;
+-       2) 字段名称是Key，类型根据xmap中指定的key类型设置。
+-       3) 字段名称是Value，类型根据xmap中指定的value类型设置。
+-   3.在结构体末尾生成对应的变化记录字段：`repeated MessageName MessageName = 1000 + id;`。
 - 对于Entity对象，自动生成唯一Id字段，类型是int64： `int64 XXXId = 10000;`
 - 对于Module/Manager/Mechanism对象，自动生成唯一Id字段，类型是int64： `int32 XXXId = 10000;`
 
@@ -387,13 +390,13 @@ message HeroMechanism {
   optional int32 UseTimes = 4;   // 英雄被使用次数
   map<int32, int32> Skills = 5; // 技能
 
-  repeated XXXSkillChange SkillChanges = 1005; // 技能变化
+  repeated XXXChange_Skills XXXChange_Skills = 1005; // 技能变化
 
   int32 XXXId = 10000; // 自动化生成MechanismId，范式，不可修改。
 }
 
-//XXXChange 是根据HeroMechanism结构体中SkillChanges字段自动化生成的。结构模式固定，不要修改。
-message XXXSkillChange {
+//XXXChange_{Skills} 是根据HeroMechanism结构体中Skills字段自动化生成的。结构模式固定，不要修改。
+message XXXChange_Skills {
   common.ChangeType ChangeType = 1;
   int32 Key = 2;
   int32 Value = 3; 
