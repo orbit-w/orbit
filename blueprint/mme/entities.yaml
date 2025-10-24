@@ -4,6 +4,7 @@
 # 实体是游戏中的一个独立对象单元，可以包含多个模块
 # 自动生成proto文件时会生成实体的proto文件，文件名称为entities.proto，文件内容为实体的定义。
 # 实体的定义和proto文件的定义是一一对应的，例如：PlayerEntity实体的定义和PlayerEntity.proto文件的定义是一一对应的。
+# 实体的定义和.go文件的定义是一一对应的，例如：PlayerEntity实体的定义和PlayerEntity.go文件的定义是一一对应的。
 # 例如：HeroManager HeroManager: 1，HeroManager模块的定义和HeroManager字段，Field序号为1
 #Player实例
 Entity:

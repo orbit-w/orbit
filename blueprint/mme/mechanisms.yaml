@@ -2,6 +2,7 @@
 # 机制是游戏中的一个独立对象单元，可以包含多个数据结构
 # 自动生成proto文件时会生成机制的proto文件，文件名称为mechanisms.proto，文件内容为机制的定义。
 # 机制的定义和proto文件的定义是一一对应的，例如：LevelUpMechanism机制的定义和LevelUpMechanism.proto文件的定义是一一对应的。
+# 机制的定义和.go文件的定义是一一对应的，例如：LevelUpMechanism机制的定义和LevelUpMechanism.go文件的定义是一一对应的。
 # int32 CurLevel: 1 [blueprint:"access=all"]，int32类型的字段，字段名称为CurLevel，字段描述为当前等级，Field序号为1，数据访问权限为all，表示客户端和服务端都可以访问。
 ---
 Mechanisms:
