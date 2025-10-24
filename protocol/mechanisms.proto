@@ -16,7 +16,7 @@ message LevelUpMechanism {
 }
 
 // 英雄机制
-// XXXId 是根据HeroMechanism结构体中Id字段自动化生成的，用于记录英雄实例唯一Id。结构模式固定，不要修改。
+// XXXId 是根据HeroMechanism结构体中Id字段自动化生成的。结构模式固定，不要修改。
 message HeroMechanism {
   optional int64 Id = 1;         // 英雄实例唯一Id
   optional int32 ConfId = 2;     // 英雄配置ID
@@ -24,13 +24,13 @@ message HeroMechanism {
   optional int32 UseTimes = 4;   // 英雄被使用次数
   map<int32, int32> Skills = 5; // 技能
 
-  repeated SkillXXXChange SkillChanges = 1005; // 技能变化
+  repeated XXXSkillChange SkillChanges = 1005; // 技能变化
 
   int32 XXXId = 10000; // 自动化生成MechanismId，范式，不可修改。
 }
 
-//XXXChange 是根据HeroMechanism结构体中Skills字段自动化生成的，用于记录技能变化。结构模式固定，不要修改。
-message SkillXXXChange {
+//XXXChange 是根据HeroMechanism结构体中SkillChanges字段自动化生成的。结构模式固定，不要修改。
+message XXXSkillChange {
   common.ChangeType ChangeType = 1;
   int32 Key = 2;
   int32 Value = 3; 
