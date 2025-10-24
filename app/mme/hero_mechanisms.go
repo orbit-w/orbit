@@ -10,13 +10,13 @@ import (
 	"github.com/gogo/protobuf/proto"
 )
 
-// Dirty bits for component fields
+// Dirty bits for Mechanism fields
 const (
-	LevelUpMechanismDirtyIdBit         int64 = 1 << 0
-	LevelUpMechanismDirtyConfIdBit     int64 = 1 << 1
-	LevelUpMechanismDirtyCreateTimeBit int64 = 1 << 2
-	LevelUpMechanismDirtyUseTimesBit   int64 = 1 << 3
-	LevelUpMechanismDirtySkillsBit     int64 = 1 << 4
+	HeroMechanismDirtyIdBit         int64 = 1 << 0
+	HeroMechanismDirtyConfIdBit     int64 = 1 << 1
+	HeroMechanismDirtyCreateTimeBit int64 = 1 << 2
+	HeroMechanismDirtyUseTimesBit   int64 = 1 << 3
+	HeroMechanismDirtySkillsBit     int64 = 1 << 4
 )
 
 type HeroMechanism struct {
@@ -31,7 +31,7 @@ func NewHeroMechanism() *HeroMechanism {
 		HeroMechanism: new(mme.HeroMechanism),
 	}
 
-	hm.SkillsAccessor = xmap.NewMapAccessorWithMarker(&hm.Skills, hm, LevelUpMechanismDirtySkillsBit)
+	hm.SkillsAccessor = xmap.NewMapAccessorWithMarker(&hm.Skills, hm, HeroMechanismDirtySkillsBit)
 	return hm
 }
 
@@ -46,7 +46,7 @@ func (m *HeroMechanism) Link(parent *dirty_tracker.DirtyTracker, parentBit int64
 
 func (m *HeroMechanism) SetId(v int64) {
 	m.Id = &v
-	m.MarkDirty(LevelUpMechanismDirtyIdBit)
+	m.MarkDirty(HeroMechanismDirtyIdBit)
 }
 
 func (m *HeroMechanism) SetConfId(v int32) {
@@ -56,12 +56,12 @@ func (m *HeroMechanism) SetConfId(v int32) {
 
 func (m *HeroMechanism) SetUseTimes(v int32) {
 	m.UseTimes = &v
-	m.MarkDirty(LevelUpMechanismDirtyUseTimesBit)
+	m.MarkDirty(HeroMechanismDirtyUseTimesBit)
 }
 
 func (m *HeroMechanism) SetCreateTime(v int64) {
 	m.CreateTime = &v
-	m.MarkDirty(LevelUpMechanismDirtyCreateTimeBit)
+	m.MarkDirty(HeroMechanismDirtyCreateTimeBit)
 }
 
 func (m *HeroMechanism) GetSkillAccessor() xmap.MapAccessor[int32, int32] {
@@ -85,11 +85,11 @@ func (m *HeroMechanism) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder
 		dirtyBit  int64
 		value     any
 	}{
-		{"_id", LevelUpMechanismDirtyIdBit, m.Id},
+		{"_id", HeroMechanismDirtyIdBit, m.Id},
 		{"conf_id", LevelUpMechanismDirtyConfIdBit, m.ConfId},
-		{"create_time", LevelUpMechanismDirtyCreateTimeBit, m.CreateTime},
-		{"use_times", LevelUpMechanismDirtyUseTimesBit, m.UseTimes},
-		{"skills", LevelUpMechanismDirtySkillsBit, m.Skills},
+		{"create_time", HeroMechanismDirtyCreateTimeBit, m.CreateTime},
+		{"use_times", HeroMechanismDirtyUseTimesBit, m.UseTimes},
+		{"skills", HeroMechanismDirtySkillsBit, m.Skills},
 	}
 
 	// 使用 strings.Builder 优化路径构建性能
@@ -148,7 +148,7 @@ func (m *HeroMechanism) ToIncrementalProto() proto.Message {
 	incremental := &mme.HeroMechanism{}
 
 	// 根据脏标记位设置对应的字段
-	if m.IsDirty(LevelUpMechanismDirtyIdBit) {
+	if m.IsDirty(HeroMechanismDirtyIdBit) {
 		incremental.Id = m.Id
 	}
 
@@ -156,26 +156,26 @@ func (m *HeroMechanism) ToIncrementalProto() proto.Message {
 		incremental.ConfId = m.ConfId
 	}
 
-	if m.IsDirty(LevelUpMechanismDirtyCreateTimeBit) {
+	if m.IsDirty(HeroMechanismDirtyCreateTimeBit) {
 		incremental.CreateTime = m.CreateTime
 	}
 
-	if m.IsDirty(LevelUpMechanismDirtyUseTimesBit) {
+	if m.IsDirty(HeroMechanismDirtyUseTimesBit) {
 		incremental.UseTimes = m.UseTimes
 	}
 
-	if m.IsDirty(LevelUpMechanismDirtySkillsBit) {
-		incremental.SkillChanges = make([]*mme.SkillXXXChange, 0)
+	if m.IsDirty(HeroMechanismDirtySkillsBit) {
+		incremental.XXXChange_Skills = make([]*mme.XXXChange_Skills, 0)
 		m.SkillsAccessor.RangeOperations(func(key int32, operation xmap.MapOperation[int32]) bool {
 			switch operation.Type {
 			case xmap.SetOperation:
 				v, _ := m.SkillsAccessor.Get(key)
-				incremental.SkillChanges = append(incremental.SkillChanges, &mme.SkillXXXChange{
+				incremental.XXXChange_Skills = append(incremental.XXXChange_Skills, &mme.XXXChange_Skills{
 					Key:   key,
 					Value: v,
 				})
 			case xmap.DeleteOperation:
-				incremental.SkillChanges = append(incremental.SkillChanges, &mme.SkillXXXChange{
+				incremental.XXXChange_Skills = append(incremental.XXXChange_Skills, &mme.XXXChange_Skills{
 					Key: key,
 				})
 			}
