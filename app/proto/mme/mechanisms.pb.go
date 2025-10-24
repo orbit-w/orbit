@@ -101,16 +101,16 @@ func (x *LevelUpMechanism) GetXXXId() int32 {
 // 英雄机制
 // XXXId 是根据HeroMechanism结构体中Id字段自动化生成的。结构模式固定，不要修改。
 type HeroMechanism struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            *int64                 `protobuf:"varint,1,opt,name=Id,proto3,oneof" json:"Id,omitempty"`                                                                              // 英雄实例唯一Id
-	ConfId        *int32                 `protobuf:"varint,2,opt,name=ConfId,proto3,oneof" json:"ConfId,omitempty"`                                                                      // 英雄配置ID
-	CreateTime    *int64                 `protobuf:"varint,3,opt,name=CreateTime,proto3,oneof" json:"CreateTime,omitempty"`                                                              // 玩家获得英雄的时间
-	UseTimes      *int32                 `protobuf:"varint,4,opt,name=UseTimes,proto3,oneof" json:"UseTimes,omitempty"`                                                                  // 英雄被使用次数
-	Skills        map[int32]int32        `protobuf:"bytes,5,rep,name=Skills,proto3" json:"Skills,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"` // 技能
-	SkillChanges  []*XXXSkillChange      `protobuf:"bytes,1005,rep,name=SkillChanges,proto3" json:"SkillChanges,omitempty"`                                                              // 技能变化
-	XXXId         int32                  `protobuf:"varint,10000,opt,name=XXXId,proto3" json:"XXXId,omitempty"`                                                                          // 自动化生成MechanismId，范式，不可修改。
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Id              *int64                 `protobuf:"varint,1,opt,name=Id,proto3,oneof" json:"Id,omitempty"`                                                                              // 英雄实例唯一Id
+	ConfId          *int32                 `protobuf:"varint,2,opt,name=ConfId,proto3,oneof" json:"ConfId,omitempty"`                                                                      // 英雄配置ID
+	CreateTime      *int64                 `protobuf:"varint,3,opt,name=CreateTime,proto3,oneof" json:"CreateTime,omitempty"`                                                              // 玩家获得英雄的时间
+	UseTimes        *int32                 `protobuf:"varint,4,opt,name=UseTimes,proto3,oneof" json:"UseTimes,omitempty"`                                                                  // 英雄被使用次数
+	Skills          map[int32]int32        `protobuf:"bytes,5,rep,name=Skills,proto3" json:"Skills,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"` // 技能
+	XXXSkillsChange []*XXXChange_Skills    `protobuf:"bytes,1005,rep,name=XXXSkillsChange,proto3" json:"XXXSkillsChange,omitempty"`                                                        // 技能变化
+	XXXId           int32                  `protobuf:"varint,10000,opt,name=XXXId,proto3" json:"XXXId,omitempty"`                                                                          // 自动化生成MechanismId，范式，不可修改。
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *HeroMechanism) Reset() {
@@ -178,9 +178,9 @@ func (x *HeroMechanism) GetSkills() map[int32]int32 {
 	return nil
 }
 
-func (x *HeroMechanism) GetSkillChanges() []*XXXSkillChange {
+func (x *HeroMechanism) GetXXXSkillsChange() []*XXXChange_Skills {
 	if x != nil {
-		return x.SkillChanges
+		return x.XXXSkillsChange
 	}
 	return nil
 }
@@ -192,8 +192,8 @@ func (x *HeroMechanism) GetXXXId() int32 {
 	return 0
 }
 
-// XXXChange 是根据HeroMechanism结构体中SkillChanges字段自动化生成的。结构模式固定，不要修改。
-type XXXSkillChange struct {
+// XXXChange_{Skills} 是根据HeroMechanism结构体中Skills字段自动化生成的。结构模式固定，不要修改。
+type XXXChange_Skills struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ChangeType    ChangeType             `protobuf:"varint,1,opt,name=ChangeType,proto3,enum=common.ChangeType" json:"ChangeType,omitempty"`
 	Key           int32                  `protobuf:"varint,2,opt,name=Key,proto3" json:"Key,omitempty"`
@@ -202,20 +202,20 @@ type XXXSkillChange struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *XXXSkillChange) Reset() {
-	*x = XXXSkillChange{}
+func (x *XXXChange_Skills) Reset() {
+	*x = XXXChange_Skills{}
 	mi := &file_protocol_mechanisms_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *XXXSkillChange) String() string {
+func (x *XXXChange_Skills) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*XXXSkillChange) ProtoMessage() {}
+func (*XXXChange_Skills) ProtoMessage() {}
 
-func (x *XXXSkillChange) ProtoReflect() protoreflect.Message {
+func (x *XXXChange_Skills) ProtoReflect() protoreflect.Message {
 	mi := &file_protocol_mechanisms_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -227,26 +227,26 @@ func (x *XXXSkillChange) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use XXXSkillChange.ProtoReflect.Descriptor instead.
-func (*XXXSkillChange) Descriptor() ([]byte, []int) {
+// Deprecated: Use XXXChange_Skills.ProtoReflect.Descriptor instead.
+func (*XXXChange_Skills) Descriptor() ([]byte, []int) {
 	return file_protocol_mechanisms_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *XXXSkillChange) GetChangeType() ChangeType {
+func (x *XXXChange_Skills) GetChangeType() ChangeType {
 	if x != nil {
 		return x.ChangeType
 	}
 	return ChangeType_CHANGE_TYPE_NONE
 }
 
-func (x *XXXSkillChange) GetKey() int32 {
+func (x *XXXChange_Skills) GetKey() int32 {
 	if x != nil {
 		return x.Key
 	}
 	return 0
 }
 
-func (x *XXXSkillChange) GetValue() int32 {
+func (x *XXXChange_Skills) GetValue() int32 {
 	if x != nil {
 		return x.Value
 	}
@@ -382,7 +382,7 @@ const file_protocol_mechanisms_proto_rawDesc = "" +
 	"\x03_IdB\v\n" +
 	"\t_CurLevelB\t\n" +
 	"\a_CurExpB\t\n" +
-	"\a_ConfId\"\x87\x03\n" +
+	"\a_ConfId\"\x8f\x03\n" +
 	"\rHeroMechanism\x12\x13\n" +
 	"\x02Id\x18\x01 \x01(\x03H\x00R\x02Id\x88\x01\x01\x12\x1b\n" +
 	"\x06ConfId\x18\x02 \x01(\x05H\x01R\x06ConfId\x88\x01\x01\x12#\n" +
@@ -390,8 +390,8 @@ const file_protocol_mechanisms_proto_rawDesc = "" +
 	"CreateTime\x18\x03 \x01(\x03H\x02R\n" +
 	"CreateTime\x88\x01\x01\x12\x1f\n" +
 	"\bUseTimes\x18\x04 \x01(\x05H\x03R\bUseTimes\x88\x01\x01\x12=\n" +
-	"\x06Skills\x18\x05 \x03(\v2%.mechanisms.HeroMechanism.SkillsEntryR\x06Skills\x12?\n" +
-	"\fSkillChanges\x18\xed\a \x03(\v2\x1a.mechanisms.XXXSkillChangeR\fSkillChanges\x12\x15\n" +
+	"\x06Skills\x18\x05 \x03(\v2%.mechanisms.HeroMechanism.SkillsEntryR\x06Skills\x12G\n" +
+	"\x0fXXXSkillsChange\x18\xed\a \x03(\v2\x1c.mechanisms.XXXChange_SkillsR\x0fXXXSkillsChange\x12\x15\n" +
 	"\x05XXXId\x18\x90N \x01(\x05R\x05XXXId\x1a9\n" +
 	"\vSkillsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\x05R\x03key\x12\x14\n" +
@@ -399,8 +399,8 @@ const file_protocol_mechanisms_proto_rawDesc = "" +
 	"\x03_IdB\t\n" +
 	"\a_ConfIdB\r\n" +
 	"\v_CreateTimeB\v\n" +
-	"\t_UseTimes\"l\n" +
-	"\x0eXXXSkillChange\x122\n" +
+	"\t_UseTimes\"n\n" +
+	"\x10XXXChange_Skills\x122\n" +
 	"\n" +
 	"ChangeType\x18\x01 \x01(\x0e2\x12.common.ChangeTypeR\n" +
 	"ChangeType\x12\x10\n" +
@@ -437,7 +437,7 @@ var file_protocol_mechanisms_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_protocol_mechanisms_proto_goTypes = []any{
 	(*LevelUpMechanism)(nil),      // 0: mechanisms.LevelUpMechanism
 	(*HeroMechanism)(nil),         // 1: mechanisms.HeroMechanism
-	(*XXXSkillChange)(nil),        // 2: mechanisms.XXXSkillChange
+	(*XXXChange_Skills)(nil),      // 2: mechanisms.XXXChange_Skills
 	(*ManualUnlockMechanism)(nil), // 3: mechanisms.ManualUnlockMechanism
 	(*WearMechanism)(nil),         // 4: mechanisms.WearMechanism
 	nil,                           // 5: mechanisms.HeroMechanism.SkillsEntry
@@ -447,8 +447,8 @@ var file_protocol_mechanisms_proto_goTypes = []any{
 }
 var file_protocol_mechanisms_proto_depIdxs = []int32{
 	5, // 0: mechanisms.HeroMechanism.Skills:type_name -> mechanisms.HeroMechanism.SkillsEntry
-	2, // 1: mechanisms.HeroMechanism.SkillChanges:type_name -> mechanisms.XXXSkillChange
-	8, // 2: mechanisms.XXXSkillChange.ChangeType:type_name -> common.ChangeType
+	2, // 1: mechanisms.HeroMechanism.XXXSkillsChange:type_name -> mechanisms.XXXChange_Skills
+	8, // 2: mechanisms.XXXChange_Skills.ChangeType:type_name -> common.ChangeType
 	6, // 3: mechanisms.ManualUnlockMechanism.UnlockMap:type_name -> mechanisms.ManualUnlockMechanism.UnlockMapEntry
 	7, // 4: mechanisms.WearMechanism.WearMap:type_name -> mechanisms.WearMechanism.WearMapEntry
 	5, // [5:5] is the sub-list for method output_type
