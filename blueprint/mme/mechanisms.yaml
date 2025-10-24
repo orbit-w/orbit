@@ -4,6 +4,7 @@
 # 机制的定义和proto文件的定义是一一对应的，例如：LevelUpMechanism机制的定义和LevelUpMechanism.proto文件的定义是一一对应的。
 # 机制的定义和.go文件的定义是一一对应的，例如：LevelUpMechanism机制的定义和LevelUpMechanism.go文件的定义是一一对应的。
 # int32 CurLevel: 1 [blueprint:"access=all"]，int32类型的字段，字段名称为CurLevel，字段描述为当前等级，Field序号为1，数据访问权限为all，表示客户端和服务端都可以访问。
+# 生成proto文件，默认生成optional字段，如果需要生成required字段，可以在字段定义后面加上[blueprint:"required=true"]
 ---
 Mechanisms:
   #升级机制
@@ -33,6 +34,8 @@ Mechanisms:
       int64 CreateTime: 2
       #英雄被使用次数
       int32 UseTimes: 3
+      #技能
+      xmap<int32, int32> Skills: 4 [blueprint:"access=all"]
   #手动解锁机制
   - ManualUnlockMechanism:
       #解锁状态

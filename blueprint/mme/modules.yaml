@@ -6,6 +6,7 @@
 # 模块的定义和proto文件的定义是一一对应的，例如：HeroModule模块的定义和HeroModule.proto文件的定义是一一对应的。
 # 模块的定义和.go文件的定义是一一对应的，例如：HeroModule模块的定义和HeroModule.go文件的定义是一一对应的。
 # 例如：mechanisms.HeroMechanism Base: 1，HeroMechanism机制的定义和Base字段，Field序号为1
+# 生成proto文件，默认生成optional字段，如果需要生成required字段，可以在字段定义后面加上[blueprint:"required=true"]
 Modules:
   #英雄模块
   - HeroModule:
