@@ -3,6 +3,7 @@
 ## 概述
 
 NetBluePrint 是一个基于 YAML 的网络协议设计系统，用于定义游戏中的网络消息与数据结构。通过 YAML 蓝图文件，可自动生成 Protocol Buffers (.proto) 文件，实现网络协议的标准化与自动化管理。
+MME中定义的结构，到线上后，FieldIndex不可更改，可以直接删除，但是不可复用。
 
 ## 目录结构
 
@@ -334,6 +335,7 @@ message Notify  { message ExpChange { int32 Exp = 1; Core.MMELocation Loc = 1000
 -   3.在结构体末尾生成对应的变化记录字段：`repeated MessageName MessageName = 1000 + id;`。
 - 对于Entity对象，自动生成唯一Id字段，类型是int64： `int64 XXXId = 10000;`
 - 对于Module/Manager/Mechanism对象，自动生成唯一Id字段，类型是int64： `int64 XXXId = 10000;`
+- 生成MME中Entity/Module/Manager/Mechanism四种结构体时，DirtyBit 标记位，默认 DirtyXXXIdBit int64 = 1 << 0. 其他字段根据MME yaml中定义的FieldIndex进行左移。
 
 示例1：
 ```yaml
