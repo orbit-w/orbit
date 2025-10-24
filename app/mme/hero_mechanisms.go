@@ -156,20 +156,6 @@ func (m *HeroMechanism) DeepCopy(co *HeroMechanism) {
 		}
 	}
 
-	// 深拷贝 XXXChange_Skills slice
-	if m.XXXChange_Skills != nil {
-		co.XXXChange_Skills = make([]*mme.XXXChange_Skills, len(m.XXXChange_Skills))
-		for i, skill := range m.XXXChange_Skills {
-			if skill != nil {
-				co.XXXChange_Skills[i] = &mme.XXXChange_Skills{
-					ChangeType: skill.ChangeType,
-					Key:        skill.Key,
-					Value:      skill.Value,
-				}
-			}
-		}
-	}
-
 	// 拷贝 XXXId（非指针）
 	co.XXXId = m.XXXId
 

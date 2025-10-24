@@ -6,13 +6,15 @@ import (
 	"gitee.com/orbit-w/meteor/bases/dirty/dirty_tracker"
 	"gitee.com/orbit-w/orbit/app/proto/mme"
 	"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder"
+	"github.com/gogo/protobuf/proto"
 )
 
 // Dirty bits for Mechanism fields
 const (
-	LevelUpMechanismDirtyCurLevelBit int64 = 1 << 0
-	LevelUpMechanismDirtyCurExpBit   int64 = 1 << 1
-	LevelUpMechanismDirtyConfIdBit   int64 = 1 << 2
+	LevelUpMechanismDirtyXXXIdBit    int64 = 1 << 0
+	LevelUpMechanismDirtyCurLevelBit int64 = 1 << 1
+	LevelUpMechanismDirtyCurExpBit   int64 = 1 << 2
+	LevelUpMechanismDirtyConfIdBit   int64 = 1 << 3
 )
 
 type LevelUpMechanism struct {
@@ -33,6 +35,18 @@ func (m *LevelUpMechanism) Name() string {
 
 func (m *LevelUpMechanism) Link(parent *dirty_tracker.DirtyTracker, parentBit int64) {
 	m.DirtyTracker.Link(parent, parentBit)
+}
+
+func (m *LevelUpMechanism) GetXXXId() int64 {
+	if m != nil {
+		return m.XXXId
+	}
+	return 0
+}
+
+func (m *LevelUpMechanism) SetXXXId(v int64) {
+	m.XXXId = v
+	m.MarkDirty(LevelUpMechanismDirtyXXXIdBit)
 }
 
 func (m *LevelUpMechanism) SetCurLevel(v int32) {
@@ -95,4 +109,41 @@ func (m *LevelUpMechanism) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuil
 			builder.Set(pathBuilder.String(), config.value)
 		}
 	}
+}
+
+func (m *LevelUpMechanism) DeepCopy(co *LevelUpMechanism) {
+
+}
+
+// ToIncrementalProto 根据脏标记位构建增量数据的 protoMessage
+// 只返回标记为脏的字段数据，用于增量同步
+func (m *LevelUpMechanism) ToIncrementalProto() proto.Message {
+	if m == nil {
+		return nil
+	}
+
+	incremental := &mme.LevelUpMechanism{}
+
+	// 如果没有脏标记，返回 nil
+	if !m.HasAnyDirty() {
+		return nil
+	}
+
+	if m.IsDirty(LevelUpMechanismDirtyXXXIdBit) {
+		incremental.XXXId = m.XXXId
+	}
+
+	if m.IsDirty(LevelUpMechanismDirtyCurLevelBit) {
+		incremental.CurLevel = m.CurLevel
+	}
+
+	if m.IsDirty(LevelUpMechanismDirtyCurExpBit) {
+		incremental.CurExp = m.CurExp
+	}
+
+	if m.IsDirty(LevelUpMechanismDirtyConfIdBit) {
+		incremental.ConfId = m.ConfId
+	}
+
+	return incremental
 }
