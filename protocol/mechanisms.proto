@@ -7,17 +7,16 @@ import "protocol/common.proto";
 
 // 升级机制
 message LevelUpMechanism {
-  optional int32 CurLevel = 1;  // 当前等级
-  optional int32 CurExp = 2;    // 当前经验值
-  optional int32 ConfId = 3;    // 走哪套升级配置
-}
+  optional int64 Id = 1;         // 升级实例唯一Id
+  optional int32 CurLevel = 2;  // 当前等级
+  optional int32 CurExp = 3;    // 当前经验值
+  optional int32 ConfId = 4;    // 走哪套升级配置
 
-// 升级机制设置
-message LevelUpMechanismSettings {
-  optional bool AutoLevelUp = 1;  // 经验够则自动升级
+  int32 XXXId = 10000; // 自动化生成MechanismId，范式，不可修改。
 }
 
 // 英雄机制
+// XXXId 是根据HeroMechanism结构体中Id字段自动化生成的，用于记录英雄实例唯一Id。结构模式固定，不要修改。
 message HeroMechanism {
   optional int64 Id = 1;         // 英雄实例唯一Id
   optional int32 ConfId = 2;     // 英雄配置ID
@@ -26,6 +25,8 @@ message HeroMechanism {
   map<int32, int32> Skills = 5; // 技能
 
   repeated SkillXXXChange SkillChanges = 1005; // 技能变化
+
+  int32 XXXId = 10000; // 自动化生成MechanismId，范式，不可修改。
 }
 
 //XXXChange 是根据HeroMechanism结构体中Skills字段自动化生成的，用于记录技能变化。结构模式固定，不要修改。
@@ -38,10 +39,14 @@ message SkillXXXChange {
 // 手动解锁机制
 message ManualUnlockMechanism {
   map<int32, bool> UnlockMap = 1;  // 解锁状态
+
+  int32 XXXId = 10000; // 自动化生成MechanismId，范式，不可修改。
 }
 
 // 穿戴机制
 message WearMechanism {
   map<int32, int32> WearMap = 1;  // 穿戴状态
   optional int32 ConfId = 2;               // 走哪套穿戴配置
+
+  int32 XXXId = 10000; // 自动化生成MechanismId，范式，不可修改。
 }
