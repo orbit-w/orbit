@@ -3,74 +3,74 @@ package mme
 import (
 	"strings"
 
-	"gitee.com/orbit-w/meteor/bases/dirty/dirty_tracker"
 	"gitee.com/orbit-w/orbit/app/proto/mme"
+	dirtyflag "gitee.com/orbit-w/orbit/lib/base/dirty_flag"
 	"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder"
 	"github.com/gogo/protobuf/proto"
 )
 
 // Dirty bits for Mechanism fields
 const (
-	LevelUpMechanismDirtyXXXIdBit    int64 = 1 << 0
-	LevelUpMechanismDirtyCurLevelBit int64 = 1 << 1
-	LevelUpMechanismDirtyCurExpBit   int64 = 1 << 2
-	LevelUpMechanismDirtyConfIdBit   int64 = 1 << 3
+	LevelUpMechanismDirtyCurLevelBit int64 = 1 << 0
+	LevelUpMechanismDirtyCurExpBit   int64 = 1 << 1
+	LevelUpMechanismDirtyConfIdBit   int64 = 1 << 2
 )
 
-type LevelUpMechanism struct {
-	*mme.LevelUpMechanism
-	dirty_tracker.DirtyTracker
+type LevelUpMechanism[FactsAccessorKey comparable] struct {
+	levelUpMechanism *mme.LevelUpMechanism
+	dirtyflag.IDirtyFlag[FactsAccessorKey]
 }
 
-func NewLevelUpMechanism() *LevelUpMechanism {
-	return &LevelUpMechanism{
-		LevelUpMechanism: new(mme.LevelUpMechanism),
+func NewLevelUpMechanism[FactsAccessorKey comparable](levelUpMechanism *mme.LevelUpMechanism) *LevelUpMechanism[FactsAccessorKey] {
+	if levelUpMechanism == nil {
+		panic("levelUpMechanism is nil")
 	}
+	m := &LevelUpMechanism[FactsAccessorKey]{
+		levelUpMechanism: levelUpMechanism,
+		IDirtyFlag:       dirtyflag.NewDirtyFlag[FactsAccessorKey](),
+	}
+	return m
 }
 
 // 机制唯一名称
-func (m *LevelUpMechanism) Name() string {
+func (m *LevelUpMechanism[FactsAccessorKey]) Name() string {
 	return "LevelUpMechanism"
 }
 
-func (m *LevelUpMechanism) Link(parent *dirty_tracker.DirtyTracker, parentBit int64) {
-	m.DirtyTracker.Link(parent, parentBit)
-}
-
-func (m *LevelUpMechanism) GetXXXId() int64 {
-	if m != nil {
-		return m.XXXId
-	}
-	return 0
-}
-
-func (m *LevelUpMechanism) SetXXXId(v int64) {
-	m.XXXId = v
-	m.MarkDirty(LevelUpMechanismDirtyXXXIdBit)
-}
-
-func (m *LevelUpMechanism) SetCurLevel(v int32) {
-	m.CurLevel = &v
+func (m *LevelUpMechanism[FactsAccessorKey]) SetCurLevel(v int32) {
+	m.levelUpMechanism.CurLevel = &v
 	m.MarkDirty(LevelUpMechanismDirtyCurLevelBit)
 }
 
-func (m *LevelUpMechanism) SetCurExp(v int32) {
-	m.CurExp = &v
+func (m *LevelUpMechanism[FactsAccessorKey]) SetCurExp(v int32) {
+	m.levelUpMechanism.CurExp = &v
 	m.MarkDirty(LevelUpMechanismDirtyCurExpBit)
 }
 
-func (m *LevelUpMechanism) SetConfId(v int32) {
-	m.ConfId = &v
+func (m *LevelUpMechanism[FactsAccessorKey]) SetConfId(v int32) {
+	m.levelUpMechanism.ConfId = &v
 	m.MarkDirty(LevelUpMechanismDirtyConfIdBit)
 }
 
+func (m *LevelUpMechanism[FactsAccessorKey]) GetCurLevel() int32 {
+	return *m.levelUpMechanism.CurLevel
+}
+
+func (m *LevelUpMechanism[FactsAccessorKey]) GetCurExp() int32 {
+	return *m.levelUpMechanism.CurExp
+}
+
+func (m *LevelUpMechanism[FactsAccessorKey]) GetConfId() int32 {
+	return *m.levelUpMechanism.ConfId
+}
+
 // ClearAllDirtyFlags 清除所有脏标记位
-func (m *LevelUpMechanism) ClearAllDirtyFlags() {
-	m.DirtyTracker.ClearAllDirty()
+func (m *LevelUpMechanism[FactsAccessorKey]) ClearAllDirtyFlags() {
+	m.ClearAllDirty()
 }
 
 // BuildMongoUpdate 构建MongoDB更新操作
-func (m *LevelUpMechanism) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder, prefix string) {
+func (m *LevelUpMechanism[FactsAccessorKey]) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder, prefix string) {
 	if m == nil {
 		return
 	}
@@ -81,9 +81,9 @@ func (m *LevelUpMechanism) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuil
 		dirtyBit  int64
 		value     any
 	}{
-		{"cur_level", LevelUpMechanismDirtyCurLevelBit, m.CurLevel},
-		{"cur_exp", LevelUpMechanismDirtyCurExpBit, m.CurExp},
-		{"conf_id", LevelUpMechanismDirtyConfIdBit, m.ConfId},
+		{"cur_level", LevelUpMechanismDirtyCurLevelBit, m.GetCurLevel()},
+		{"cur_exp", LevelUpMechanismDirtyCurExpBit, m.GetCurExp()},
+		{"conf_id", LevelUpMechanismDirtyConfIdBit, m.GetConfId()},
 	}
 
 	// 使用 strings.Builder 优化路径构建性能
@@ -113,34 +113,31 @@ func (m *LevelUpMechanism) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuil
 
 // DeepCopy creates a deep copy of LevelUpMechanism proto data only
 // 手写实现，性能优于 proto.Clone（避免反射开销）
-func (m *LevelUpMechanism) DeepCopy(co *mme.LevelUpMechanism) {
+func (m *LevelUpMechanism[FactsAccessorKey]) DeepCopy(co *mme.LevelUpMechanism) {
 	if m == nil || co == nil {
 		return
 	}
 
 	// 深拷贝指针字段
-	if m.CurLevel != nil {
-		v := *m.CurLevel
+	if m.levelUpMechanism.CurLevel != nil {
+		v := m.GetCurLevel()
 		co.CurLevel = &v
 	}
 
-	if m.CurExp != nil {
-		v := *m.CurExp
+	if m.levelUpMechanism.CurExp != nil {
+		v := m.GetCurExp()
 		co.CurExp = &v
 	}
 
-	if m.ConfId != nil {
-		v := *m.ConfId
+	if m.levelUpMechanism.ConfId != nil {
+		v := m.GetConfId()
 		co.ConfId = &v
 	}
-
-	// 拷贝 XXXId
-	co.XXXId = m.XXXId
 }
 
 // ToIncrementalProto 根据脏标记位构建增量数据的 protoMessage
 // 只返回标记为脏的字段数据，用于增量同步
-func (m *LevelUpMechanism) ToIncrementalProto() proto.Message {
+func (m *LevelUpMechanism[FactsAccessorKey]) ToIncrementalProto() proto.Message {
 	if m == nil {
 		return nil
 	}
@@ -152,20 +149,19 @@ func (m *LevelUpMechanism) ToIncrementalProto() proto.Message {
 		return nil
 	}
 
-	if m.IsDirty(LevelUpMechanismDirtyXXXIdBit) {
-		incremental.XXXId = m.XXXId
-	}
-
 	if m.IsDirty(LevelUpMechanismDirtyCurLevelBit) {
-		incremental.CurLevel = m.CurLevel
+		v := m.GetCurLevel()
+		incremental.CurLevel = &v
 	}
 
 	if m.IsDirty(LevelUpMechanismDirtyCurExpBit) {
-		incremental.CurExp = m.CurExp
+		v := m.GetCurExp()
+		incremental.CurExp = &v
 	}
 
 	if m.IsDirty(LevelUpMechanismDirtyConfIdBit) {
-		incremental.ConfId = m.ConfId
+		v := m.GetConfId()
+		incremental.ConfId = &v
 	}
 
 	return incremental

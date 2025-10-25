@@ -7,12 +7,11 @@
 package mme
 
 import (
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
-
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -28,7 +27,6 @@ type LevelUpMechanism struct {
 	CurLevel      *int32                 `protobuf:"varint,1,opt,name=CurLevel,proto3,oneof" json:"CurLevel,omitempty"` // 当前等级
 	CurExp        *int32                 `protobuf:"varint,2,opt,name=CurExp,proto3,oneof" json:"CurExp,omitempty"`     // 当前经验值
 	ConfId        *int32                 `protobuf:"varint,3,opt,name=ConfId,proto3,oneof" json:"ConfId,omitempty"`     // 走哪套升级配置
-	XXXId         int64                  `protobuf:"varint,10000,opt,name=XXXId,proto3" json:"XXXId,omitempty"`         // 自动化生成MechanismId，范式，不可修改。
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -84,26 +82,17 @@ func (x *LevelUpMechanism) GetConfId() int32 {
 	return 0
 }
 
-func (x *LevelUpMechanism) GetXXXId() int64 {
-	if x != nil {
-		return x.XXXId
-	}
-	return 0
-}
-
 // 英雄机制
-// XXXId 是根据HeroMechanism结构体中Id字段自动化生成的。结构模式固定，不要修改。
 type HeroMechanism struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	Id               *int64                 `protobuf:"varint,1,opt,name=Id,proto3,oneof" json:"Id,omitempty"`                                                                              // 英雄实例唯一Id
-	ConfId           *int32                 `protobuf:"varint,2,opt,name=ConfId,proto3,oneof" json:"ConfId,omitempty"`                                                                      // 英雄配置ID
-	CreateTime       *int64                 `protobuf:"varint,3,opt,name=CreateTime,proto3,oneof" json:"CreateTime,omitempty"`                                                              // 玩家获得英雄的时间
-	UseTimes         *int32                 `protobuf:"varint,4,opt,name=UseTimes,proto3,oneof" json:"UseTimes,omitempty"`                                                                  // 英雄被使用次数
-	Skills           map[int32]int32        `protobuf:"bytes,5,rep,name=Skills,proto3" json:"Skills,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"` // 技能
-	XXXChange_Skills []*XXXChange_Skills    `protobuf:"bytes,1005,rep,name=XXXChange_Skills,json=XXXChangeSkills,proto3" json:"XXXChange_Skills,omitempty"`                                 // 技能变化
-	XXXId            int64                  `protobuf:"varint,10000,opt,name=XXXId,proto3" json:"XXXId,omitempty"`                                                                          // 自动化生成MechanismId，范式，不可修改。
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	state                protoimpl.MessageState                     `protogen:"open.v1"`
+	Id                   *int64                                     `protobuf:"varint,1,opt,name=Id,proto3,oneof" json:"Id,omitempty"`                                                                              // 英雄实例唯一Id
+	ConfId               *int32                                     `protobuf:"varint,2,opt,name=ConfId,proto3,oneof" json:"ConfId,omitempty"`                                                                      // 英雄配置ID
+	CreateTime           *int64                                     `protobuf:"varint,3,opt,name=CreateTime,proto3,oneof" json:"CreateTime,omitempty"`                                                              // 玩家获得英雄的时间
+	UseTimes             *int32                                     `protobuf:"varint,4,opt,name=UseTimes,proto3,oneof" json:"UseTimes,omitempty"`                                                                  // 英雄被使用次数
+	Skills               map[int32]int32                            `protobuf:"bytes,5,rep,name=Skills,proto3" json:"Skills,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"` // 技能
+	Skills_XXXChangeList []*HeroMechanism_Skills_XXXMapChangeRecord `protobuf:"bytes,1005,rep,name=Skills_XXXChangeList,json=SkillsXXXChangeList,proto3" json:"Skills_XXXChangeList,omitempty"`                     // 技能变化
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *HeroMechanism) Reset() {
@@ -171,93 +160,24 @@ func (x *HeroMechanism) GetSkills() map[int32]int32 {
 	return nil
 }
 
-func (x *HeroMechanism) GetXXXChange_Skills() []*XXXChange_Skills {
+func (x *HeroMechanism) GetSkills_XXXChangeList() []*HeroMechanism_Skills_XXXMapChangeRecord {
 	if x != nil {
-		return x.XXXChange_Skills
+		return x.Skills_XXXChangeList
 	}
 	return nil
-}
-
-func (x *HeroMechanism) GetXXXId() int64 {
-	if x != nil {
-		return x.XXXId
-	}
-	return 0
-}
-
-// XXXChange_{Skills} 是根据HeroMechanism结构体中Skills字段自动化生成的。结构模式固定，不要修改。
-type XXXChange_Skills struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ChangeType    ChangeType             `protobuf:"varint,1,opt,name=ChangeType,proto3,enum=common.ChangeType" json:"ChangeType,omitempty"`
-	Key           int32                  `protobuf:"varint,2,opt,name=Key,proto3" json:"Key,omitempty"`
-	Value         int32                  `protobuf:"varint,3,opt,name=Value,proto3" json:"Value,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *XXXChange_Skills) Reset() {
-	*x = XXXChange_Skills{}
-	mi := &file_protocol_mechanisms_proto_msgTypes[2]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *XXXChange_Skills) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*XXXChange_Skills) ProtoMessage() {}
-
-func (x *XXXChange_Skills) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_mechanisms_proto_msgTypes[2]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use XXXChange_Skills.ProtoReflect.Descriptor instead.
-func (*XXXChange_Skills) Descriptor() ([]byte, []int) {
-	return file_protocol_mechanisms_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *XXXChange_Skills) GetChangeType() ChangeType {
-	if x != nil {
-		return x.ChangeType
-	}
-	return ChangeType_CHANGE_TYPE_NONE
-}
-
-func (x *XXXChange_Skills) GetKey() int32 {
-	if x != nil {
-		return x.Key
-	}
-	return 0
-}
-
-func (x *XXXChange_Skills) GetValue() int32 {
-	if x != nil {
-		return x.Value
-	}
-	return 0
 }
 
 // 手动解锁机制
 type ManualUnlockMechanism struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	UnlockMap     map[int32]bool         `protobuf:"bytes,1,rep,name=UnlockMap,proto3" json:"UnlockMap,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"` // 解锁状态
-	XXXId         int64                  `protobuf:"varint,10000,opt,name=XXXId,proto3" json:"XXXId,omitempty"`                                                                                // 自动化生成MechanismId，范式，不可修改。
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ManualUnlockMechanism) Reset() {
 	*x = ManualUnlockMechanism{}
-	mi := &file_protocol_mechanisms_proto_msgTypes[3]
+	mi := &file_protocol_mechanisms_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -269,7 +189,7 @@ func (x *ManualUnlockMechanism) String() string {
 func (*ManualUnlockMechanism) ProtoMessage() {}
 
 func (x *ManualUnlockMechanism) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_mechanisms_proto_msgTypes[3]
+	mi := &file_protocol_mechanisms_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -282,7 +202,7 @@ func (x *ManualUnlockMechanism) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ManualUnlockMechanism.ProtoReflect.Descriptor instead.
 func (*ManualUnlockMechanism) Descriptor() ([]byte, []int) {
-	return file_protocol_mechanisms_proto_rawDescGZIP(), []int{3}
+	return file_protocol_mechanisms_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *ManualUnlockMechanism) GetUnlockMap() map[int32]bool {
@@ -292,26 +212,18 @@ func (x *ManualUnlockMechanism) GetUnlockMap() map[int32]bool {
 	return nil
 }
 
-func (x *ManualUnlockMechanism) GetXXXId() int64 {
-	if x != nil {
-		return x.XXXId
-	}
-	return 0
-}
-
 // 穿戴机制
 type WearMechanism struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	WearMap       map[int32]int32        `protobuf:"bytes,1,rep,name=WearMap,proto3" json:"WearMap,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"` // 穿戴状态
 	ConfId        *int32                 `protobuf:"varint,2,opt,name=ConfId,proto3,oneof" json:"ConfId,omitempty"`                                                                        // 走哪套穿戴配置
-	XXXId         int64                  `protobuf:"varint,10000,opt,name=XXXId,proto3" json:"XXXId,omitempty"`                                                                            // 自动化生成MechanismId，范式，不可修改。
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *WearMechanism) Reset() {
 	*x = WearMechanism{}
-	mi := &file_protocol_mechanisms_proto_msgTypes[4]
+	mi := &file_protocol_mechanisms_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -323,7 +235,7 @@ func (x *WearMechanism) String() string {
 func (*WearMechanism) ProtoMessage() {}
 
 func (x *WearMechanism) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_mechanisms_proto_msgTypes[4]
+	mi := &file_protocol_mechanisms_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -336,7 +248,7 @@ func (x *WearMechanism) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WearMechanism.ProtoReflect.Descriptor instead.
 func (*WearMechanism) Descriptor() ([]byte, []int) {
-	return file_protocol_mechanisms_proto_rawDescGZIP(), []int{4}
+	return file_protocol_mechanisms_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *WearMechanism) GetWearMap() map[int32]int32 {
@@ -353,9 +265,62 @@ func (x *WearMechanism) GetConfId() int32 {
 	return 0
 }
 
-func (x *WearMechanism) GetXXXId() int64 {
+type HeroMechanism_Skills_XXXMapChangeRecord struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ChangeType    ChangeType             `protobuf:"varint,1,opt,name=ChangeType,proto3,enum=common.ChangeType" json:"ChangeType,omitempty"`
+	Key           int32                  `protobuf:"varint,2,opt,name=Key,proto3" json:"Key,omitempty"`
+	Value         int32                  `protobuf:"varint,3,opt,name=Value,proto3" json:"Value,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HeroMechanism_Skills_XXXMapChangeRecord) Reset() {
+	*x = HeroMechanism_Skills_XXXMapChangeRecord{}
+	mi := &file_protocol_mechanisms_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HeroMechanism_Skills_XXXMapChangeRecord) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HeroMechanism_Skills_XXXMapChangeRecord) ProtoMessage() {}
+
+func (x *HeroMechanism_Skills_XXXMapChangeRecord) ProtoReflect() protoreflect.Message {
+	mi := &file_protocol_mechanisms_proto_msgTypes[5]
 	if x != nil {
-		return x.XXXId
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HeroMechanism_Skills_XXXMapChangeRecord.ProtoReflect.Descriptor instead.
+func (*HeroMechanism_Skills_XXXMapChangeRecord) Descriptor() ([]byte, []int) {
+	return file_protocol_mechanisms_proto_rawDescGZIP(), []int{1, 1}
+}
+
+func (x *HeroMechanism_Skills_XXXMapChangeRecord) GetChangeType() ChangeType {
+	if x != nil {
+		return x.ChangeType
+	}
+	return ChangeType_CHANGE_TYPE_NONE
+}
+
+func (x *HeroMechanism_Skills_XXXMapChangeRecord) GetKey() int32 {
+	if x != nil {
+		return x.Key
+	}
+	return 0
+}
+
+func (x *HeroMechanism_Skills_XXXMapChangeRecord) GetValue() int32 {
+	if x != nil {
+		return x.Value
 	}
 	return 0
 }
@@ -365,15 +330,14 @@ var File_protocol_mechanisms_proto protoreflect.FileDescriptor
 const file_protocol_mechanisms_proto_rawDesc = "" +
 	"\n" +
 	"\x19protocol/mechanisms.proto\x12\n" +
-	"mechanisms\x1a\x15protocol/common.proto\"\xa7\x01\n" +
+	"mechanisms\x1a\x15protocol/common.proto\"\x90\x01\n" +
 	"\x10LevelUpMechanism\x12\x1f\n" +
 	"\bCurLevel\x18\x01 \x01(\x05H\x00R\bCurLevel\x88\x01\x01\x12\x1b\n" +
 	"\x06CurExp\x18\x02 \x01(\x05H\x01R\x06CurExp\x88\x01\x01\x12\x1b\n" +
-	"\x06ConfId\x18\x03 \x01(\x05H\x02R\x06ConfId\x88\x01\x01\x12\x15\n" +
-	"\x05XXXId\x18\x90N \x01(\x03R\x05XXXIdB\v\n" +
+	"\x06ConfId\x18\x03 \x01(\x05H\x02R\x06ConfId\x88\x01\x01B\v\n" +
 	"\t_CurLevelB\t\n" +
 	"\a_CurExpB\t\n" +
-	"\a_ConfId\"\x90\x03\n" +
+	"\a_ConfId\"\x91\x04\n" +
 	"\rHeroMechanism\x12\x13\n" +
 	"\x02Id\x18\x01 \x01(\x03H\x00R\x02Id\x88\x01\x01\x12\x1b\n" +
 	"\x06ConfId\x18\x02 \x01(\x05H\x01R\x06ConfId\x88\x01\x01\x12#\n" +
@@ -381,32 +345,29 @@ const file_protocol_mechanisms_proto_rawDesc = "" +
 	"CreateTime\x18\x03 \x01(\x03H\x02R\n" +
 	"CreateTime\x88\x01\x01\x12\x1f\n" +
 	"\bUseTimes\x18\x04 \x01(\x05H\x03R\bUseTimes\x88\x01\x01\x12=\n" +
-	"\x06Skills\x18\x05 \x03(\v2%.mechanisms.HeroMechanism.SkillsEntryR\x06Skills\x12H\n" +
-	"\x10XXXChange_Skills\x18\xed\a \x03(\v2\x1c.mechanisms.XXXChange_SkillsR\x0fXXXChangeSkills\x12\x15\n" +
-	"\x05XXXId\x18\x90N \x01(\x03R\x05XXXId\x1a9\n" +
+	"\x06Skills\x18\x05 \x03(\v2%.mechanisms.HeroMechanism.SkillsEntryR\x06Skills\x12g\n" +
+	"\x14Skills_XXXChangeList\x18\xed\a \x03(\v23.mechanisms.HeroMechanism.Skills_XXXMapChangeRecordR\x13SkillsXXXChangeList\x1a9\n" +
 	"\vSkillsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\x05R\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01B\x05\n" +
-	"\x03_IdB\t\n" +
-	"\a_ConfIdB\r\n" +
-	"\v_CreateTimeB\v\n" +
-	"\t_UseTimes\"n\n" +
-	"\x10XXXChange_Skills\x122\n" +
+	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01\x1aw\n" +
+	"\x19Skills_XXXMapChangeRecord\x122\n" +
 	"\n" +
 	"ChangeType\x18\x01 \x01(\x0e2\x12.common.ChangeTypeR\n" +
 	"ChangeType\x12\x10\n" +
 	"\x03Key\x18\x02 \x01(\x05R\x03Key\x12\x14\n" +
-	"\x05Value\x18\x03 \x01(\x05R\x05Value\"\xbc\x01\n" +
+	"\x05Value\x18\x03 \x01(\x05R\x05ValueB\x05\n" +
+	"\x03_IdB\t\n" +
+	"\a_ConfIdB\r\n" +
+	"\v_CreateTimeB\v\n" +
+	"\t_UseTimes\"\xa5\x01\n" +
 	"\x15ManualUnlockMechanism\x12N\n" +
-	"\tUnlockMap\x18\x01 \x03(\v20.mechanisms.ManualUnlockMechanism.UnlockMapEntryR\tUnlockMap\x12\x15\n" +
-	"\x05XXXId\x18\x90N \x01(\x03R\x05XXXId\x1a<\n" +
+	"\tUnlockMap\x18\x01 \x03(\v20.mechanisms.ManualUnlockMechanism.UnlockMapEntryR\tUnlockMap\x1a<\n" +
 	"\x0eUnlockMapEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\x05R\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\bR\x05value:\x028\x01\"\xcc\x01\n" +
+	"\x05value\x18\x02 \x01(\bR\x05value:\x028\x01\"\xb5\x01\n" +
 	"\rWearMechanism\x12@\n" +
 	"\aWearMap\x18\x01 \x03(\v2&.mechanisms.WearMechanism.WearMapEntryR\aWearMap\x12\x1b\n" +
-	"\x06ConfId\x18\x02 \x01(\x05H\x00R\x06ConfId\x88\x01\x01\x12\x15\n" +
-	"\x05XXXId\x18\x90N \x01(\x03R\x05XXXId\x1a:\n" +
+	"\x06ConfId\x18\x02 \x01(\x05H\x00R\x06ConfId\x88\x01\x01\x1a:\n" +
 	"\fWearMapEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\x05R\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01B\t\n" +
@@ -428,20 +389,20 @@ var file_protocol_mechanisms_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_protocol_mechanisms_proto_goTypes = []any{
 	(*LevelUpMechanism)(nil),      // 0: mechanisms.LevelUpMechanism
 	(*HeroMechanism)(nil),         // 1: mechanisms.HeroMechanism
-	(*XXXChange_Skills)(nil),      // 2: mechanisms.XXXChange_Skills
-	(*ManualUnlockMechanism)(nil), // 3: mechanisms.ManualUnlockMechanism
-	(*WearMechanism)(nil),         // 4: mechanisms.WearMechanism
-	nil,                           // 5: mechanisms.HeroMechanism.SkillsEntry
-	nil,                           // 6: mechanisms.ManualUnlockMechanism.UnlockMapEntry
-	nil,                           // 7: mechanisms.WearMechanism.WearMapEntry
-	(ChangeType)(0),               // 8: common.ChangeType
+	(*ManualUnlockMechanism)(nil), // 2: mechanisms.ManualUnlockMechanism
+	(*WearMechanism)(nil),         // 3: mechanisms.WearMechanism
+	nil,                           // 4: mechanisms.HeroMechanism.SkillsEntry
+	(*HeroMechanism_Skills_XXXMapChangeRecord)(nil), // 5: mechanisms.HeroMechanism.Skills_XXXMapChangeRecord
+	nil,             // 6: mechanisms.ManualUnlockMechanism.UnlockMapEntry
+	nil,             // 7: mechanisms.WearMechanism.WearMapEntry
+	(ChangeType)(0), // 8: common.ChangeType
 }
 var file_protocol_mechanisms_proto_depIdxs = []int32{
-	5, // 0: mechanisms.HeroMechanism.Skills:type_name -> mechanisms.HeroMechanism.SkillsEntry
-	2, // 1: mechanisms.HeroMechanism.XXXChange_Skills:type_name -> mechanisms.XXXChange_Skills
-	8, // 2: mechanisms.XXXChange_Skills.ChangeType:type_name -> common.ChangeType
-	6, // 3: mechanisms.ManualUnlockMechanism.UnlockMap:type_name -> mechanisms.ManualUnlockMechanism.UnlockMapEntry
-	7, // 4: mechanisms.WearMechanism.WearMap:type_name -> mechanisms.WearMechanism.WearMapEntry
+	4, // 0: mechanisms.HeroMechanism.Skills:type_name -> mechanisms.HeroMechanism.SkillsEntry
+	5, // 1: mechanisms.HeroMechanism.Skills_XXXChangeList:type_name -> mechanisms.HeroMechanism.Skills_XXXMapChangeRecord
+	6, // 2: mechanisms.ManualUnlockMechanism.UnlockMap:type_name -> mechanisms.ManualUnlockMechanism.UnlockMapEntry
+	7, // 3: mechanisms.WearMechanism.WearMap:type_name -> mechanisms.WearMechanism.WearMapEntry
+	8, // 4: mechanisms.HeroMechanism.Skills_XXXMapChangeRecord.ChangeType:type_name -> common.ChangeType
 	5, // [5:5] is the sub-list for method output_type
 	5, // [5:5] is the sub-list for method input_type
 	5, // [5:5] is the sub-list for extension type_name
@@ -457,7 +418,7 @@ func file_protocol_mechanisms_proto_init() {
 	file_protocol_common_proto_init()
 	file_protocol_mechanisms_proto_msgTypes[0].OneofWrappers = []any{}
 	file_protocol_mechanisms_proto_msgTypes[1].OneofWrappers = []any{}
-	file_protocol_mechanisms_proto_msgTypes[4].OneofWrappers = []any{}
+	file_protocol_mechanisms_proto_msgTypes[3].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

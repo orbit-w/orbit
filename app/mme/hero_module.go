@@ -13,14 +13,27 @@ const (
 )
 
 type HeroModule struct {
-	*mme.HeroModule
+	mme *mme.HeroModule
 	dirty_tracker.DirtyTracker
+
+	Base    *HeroMechanism[int32]
+	LevelUp *LevelUpMechanism[int32]
 }
 
-func NewHeroModule() *HeroModule {
-	return &HeroModule{
-		HeroModule: new(mme.HeroModule),
+func NewHeroModule(pt *mme.HeroModule) *HeroModule {
+	if pt == nil {
+		panic("pt is nil")
 	}
+	m := &HeroModule{
+		mme: pt,
+	}
+	// 非
+	m.Base = NewHeroMechanism[int32](m.mme.Base)
+	m.Base.Link(&m.DirtyTracker, HeroModuleDirtyBaseBit)
+
+	m.LevelUp = NewLevelUpMechanism[int32](m.mme.LevelUp)
+	m.LevelUp.Link(&m.DirtyTracker, HeroModuleDirtyLevelUpBit)
+	return m
 }
 
 func (m *HeroModule) Name() string {
@@ -31,14 +44,16 @@ func (m *HeroModule) Link(parent *dirty_tracker.DirtyTracker, parentBit int64) {
 	m.DirtyTracker.Link(parent, parentBit)
 }
 
-func (m *HeroModule) GetXXXId() int64 {
-	if m != nil {
-		return m.XXXId
+func (m *HeroModule) DeepCopy(co *mme.HeroModule) {
+	if m == nil || co == nil {
+		return
 	}
-	return 0
-}
 
-func (m *HeroModule) SetXXXId(v int64) {
-	m.XXXId = v
-	m.MarkDirty(HeroModuleDirtyXXXIdBit)
+	if m.Base != nil {
+		m.Base.DeepCopy(co.Base)
+	}
+
+	if m.LevelUp != nil {
+		m.LevelUp.DeepCopy(co.LevelUp)
+	}
 }

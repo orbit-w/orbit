@@ -25,7 +25,6 @@ type HeroModule struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Base          *HeroMechanism         `protobuf:"bytes,1,opt,name=Base,proto3" json:"Base,omitempty"`
 	LevelUp       *LevelUpMechanism      `protobuf:"bytes,2,opt,name=LevelUp,proto3" json:"LevelUp,omitempty"`
-	XXXId         int64                  `protobuf:"varint,10000,opt,name=XXXId,proto3" json:"XXXId,omitempty"` // 自动化生成ModuleId，范式，不可修改。
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -74,23 +73,15 @@ func (x *HeroModule) GetLevelUp() *LevelUpMechanism {
 	return nil
 }
 
-func (x *HeroModule) GetXXXId() int64 {
-	if x != nil {
-		return x.XXXId
-	}
-	return 0
-}
-
 var File_protocol_modules_proto protoreflect.FileDescriptor
 
 const file_protocol_modules_proto_rawDesc = "" +
 	"\n" +
-	"\x16protocol/modules.proto\x12\amodules\x1a\x19protocol/mechanisms.proto\"\x8a\x01\n" +
+	"\x16protocol/modules.proto\x12\amodules\x1a\x19protocol/mechanisms.proto\"s\n" +
 	"\n" +
 	"HeroModule\x12-\n" +
 	"\x04Base\x18\x01 \x01(\v2\x19.mechanisms.HeroMechanismR\x04Base\x126\n" +
-	"\aLevelUp\x18\x02 \x01(\v2\x1c.mechanisms.LevelUpMechanismR\aLevelUp\x12\x15\n" +
-	"\x05XXXId\x18\x90N \x01(\x03R\x05XXXIdB\aZ\x05./mmeb\x06proto3"
+	"\aLevelUp\x18\x02 \x01(\v2\x1c.mechanisms.LevelUpMechanismR\aLevelUpB\aZ\x05./mmeb\x06proto3"
 
 var (
 	file_protocol_modules_proto_rawDescOnce sync.Once
