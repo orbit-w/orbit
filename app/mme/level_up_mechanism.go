@@ -111,14 +111,12 @@ func (m *LevelUpMechanism) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuil
 	}
 }
 
-// DeepCopy creates a deep copy of LevelUpMechanism
-func (m *LevelUpMechanism) DeepCopy(co *LevelUpMechanism) {
-	if m == nil {
+// DeepCopy creates a deep copy of LevelUpMechanism proto data only
+// 手写实现，性能优于 proto.Clone（避免反射开销）
+func (m *LevelUpMechanism) DeepCopy(co *mme.LevelUpMechanism) {
+	if m == nil || co == nil {
 		return
 	}
-
-	// 创建新的 protobuf 对象
-	co.LevelUpMechanism = &mme.LevelUpMechanism{}
 
 	// 深拷贝指针字段
 	if m.CurLevel != nil {
@@ -136,11 +134,8 @@ func (m *LevelUpMechanism) DeepCopy(co *LevelUpMechanism) {
 		co.ConfId = &v
 	}
 
-	// 拷贝非指针字段
+	// 拷贝 XXXId
 	co.XXXId = m.XXXId
-
-	// 拷贝 DirtyTracker 状态
-	co.DirtyTracker = m.DirtyTracker
 }
 
 // ToIncrementalProto 根据脏标记位构建增量数据的 protoMessage
