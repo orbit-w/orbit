@@ -20,8 +20,15 @@ type MapAccessor[K comparable, V any] struct {
 
 // NewMapAccessorWithMarker creates an accessor bound to a component field map pointer
 // and a DirtyMarker with a concrete dirty bit. This avoids closure allocations.
+// 用于值类型的 Map
 func NewMapAccessorWithMarker[K comparable, V any](m *map[K]V, marker DirtyMarker, dirtyBit int64) MapAccessor[K, V] {
 	return MapAccessor[K, V]{m: m, marker: marker, dirtyBit: dirtyBit, changeTracker: NewFinegrainedChangeTracker[K]()}
+}
+
+// NewMapAccessorWithMarkerForRef creates an accessor for reference type values
+// 用于引用类型的 Map，会在 Set 时先记录 Delete 操作
+func NewMapAccessorWithMarkerForRef[K comparable, V any](m *map[K]V, marker DirtyMarker, dirtyBit int64) MapAccessor[K, V] {
+	return MapAccessor[K, V]{m: m, marker: marker, dirtyBit: dirtyBit, changeTracker: NewFinegrainedChangeTrackerForRef[K]()}
 }
 
 func (op MapAccessor[K, V]) Get(key K) (V, bool) {
@@ -52,8 +59,11 @@ func (op MapAccessor[K, V]) ensureMapNoDirty() {
 func (op MapAccessor[K, V]) Set(key K, value V) {
 	op.ensureMapNoDirty()
 	if op.m != nil {
+		// 检查 key 是否已存在
+		_, keyExists := (*op.m)[key]
 		(*op.m)[key] = value
-		op.changeTracker.TrackSet(key)
+		// 使用 TrackSetWithDelete 来处理引用类型的特殊逻辑
+		op.changeTracker.TrackSetWithDelete(key, keyExists)
 		op.doMarkDirty()
 	}
 }
@@ -66,7 +76,8 @@ func (op MapAccessor[K, V]) Upsert(key K, value V) (V, bool) {
 	}
 	prev, existed := (*op.m)[key]
 	(*op.m)[key] = value
-	op.changeTracker.TrackSet(key)
+	// 使用 TrackSetWithDelete 来处理引用类型的特殊逻辑
+	op.changeTracker.TrackSetWithDelete(key, existed)
 	op.doMarkDirty()
 	return prev, existed
 }
@@ -133,8 +144,11 @@ func (op MapAccessor[K, V]) SetAll(entries map[K]V) {
 		return
 	}
 	for k, v := range entries {
+		// 检查 key 是否已存在
+		_, keyExists := (*op.m)[k]
 		(*op.m)[k] = v
-		op.changeTracker.TrackSet(k)
+		// 使用 TrackSetWithDelete 来处理引用类型的特殊逻辑
+		op.changeTracker.TrackSetWithDelete(k, keyExists)
 	}
 	op.doMarkDirty()
 }
@@ -226,4 +240,11 @@ func (op MapAccessor[K, V]) ResetOperations() {
 
 func (op MapAccessor[K, V]) HasChanges() bool {
 	return op.changeTracker.HasChanges()
+}
+
+// TrackSetSimple 简单的手动标记 Set 操作，不会记录 Delete
+// 适用于明确知道只需要记录 Set 操作的场景
+func (op MapAccessor[K, V]) TrackSet(key K) {
+	op.changeTracker.TrackSet(key)
+	op.doMarkDirty()
 }
