@@ -16,6 +16,7 @@ type IDirtyFlag[FactsAccessorKey comparable] interface {
 	IsDirty(dirtyBit int64) bool
 	HasAnyDirty() bool
 	ClearAllDirty()
+	GetDirtyTracker() *dt.DirtyTracker
 }
 
 type DirtyFlag[FactsAccessorKey comparable] struct {
@@ -41,6 +42,10 @@ func (d *DirtyFlag[FactsAccessorKey]) LinkFactsAccessor(parent *dt.DirtyTracker,
 	d.factsAccessor = factsAccessor
 	d.factsAccessorKey = key
 	d.DirtyTracker.Link(parent, parentBit)
+}
+
+func (d *DirtyFlag[FactsAccessorKey]) GetDirtyTracker() *dt.DirtyTracker {
+	return &d.DirtyTracker
 }
 
 func (d *DirtyFlag[FactsAccessorKey]) MarkDirty(dirtyBit int64) {
