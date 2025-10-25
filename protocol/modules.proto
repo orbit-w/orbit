@@ -8,6 +8,4 @@ import "protocol/mechanisms.proto";
 message HeroModule {
     mechanisms.HeroMechanism Base = 1;
     mechanisms.LevelUpMechanism LevelUp = 2;
-
-    int64 XXXId = 10000; // 自动化生成ModuleId，范式，不可修改。
 }
