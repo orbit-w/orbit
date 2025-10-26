@@ -3,6 +3,7 @@ package mme
 import (
 	"gitee.com/orbit-w/orbit/app/proto/mme"
 	dirtyflag "gitee.com/orbit-w/orbit/lib/base/dirty_flag"
+	"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder"
 )
 
 // Dirty bits for Module fields
@@ -55,5 +56,19 @@ func (m *HeroModule) DeepCopy(co *mme.HeroModule) {
 
 	if m.LevelUp != nil {
 		m.LevelUp.DeepCopy(co.LevelUp)
+	}
+}
+
+func (m *HeroModule) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder, prefix string) {
+	if m == nil {
+		return
+	}
+
+	if m.Base != nil && m.Base.IsDirty(HeroModuleDirtyBaseBit) {
+		m.Base.BuildMongoUpdate(builder, prefix+".base")
+	}
+
+	if m.LevelUp != nil && m.LevelUp.IsDirty(HeroModuleDirtyLevelUpBit) {
+		m.LevelUp.BuildMongoUpdate(builder, prefix+".level_up")
 	}
 }
