@@ -3,7 +3,7 @@ package xmapwrapper
 import (
 	dt "gitee.com/orbit-w/meteor/bases/dirty/dirty_tracker"
 	"gitee.com/orbit-w/meteor/bases/dirty/xmap"
-	"github.com/gogo/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 )
 
 // Linkable 定义可链接对象的接口

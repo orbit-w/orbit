@@ -5,7 +5,7 @@ import (
 
 	dt "gitee.com/orbit-w/meteor/bases/dirty/dirty_tracker"
 	"gitee.com/orbit-w/meteor/bases/dirty/xmap"
-	"github.com/gogo/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 )
 
 // ============================================

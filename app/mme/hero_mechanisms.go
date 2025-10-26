@@ -7,7 +7,7 @@ import (
 	"gitee.com/orbit-w/orbit/app/proto/mme"
 	dirtyflag "gitee.com/orbit-w/orbit/lib/base/dirty_flag"
 	"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder"
-	"github.com/gogo/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 )
 
 // Dirty bits for Mechanism fields
@@ -143,41 +143,11 @@ func (m *HeroMechanism) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder
 	}
 }
 
-// DeepCopy creates a deep copy of HeroMechanism proto data only
-// 手写实现，性能优于 proto.Clone（避免反射开销）
-func (m *HeroMechanism) DeepCopy(co *mme.HeroMechanism) {
-	if m == nil || co == nil {
-		return
+func (m *HeroMechanism) DeepCopy() *mme.HeroMechanism {
+	if m == nil {
+		return nil
 	}
-
-	// 深拷贝指针字段
-	if m.heroMechanism.Id != nil {
-		v := *m.heroMechanism.Id
-		co.Id = &v
-	}
-
-	if m.heroMechanism.ConfId != nil {
-		v := *m.heroMechanism.ConfId
-		co.ConfId = &v
-	}
-
-	if m.heroMechanism.CreateTime != nil {
-		v := *m.heroMechanism.CreateTime
-		co.CreateTime = &v
-	}
-
-	if m.heroMechanism.UseTimes != nil {
-		v := *m.heroMechanism.UseTimes
-		co.UseTimes = &v
-	}
-
-	// 深拷贝 Skills map
-	if m.heroMechanism.Skills != nil {
-		co.Skills = make(map[int32]int32, len(m.heroMechanism.Skills))
-		for k, v := range m.heroMechanism.Skills {
-			co.Skills[k] = v
-		}
-	}
+	return proto.Clone(m.heroMechanism).(*mme.HeroMechanism)
 }
 
 // ToIncrementalProto 根据脏标记位构建增量数据的 protoMessage

@@ -6,8 +6,8 @@ import (
 	"gitee.com/orbit-w/orbit/app/proto/mme"
 	dirtyflag "gitee.com/orbit-w/orbit/lib/base/dirty_flag"
 	"gitee.com/orbit-w/orbit/lib/base/xmapwrapper"
-	"github.com/gogo/protobuf/proto"
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/proto"
 )
 
 const (
@@ -62,6 +62,13 @@ func (m *HeroManager) ClearAllDirty() {
 		object.ClearAllDirty()
 		return false
 	})
+}
+
+func (m *HeroManager) DeepCopy() *mme.HeroManager {
+	if m == nil {
+		return nil
+	}
+	return proto.Clone(m.heroManager).(*mme.HeroManager)
 }
 
 // ToIncrementalProto 根据脏标记位构建增量数据的 protoMessage

@@ -4,7 +4,7 @@ import (
 	"gitee.com/orbit-w/orbit/app/proto/mme"
 	dirtyflag "gitee.com/orbit-w/orbit/lib/base/dirty_flag"
 	"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder"
-	"github.com/gogo/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 )
 
 // Dirty bits for Module fields
@@ -46,18 +46,11 @@ func (m *HeroModule) Name() string {
 	return "HeroModule"
 }
 
-func (m *HeroModule) DeepCopy(co *mme.HeroModule) {
-	if m == nil || co == nil {
-		return
+func (m *HeroModule) DeepCopy() *mme.HeroModule {
+	if m == nil {
+		return nil
 	}
-
-	if m.Base != nil {
-		m.Base.DeepCopy(co.Base)
-	}
-
-	if m.LevelUp != nil {
-		m.LevelUp.DeepCopy(co.LevelUp)
-	}
+	return proto.Clone(m.mme).(*mme.HeroModule)
 }
 
 func (m *HeroModule) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder, prefix string) {

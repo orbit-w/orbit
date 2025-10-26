@@ -6,7 +6,7 @@ import (
 	"gitee.com/orbit-w/orbit/app/proto/mme"
 	dirtyflag "gitee.com/orbit-w/orbit/lib/base/dirty_flag"
 	"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder"
-	"github.com/gogo/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 )
 
 // Dirty bits for Mechanism fields
@@ -111,28 +111,12 @@ func (m *LevelUpMechanism) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuil
 	}
 }
 
-// DeepCopy creates a deep copy of LevelUpMechanism proto data only
-// 手写实现，性能优于 proto.Clone（避免反射开销）
-func (m *LevelUpMechanism) DeepCopy(co *mme.LevelUpMechanism) {
-	if m == nil || co == nil {
-		return
+func (m *LevelUpMechanism) DeepCopy() *mme.LevelUpMechanism {
+	if m == nil {
+		return nil
 	}
+	return proto.Clone(m.levelUpMechanism).(*mme.LevelUpMechanism)
 
-	// 深拷贝指针字段
-	if m.levelUpMechanism.CurLevel != nil {
-		v := m.GetCurLevel()
-		co.CurLevel = &v
-	}
-
-	if m.levelUpMechanism.CurExp != nil {
-		v := m.GetCurExp()
-		co.CurExp = &v
-	}
-
-	if m.levelUpMechanism.ConfId != nil {
-		v := m.GetConfId()
-		co.ConfId = &v
-	}
 }
 
 // ToIncrementalProto 根据脏标记位构建增量数据的 protoMessage
