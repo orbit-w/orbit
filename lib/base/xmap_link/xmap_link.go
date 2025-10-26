@@ -11,7 +11,7 @@ type Linkable[K comparable] interface {
 	// Link 链接到父DirtyTracker
 	Link(parent *dt.DirtyTracker, parentBit int64)
 	// LinkFactsAccessor 链接到父DirtyTracker和xmap的FactsAccessor
-	LinkFactsAccessor(parent *dt.DirtyTracker, parentBit int64, factsAccessor xmap.FactsAccessor[K], key K)
+	LinkFactsAccessor(parent *dt.DirtyTracker, parentBit int64, factsAccessor func())
 	// Unlink 断开链接
 	Unlink()
 	// GetDirtyTracker 获取DirtyTracker（用于子对象的Link）
@@ -67,7 +67,10 @@ func NewXMapLink[K comparable, PbValue any, WrapperValue Linkable[K]](
 		for key, pbValue := range *pbMap {
 			wrapper := wrapperFactory(pbValue)
 			// 使用LinkFactsAccessor链接到父对象和Key
-			wrapper.LinkFactsAccessor(link.parentTracker, link.parentBit, &link.mapAccessor, key)
+			tracker := func() {
+				link.mapAccessor.TrackSet(key)
+			}
+			wrapper.LinkFactsAccessor(link.parentTracker, link.parentBit, tracker)
 			link.wrapperMap[key] = wrapper
 		}
 	}
@@ -83,7 +86,10 @@ func (x *XMapLink[K, PbValue, WrapperValue]) SetParent(parentTracker *dt.DirtyTr
 	// 重新链接所有已存在的包装对象
 	for key, wrapper := range x.wrapperMap {
 		wrapper.Unlink()
-		wrapper.LinkFactsAccessor(x.parentTracker, x.parentBit, &x.mapAccessor, key)
+		tracker := func() {
+			x.mapAccessor.TrackSet(key)
+		}
+		wrapper.LinkFactsAccessor(x.parentTracker, x.parentBit, tracker)
 	}
 }
 
@@ -105,7 +111,10 @@ func (x *XMapLink[K, PbValue, WrapperValue]) Set(key K, pbValue PbValue) Wrapper
 	wrapper := x.wrapperFactory(pbValue)
 
 	// Link到父对象和xmap的FactsAccessor
-	wrapper.LinkFactsAccessor(x.parentTracker, x.parentBit, &x.mapAccessor, key)
+	tracker := func() {
+		x.mapAccessor.TrackSet(key)
+	}
+	wrapper.LinkFactsAccessor(x.parentTracker, x.parentBit, tracker)
 
 	// 更新protobuf map（通过MapAccessor，会自动处理TrackSetWithDelete）
 	x.mapAccessor.Set(key, pbValue)

@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	dt "gitee.com/orbit-w/meteor/bases/dirty/dirty_tracker"
-	"gitee.com/orbit-w/meteor/bases/dirty/xmap"
 )
 
 // ============================================
@@ -18,10 +17,9 @@ type MockPbData struct {
 
 // MockWrapper 模拟包装对象
 type MockWrapper struct {
-	pb               *MockPbData
-	tracker          dt.DirtyTracker
-	factsAccessor    xmap.FactsAccessor[int64]
-	factsAccessorKey int64
+	pb            *MockPbData
+	tracker       dt.DirtyTracker
+	factsAccessor func() // 修正：factsAccessor 是 func() 类型，不是接口
 }
 
 func NewMockWrapper(pb *MockPbData) *MockWrapper {
@@ -35,16 +33,14 @@ func (w *MockWrapper) Link(parent *dt.DirtyTracker, parentBit int64) {
 	w.tracker.Link(parent, parentBit)
 }
 
-func (w *MockWrapper) LinkFactsAccessor(parent *dt.DirtyTracker, parentBit int64, factsAccessor xmap.FactsAccessor[int64], key int64) {
+func (w *MockWrapper) LinkFactsAccessor(parent *dt.DirtyTracker, parentBit int64, factsAccessor func()) {
 	w.factsAccessor = factsAccessor
-	w.factsAccessorKey = key
 	w.tracker.Link(parent, parentBit)
 }
 
 func (w *MockWrapper) Unlink() {
 	w.tracker.Unlink()
 	w.factsAccessor = nil
-	w.factsAccessorKey = 0
 }
 
 func (w *MockWrapper) GetDirtyTracker() *dt.DirtyTracker {
@@ -54,12 +50,20 @@ func (w *MockWrapper) GetDirtyTracker() *dt.DirtyTracker {
 func (w *MockWrapper) MarkDirty(dirtyBit int64) {
 	w.tracker.MarkDirty(dirtyBit)
 	if w.factsAccessor != nil {
-		w.factsAccessor.TrackSet(w.factsAccessorKey)
+		w.factsAccessor()
 	}
 }
 
 func (w *MockWrapper) IsLinked() bool {
 	return w.factsAccessor != nil
+}
+
+func (w *MockWrapper) GetValue() int32 {
+	return w.pb.Value
+}
+
+func (w *MockWrapper) SetValue(value int32) {
+	w.pb.Value = value
 }
 
 // ============================================
@@ -636,5 +640,389 @@ func BenchmarkXMapLink_Range(b *testing.B) {
 		link.Range(func(key int64, wrapper *MockWrapper) bool {
 			return true
 		})
+	}
+}
+
+// ============================================
+// 新增的高级测试用例
+// ============================================
+
+// TestXMapLink_SetParent 测试动态设置父节点
+func TestXMapLink_SetParent(t *testing.T) {
+	pbMap := make(map[int64]*MockPbData)
+	pbMap[1] = &MockPbData{Value: 100}
+	pbMap[2] = &MockPbData{Value: 200}
+
+	// 创建第一个父tracker
+	tracker1 := &dt.DirtyTracker{}
+	const dirtyBit1 = int64(1 << 0)
+
+	link := NewXMapLinkWithParent[int64, *MockPbData, *MockWrapper](
+		&pbMap,
+		tracker1,
+		dirtyBit1,
+		NewMockWrapper,
+		true,
+	)
+
+	// 验证初始状态：所有wrapper都链接到tracker1
+	wrapper1, _ := link.Get(1)
+	if !wrapper1.IsLinked() {
+		t.Error("Expected wrapper1 to be linked initially")
+	}
+
+	// 创建第二个父tracker并重新设置
+	tracker2 := &dt.DirtyTracker{}
+	const dirtyBit2 = int64(1 << 2)
+
+	// 调用SetParent应该重新链接所有现有的wrapper
+	link.SetParent(tracker2, dirtyBit2)
+
+	// SetParent后，wrapper仍然应该是链接状态
+	if !wrapper1.IsLinked() {
+		t.Error("Expected wrapper1 to still be linked after SetParent")
+	}
+
+	// 清除所有脏标记
+	tracker1.ClearAllDirty()
+	tracker2.ClearAllDirty()
+
+	// 重新获取wrapper（确保获取最新的链接状态）
+	wrapper1, _ = link.Get(1)
+
+	// 修改wrapper，应该标记tracker2
+	wrapper1.MarkDirty(1 << 1)
+	if !tracker2.IsDirty(dirtyBit2) {
+		t.Error("Expected tracker2 to be marked dirty after SetParent")
+	}
+
+	// 验证添加新元素也使用新的父tracker
+	tracker2.ClearAllDirty()
+	wrapper3 := link.Set(3, &MockPbData{Value: 300})
+
+	// 新添加的wrapper应该链接到tracker2
+	if !wrapper3.IsLinked() {
+		t.Error("Expected new wrapper to be linked")
+	}
+
+	tracker2.ClearAllDirty()
+	wrapper3.MarkDirty(1 << 1)
+	if !tracker2.IsDirty(dirtyBit2) {
+		t.Error("Expected tracker2 to be marked dirty for new wrapper")
+	}
+}
+
+// TestXMapLink_GetMapAccessor 测试获取MapAccessor
+func TestXMapLink_GetMapAccessor(t *testing.T) {
+	pbMap := make(map[int64]*MockPbData)
+	tracker := &dt.DirtyTracker{}
+
+	link := NewXMapLinkWithParent[int64, *MockPbData, *MockWrapper](
+		&pbMap,
+		tracker,
+		1<<0,
+		NewMockWrapper,
+		true,
+	)
+
+	accessor := link.GetMapAccessor()
+	if accessor == nil {
+		t.Fatal("GetMapAccessor returned nil")
+	}
+
+	// 通过accessor直接操作应该也能工作
+	pb := &MockPbData{Value: 999}
+	accessor.Set(1, pb)
+
+	// 验证pbMap被更新
+	if pbMap[1].Value != 999 {
+		t.Errorf("Expected pbMap[1].Value to be 999, got %d", pbMap[1].Value)
+	}
+}
+
+// TestXMapLink_RangeWithNilCallback 测试Range传入nil回调
+func TestXMapLink_RangeWithNilCallback(t *testing.T) {
+	pbMap := make(map[int64]*MockPbData)
+	pbMap[1] = &MockPbData{Value: 100}
+
+	tracker := &dt.DirtyTracker{}
+	link := NewXMapLinkWithParent[int64, *MockPbData, *MockWrapper](
+		&pbMap,
+		tracker,
+		1<<0,
+		NewMockWrapper,
+		true,
+	)
+
+	// 传入nil不应该panic
+	link.Range(nil)
+}
+
+// TestXMapLink_FactsAccessorPropagation 测试FactsAccessor的正确传播
+func TestXMapLink_FactsAccessorPropagation(t *testing.T) {
+	pbMap := make(map[int64]*MockPbData)
+	tracker := &dt.DirtyTracker{}
+	const dirtyBit = int64(1 << 0)
+
+	link := NewXMapLinkWithParent[int64, *MockPbData, *MockWrapper](
+		&pbMap,
+		tracker,
+		dirtyBit,
+		NewMockWrapper,
+		true,
+	)
+
+	// 添加一个对象
+	wrapper := link.Set(1, &MockPbData{Value: 100})
+	tracker.ClearAllDirty()
+
+	// 调用wrapper的MarkDirty应该通过factsAccessor触发TrackSet
+	wrapper.MarkDirty(1 << 1)
+
+	// 验证父tracker被标记为脏（通过factsAccessor）
+	if !tracker.IsDirty(dirtyBit) {
+		t.Error("Expected parent tracker to be marked dirty via factsAccessor")
+	}
+}
+
+// TestXMapLink_MultipleSetSameKey 测试同一个key多次Set
+func TestXMapLink_MultipleSetSameKey(t *testing.T) {
+	pbMap := make(map[int64]*MockPbData)
+	tracker := &dt.DirtyTracker{}
+	const dirtyBit = int64(1 << 0)
+
+	link := NewXMapLinkWithParent[int64, *MockPbData, *MockWrapper](
+		&pbMap,
+		tracker,
+		dirtyBit,
+		NewMockWrapper,
+		true,
+	)
+
+	// 第一次Set
+	wrapper1 := link.Set(1, &MockPbData{Value: 100})
+	if !wrapper1.IsLinked() {
+		t.Error("Expected wrapper1 to be linked")
+	}
+
+	// 第二次Set相同的key
+	wrapper2 := link.Set(1, &MockPbData{Value: 200})
+
+	// 验证wrapper1被unlink
+	if wrapper1.IsLinked() {
+		t.Error("Expected wrapper1 to be unlinked after replacement")
+	}
+
+	// 验证wrapper2被link
+	if !wrapper2.IsLinked() {
+		t.Error("Expected wrapper2 to be linked")
+	}
+
+	// 验证map长度仍然为1
+	if link.Len() != 1 {
+		t.Errorf("Expected length 1, got %d", link.Len())
+	}
+
+	// 验证新值被正确设置
+	currentWrapper, _ := link.Get(1)
+	if currentWrapper.GetValue() != 200 {
+		t.Errorf("Expected value 200, got %d", currentWrapper.GetValue())
+	}
+
+	// 第三次Set
+	wrapper3 := link.Set(1, &MockPbData{Value: 300})
+
+	// 验证wrapper2被unlink
+	if wrapper2.IsLinked() {
+		t.Error("Expected wrapper2 to be unlinked after second replacement")
+	}
+
+	// 验证wrapper3被link
+	if !wrapper3.IsLinked() {
+		t.Error("Expected wrapper3 to be linked")
+	}
+}
+
+// TestXMapLink_ClearThenAdd 测试清空后再添加
+func TestXMapLink_ClearThenAdd(t *testing.T) {
+	pbMap := make(map[int64]*MockPbData)
+	pbMap[1] = &MockPbData{Value: 100}
+	pbMap[2] = &MockPbData{Value: 200}
+
+	tracker := &dt.DirtyTracker{}
+	link := NewXMapLinkWithParent[int64, *MockPbData, *MockWrapper](
+		&pbMap,
+		tracker,
+		1<<0,
+		NewMockWrapper,
+		true,
+	)
+
+	// 清空
+	link.Clear()
+	if link.Len() != 0 {
+		t.Errorf("Expected length 0 after clear, got %d", link.Len())
+	}
+
+	// 再次添加
+	wrapper := link.Set(3, &MockPbData{Value: 300})
+	if !wrapper.IsLinked() {
+		t.Error("Expected new wrapper to be linked")
+	}
+
+	if link.Len() != 1 {
+		t.Errorf("Expected length 1, got %d", link.Len())
+	}
+
+	// 验证新数据正确
+	w, ok := link.Get(3)
+	if !ok {
+		t.Error("Expected key 3 to exist")
+	}
+	if w.GetValue() != 300 {
+		t.Errorf("Expected value 300, got %d", w.GetValue())
+	}
+}
+
+// TestXMapLink_OperationsOnNilMap 测试在nil map上的操作
+func TestXMapLink_OperationsOnNilMap(t *testing.T) {
+	var pbMap map[int64]*MockPbData // nil map
+	tracker := &dt.DirtyTracker{}
+
+	link := NewXMapLinkWithParent[int64, *MockPbData, *MockWrapper](
+		&pbMap,
+		tracker,
+		1<<0,
+		NewMockWrapper,
+		true,
+	)
+
+	// 在nil map上Set应该能够创建map并正常工作
+	wrapper := link.Set(1, &MockPbData{Value: 100})
+
+	if !wrapper.IsLinked() {
+		t.Error("Expected wrapper to be linked")
+	}
+
+	if link.Len() != 1 {
+		t.Errorf("Expected length 1, got %d", link.Len())
+	}
+
+	// 验证可以Get
+	w, ok := link.Get(1)
+	if !ok {
+		t.Error("Expected key 1 to exist")
+	}
+	if w.GetValue() != 100 {
+		t.Errorf("Expected value 100, got %d", w.GetValue())
+	}
+}
+
+// TestXMapLink_KeysAndValues 测试Keys和Values的顺序无关性
+func TestXMapLink_KeysAndValues(t *testing.T) {
+	pbMap := make(map[int64]*MockPbData)
+	tracker := &dt.DirtyTracker{}
+
+	link := NewXMapLinkWithParent[int64, *MockPbData, *MockWrapper](
+		&pbMap,
+		tracker,
+		1<<0,
+		NewMockWrapper,
+		true,
+	)
+
+	// 添加多个元素
+	expectedKeys := []int64{1, 2, 3, 5, 8, 13}
+	expectedSum := int32(0)
+	for _, key := range expectedKeys {
+		value := int32(key * 10)
+		link.Set(key, &MockPbData{Value: value})
+		expectedSum += value
+	}
+
+	// 测试Keys
+	keys := link.Keys()
+	if len(keys) != len(expectedKeys) {
+		t.Errorf("Expected %d keys, got %d", len(expectedKeys), len(keys))
+	}
+
+	keyMap := make(map[int64]bool)
+	for _, key := range keys {
+		keyMap[key] = true
+	}
+	for _, expected := range expectedKeys {
+		if !keyMap[expected] {
+			t.Errorf("Expected key %d not found", expected)
+		}
+	}
+
+	// 测试Values
+	values := link.Values()
+	if len(values) != len(expectedKeys) {
+		t.Errorf("Expected %d values, got %d", len(expectedKeys), len(values))
+	}
+
+	actualSum := int32(0)
+	for _, wrapper := range values {
+		actualSum += wrapper.GetValue()
+	}
+	if actualSum != expectedSum {
+		t.Errorf("Expected sum %d, got %d", expectedSum, actualSum)
+	}
+}
+
+// TestXMapLink_EmptyOperations 测试空map上的所有操作
+func TestXMapLink_EmptyOperations(t *testing.T) {
+	pbMap := make(map[int64]*MockPbData)
+	tracker := &dt.DirtyTracker{}
+
+	link := NewXMapLinkWithParent[int64, *MockPbData, *MockWrapper](
+		&pbMap,
+		tracker,
+		1<<0,
+		NewMockWrapper,
+		true,
+	)
+
+	// 测试所有操作在空map上都不会panic
+	if link.Len() != 0 {
+		t.Error("Expected empty map to have length 0")
+	}
+
+	if link.Has(1) {
+		t.Error("Expected Has to return false on empty map")
+	}
+
+	_, ok := link.Get(1)
+	if ok {
+		t.Error("Expected Get to return false on empty map")
+	}
+
+	if link.Delete(1) {
+		t.Error("Expected Delete to return false on empty map")
+	}
+
+	// Range在空map上应该不执行回调
+	executed := false
+	link.Range(func(key int64, wrapper *MockWrapper) bool {
+		executed = true
+		return true
+	})
+	if executed {
+		t.Error("Expected Range callback not to be executed on empty map")
+	}
+
+	// Clear空map应该不会panic
+	link.Clear()
+
+	// Keys和Values应该返回空切片
+	keys := link.Keys()
+	if len(keys) != 0 {
+		t.Errorf("Expected empty keys slice, got length %d", len(keys))
+	}
+
+	values := link.Values()
+	if len(values) != 0 {
+		t.Errorf("Expected empty values slice, got length %d", len(values))
 	}
 }
