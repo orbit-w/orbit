@@ -73,40 +73,33 @@ func (m *HeroManager) ToIncrementalProto() proto.Message {
 
 	incremental := &mme.HeroManager{}
 
-	incremental.HeroMap_XXXChangeList = make([]*mme.HeroManager_HeroMap_XXXMapChangeRecord, 0)
-	m.heroMapLink.Range(func(id int64, hero *HeroModule) bool {
-		pb := hero.ToIncrementalProto()
-		v, ok := pb.(*mme.HeroModule)
-		if ok {
-			incremental.HeroMap[id] = v
-		}
-		return true
-	})
-
-	m.heroMapLink.RangeOperations(func(key int64, operation xmap.MapOperation[int64]) bool {
-		switch operation.Type {
-		case xmap.SetOperation:
-			hero, _ := m.heroMapLink.Get(key)
-			pb := hero.ToIncrementalProto()
-			v, ok := pb.(*mme.HeroModule)
-			if ok {
+	if m.IsDirty(HeroManagerDirtyHeroMapBit) {
+		incremental.HeroMap_XXXChangeList = make([]*mme.HeroManager_HeroMap_XXXMapChangeRecord, 0)
+		m.heroMapLink.RangeOperations(func(key int64, operation xmap.MapOperation[int64]) bool {
+			switch operation.Type {
+			case xmap.SetOperation:
+				hero, _ := m.heroMapLink.Get(key)
+				pb := hero.ToIncrementalProto()
+				v, ok := pb.(*mme.HeroModule)
+				if ok {
+					incremental.HeroMap_XXXChangeList = append(incremental.HeroMap_XXXChangeList, &mme.HeroManager_HeroMap_XXXMapChangeRecord{
+						Key:   key,
+						Value: v,
+					})
+				} else {
+					mlog.Error("HeroManager.ToIncrementalProto", zap.Any("key", key), zap.Any("operation", operation))
+				}
+				return true
+			case xmap.DeleteOperation:
 				incremental.HeroMap_XXXChangeList = append(incremental.HeroMap_XXXChangeList, &mme.HeroManager_HeroMap_XXXMapChangeRecord{
-					Key:   key,
-					Value: v,
+					Key:      key,
+					IsDelete: true,
 				})
-			} else {
-				mlog.Error("HeroManager.ToIncrementalProto", zap.Any("key", key), zap.Any("operation", operation))
+				return true
 			}
 			return true
-		case xmap.DeleteOperation:
-			incremental.HeroMap_XXXChangeList = append(incremental.HeroMap_XXXChangeList, &mme.HeroManager_HeroMap_XXXMapChangeRecord{
-				Key:      key,
-				IsDelete: true,
-			})
-			return true
-		}
-		return true
-	})
+		})
 
+	}
 	return incremental
 }
