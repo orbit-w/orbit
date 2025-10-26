@@ -1,4 +1,4 @@
-package xmaplink
+package xmapwrapper
 
 import (
 	"testing"
@@ -96,7 +96,7 @@ func TestXMapLink_New(t *testing.T) {
 	tracker := &dt.DirtyTracker{}
 	const dirtyBit = int64(1 << 0)
 
-	link := NewXMapLinkWithParent[int64, *MockPbData, *MockWrapper](
+	link := NewXMapWrapperWithParent[int64, *MockPbData, *MockWrapper](
 		&pbMap,
 		tracker,
 		dirtyBit,
@@ -142,7 +142,7 @@ func TestXMapLink_Get(t *testing.T) {
 	pbMap[1] = &MockPbData{Value: 100}
 
 	tracker := &dt.DirtyTracker{}
-	link := NewXMapLinkWithParent[int64, *MockPbData, *MockWrapper](
+	link := NewXMapWrapperWithParent[int64, *MockPbData, *MockWrapper](
 		&pbMap,
 		tracker,
 		1<<0,
@@ -170,7 +170,7 @@ func TestXMapLink_Set(t *testing.T) {
 	tracker := &dt.DirtyTracker{}
 	const dirtyBit = int64(1 << 0)
 
-	link := NewXMapLinkWithParent[int64, *MockPbData, *MockWrapper](
+	link := NewXMapWrapperWithParent[int64, *MockPbData, *MockWrapper](
 		&pbMap,
 		tracker,
 		dirtyBit,
@@ -238,7 +238,7 @@ func TestXMapLink_Delete(t *testing.T) {
 	tracker := &dt.DirtyTracker{}
 	const dirtyBit = int64(1 << 0)
 
-	link := NewXMapLinkWithParent[int64, *MockPbData, *MockWrapper](
+	link := NewXMapWrapperWithParent[int64, *MockPbData, *MockWrapper](
 		&pbMap,
 		tracker,
 		dirtyBit,
@@ -293,7 +293,7 @@ func TestXMapLink_Has(t *testing.T) {
 	pbMap[1] = &MockPbData{Value: 100}
 
 	tracker := &dt.DirtyTracker{}
-	link := NewXMapLinkWithParent[int64, *MockPbData, *MockWrapper](
+	link := NewXMapWrapperWithParent[int64, *MockPbData, *MockWrapper](
 		&pbMap,
 		tracker,
 		1<<0,
@@ -314,7 +314,7 @@ func TestXMapLink_Has(t *testing.T) {
 func TestXMapLink_Len(t *testing.T) {
 	pbMap := make(map[int64]*MockPbData)
 	tracker := &dt.DirtyTracker{}
-	link := NewXMapLinkWithParent[int64, *MockPbData, *MockWrapper](
+	link := NewXMapWrapperWithParent[int64, *MockPbData, *MockWrapper](
 		&pbMap,
 		tracker,
 		1<<0,
@@ -351,7 +351,7 @@ func TestXMapLink_Range(t *testing.T) {
 	pbMap[3] = &MockPbData{Value: 300}
 
 	tracker := &dt.DirtyTracker{}
-	link := NewXMapLinkWithParent[int64, *MockPbData, *MockWrapper](
+	link := NewXMapWrapperWithParent[int64, *MockPbData, *MockWrapper](
 		&pbMap,
 		tracker,
 		1<<0,
@@ -394,7 +394,7 @@ func TestXMapLink_Clear(t *testing.T) {
 	tracker := &dt.DirtyTracker{}
 	const dirtyBit = int64(1 << 0)
 
-	link := NewXMapLinkWithParent[int64, *MockPbData, *MockWrapper](
+	link := NewXMapWrapperWithParent[int64, *MockPbData, *MockWrapper](
 		&pbMap,
 		tracker,
 		dirtyBit,
@@ -442,7 +442,7 @@ func TestXMapLink_Keys(t *testing.T) {
 	pbMap[3] = &MockPbData{Value: 300}
 
 	tracker := &dt.DirtyTracker{}
-	link := NewXMapLinkWithParent[int64, *MockPbData, *MockWrapper](
+	link := NewXMapWrapperWithParent[int64, *MockPbData, *MockWrapper](
 		&pbMap,
 		tracker,
 		1<<0,
@@ -474,7 +474,7 @@ func TestXMapLink_Values(t *testing.T) {
 	pbMap[3] = &MockPbData{Value: 300}
 
 	tracker := &dt.DirtyTracker{}
-	link := NewXMapLinkWithParent[int64, *MockPbData, *MockWrapper](
+	link := NewXMapWrapperWithParent[int64, *MockPbData, *MockWrapper](
 		&pbMap,
 		tracker,
 		1<<0,
@@ -504,7 +504,7 @@ func TestXMapLink_DirtyMarkPropagation(t *testing.T) {
 	tracker := &dt.DirtyTracker{}
 	const dirtyBit = int64(1 << 0)
 
-	link := NewXMapLinkWithParent[int64, *MockPbData, *MockWrapper](
+	link := NewXMapWrapperWithParent[int64, *MockPbData, *MockWrapper](
 		&pbMap,
 		tracker,
 		dirtyBit,
@@ -532,7 +532,7 @@ func TestXMapLink_EmptyMap(t *testing.T) {
 	var pbMap map[int64]*MockPbData // nil map
 	tracker := &dt.DirtyTracker{}
 
-	link := NewXMapLinkWithParent[int64, *MockPbData, *MockWrapper](
+	link := NewXMapWrapperWithParent[int64, *MockPbData, *MockWrapper](
 		&pbMap,
 		tracker,
 		1<<0,
@@ -567,7 +567,7 @@ func TestXMapLink_EmptyMap(t *testing.T) {
 func BenchmarkXMapLink_Set(b *testing.B) {
 	pbMap := make(map[int64]*MockPbData)
 	tracker := &dt.DirtyTracker{}
-	link := NewXMapLinkWithParent[int64, *MockPbData, *MockWrapper](
+	link := NewXMapWrapperWithParent[int64, *MockPbData, *MockWrapper](
 		&pbMap,
 		tracker,
 		1<<0,
@@ -583,7 +583,7 @@ func BenchmarkXMapLink_Set(b *testing.B) {
 func BenchmarkXMapLink_Get(b *testing.B) {
 	pbMap := make(map[int64]*MockPbData)
 	tracker := &dt.DirtyTracker{}
-	link := NewXMapLinkWithParent[int64, *MockPbData, *MockWrapper](
+	link := NewXMapWrapperWithParent[int64, *MockPbData, *MockWrapper](
 		&pbMap,
 		tracker,
 		1<<0,
@@ -604,7 +604,7 @@ func BenchmarkXMapLink_Get(b *testing.B) {
 func BenchmarkXMapLink_Delete(b *testing.B) {
 	pbMap := make(map[int64]*MockPbData)
 	tracker := &dt.DirtyTracker{}
-	link := NewXMapLinkWithParent[int64, *MockPbData, *MockWrapper](
+	link := NewXMapWrapperWithParent[int64, *MockPbData, *MockWrapper](
 		&pbMap,
 		tracker,
 		1<<0,
@@ -625,7 +625,7 @@ func BenchmarkXMapLink_Delete(b *testing.B) {
 func BenchmarkXMapLink_Range(b *testing.B) {
 	pbMap := make(map[int64]*MockPbData)
 	tracker := &dt.DirtyTracker{}
-	link := NewXMapLinkWithParent[int64, *MockPbData, *MockWrapper](
+	link := NewXMapWrapperWithParent[int64, *MockPbData, *MockWrapper](
 		&pbMap,
 		tracker,
 		1<<0,
@@ -659,7 +659,7 @@ func TestXMapLink_SetParent(t *testing.T) {
 	tracker1 := &dt.DirtyTracker{}
 	const dirtyBit1 = int64(1 << 0)
 
-	link := NewXMapLinkWithParent[int64, *MockPbData, *MockWrapper](
+	link := NewXMapWrapperWithParent[int64, *MockPbData, *MockWrapper](
 		&pbMap,
 		tracker1,
 		dirtyBit1,
@@ -718,7 +718,7 @@ func TestXMapLink_GetMapAccessor(t *testing.T) {
 	pbMap := make(map[int64]*MockPbData)
 	tracker := &dt.DirtyTracker{}
 
-	link := NewXMapLinkWithParent[int64, *MockPbData, *MockWrapper](
+	link := NewXMapWrapperWithParent[int64, *MockPbData, *MockWrapper](
 		&pbMap,
 		tracker,
 		1<<0,
@@ -746,7 +746,7 @@ func TestXMapLink_RangeWithNilCallback(t *testing.T) {
 	pbMap[1] = &MockPbData{Value: 100}
 
 	tracker := &dt.DirtyTracker{}
-	link := NewXMapLinkWithParent[int64, *MockPbData, *MockWrapper](
+	link := NewXMapWrapperWithParent[int64, *MockPbData, *MockWrapper](
 		&pbMap,
 		tracker,
 		1<<0,
@@ -763,7 +763,7 @@ func TestXMapLink_FactsAccessorPropagation(t *testing.T) {
 	tracker := &dt.DirtyTracker{}
 	const dirtyBit = int64(1 << 0)
 
-	link := NewXMapLinkWithParent[int64, *MockPbData, *MockWrapper](
+	link := NewXMapWrapperWithParent[int64, *MockPbData, *MockWrapper](
 		&pbMap,
 		tracker,
 		dirtyBit,
@@ -789,7 +789,7 @@ func TestXMapLink_MultipleSetSameKey(t *testing.T) {
 	tracker := &dt.DirtyTracker{}
 	const dirtyBit = int64(1 << 0)
 
-	link := NewXMapLinkWithParent[int64, *MockPbData, *MockWrapper](
+	link := NewXMapWrapperWithParent[int64, *MockPbData, *MockWrapper](
 		&pbMap,
 		tracker,
 		dirtyBit,
@@ -847,7 +847,7 @@ func TestXMapLink_ClearThenAdd(t *testing.T) {
 	pbMap[2] = &MockPbData{Value: 200}
 
 	tracker := &dt.DirtyTracker{}
-	link := NewXMapLinkWithParent[int64, *MockPbData, *MockWrapper](
+	link := NewXMapWrapperWithParent[int64, *MockPbData, *MockWrapper](
 		&pbMap,
 		tracker,
 		1<<0,
@@ -885,7 +885,7 @@ func TestXMapLink_OperationsOnNilMap(t *testing.T) {
 	var pbMap map[int64]*MockPbData // nil map
 	tracker := &dt.DirtyTracker{}
 
-	link := NewXMapLinkWithParent[int64, *MockPbData, *MockWrapper](
+	link := NewXMapWrapperWithParent[int64, *MockPbData, *MockWrapper](
 		&pbMap,
 		tracker,
 		1<<0,
@@ -918,7 +918,7 @@ func TestXMapLink_KeysAndValues(t *testing.T) {
 	pbMap := make(map[int64]*MockPbData)
 	tracker := &dt.DirtyTracker{}
 
-	link := NewXMapLinkWithParent[int64, *MockPbData, *MockWrapper](
+	link := NewXMapWrapperWithParent[int64, *MockPbData, *MockWrapper](
 		&pbMap,
 		tracker,
 		1<<0,
@@ -970,7 +970,7 @@ func TestXMapLink_EmptyOperations(t *testing.T) {
 	pbMap := make(map[int64]*MockPbData)
 	tracker := &dt.DirtyTracker{}
 
-	link := NewXMapLinkWithParent(
+	link := NewXMapWrapperWithParent(
 		&pbMap,
 		tracker,
 		1<<0,
@@ -1028,7 +1028,7 @@ func TestXMapLink_RangeIncrementalSyncObject(t *testing.T) {
 	pbMap[3] = &MockPbData{Value: 300}
 
 	tracker := &dt.DirtyTracker{}
-	link := NewXMapLinkWithParent[int64, *MockPbData, *MockWrapper](
+	link := NewXMapWrapperWithParent[int64, *MockPbData, *MockWrapper](
 		&pbMap,
 		tracker,
 		1<<0,
@@ -1076,7 +1076,7 @@ func TestXMapLink_RangeOperations(t *testing.T) {
 	tracker := &dt.DirtyTracker{}
 	const dirtyBit = int64(1 << 0)
 
-	link := NewXMapLinkWithParent[int64, *MockPbData, *MockWrapper](
+	link := NewXMapWrapperWithParent[int64, *MockPbData, *MockWrapper](
 		&pbMap,
 		tracker,
 		dirtyBit,
@@ -1113,7 +1113,7 @@ func TestXMapLink_IncrementalSyncInterface(t *testing.T) {
 	tracker := &dt.DirtyTracker{}
 	const dirtyBit = int64(1 << 0)
 
-	link := NewXMapLinkWithParent[int64, *MockPbData, *MockWrapper](
+	link := NewXMapWrapperWithParent[int64, *MockPbData, *MockWrapper](
 		&pbMap,
 		tracker,
 		dirtyBit,
@@ -1148,7 +1148,7 @@ func TestXMapLink_SetParentWithNilTracker(t *testing.T) {
 	pbMap[1] = &MockPbData{Value: 100}
 
 	tracker := &dt.DirtyTracker{}
-	link := NewXMapLinkWithParent[int64, *MockPbData, *MockWrapper](
+	link := NewXMapWrapperWithParent[int64, *MockPbData, *MockWrapper](
 		&pbMap,
 		tracker,
 		1<<0,
@@ -1172,7 +1172,7 @@ func TestXMapLink_SetParentWithNilTracker(t *testing.T) {
 func TestXMapLink_ConcurrentSafety(t *testing.T) {
 	pbMap := make(map[int64]*MockPbData)
 	tracker := &dt.DirtyTracker{}
-	link := NewXMapLinkWithParent[int64, *MockPbData, *MockWrapper](
+	link := NewXMapWrapperWithParent[int64, *MockPbData, *MockWrapper](
 		&pbMap,
 		tracker,
 		1<<0,

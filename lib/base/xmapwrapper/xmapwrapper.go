@@ -1,4 +1,4 @@
-package xmaplink
+package xmapwrapper
 
 import (
 	dt "gitee.com/orbit-w/meteor/bases/dirty/dirty_tracker"
@@ -33,11 +33,11 @@ type IncrementalSyncObject interface {
 // 用于将protobuf对象转换为包装对象
 type WrapperFactory[PbValue any, WrapperValue any] func(pb PbValue) WrapperValue
 
-// XMapLink 通用的xmap链接管理器
+// XMapWrapper 通用的xmap链接管理器
 // K: map的key类型
 // PbValue: protobuf对象类型（通常是指针）
 // WrapperValue: 包装对象类型（实现了Linkable接口）
-type XMapLink[K comparable, PbValue any, WrapperValue Linkable] struct {
+type XMapWrapper[K comparable, PbValue any, WrapperValue Linkable] struct {
 	pbMap          *map[K]PbValue                        // protobuf map的引用
 	wrapperMap     map[K]WrapperValue                    // 包装对象map
 	mapAccessor    xmap.MapAccessor[K, PbValue]          // xmap访问器
@@ -46,19 +46,19 @@ type XMapLink[K comparable, PbValue any, WrapperValue Linkable] struct {
 	parentBit      int64                                 // 父脏标记位
 }
 
-// NewXMapLink 创建一个新的XMapLink实例
+// NewXMapWrapper 创建一个新的XMapLink实例
 // pbMap: protobuf map的引用
 // marker: 脏标记接口
 // dirtyBit: 脏标记位
 // wrapperFactory: 包装器工厂函数
-func NewXMapLink[K comparable, PbValue any, WrapperValue Linkable](
+func NewXMapWrapper[K comparable, PbValue any, WrapperValue Linkable](
 	pbMap *map[K]PbValue,
 	marker xmap.DirtyMarker,
 	dirtyBit int64,
 	wrapperFactory WrapperFactory[PbValue, WrapperValue],
-) *XMapLink[K, PbValue, WrapperValue] {
+) *XMapWrapper[K, PbValue, WrapperValue] {
 
-	link := &XMapLink[K, PbValue, WrapperValue]{
+	link := &XMapWrapper[K, PbValue, WrapperValue]{
 		pbMap:          pbMap,
 		wrapperMap:     make(map[K]WrapperValue),
 		wrapperFactory: wrapperFactory,
@@ -84,7 +84,7 @@ func NewXMapLink[K comparable, PbValue any, WrapperValue Linkable](
 }
 
 // SetParent 设置父DirtyTracker（必须在初始化完成后调用）
-func (x *XMapLink[K, PbValue, WrapperValue]) SetParent(parentTracker *dt.DirtyTracker, parentBit int64) {
+func (x *XMapWrapper[K, PbValue, WrapperValue]) SetParent(parentTracker *dt.DirtyTracker, parentBit int64) {
 	x.parentTracker = parentTracker
 	x.parentBit = parentBit
 
@@ -100,7 +100,7 @@ func (x *XMapLink[K, PbValue, WrapperValue]) SetParent(parentTracker *dt.DirtyTr
 
 // Get 获取包装对象
 // 返回包装对象和是否存在的标志
-func (x *XMapLink[K, PbValue, WrapperValue]) Get(key K) (WrapperValue, bool) {
+func (x *XMapWrapper[K, PbValue, WrapperValue]) Get(key K) (WrapperValue, bool) {
 	wrapper, ok := x.wrapperMap[key]
 	return wrapper, ok
 }
@@ -108,7 +108,7 @@ func (x *XMapLink[K, PbValue, WrapperValue]) Get(key K) (WrapperValue, bool) {
 // Set 设置/添加对象
 // 如果key已存在，会先Unlink旧对象
 // 返回新的包装对象
-func (x *XMapLink[K, PbValue, WrapperValue]) Set(key K, pbValue PbValue) WrapperValue {
+func (x *XMapWrapper[K, PbValue, WrapperValue]) Set(key K, pbValue PbValue) WrapperValue {
 	// 处理旧对象的Unlink
 	x.Delete(key)
 
@@ -132,7 +132,7 @@ func (x *XMapLink[K, PbValue, WrapperValue]) Set(key K, pbValue PbValue) Wrapper
 
 // Delete 删除对象
 // 返回是否成功删除
-func (x *XMapLink[K, PbValue, WrapperValue]) Delete(key K) bool {
+func (x *XMapWrapper[K, PbValue, WrapperValue]) Delete(key K) bool {
 	if wrapper, exists := x.wrapperMap[key]; exists {
 		// 从protobuf map中删除（通过MapAccessor）
 		x.mapAccessor.Delete(key)
@@ -149,19 +149,19 @@ func (x *XMapLink[K, PbValue, WrapperValue]) Delete(key K) bool {
 }
 
 // Has 检查key是否存在
-func (x *XMapLink[K, PbValue, WrapperValue]) Has(key K) bool {
+func (x *XMapWrapper[K, PbValue, WrapperValue]) Has(key K) bool {
 	_, ok := x.wrapperMap[key]
 	return ok
 }
 
 // Len 返回map的长度
-func (x *XMapLink[K, PbValue, WrapperValue]) Len() int {
+func (x *XMapWrapper[K, PbValue, WrapperValue]) Len() int {
 	return len(x.wrapperMap)
 }
 
 // Range 遍历所有对象
 // 回调函数返回false时停止遍历
-func (x *XMapLink[K, PbValue, WrapperValue]) Range(f func(key K, wrapper WrapperValue) bool) {
+func (x *XMapWrapper[K, PbValue, WrapperValue]) Range(f func(key K, wrapper WrapperValue) bool) {
 	if f == nil {
 		return
 	}
@@ -173,7 +173,7 @@ func (x *XMapLink[K, PbValue, WrapperValue]) Range(f func(key K, wrapper Wrapper
 }
 
 // Clear 清空所有对象
-func (x *XMapLink[K, PbValue, WrapperValue]) Clear() {
+func (x *XMapWrapper[K, PbValue, WrapperValue]) Clear() {
 	// Unlink所有包装对象
 	for _, wrapper := range x.wrapperMap {
 		wrapper.Unlink()
@@ -187,12 +187,12 @@ func (x *XMapLink[K, PbValue, WrapperValue]) Clear() {
 }
 
 // GetMapAccessor 获取MapAccessor（用于高级操作）
-func (x *XMapLink[K, PbValue, WrapperValue]) GetMapAccessor() *xmap.MapAccessor[K, PbValue] {
+func (x *XMapWrapper[K, PbValue, WrapperValue]) GetMapAccessor() *xmap.MapAccessor[K, PbValue] {
 	return &x.mapAccessor
 }
 
 // Keys 返回所有key
-func (x *XMapLink[K, PbValue, WrapperValue]) Keys() []K {
+func (x *XMapWrapper[K, PbValue, WrapperValue]) Keys() []K {
 	keys := make([]K, 0, len(x.wrapperMap))
 	for key := range x.wrapperMap {
 		keys = append(keys, key)
@@ -201,7 +201,7 @@ func (x *XMapLink[K, PbValue, WrapperValue]) Keys() []K {
 }
 
 // Values 返回所有包装对象
-func (x *XMapLink[K, PbValue, WrapperValue]) Values() []WrapperValue {
+func (x *XMapWrapper[K, PbValue, WrapperValue]) Values() []WrapperValue {
 	values := make([]WrapperValue, 0, len(x.wrapperMap))
 	for _, wrapper := range x.wrapperMap {
 		values = append(values, wrapper)
@@ -209,7 +209,7 @@ func (x *XMapLink[K, PbValue, WrapperValue]) Values() []WrapperValue {
 	return values
 }
 
-func (x *XMapLink[K, PbValue, WrapperValue]) RangeOperations(f func(key K, operation xmap.MapOperation[K]) bool) {
+func (x *XMapWrapper[K, PbValue, WrapperValue]) RangeOperations(f func(key K, operation xmap.MapOperation[K]) bool) {
 	if f == nil {
 		return
 	}
@@ -217,7 +217,7 @@ func (x *XMapLink[K, PbValue, WrapperValue]) RangeOperations(f func(key K, opera
 }
 
 // RangeIncrementalSyncObject 遍历所有增量同步对象
-func (x *XMapLink[K, PbValue, WrapperValue]) RangeIncrementalSyncObject(f func(key K, object IncrementalSyncObject) (stop bool)) {
+func (x *XMapWrapper[K, PbValue, WrapperValue]) RangeIncrementalSyncObject(f func(key K, object IncrementalSyncObject) (stop bool)) {
 	if f == nil {
 		return
 	}
