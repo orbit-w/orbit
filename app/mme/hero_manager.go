@@ -1,9 +1,13 @@
 package mme
 
 import (
+	"gitee.com/orbit-w/meteor/bases/dirty/xmap"
+	"gitee.com/orbit-w/meteor/modules/mlog"
 	"gitee.com/orbit-w/orbit/app/proto/mme"
 	dirtyflag "gitee.com/orbit-w/orbit/lib/base/dirty_flag"
 	xmaplink "gitee.com/orbit-w/orbit/lib/base/xmap_link"
+	"github.com/gogo/protobuf/proto"
+	"go.uber.org/zap"
 )
 
 const (
@@ -28,7 +32,7 @@ func NewHeroManager(pt *mme.HeroManager) *HeroManager {
 	}
 
 	m.heroMapLink = xmaplink.NewXMapLinkWithParent(
-		&m.heroManager.HeroMap, m.GetDirtyTracker(), HeroManagerDirtyHeroMapBit, NewHeroModule, true)
+		&m.heroManager.HeroMap, m.GetDirtyTracker(), HeroManagerDirtyHeroMapBit, NewHeroModule)
 
 	return m
 }
@@ -48,4 +52,60 @@ func (m *HeroManager) HeroMap_Range(f func(id int64, hero *HeroModule) bool) {
 	m.heroMapLink.Range(func(id int64, hero *HeroModule) bool {
 		return f(id, hero)
 	})
+}
+
+func (m *HeroManager) ClearAllDirtyFlags() {
+	m.ClearAllDirty()
+
+	m.heroMapLink.Range(func(id int64, hero *HeroModule) bool {
+		hero.ClearAllDirty()
+		return true
+	})
+}
+
+// ToIncrementalProto 根据脏标记位构建增量数据的 protoMessage
+// 只返回标记为脏的字段数据，用于增量同步
+func (m *HeroManager) ToIncrementalProto() proto.Message {
+	if m == nil {
+		return nil
+	}
+
+	incremental := &mme.HeroManager{}
+
+	incremental.HeroMap_XXXChangeList = make([]*mme.HeroManager_HeroMap_XXXMapChangeRecord, 0)
+	m.heroMapLink.Range(func(id int64, hero *HeroModule) bool {
+		pb := hero.ToIncrementalProto()
+		v, ok := pb.(*mme.HeroModule)
+		if ok {
+			incremental.HeroMap[id] = v
+		}
+		return true
+	})
+
+	m.heroMapLink.RangeOperations(func(key int64, operation xmap.MapOperation[int64]) bool {
+		switch operation.Type {
+		case xmap.SetOperation:
+			hero, _ := m.heroMapLink.Get(key)
+			pb := hero.ToIncrementalProto()
+			v, ok := pb.(*mme.HeroModule)
+			if ok {
+				incremental.HeroMap_XXXChangeList = append(incremental.HeroMap_XXXChangeList, &mme.HeroManager_HeroMap_XXXMapChangeRecord{
+					Key:   key,
+					Value: v,
+				})
+			} else {
+				mlog.Error("HeroManager.ToIncrementalProto", zap.Any("key", key), zap.Any("operation", operation))
+			}
+			return true
+		case xmap.DeleteOperation:
+			incremental.HeroMap_XXXChangeList = append(incremental.HeroMap_XXXChangeList, &mme.HeroManager_HeroMap_XXXMapChangeRecord{
+				Key:      key,
+				IsDelete: true,
+			})
+			return true
+		}
+		return true
+	})
+
+	return incremental
 }

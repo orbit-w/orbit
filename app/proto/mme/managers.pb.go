@@ -75,7 +75,7 @@ func (x *HeroManager) GetHeroMap_XXXChangeList() []*HeroManager_HeroMap_XXXMapCh
 
 type HeroManager_HeroMap_XXXMapChangeRecord struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Key           int32                  `protobuf:"varint,1,opt,name=key,proto3" json:"key,omitempty"`
+	Key           int64                  `protobuf:"varint,1,opt,name=key,proto3" json:"key,omitempty"`
 	Value         *HeroModule            `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
 	IsDelete      bool                   `protobuf:"varint,3,opt,name=isDelete,proto3" json:"isDelete,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -112,7 +112,7 @@ func (*HeroManager_HeroMap_XXXMapChangeRecord) Descriptor() ([]byte, []int) {
 	return file_protocol_managers_proto_rawDescGZIP(), []int{0, 1}
 }
 
-func (x *HeroManager_HeroMap_XXXMapChangeRecord) GetKey() int32 {
+func (x *HeroManager_HeroMap_XXXMapChangeRecord) GetKey() int64 {
 	if x != nil {
 		return x.Key
 	}
@@ -145,7 +145,7 @@ const file_protocol_managers_proto_rawDesc = "" +
 	"\x03key\x18\x01 \x01(\x03R\x03key\x12)\n" +
 	"\x05value\x18\x02 \x01(\v2\x13.modules.HeroModuleR\x05value:\x028\x01\x1au\n" +
 	"\x1aHeroMap_XXXMapChangeRecord\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\x05R\x03key\x12)\n" +
+	"\x03key\x18\x01 \x01(\x03R\x03key\x12)\n" +
 	"\x05value\x18\x02 \x01(\v2\x13.modules.HeroModuleR\x05value\x12\x1a\n" +
 	"\bisDelete\x18\x03 \x01(\bR\bisDeleteB\aZ\x05./mmeb\x06proto3"
 

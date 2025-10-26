@@ -74,6 +74,8 @@ func (m *HeroModule) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder, p
 	}
 }
 
+// ToIncrementalProto 根据脏标记位构建增量数据的 protoMessage
+// 只返回标记为脏的字段数据，用于增量同步
 func (m *HeroModule) ToIncrementalProto() proto.Message {
 	if m == nil {
 		return nil
