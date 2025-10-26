@@ -7,7 +7,7 @@ import (
 
 // NewXMapLinkForRef 创建引用类型的XMapLink（自动使用TrackSetWithDelete）
 // 适用于Value是指针类型的场景（如 *mme.HeroModule）
-func NewXMapLinkForRef[K comparable, PbValue any, WrapperValue Linkable[K]](
+func NewXMapLinkForRef[K comparable, PbValue any, WrapperValue Linkable](
 	pbMap *map[K]PbValue,
 	marker xmap.DirtyMarker,
 	dirtyBit int64,
@@ -18,7 +18,7 @@ func NewXMapLinkForRef[K comparable, PbValue any, WrapperValue Linkable[K]](
 
 // NewXMapLinkForValue 创建值类型的XMapLink
 // 适用于Value是值类型的场景（如 int32, string）
-func NewXMapLinkForValue[K comparable, PbValue any, WrapperValue Linkable[K]](
+func NewXMapLinkForValue[K comparable, PbValue any, WrapperValue Linkable](
 	pbMap *map[K]PbValue,
 	marker xmap.DirtyMarker,
 	dirtyBit int64,
@@ -29,7 +29,7 @@ func NewXMapLinkForValue[K comparable, PbValue any, WrapperValue Linkable[K]](
 
 // NewXMapLinkWithParent 创建XMapLink并立即设置父节点
 // 这是最常用的构造方式
-func NewXMapLinkWithParent[K comparable, PbValue any, WrapperValue Linkable[K]](
+func NewXMapLinkWithParent[K comparable, PbValue any, WrapperValue Linkable](
 	pbMap *map[K]PbValue,
 	parentTracker *dt.DirtyTracker,
 	parentBit int64,

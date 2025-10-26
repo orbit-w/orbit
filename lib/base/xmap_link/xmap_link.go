@@ -7,7 +7,7 @@ import (
 
 // Linkable 定义可链接对象的接口
 // 所有 Mechanism/Module/Manager 都应该实现此接口
-type Linkable[K comparable] interface {
+type Linkable interface {
 	// Link 链接到父DirtyTracker
 	Link(parent *dt.DirtyTracker, parentBit int64)
 	// LinkFactsAccessor 链接到父DirtyTracker和xmap的FactsAccessor
@@ -26,7 +26,7 @@ type WrapperFactory[PbValue any, WrapperValue any] func(pb PbValue) WrapperValue
 // K: map的key类型
 // PbValue: protobuf对象类型（通常是指针）
 // WrapperValue: 包装对象类型（实现了Linkable接口）
-type XMapLink[K comparable, PbValue any, WrapperValue Linkable[K]] struct {
+type XMapLink[K comparable, PbValue any, WrapperValue Linkable] struct {
 	pbMap          *map[K]PbValue                        // protobuf map的引用
 	wrapperMap     map[K]WrapperValue                    // 包装对象map
 	mapAccessor    xmap.MapAccessor[K, PbValue]          // xmap访问器
@@ -41,7 +41,7 @@ type XMapLink[K comparable, PbValue any, WrapperValue Linkable[K]] struct {
 // dirtyBit: 脏标记位
 // wrapperFactory: 包装器工厂函数
 // isRefType: 是否为引用类型（如果是引用类型，Set时会使用TrackSetWithDelete）
-func NewXMapLink[K comparable, PbValue any, WrapperValue Linkable[K]](
+func NewXMapLink[K comparable, PbValue any, WrapperValue Linkable](
 	pbMap *map[K]PbValue,
 	marker xmap.DirtyMarker,
 	dirtyBit int64,
