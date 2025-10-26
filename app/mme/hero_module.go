@@ -12,39 +12,39 @@ const (
 	HeroModuleDirtyLevelUpBit int64 = 1 << 2
 )
 
-type HeroModule[FactsAccessorKey comparable] struct {
+type HeroModule struct {
 	mme *mme.HeroModule
-	dirtyflag.IDirtyFlag[FactsAccessorKey]
+	dirtyflag.IDirtyFlag
 
-	Base    *HeroMechanism[any]
-	LevelUp *LevelUpMechanism[any]
+	Base    *HeroMechanism
+	LevelUp *LevelUpMechanism
 }
 
-func NewHeroModule[FactsAccessorKey comparable](pt *mme.HeroModule) *HeroModule[FactsAccessorKey] {
+func NewHeroModule(pt *mme.HeroModule) *HeroModule {
 	if pt == nil {
 		panic("pt is nil")
 	}
-	m := &HeroModule[FactsAccessorKey]{
+	m := &HeroModule{
 		mme:        pt,
-		IDirtyFlag: dirtyflag.NewDirtyFlag[FactsAccessorKey](),
+		IDirtyFlag: dirtyflag.NewDirtyFlag(),
 	}
 	// Mechanism obj 需要Link到DirtyTracker
 	// xmap类型，
 	// if Value 是Mechanism，则需要通过LinkFactsAccessor到Father和xmap的Key
 
-	m.Base = NewHeroMechanism[any](m.mme.Base)
+	m.Base = NewHeroMechanism(m.mme.Base)
 	m.Base.Link(m.GetDirtyTracker(), HeroModuleDirtyBaseBit)
 
-	m.LevelUp = NewLevelUpMechanism[any](m.mme.LevelUp)
+	m.LevelUp = NewLevelUpMechanism(m.mme.LevelUp)
 	m.LevelUp.Link(m.GetDirtyTracker(), HeroModuleDirtyLevelUpBit)
 	return m
 }
 
-func (m *HeroModule[FactsAccessorKey]) Name() string {
+func (m *HeroModule) Name() string {
 	return "HeroModule"
 }
 
-func (m *HeroModule[FactsAccessorKey]) DeepCopy(co *mme.HeroModule) {
+func (m *HeroModule) DeepCopy(co *mme.HeroModule) {
 	if m == nil || co == nil {
 		return
 	}
