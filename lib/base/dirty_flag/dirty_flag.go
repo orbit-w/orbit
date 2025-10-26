@@ -17,6 +17,9 @@ type IDirtyFlag[FactsAccessorKey comparable] interface {
 	HasAnyDirty() bool
 	ClearAllDirty()
 	GetDirtyTracker() *dt.DirtyTracker
+	GetFactsAccessor() xmap.FactsAccessor[FactsAccessorKey]
+	GetFactsAccessorKey() FactsAccessorKey
+	Unlink()
 }
 
 type DirtyFlag[FactsAccessorKey comparable] struct {
@@ -33,7 +36,6 @@ func (d *DirtyFlag[FactsAccessorKey]) Link(parent *dt.DirtyTracker, parentBit in
 	d.DirtyTracker.Link(parent, parentBit)
 }
 
-// 链接Map访问器, 用于记录Map中的操作记录和记录并向上记录传递脏标记
 func (d *DirtyFlag[FactsAccessorKey]) LinkFactsAccessor(parent *dt.DirtyTracker, parentBit int64,
 	factsAccessor xmap.FactsAccessor[FactsAccessorKey], key FactsAccessorKey) {
 	if factsAccessor == nil {
@@ -42,6 +44,22 @@ func (d *DirtyFlag[FactsAccessorKey]) LinkFactsAccessor(parent *dt.DirtyTracker,
 	d.factsAccessor = factsAccessor
 	d.factsAccessorKey = key
 	d.DirtyTracker.Link(parent, parentBit)
+}
+
+func (d *DirtyFlag[FactsAccessorKey]) Unlink() {
+	d.DirtyTracker.Unlink()
+
+	d.factsAccessor = nil
+	var zeroValue FactsAccessorKey
+	d.factsAccessorKey = zeroValue
+}
+
+func (d *DirtyFlag[FactsAccessorKey]) GetFactsAccessor() xmap.FactsAccessor[FactsAccessorKey] {
+	return d.factsAccessor
+}
+
+func (d *DirtyFlag[FactsAccessorKey]) GetFactsAccessorKey() FactsAccessorKey {
+	return d.factsAccessorKey
 }
 
 func (d *DirtyFlag[FactsAccessorKey]) GetDirtyTracker() *dt.DirtyTracker {
