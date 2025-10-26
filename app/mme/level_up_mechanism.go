@@ -16,61 +16,61 @@ const (
 	LevelUpMechanismDirtyConfIdBit   int64 = 1 << 2
 )
 
-type LevelUpMechanism[FactsAccessorKey comparable] struct {
+type LevelUpMechanism struct {
 	levelUpMechanism *mme.LevelUpMechanism
-	dirtyflag.IDirtyFlag[FactsAccessorKey]
+	dirtyflag.IDirtyFlag
 }
 
-func NewLevelUpMechanism[FactsAccessorKey comparable](levelUpMechanism *mme.LevelUpMechanism) *LevelUpMechanism[FactsAccessorKey] {
+func NewLevelUpMechanism(levelUpMechanism *mme.LevelUpMechanism) *LevelUpMechanism {
 	if levelUpMechanism == nil {
 		panic("levelUpMechanism is nil")
 	}
-	m := &LevelUpMechanism[FactsAccessorKey]{
+	m := &LevelUpMechanism{
 		levelUpMechanism: levelUpMechanism,
-		IDirtyFlag:       dirtyflag.NewDirtyFlag[FactsAccessorKey](),
+		IDirtyFlag:       dirtyflag.NewDirtyFlag(),
 	}
 	return m
 }
 
 // 机制唯一名称
-func (m *LevelUpMechanism[FactsAccessorKey]) Name() string {
+func (m *LevelUpMechanism) Name() string {
 	return "LevelUpMechanism"
 }
 
-func (m *LevelUpMechanism[FactsAccessorKey]) SetCurLevel(v int32) {
+func (m *LevelUpMechanism) SetCurLevel(v int32) {
 	m.levelUpMechanism.CurLevel = &v
 	m.MarkDirty(LevelUpMechanismDirtyCurLevelBit)
 }
 
-func (m *LevelUpMechanism[FactsAccessorKey]) SetCurExp(v int32) {
+func (m *LevelUpMechanism) SetCurExp(v int32) {
 	m.levelUpMechanism.CurExp = &v
 	m.MarkDirty(LevelUpMechanismDirtyCurExpBit)
 }
 
-func (m *LevelUpMechanism[FactsAccessorKey]) SetConfId(v int32) {
+func (m *LevelUpMechanism) SetConfId(v int32) {
 	m.levelUpMechanism.ConfId = &v
 	m.MarkDirty(LevelUpMechanismDirtyConfIdBit)
 }
 
-func (m *LevelUpMechanism[FactsAccessorKey]) GetCurLevel() int32 {
+func (m *LevelUpMechanism) GetCurLevel() int32 {
 	return *m.levelUpMechanism.CurLevel
 }
 
-func (m *LevelUpMechanism[FactsAccessorKey]) GetCurExp() int32 {
+func (m *LevelUpMechanism) GetCurExp() int32 {
 	return *m.levelUpMechanism.CurExp
 }
 
-func (m *LevelUpMechanism[FactsAccessorKey]) GetConfId() int32 {
+func (m *LevelUpMechanism) GetConfId() int32 {
 	return *m.levelUpMechanism.ConfId
 }
 
 // ClearAllDirtyFlags 清除所有脏标记位
-func (m *LevelUpMechanism[FactsAccessorKey]) ClearAllDirtyFlags() {
+func (m *LevelUpMechanism) ClearAllDirtyFlags() {
 	m.ClearAllDirty()
 }
 
 // BuildMongoUpdate 构建MongoDB更新操作
-func (m *LevelUpMechanism[FactsAccessorKey]) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder, prefix string) {
+func (m *LevelUpMechanism) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder, prefix string) {
 	if m == nil {
 		return
 	}
@@ -113,7 +113,7 @@ func (m *LevelUpMechanism[FactsAccessorKey]) BuildMongoUpdate(builder *mgo_build
 
 // DeepCopy creates a deep copy of LevelUpMechanism proto data only
 // 手写实现，性能优于 proto.Clone（避免反射开销）
-func (m *LevelUpMechanism[FactsAccessorKey]) DeepCopy(co *mme.LevelUpMechanism) {
+func (m *LevelUpMechanism) DeepCopy(co *mme.LevelUpMechanism) {
 	if m == nil || co == nil {
 		return
 	}
@@ -137,7 +137,7 @@ func (m *LevelUpMechanism[FactsAccessorKey]) DeepCopy(co *mme.LevelUpMechanism) 
 
 // ToIncrementalProto 根据脏标记位构建增量数据的 protoMessage
 // 只返回标记为脏的字段数据，用于增量同步
-func (m *LevelUpMechanism[FactsAccessorKey]) ToIncrementalProto() proto.Message {
+func (m *LevelUpMechanism) ToIncrementalProto() proto.Message {
 	if m == nil {
 		return nil
 	}

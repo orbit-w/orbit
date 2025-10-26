@@ -20,20 +20,20 @@ const (
 	HeroMechanismDirtySkillsBit     int64 = 1 << 5
 )
 
-type HeroMechanism[FactsAccessorKey comparable] struct {
+type HeroMechanism struct {
 	heroMechanism *mme.HeroMechanism
-	dirtyflag.IDirtyFlag[FactsAccessorKey]
+	dirtyflag.IDirtyFlag
 
 	skillsAccessor xmap.MapAccessor[int32, int32]
 }
 
-func NewHeroMechanism[FactsAccessorKey comparable](pt *mme.HeroMechanism) *HeroMechanism[FactsAccessorKey] {
+func NewHeroMechanism(pt *mme.HeroMechanism) *HeroMechanism {
 	if pt == nil {
 		panic("pt is nil")
 	}
-	hm := &HeroMechanism[FactsAccessorKey]{
+	hm := &HeroMechanism{
 		heroMechanism: pt,
-		IDirtyFlag:    dirtyflag.NewDirtyFlag[FactsAccessorKey](),
+		IDirtyFlag:    dirtyflag.NewDirtyFlag(),
 	}
 
 	hm.skillsAccessor = xmap.NewMapAccessorWithMarker(&hm.heroMechanism.Skills, hm, HeroMechanismDirtySkillsBit)
@@ -41,56 +41,56 @@ func NewHeroMechanism[FactsAccessorKey comparable](pt *mme.HeroMechanism) *HeroM
 }
 
 // 机制唯一名称
-func (m *HeroMechanism[FactsAccessorKey]) Name() string {
+func (m *HeroMechanism) Name() string {
 	return "HeroMechanism"
 }
 
-func (m *HeroMechanism[FactsAccessorKey]) GetId() int64 {
+func (m *HeroMechanism) GetId() int64 {
 	return *m.heroMechanism.Id
 }
 
-func (m *HeroMechanism[FactsAccessorKey]) GetConfId() int32 {
+func (m *HeroMechanism) GetConfId() int32 {
 	return *m.heroMechanism.ConfId
 }
 
-func (m *HeroMechanism[FactsAccessorKey]) GetUseTimes() int32 {
+func (m *HeroMechanism) GetUseTimes() int32 {
 	return *m.heroMechanism.UseTimes
 }
 
-func (m *HeroMechanism[FactsAccessorKey]) GetCreateTime() int64 {
+func (m *HeroMechanism) GetCreateTime() int64 {
 	return *m.heroMechanism.CreateTime
 }
 
-func (m *HeroMechanism[FactsAccessorKey]) SetId(v int64) {
+func (m *HeroMechanism) SetId(v int64) {
 	m.heroMechanism.Id = &v
 	m.MarkDirty(HeroMechanismDirtyIdBit)
 }
 
-func (m *HeroMechanism[FactsAccessorKey]) SetConfId(v int32) {
+func (m *HeroMechanism) SetConfId(v int32) {
 	m.heroMechanism.ConfId = &v
 	m.MarkDirty(LevelUpMechanismDirtyConfIdBit)
 }
 
-func (m *HeroMechanism[FactsAccessorKey]) SetUseTimes(v int32) {
+func (m *HeroMechanism) SetUseTimes(v int32) {
 	m.heroMechanism.UseTimes = &v
 	m.MarkDirty(HeroMechanismDirtyUseTimesBit)
 }
 
-func (m *HeroMechanism[FactsAccessorKey]) SetCreateTime(v int64) {
+func (m *HeroMechanism) SetCreateTime(v int64) {
 	m.heroMechanism.CreateTime = &v
 	m.MarkDirty(HeroMechanismDirtyCreateTimeBit)
 }
 
-func (m *HeroMechanism[FactsAccessorKey]) GetSkills() map[int32]int32 {
+func (m *HeroMechanism) GetSkills() map[int32]int32 {
 	return m.heroMechanism.Skills
 }
 
-func (m *HeroMechanism[FactsAccessorKey]) GetSkillAccessor() xmap.MapAccessor[int32, int32] {
+func (m *HeroMechanism) GetSkillAccessor() xmap.MapAccessor[int32, int32] {
 	return m.skillsAccessor
 }
 
 // ClearAllDirtyFlags 清除所有脏标记位
-func (m *HeroMechanism[FactsAccessorKey]) ClearAllDirtyFlags() {
+func (m *HeroMechanism) ClearAllDirtyFlags() {
 	m.ClearAllDirty()
 
 	// 如果Value为引用类型且有脏标记，则清除所有xmap中Value的脏标记
@@ -100,7 +100,7 @@ func (m *HeroMechanism[FactsAccessorKey]) ClearAllDirtyFlags() {
 }
 
 // BuildMongoUpdate 构建MongoDB更新操作
-func (m *HeroMechanism[FactsAccessorKey]) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder, prefix string) {
+func (m *HeroMechanism) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder, prefix string) {
 	if m == nil {
 		return
 	}
@@ -145,7 +145,7 @@ func (m *HeroMechanism[FactsAccessorKey]) BuildMongoUpdate(builder *mgo_builder.
 
 // DeepCopy creates a deep copy of HeroMechanism proto data only
 // 手写实现，性能优于 proto.Clone（避免反射开销）
-func (m *HeroMechanism[FactsAccessorKey]) DeepCopy(co *mme.HeroMechanism) {
+func (m *HeroMechanism) DeepCopy(co *mme.HeroMechanism) {
 	if m == nil || co == nil {
 		return
 	}
@@ -182,7 +182,7 @@ func (m *HeroMechanism[FactsAccessorKey]) DeepCopy(co *mme.HeroMechanism) {
 
 // ToIncrementalProto 根据脏标记位构建增量数据的 protoMessage
 // 只返回标记为脏的字段数据，用于增量同步
-func (m *HeroMechanism[FactsAccessorKey]) ToIncrementalProto() proto.Message {
+func (m *HeroMechanism) ToIncrementalProto() proto.Message {
 	if m == nil {
 		return nil
 	}
