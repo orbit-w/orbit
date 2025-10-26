@@ -99,9 +99,7 @@ func (x *XMapLink[K, PbValue, WrapperValue]) Get(key K) (WrapperValue, bool) {
 // 返回新的包装对象
 func (x *XMapLink[K, PbValue, WrapperValue]) Set(key K, pbValue PbValue) WrapperValue {
 	// 处理旧对象的Unlink
-	if oldWrapper, exists := x.wrapperMap[key]; exists {
-		oldWrapper.Unlink()
-	}
+	x.Delete(key)
 
 	// 创建新的包装对象
 	wrapper := x.wrapperFactory(pbValue)
@@ -122,14 +120,14 @@ func (x *XMapLink[K, PbValue, WrapperValue]) Set(key K, pbValue PbValue) Wrapper
 // 返回是否成功删除
 func (x *XMapLink[K, PbValue, WrapperValue]) Delete(key K) bool {
 	if wrapper, exists := x.wrapperMap[key]; exists {
-		// Unlink包装对象
+		// 从protobuf map中删除（通过MapAccessor）
+		x.mapAccessor.Delete(key)
+
+		// Unlink包装对象, 解除与父对象和xmap的关联
 		wrapper.Unlink()
 
 		// 从包装对象map中删除
 		delete(x.wrapperMap, key)
-
-		// 从protobuf map中删除（通过MapAccessor）
-		x.mapAccessor.Delete(key)
 
 		return true
 	}
