@@ -1,5 +1,7 @@
 gitee.com/orbit-w/meteor v0.0.0-20251025095035-d8df6b84119b h1:nckMcJv8JK6ZMtxwh6Li+uhtpkqXYYa8nfN9CrA/9dU=
 gitee.com/orbit-w/meteor v0.0.0-20251025095035-d8df6b84119b/go.mod h1:nRmK4C038ZlAwTW4qOlo2YGe+DKxCmpgOQtCIinj95c=
+gitee.com/orbit-w/meteor v0.0.0-20251026064651-be58910a3166 h1:42JwoPKNYCCdNqyVxeeJ2YMOZl6NZWVRz7a5ZiK9Nxk=
+gitee.com/orbit-w/meteor v0.0.0-20251026064651-be58910a3166/go.mod h1:nRmK4C038ZlAwTW4qOlo2YGe+DKxCmpgOQtCIinj95c=
 github.com/BurntSushi/toml v1.4.0 h1:kuoIxZQy2WRRk1pttg9asf+WVv6tWQuBNVmK8+nqPr0=
 github.com/BurntSushi/toml v1.4.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
 github.com/Workiva/go-datastructures v1.1.5 h1:5YfhQ4ry7bZc2Mc7R0YZyYwpf5c6t1cEFvdAhd6Mkf4=

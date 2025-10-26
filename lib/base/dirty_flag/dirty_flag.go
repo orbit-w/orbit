@@ -5,78 +5,72 @@ import (
 	"gitee.com/orbit-w/meteor/bases/dirty/xmap"
 )
 
-type Linkable[FactsAccessorKey comparable] interface {
+type Linkable interface {
 	Link(parent *dt.DirtyTracker, parentBit int64)
-	LinkFactsAccessor(parent *dt.DirtyTracker, parentBit int64, factsAccessor xmap.FactsAccessor[FactsAccessorKey], key FactsAccessorKey)
+	LinkFactsAccessor(parent *dt.DirtyTracker, parentBit int64, factsAccessor xmap.FactsAccessor)
 }
 
-type IDirtyFlag[FactsAccessorKey comparable] interface {
-	Linkable[FactsAccessorKey]
+type IFactsAccessorLinker interface {
+}
+
+type IDirtyFlag interface {
+	Linkable
 	MarkDirty(dirtyBit int64)
 	IsDirty(dirtyBit int64) bool
 	HasAnyDirty() bool
 	ClearAllDirty()
 	GetDirtyTracker() *dt.DirtyTracker
-	GetFactsAccessor() xmap.FactsAccessor[FactsAccessorKey]
-	GetFactsAccessorKey() FactsAccessorKey
+	GetFactsAccessor() xmap.FactsAccessor
 	Unlink()
 }
 
-type DirtyFlag[FactsAccessorKey comparable] struct {
+type DirtyFlag struct {
 	dt.DirtyTracker
-	factsAccessorKey FactsAccessorKey
-	factsAccessor    xmap.FactsAccessor[FactsAccessorKey]
+	factsAccessor xmap.FactsAccessor
 }
 
-func NewDirtyFlag[FactsAccessorKey comparable]() *DirtyFlag[FactsAccessorKey] {
-	return &DirtyFlag[FactsAccessorKey]{}
+func NewDirtyFlag() *DirtyFlag {
+	return &DirtyFlag{}
 }
 
-func (d *DirtyFlag[FactsAccessorKey]) Link(parent *dt.DirtyTracker, parentBit int64) {
+func (d *DirtyFlag) Link(parent *dt.DirtyTracker, parentBit int64) {
 	d.DirtyTracker.Link(parent, parentBit)
 }
 
-func (d *DirtyFlag[FactsAccessorKey]) LinkFactsAccessor(parent *dt.DirtyTracker, parentBit int64,
-	factsAccessor xmap.FactsAccessor[FactsAccessorKey], key FactsAccessorKey) {
+func (d *DirtyFlag) LinkFactsAccessor(parent *dt.DirtyTracker, parentBit int64,
+	factsAccessor xmap.FactsAccessor) {
 	if factsAccessor == nil {
 		panic("factsAccessor is nil")
 	}
 	d.factsAccessor = factsAccessor
-	d.factsAccessorKey = key
 	d.DirtyTracker.Link(parent, parentBit)
 }
 
-func (d *DirtyFlag[FactsAccessorKey]) Unlink() {
+func (d *DirtyFlag) Unlink() {
 	d.DirtyTracker.Unlink()
 
 	d.factsAccessor = nil
-	var zeroValue FactsAccessorKey
-	d.factsAccessorKey = zeroValue
 }
 
-func (d *DirtyFlag[FactsAccessorKey]) GetFactsAccessor() xmap.FactsAccessor[FactsAccessorKey] {
+func (d *DirtyFlag) GetFactsAccessor() xmap.FactsAccessor {
 	return d.factsAccessor
 }
 
-func (d *DirtyFlag[FactsAccessorKey]) GetFactsAccessorKey() FactsAccessorKey {
-	return d.factsAccessorKey
-}
-
-func (d *DirtyFlag[FactsAccessorKey]) GetDirtyTracker() *dt.DirtyTracker {
+func (d *DirtyFlag) GetDirtyTracker() *dt.DirtyTracker {
 	return &d.DirtyTracker
 }
 
-func (d *DirtyFlag[FactsAccessorKey]) MarkDirty(dirtyBit int64) {
+func (d *DirtyFlag) MarkDirty(dirtyBit int64) {
 	d.DirtyTracker.MarkDirty(dirtyBit)
 	if d.factsAccessor != nil {
-		d.factsAccessor.TrackSet(d.factsAccessorKey)
+		d.factsAccessor.TrackSet()
 	}
 }
 
-func (d *DirtyFlag[FactsAccessorKey]) IsDirty(dirtyBit int64) bool {
+func (d *DirtyFlag) IsDirty(dirtyBit int64) bool {
 	return d.DirtyTracker.IsDirty(dirtyBit)
 }
 
-func (d *DirtyFlag[FactsAccessorKey]) HasAnyDirty() bool {
+func (d *DirtyFlag) HasAnyDirty() bool {
 	return d.DirtyTracker.HasAnyDirty()
 }

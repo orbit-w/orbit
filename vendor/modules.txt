@@ -1,4 +1,4 @@
-# gitee.com/orbit-w/meteor v0.0.0-20251025095035-d8df6b84119b
+# gitee.com/orbit-w/meteor v0.0.0-20251026064651-be58910a3166
 ## explicit; go 1.24
 gitee.com/orbit-w/meteor/bases/container/heap
 gitee.com/orbit-w/meteor/bases/container/priority_queue
