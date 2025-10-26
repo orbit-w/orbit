@@ -54,12 +54,13 @@ func (m *HeroManager) HeroMap_Range(f func(id int64, hero *HeroModule) bool) {
 	})
 }
 
-func (m *HeroManager) ClearAllDirtyFlags() {
-	m.ClearAllDirty()
+func (m *HeroManager) ClearAllDirty() {
+	m.IDirtyFlag.ClearAllDirty()
 
-	m.heroMapLink.Range(func(id int64, hero *HeroModule) bool {
-		hero.ClearAllDirty()
-		return true
+	// 清空xmaplink中所有object的脏标记
+	m.heroMapLink.RangeIncrementalSyncObject(func(key int64, object xmaplink.IncrementalSyncObject) (stop bool) {
+		object.ClearAllDirty()
+		return false
 	})
 }
 
