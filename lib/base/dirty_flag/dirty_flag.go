@@ -2,12 +2,11 @@ package dirtyflag
 
 import (
 	dt "gitee.com/orbit-w/meteor/bases/dirty/dirty_tracker"
-	"gitee.com/orbit-w/meteor/bases/dirty/xmap"
 )
 
 type Linkable interface {
 	Link(parent *dt.DirtyTracker, parentBit int64)
-	LinkFactsAccessor(parent *dt.DirtyTracker, parentBit int64, factsAccessor xmap.FactsAccessor)
+	LinkFactsAccessor(parent *dt.DirtyTracker, parentBit int64, trackSet func())
 }
 
 type IFactsAccessorLinker interface {
@@ -20,13 +19,12 @@ type IDirtyFlag interface {
 	HasAnyDirty() bool
 	ClearAllDirty()
 	GetDirtyTracker() *dt.DirtyTracker
-	GetFactsAccessor() xmap.FactsAccessor
 	Unlink()
 }
 
 type DirtyFlag struct {
 	dt.DirtyTracker
-	factsAccessor xmap.FactsAccessor
+	trackSet func()
 }
 
 func NewDirtyFlag() *DirtyFlag {
@@ -38,22 +36,18 @@ func (d *DirtyFlag) Link(parent *dt.DirtyTracker, parentBit int64) {
 }
 
 func (d *DirtyFlag) LinkFactsAccessor(parent *dt.DirtyTracker, parentBit int64,
-	factsAccessor xmap.FactsAccessor) {
-	if factsAccessor == nil {
+	trackSet func()) {
+	if trackSet == nil {
 		panic("factsAccessor is nil")
 	}
-	d.factsAccessor = factsAccessor
+	d.trackSet = trackSet
 	d.DirtyTracker.Link(parent, parentBit)
 }
 
 func (d *DirtyFlag) Unlink() {
 	d.DirtyTracker.Unlink()
 
-	d.factsAccessor = nil
-}
-
-func (d *DirtyFlag) GetFactsAccessor() xmap.FactsAccessor {
-	return d.factsAccessor
+	d.trackSet = nil
 }
 
 func (d *DirtyFlag) GetDirtyTracker() *dt.DirtyTracker {
@@ -62,8 +56,8 @@ func (d *DirtyFlag) GetDirtyTracker() *dt.DirtyTracker {
 
 func (d *DirtyFlag) MarkDirty(dirtyBit int64) {
 	d.DirtyTracker.MarkDirty(dirtyBit)
-	if d.factsAccessor != nil {
-		d.factsAccessor.TrackSet()
+	if d.trackSet != nil {
+		d.trackSet()
 	}
 }
 
