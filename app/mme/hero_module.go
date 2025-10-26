@@ -4,6 +4,7 @@ import (
 	"gitee.com/orbit-w/orbit/app/proto/mme"
 	dirtyflag "gitee.com/orbit-w/orbit/lib/base/dirty_flag"
 	"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder"
+	"github.com/gogo/protobuf/proto"
 )
 
 // Dirty bits for Module fields
@@ -64,11 +65,37 @@ func (m *HeroModule) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder, p
 		return
 	}
 
-	if m.Base != nil && m.Base.IsDirty(HeroModuleDirtyBaseBit) {
+	if m.Base != nil && m.IsDirty(HeroModuleDirtyBaseBit) {
 		m.Base.BuildMongoUpdate(builder, prefix+".base")
 	}
 
-	if m.LevelUp != nil && m.LevelUp.IsDirty(HeroModuleDirtyLevelUpBit) {
+	if m.LevelUp != nil && m.IsDirty(HeroModuleDirtyLevelUpBit) {
 		m.LevelUp.BuildMongoUpdate(builder, prefix+".level_up")
 	}
+}
+
+func (m *HeroModule) ToIncrementalProto() proto.Message {
+	if m == nil {
+		return nil
+	}
+
+	incremental := &mme.HeroModule{}
+
+	if m.Base != nil && m.IsDirty(HeroModuleDirtyBaseBit) {
+		pb := m.Base.ToIncrementalProto()
+		v, ok := pb.(*mme.HeroMechanism)
+		if ok {
+			incremental.Base = v
+		}
+	}
+
+	if m.LevelUp != nil && m.IsDirty(HeroModuleDirtyLevelUpBit) {
+		pb := m.LevelUp.ToIncrementalProto()
+		v, ok := pb.(*mme.LevelUpMechanism)
+		if ok {
+			incremental.LevelUp = v
+		}
+	}
+
+	return incremental
 }
