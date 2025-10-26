@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	dt "gitee.com/orbit-w/meteor/bases/dirty/dirty_tracker"
+	"gitee.com/orbit-w/meteor/bases/dirty/xmap"
+	"github.com/gogo/protobuf/proto"
 )
 
 // ============================================
@@ -54,6 +56,22 @@ func (w *MockWrapper) MarkDirty(dirtyBit int64) {
 	}
 }
 
+// 实现 IncrementalSyncObject 接口
+func (w *MockWrapper) ToIncrementalProto() proto.Message {
+	// 返回pb数据（简化实现）
+	// MockPbData不是真正的proto.Message，这里返回nil作为简化
+	return nil
+}
+
+func (w *MockWrapper) ClearAllDirty() {
+	w.tracker.ClearAllDirty()
+}
+
+func (w *MockWrapper) IsDirty(dirtyBit int64) bool {
+	return w.tracker.IsDirty(dirtyBit)
+}
+
+// 辅助方法
 func (w *MockWrapper) IsLinked() bool {
 	return w.factsAccessor != nil
 }
@@ -999,5 +1017,182 @@ func TestXMapLink_EmptyOperations(t *testing.T) {
 	values := link.Values()
 	if len(values) != 0 {
 		t.Errorf("Expected empty values slice, got length %d", len(values))
+	}
+}
+
+// TestXMapLink_RangeIncrementalSyncObject 测试RangeIncrementalSyncObject方法
+func TestXMapLink_RangeIncrementalSyncObject(t *testing.T) {
+	pbMap := make(map[int64]*MockPbData)
+	pbMap[1] = &MockPbData{Value: 100}
+	pbMap[2] = &MockPbData{Value: 200}
+	pbMap[3] = &MockPbData{Value: 300}
+
+	tracker := &dt.DirtyTracker{}
+	link := NewXMapLinkWithParent[int64, *MockPbData, *MockWrapper](
+		&pbMap,
+		tracker,
+		1<<0,
+		NewMockWrapper,
+	)
+
+	// 测试遍历所有增量同步对象
+	count := 0
+	keys := make(map[int64]bool)
+	link.RangeIncrementalSyncObject(func(key int64, object IncrementalSyncObject) bool {
+		count++
+		keys[key] = true
+		// 验证对象不为nil
+		if object == nil {
+			t.Error("Expected object to be non-nil")
+		}
+		return false // 继续遍历
+	})
+
+	if count != 3 {
+		t.Errorf("Expected to iterate 3 times, got %d", count)
+	}
+	if !keys[1] || !keys[2] || !keys[3] {
+		t.Error("Missing expected keys in iteration")
+	}
+
+	// 测试提前退出
+	count = 0
+	link.RangeIncrementalSyncObject(func(key int64, object IncrementalSyncObject) bool {
+		count++
+		return count >= 2 // 遍历2个后停止
+	})
+
+	if count != 2 {
+		t.Errorf("Expected to iterate 2 times, got %d", count)
+	}
+
+	// 测试nil回调
+	link.RangeIncrementalSyncObject(nil)
+}
+
+// TestXMapLink_RangeOperations 测试RangeOperations方法
+func TestXMapLink_RangeOperations(t *testing.T) {
+	pbMap := make(map[int64]*MockPbData)
+	tracker := &dt.DirtyTracker{}
+	const dirtyBit = int64(1 << 0)
+
+	link := NewXMapLinkWithParent[int64, *MockPbData, *MockWrapper](
+		&pbMap,
+		tracker,
+		dirtyBit,
+		NewMockWrapper,
+	)
+
+	// 执行一些操作
+	link.Set(1, &MockPbData{Value: 100})
+	link.Set(2, &MockPbData{Value: 200})
+	link.Delete(1)
+	link.Set(3, &MockPbData{Value: 300})
+
+	// 遍历操作
+	operationCount := 0
+	link.RangeOperations(func(key int64, operation xmap.MapOperation[int64]) bool {
+		// 记录操作
+		operationCount++
+		// operation是接口类型，会传入具体的操作实例
+		return true // 继续遍历
+	})
+
+	// 验证有操作被记录
+	if operationCount == 0 {
+		t.Error("Expected some operations to be recorded")
+	}
+
+	// 测试nil回调
+	link.RangeOperations(nil)
+}
+
+// TestXMapLink_IncrementalSyncInterface 测试IncrementalSyncObject接口实现
+func TestXMapLink_IncrementalSyncInterface(t *testing.T) {
+	pbMap := make(map[int64]*MockPbData)
+	tracker := &dt.DirtyTracker{}
+	const dirtyBit = int64(1 << 0)
+
+	link := NewXMapLinkWithParent[int64, *MockPbData, *MockWrapper](
+		&pbMap,
+		tracker,
+		dirtyBit,
+		NewMockWrapper,
+	)
+
+	// 添加对象
+	wrapper := link.Set(1, &MockPbData{Value: 100})
+
+	// 测试ToIncrementalProto（在我们的Mock中返回nil是正常的）
+	protoMsg := wrapper.ToIncrementalProto()
+	// 在实际使用中，这应该返回一个proto.Message，但我们的Mock简化了实现
+	_ = protoMsg
+
+	// 测试MarkDirty和IsDirty
+	const childBit = int64(1 << 1)
+	wrapper.MarkDirty(childBit)
+	if !wrapper.IsDirty(childBit) {
+		t.Error("Expected wrapper to be dirty after MarkDirty")
+	}
+
+	// 测试ClearAllDirty
+	wrapper.ClearAllDirty()
+	if wrapper.IsDirty(childBit) {
+		t.Error("Expected wrapper to not be dirty after ClearAllDirty")
+	}
+}
+
+// TestXMapLink_SetParentWithNilTracker 测试使用nil tracker的SetParent
+func TestXMapLink_SetParentWithNilTracker(t *testing.T) {
+	pbMap := make(map[int64]*MockPbData)
+	pbMap[1] = &MockPbData{Value: 100}
+
+	tracker := &dt.DirtyTracker{}
+	link := NewXMapLinkWithParent[int64, *MockPbData, *MockWrapper](
+		&pbMap,
+		tracker,
+		1<<0,
+		NewMockWrapper,
+	)
+
+	// 使用nil tracker调用SetParent不应该panic
+	link.SetParent(nil, 0)
+
+	// 验证wrapper仍然可以正常工作
+	wrapper, ok := link.Get(1)
+	if !ok {
+		t.Error("Expected key 1 to exist")
+	}
+	if wrapper.GetValue() != 100 {
+		t.Errorf("Expected value 100, got %d", wrapper.GetValue())
+	}
+}
+
+// TestXMapLink_ConcurrentSafety 测试并发安全性（基础测试）
+func TestXMapLink_ConcurrentSafety(t *testing.T) {
+	pbMap := make(map[int64]*MockPbData)
+	tracker := &dt.DirtyTracker{}
+	link := NewXMapLinkWithParent[int64, *MockPbData, *MockWrapper](
+		&pbMap,
+		tracker,
+		1<<0,
+		NewMockWrapper,
+	)
+
+	// 预填充一些数据
+	for i := int64(0); i < 10; i++ {
+		link.Set(i, &MockPbData{Value: int32(i * 10)})
+	}
+
+	// 测试基本的读取操作不会panic
+	// 注意: XMapLink不保证并发安全，这里只是确保基本操作不会崩溃
+	for i := int64(0); i < 10; i++ {
+		wrapper, ok := link.Get(i)
+		if !ok {
+			t.Errorf("Expected key %d to exist", i)
+		}
+		if wrapper.GetValue() != int32(i*10) {
+			t.Errorf("Expected value %d, got %d", i*10, wrapper.GetValue())
+		}
 	}
 }

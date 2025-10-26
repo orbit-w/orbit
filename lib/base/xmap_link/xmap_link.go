@@ -3,11 +3,13 @@ package xmaplink
 import (
 	dt "gitee.com/orbit-w/meteor/bases/dirty/dirty_tracker"
 	"gitee.com/orbit-w/meteor/bases/dirty/xmap"
+	"github.com/gogo/protobuf/proto"
 )
 
 // Linkable 定义可链接对象的接口
 // 所有 Mechanism/Module/Manager 都应该实现此接口
 type Linkable interface {
+	IncrementalSyncObject
 	// Link 链接到父DirtyTracker
 	Link(parent *dt.DirtyTracker, parentBit int64)
 	// LinkFactsAccessor 链接到父DirtyTracker和xmap的FactsAccessor
@@ -16,6 +18,15 @@ type Linkable interface {
 	Unlink()
 	// GetDirtyTracker 获取DirtyTracker（用于子对象的Link）
 	GetDirtyTracker() *dt.DirtyTracker
+}
+
+// IncrementalSyncObject 增量同步对象接口
+// 用于增量同步时，获取增量数据
+type IncrementalSyncObject interface {
+	ToIncrementalProto() proto.Message
+	ClearAllDirty()
+	MarkDirty(dirtyBit int64)
+	IsDirty(dirtyBit int64) bool
 }
 
 // WrapperFactory 包装器工厂函数类型
@@ -203,4 +214,17 @@ func (x *XMapLink[K, PbValue, WrapperValue]) RangeOperations(f func(key K, opera
 		return
 	}
 	x.mapAccessor.RangeOperations(f)
+}
+
+// RangeIncrementalSyncObject 遍历所有增量同步对象
+func (x *XMapLink[K, PbValue, WrapperValue]) RangeIncrementalSyncObject(f func(key K, object IncrementalSyncObject) (stop bool)) {
+	if f == nil {
+		return
+	}
+	for k := range x.wrapperMap {
+		wrapper := x.wrapperMap[k]
+		if f(k, wrapper) {
+			break
+		}
+	}
 }
