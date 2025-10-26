@@ -83,7 +83,6 @@ func TestXMapLink_New(t *testing.T) {
 		tracker,
 		dirtyBit,
 		NewMockWrapper,
-		true,
 	)
 
 	// 验证初始化
@@ -130,7 +129,6 @@ func TestXMapLink_Get(t *testing.T) {
 		tracker,
 		1<<0,
 		NewMockWrapper,
-		true,
 	)
 
 	// 测试获取存在的key
@@ -159,7 +157,6 @@ func TestXMapLink_Set(t *testing.T) {
 		tracker,
 		dirtyBit,
 		NewMockWrapper,
-		true,
 	)
 
 	// 测试Set新对象
@@ -228,7 +225,6 @@ func TestXMapLink_Delete(t *testing.T) {
 		tracker,
 		dirtyBit,
 		NewMockWrapper,
-		true,
 	)
 
 	// 获取包装对象的引用
@@ -284,7 +280,6 @@ func TestXMapLink_Has(t *testing.T) {
 		tracker,
 		1<<0,
 		NewMockWrapper,
-		true,
 	)
 
 	// 测试存在的key
@@ -306,7 +301,6 @@ func TestXMapLink_Len(t *testing.T) {
 		tracker,
 		1<<0,
 		NewMockWrapper,
-		true,
 	)
 
 	// 测试空map
@@ -344,7 +338,6 @@ func TestXMapLink_Range(t *testing.T) {
 		tracker,
 		1<<0,
 		NewMockWrapper,
-		true,
 	)
 
 	// 测试遍历所有元素
@@ -388,7 +381,6 @@ func TestXMapLink_Clear(t *testing.T) {
 		tracker,
 		dirtyBit,
 		NewMockWrapper,
-		true,
 	)
 
 	// 获取包装对象的引用
@@ -437,7 +429,6 @@ func TestXMapLink_Keys(t *testing.T) {
 		tracker,
 		1<<0,
 		NewMockWrapper,
-		true,
 	)
 
 	keys := link.Keys()
@@ -470,7 +461,6 @@ func TestXMapLink_Values(t *testing.T) {
 		tracker,
 		1<<0,
 		NewMockWrapper,
-		true,
 	)
 
 	values := link.Values()
@@ -501,7 +491,6 @@ func TestXMapLink_DirtyMarkPropagation(t *testing.T) {
 		tracker,
 		dirtyBit,
 		NewMockWrapper,
-		true,
 	)
 
 	// 添加对象
@@ -530,7 +519,6 @@ func TestXMapLink_EmptyMap(t *testing.T) {
 		tracker,
 		1<<0,
 		NewMockWrapper,
-		true,
 	)
 
 	// 测试操作空map
@@ -566,7 +554,6 @@ func BenchmarkXMapLink_Set(b *testing.B) {
 		tracker,
 		1<<0,
 		NewMockWrapper,
-		true,
 	)
 
 	b.ResetTimer()
@@ -583,7 +570,6 @@ func BenchmarkXMapLink_Get(b *testing.B) {
 		tracker,
 		1<<0,
 		NewMockWrapper,
-		true,
 	)
 
 	// 预填充数据
@@ -605,7 +591,6 @@ func BenchmarkXMapLink_Delete(b *testing.B) {
 		tracker,
 		1<<0,
 		NewMockWrapper,
-		true,
 	)
 
 	b.ResetTimer()
@@ -627,7 +612,6 @@ func BenchmarkXMapLink_Range(b *testing.B) {
 		tracker,
 		1<<0,
 		NewMockWrapper,
-		true,
 	)
 
 	// 预填充数据
@@ -662,7 +646,6 @@ func TestXMapLink_SetParent(t *testing.T) {
 		tracker1,
 		dirtyBit1,
 		NewMockWrapper,
-		true,
 	)
 
 	// 验证初始状态：所有wrapper都链接到tracker1
@@ -722,7 +705,6 @@ func TestXMapLink_GetMapAccessor(t *testing.T) {
 		tracker,
 		1<<0,
 		NewMockWrapper,
-		true,
 	)
 
 	accessor := link.GetMapAccessor()
@@ -751,7 +733,6 @@ func TestXMapLink_RangeWithNilCallback(t *testing.T) {
 		tracker,
 		1<<0,
 		NewMockWrapper,
-		true,
 	)
 
 	// 传入nil不应该panic
@@ -769,7 +750,6 @@ func TestXMapLink_FactsAccessorPropagation(t *testing.T) {
 		tracker,
 		dirtyBit,
 		NewMockWrapper,
-		true,
 	)
 
 	// 添加一个对象
@@ -796,7 +776,6 @@ func TestXMapLink_MultipleSetSameKey(t *testing.T) {
 		tracker,
 		dirtyBit,
 		NewMockWrapper,
-		true,
 	)
 
 	// 第一次Set
@@ -855,7 +834,6 @@ func TestXMapLink_ClearThenAdd(t *testing.T) {
 		tracker,
 		1<<0,
 		NewMockWrapper,
-		true,
 	)
 
 	// 清空
@@ -894,7 +872,6 @@ func TestXMapLink_OperationsOnNilMap(t *testing.T) {
 		tracker,
 		1<<0,
 		NewMockWrapper,
-		true,
 	)
 
 	// 在nil map上Set应该能够创建map并正常工作
@@ -928,7 +905,6 @@ func TestXMapLink_KeysAndValues(t *testing.T) {
 		tracker,
 		1<<0,
 		NewMockWrapper,
-		true,
 	)
 
 	// 添加多个元素
@@ -976,12 +952,11 @@ func TestXMapLink_EmptyOperations(t *testing.T) {
 	pbMap := make(map[int64]*MockPbData)
 	tracker := &dt.DirtyTracker{}
 
-	link := NewXMapLinkWithParent[int64, *MockPbData, *MockWrapper](
+	link := NewXMapLinkWithParent(
 		&pbMap,
 		tracker,
 		1<<0,
 		NewMockWrapper,
-		true,
 	)
 
 	// 测试所有操作在空map上都不会panic

@@ -40,13 +40,11 @@ type XMapLink[K comparable, PbValue any, WrapperValue Linkable] struct {
 // marker: 脏标记接口
 // dirtyBit: 脏标记位
 // wrapperFactory: 包装器工厂函数
-// isRefType: 是否为引用类型（如果是引用类型，Set时会使用TrackSetWithDelete）
 func NewXMapLink[K comparable, PbValue any, WrapperValue Linkable](
 	pbMap *map[K]PbValue,
 	marker xmap.DirtyMarker,
 	dirtyBit int64,
 	wrapperFactory WrapperFactory[PbValue, WrapperValue],
-	isRefType bool,
 ) *XMapLink[K, PbValue, WrapperValue] {
 
 	link := &XMapLink[K, PbValue, WrapperValue]{
@@ -56,11 +54,7 @@ func NewXMapLink[K comparable, PbValue any, WrapperValue Linkable](
 	}
 
 	// 创建MapAccessor
-	if isRefType {
-		link.mapAccessor = xmap.NewMapAccessorWithMarkerForRef(pbMap, marker, dirtyBit)
-	} else {
-		link.mapAccessor = xmap.NewMapAccessorWithMarker(pbMap, marker, dirtyBit)
-	}
+	link.mapAccessor = xmap.NewMapAccessorWithMarkerForRef(pbMap, marker, dirtyBit)
 
 	// 初始化现有的map元素
 	if pbMap != nil && *pbMap != nil {
@@ -202,4 +196,11 @@ func (x *XMapLink[K, PbValue, WrapperValue]) Values() []WrapperValue {
 		values = append(values, wrapper)
 	}
 	return values
+}
+
+func (x *XMapLink[K, PbValue, WrapperValue]) RangeOperations(f func(key K, operation xmap.MapOperation[K]) bool) {
+	if f == nil {
+		return
+	}
+	x.mapAccessor.RangeOperations(f)
 }
