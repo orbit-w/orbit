@@ -27,7 +27,7 @@ func NewHeroManager[FactsAccessorKey comparable](pt *mme.HeroManager) *HeroManag
 		IDirtyFlag:  dirtyflag.NewDirtyFlag[FactsAccessorKey](),
 	}
 
-	m.heroMapLink = xmaplink.NewXMapLinkWithParent[int64, *mme.HeroModule, *HeroModule[int64]](
+	m.heroMapLink = xmaplink.NewXMapLinkWithParent(
 		&m.heroManager.HeroMap, m.GetDirtyTracker(), HeroManagerDirtyHeroMapBit, NewHeroModule[int64], true)
 
 	return m
