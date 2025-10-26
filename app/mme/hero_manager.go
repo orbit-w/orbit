@@ -5,7 +5,7 @@ import (
 	"gitee.com/orbit-w/meteor/modules/mlog"
 	"gitee.com/orbit-w/orbit/app/proto/mme"
 	dirtyflag "gitee.com/orbit-w/orbit/lib/base/dirty_flag"
-	xmaplink "gitee.com/orbit-w/orbit/lib/base/xmap_link"
+	"gitee.com/orbit-w/orbit/lib/base/xmapwrapper"
 	"github.com/gogo/protobuf/proto"
 	"go.uber.org/zap"
 )
@@ -18,7 +18,7 @@ type HeroManager struct {
 	heroManager *mme.HeroManager
 	dirtyflag.IDirtyFlag
 
-	heroMapLink *xmaplink.XMapLink[int64, *mme.HeroModule, *HeroModule]
+	heroMapLink *xmapwrapper.XMapWrapper[int64, *mme.HeroModule, *HeroModule]
 }
 
 func NewHeroManager(pt *mme.HeroManager) *HeroManager {
@@ -31,7 +31,7 @@ func NewHeroManager(pt *mme.HeroManager) *HeroManager {
 		IDirtyFlag:  dirtyflag.NewDirtyFlag(),
 	}
 
-	m.heroMapLink = xmaplink.NewXMapLinkWithParent(
+	m.heroMapLink = xmapwrapper.NewXMapWrapperWithParent(
 		&m.heroManager.HeroMap, m.GetDirtyTracker(), HeroManagerDirtyHeroMapBit, NewHeroModule)
 
 	return m
@@ -58,7 +58,7 @@ func (m *HeroManager) ClearAllDirty() {
 	m.IDirtyFlag.ClearAllDirty()
 
 	// 清空xmaplink中所有object的脏标记
-	m.heroMapLink.RangeIncrementalSyncObject(func(key int64, object xmaplink.IncrementalSyncObject) (stop bool) {
+	m.heroMapLink.RangeIncrementalSyncObject(func(key int64, object xmapwrapper.IncrementalSyncObject) (stop bool) {
 		object.ClearAllDirty()
 		return false
 	})
