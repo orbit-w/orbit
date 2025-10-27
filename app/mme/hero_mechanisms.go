@@ -12,12 +12,11 @@ import (
 
 // Dirty bits for Mechanism fields
 const (
-	HeroMechanismDirtyXXXIdBit      int64 = 1 << 0
-	HeroMechanismDirtyIdBit         int64 = 1 << 1
-	HeroMechanismDirtyConfIdBit     int64 = 1 << 2
-	HeroMechanismDirtyCreateTimeBit int64 = 1 << 3
-	HeroMechanismDirtyUseTimesBit   int64 = 1 << 4
-	HeroMechanismDirtySkillsBit     int64 = 1 << 5
+	HeroMechanismDirtyIdBit         int64 = 1 << 0
+	HeroMechanismDirtyConfIdBit     int64 = 1 << 1
+	HeroMechanismDirtyCreateTimeBit int64 = 1 << 2
+	HeroMechanismDirtyUseTimesBit   int64 = 1 << 3
+	HeroMechanismDirtySkillsBit     int64 = 1 << 4
 )
 
 type HeroMechanism struct {
