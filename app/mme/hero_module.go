@@ -9,9 +9,8 @@ import (
 
 // Dirty bits for Module fields
 const (
-	HeroModuleDirtyXXXIdBit   int64 = 1 << 0
-	HeroModuleDirtyBaseBit    int64 = 1 << 1
-	HeroModuleDirtyLevelUpBit int64 = 1 << 2
+	HeroModuleDirtyBaseBit    int64 = 1 << 0
+	HeroModuleDirtyLevelUpBit int64 = 1 << 1
 )
 
 type HeroModule struct {
