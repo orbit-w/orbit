@@ -1,7 +1,6 @@
 package mme
 
 import (
-	"strconv"
 	"strings"
 
 	"gitee.com/orbit-w/meteor/bases/dirty/xmap"
@@ -63,7 +62,6 @@ func NewHeroMechanismWrapper(data *HeroMechanism) *HeroMechanismWrapper {
 func (m *HeroMechanismWrapper) InitFieldContext() {
 	m.fieldMetas.SetFieldType(HeroMechanismFieldIndexId, fieldmeta.FieldTypeSync)
 	m.fieldMetas.SetFieldType(HeroMechanismFieldIndexConfId, fieldmeta.FieldTypeSync)
-	m.fieldMetas.SetFieldType(HeroMechanismFieldIndexCreateTime, fieldmeta.FieldTypeSync)
 	m.fieldMetas.SetFieldType(HeroMechanismFieldIndexUseTimes, fieldmeta.FieldTypeSync)
 	m.fieldMetas.SetFieldType(HeroMechanismFieldIndexSkills, fieldmeta.FieldTypeSync)
 }
@@ -139,12 +137,8 @@ func (m *HeroMechanismWrapper) BuildMongoUpdate(builder *mgo_builder.MongoUpdate
 		{"conf_id", HeroMechanismDirtyConfIdBit, m.GetConfId()},
 		{"create_time", HeroMechanismDirtyCreateTimeBit, m.GetCreateTime()},
 		{"use_times", HeroMechanismDirtyUseTimesBit, m.GetUseTimes()},
+		{"skills", HeroMechanismDirtySkillsBit, m.skillsAccessor.Clone()},
 	}
-
-	m.skillsAccessor.Range(func(key int32, value int32) bool {
-		builder.Set(prefix+".skills."+strconv.Itoa(int(key)), value)
-		return true
-	})
 
 	// 使用 strings.Builder 优化路径构建性能
 	var pathBuilder strings.Builder
@@ -172,7 +166,14 @@ func (m *HeroMechanismWrapper) BuildMongoUpdate(builder *mgo_builder.MongoUpdate
 }
 
 func (m *HeroMechanismWrapper) DeepCopy(copy *HeroMechanism) {
+	if m == nil || m.data == nil || copy == nil {
+		return
+	}
 
+	// 拷贝基础类型字段
+	*copy = *m.data
+
+	m.skillsAccessor.DeepCopy(copy.Skills)
 }
 
 func (m *HeroMechanismWrapper) MatchesAll(fieldID uint8, fieldTypes ...fieldmeta.FieldType) bool {

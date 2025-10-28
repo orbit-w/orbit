@@ -1,5 +1,7 @@
 package xmap
 
+import "maps"
+
 // DirtyMarker abstracts a type that can mark a specific dirty bit.
 // Any component embedding a tracker that exposes MarkDirty(int64) can implement this.
 type DirtyMarker interface {
@@ -171,15 +173,18 @@ func (op MapAccessor[K, V]) DeleteAll(keys ...K) int {
 	return count
 }
 
-func (op MapAccessor[K, V]) DeepCopy() map[K]V {
+func (op MapAccessor[K, V]) DeepCopy(copyMap map[K]V) {
+	if op.m == nil || *op.m == nil {
+		return
+	}
+	maps.Copy(copyMap, *op.m)
+}
+
+func (op MapAccessor[K, V]) Clone() map[K]V {
 	if op.m == nil || *op.m == nil {
 		return nil
 	}
-	dup := make(map[K]V, len(*op.m))
-	for k, v := range *op.m {
-		dup[k] = v
-	}
-	return dup
+	return maps.Clone(*op.m)
 }
 
 func (op MapAccessor[K, V]) Pop(k K) (V, bool) {

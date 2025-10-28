@@ -31,9 +31,9 @@ Mechanisms:
       #英雄配置ID
       int32 ConfId: 1 [blueprint:"access=all"]
       #玩家获得英雄的时间
-      int64 CreateTime: 2
+      int64 CreateTime: 2 [blueprint:"access=s"]
       #英雄被使用次数
-      int32 UseTimes: 3
+      int32 UseTimes: 3 [blueprint:"access=all"]
       #技能
       xmap<int32, int32> Skills: 4 [blueprint:"access=all"]
   #手动解锁机制
