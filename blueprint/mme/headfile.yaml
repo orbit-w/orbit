@@ -22,6 +22,7 @@
 - MechanismDataFieldOption:
   - access:
       Default: all
+      Enum: FieldAccessType
       Description: 数据访问权限，all表示客户端和服务端都可以访问，s表示只有服务端可以访问，c表示只有客户端可以访问
       Choices:
         - all

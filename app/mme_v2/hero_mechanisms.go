@@ -1,24 +1,33 @@
 package mme
 
 import (
-	"maps"
+	"strconv"
 	"strings"
 
 	"gitee.com/orbit-w/meteor/bases/dirty/xmap"
 	"gitee.com/orbit-w/orbit/app/proto/mme"
 	dirtyflag "gitee.com/orbit-w/orbit/lib/base/dirty_flag"
+	fieldmeta "gitee.com/orbit-w/orbit/lib/base/field_meta"
 	"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder"
+	mmeutils "gitee.com/orbit-w/orbit/lib/module/mme_utils"
 	"google.golang.org/protobuf/proto"
+)
+
+const (
+	HeroMechanismFieldIndexId = uint8(0)
+	HeroMechanismFieldIndexConfId
+	HeroMechanismFieldIndexCreateTime
+	HeroMechanismFieldIndexUseTimes
+	HeroMechanismFieldIndexSkills
 )
 
 // Dirty bits for Mechanism fields
 const (
-	HeroMechanismDirtyXXXIdBit      int64 = 1 << 0
-	HeroMechanismDirtyIdBit         int64 = 1 << 1
-	HeroMechanismDirtyConfIdBit     int64 = 1 << 2
-	HeroMechanismDirtyCreateTimeBit int64 = 1 << 3
-	HeroMechanismDirtyUseTimesBit   int64 = 1 << 4
-	HeroMechanismDirtySkillsBit     int64 = 1 << 5
+	HeroMechanismDirtyIdBit         int64 = 1 << HeroMechanismFieldIndexId
+	HeroMechanismDirtyConfIdBit     int64 = 1 << HeroMechanismFieldIndexConfId
+	HeroMechanismDirtyCreateTimeBit int64 = 1 << HeroMechanismFieldIndexCreateTime
+	HeroMechanismDirtyUseTimesBit   int64 = 1 << HeroMechanismFieldIndexUseTimes
+	HeroMechanismDirtySkillsBit     int64 = 1 << HeroMechanismFieldIndexSkills
 )
 
 type HeroMechanism struct {
@@ -29,77 +38,83 @@ type HeroMechanism struct {
 	Skills     map[int32]int32 `bson:"skills"`
 }
 
-type HeroMechanismAccessor struct {
-	impl *HeroMechanism
+type HeroMechanismWrapper struct {
+	data *HeroMechanism
 	dirtyflag.IDirtyFlag
+	fieldMetas *fieldmeta.FieldMetas
 
 	skillsAccessor xmap.MapAccessor[int32, int32]
 }
 
-func NewHeroMechanismAccessor(impl *HeroMechanism) *HeroMechanismAccessor {
-	if impl == nil {
+func NewHeroMechanismWrapper(data *HeroMechanism) *HeroMechanismWrapper {
+	if data == nil {
 		panic("pt is nil")
 	}
-	hm := &HeroMechanismAccessor{
-		impl:       impl,
+	hm := &HeroMechanismWrapper{
+		data:       data,
 		IDirtyFlag: dirtyflag.NewDirtyFlag(),
+		fieldMetas: fieldmeta.NewFieldMetas(),
 	}
 
-	hm.skillsAccessor = xmap.NewMapAccessorWithMarker(&hm.impl.Skills, hm, HeroMechanismDirtySkillsBit)
+	hm.skillsAccessor = xmap.NewMapAccessorWithMarker(&hm.data.Skills, hm, HeroMechanismDirtySkillsBit)
 	return hm
 }
 
+func (m *HeroMechanismWrapper) InitFieldContext() {
+	m.fieldMetas.SetFieldType(HeroMechanismFieldIndexId, fieldmeta.FieldTypeSync)
+	m.fieldMetas.SetFieldType(HeroMechanismFieldIndexConfId, fieldmeta.FieldTypeSync)
+	m.fieldMetas.SetFieldType(HeroMechanismFieldIndexCreateTime, fieldmeta.FieldTypeSync)
+	m.fieldMetas.SetFieldType(HeroMechanismFieldIndexUseTimes, fieldmeta.FieldTypeSync)
+	m.fieldMetas.SetFieldType(HeroMechanismFieldIndexSkills, fieldmeta.FieldTypeSync)
+}
+
 // 机制唯一名称
-func (m *HeroMechanismAccessor) Name() string {
+func (m *HeroMechanismWrapper) Name() string {
 	return "HeroMechanism"
 }
 
-func (m *HeroMechanismAccessor) GetId() int64 {
-	return m.impl.Id
+func (m *HeroMechanismWrapper) GetId() int64 {
+	return m.data.Id
 }
 
-func (m *HeroMechanismAccessor) GetConfId() int32 {
-	return m.impl.ConfId
+func (m *HeroMechanismWrapper) GetConfId() int32 {
+	return m.data.ConfId
 }
 
-func (m *HeroMechanismAccessor) GetUseTimes() int32 {
-	return m.impl.UseTimes
+func (m *HeroMechanismWrapper) GetUseTimes() int32 {
+	return m.data.UseTimes
 }
 
-func (m *HeroMechanismAccessor) GetCreateTime() int64 {
-	return m.impl.CreateTime
+func (m *HeroMechanismWrapper) GetCreateTime() int64 {
+	return m.data.CreateTime
 }
 
-func (m *HeroMechanismAccessor) SetId(v int64) {
-	m.impl.Id = v
+func (m *HeroMechanismWrapper) SetId(v int64) {
+	m.data.Id = v
 	m.MarkDirty(HeroMechanismDirtyIdBit)
 }
 
-func (m *HeroMechanismAccessor) SetConfId(v int32) {
-	m.impl.ConfId = v
+func (m *HeroMechanismWrapper) SetConfId(v int32) {
+	m.data.ConfId = v
 	m.MarkDirty(HeroMechanismDirtyConfIdBit)
 }
 
-func (m *HeroMechanismAccessor) SetUseTimes(v int32) {
-	m.impl.UseTimes = v
+func (m *HeroMechanismWrapper) SetUseTimes(v int32) {
+	m.data.UseTimes = v
 	m.MarkDirty(HeroMechanismDirtyUseTimesBit)
 }
 
-func (m *HeroMechanismAccessor) SetCreateTime(v int64) {
-	m.impl.CreateTime = v
+func (m *HeroMechanismWrapper) SetCreateTime(v int64) {
+	m.data.CreateTime = v
 	m.MarkDirty(HeroMechanismDirtyCreateTimeBit)
 }
 
-func (m *HeroMechanismAccessor) GetSkills() map[int32]int32 {
-	return m.impl.Skills
-}
-
-func (m *HeroMechanismAccessor) GetSkillAccessor() xmap.MapAccessor[int32, int32] {
+func (m *HeroMechanismWrapper) GetSkillAccessor() xmap.MapAccessor[int32, int32] {
 	return m.skillsAccessor
 }
 
 // ClearAllDirtyFlags 清除所有脏标记位
-func (m *HeroMechanismAccessor) ClearAllDirtyFlags() {
+func (m *HeroMechanismWrapper) ClearAllDirtyFlags() {
 	m.ClearAllDirty()
 
 	// 如果Value为引用类型且有脏标记，则清除所有xmap中Value的脏标记
@@ -109,7 +124,7 @@ func (m *HeroMechanismAccessor) ClearAllDirtyFlags() {
 }
 
 // BuildMongoUpdate 构建MongoDB更新操作
-func (m *HeroMechanismAccessor) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder, prefix string) {
+func (m *HeroMechanismWrapper) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder, prefix string) {
 	if m == nil {
 		return
 	}
@@ -124,8 +139,12 @@ func (m *HeroMechanismAccessor) BuildMongoUpdate(builder *mgo_builder.MongoUpdat
 		{"conf_id", HeroMechanismDirtyConfIdBit, m.GetConfId()},
 		{"create_time", HeroMechanismDirtyCreateTimeBit, m.GetCreateTime()},
 		{"use_times", HeroMechanismDirtyUseTimesBit, m.GetUseTimes()},
-		{"skills", HeroMechanismDirtySkillsBit, m.GetSkills()},
 	}
+
+	m.skillsAccessor.Range(func(key int32, value int32) bool {
+		builder.Set(prefix+".skills."+strconv.Itoa(int(key)), value)
+		return true
+	})
 
 	// 使用 strings.Builder 优化路径构建性能
 	var pathBuilder strings.Builder
@@ -152,20 +171,17 @@ func (m *HeroMechanismAccessor) BuildMongoUpdate(builder *mgo_builder.MongoUpdat
 	}
 }
 
-func (m *HeroMechanismAccessor) DeepCopy(co *HeroMechanism) {
-	if m == nil {
-		return
-	}
+func (m *HeroMechanismWrapper) DeepCopy(copy *HeroMechanism) {
 
-	*co = *m.impl
+}
 
-	co.Skills = make(map[int32]int32, len(m.impl.Skills))
-	maps.Copy(co.Skills, m.impl.Skills)
+func (m *HeroMechanismWrapper) MatchesAll(fieldID uint8, fieldTypes ...fieldmeta.FieldType) bool {
+	return m.fieldMetas.MatchesAll(fieldID, fieldTypes...)
 }
 
 // ToIncrementalProto 根据脏标记位构建增量数据的 protoMessage
 // 只返回标记为脏的字段数据，用于增量同步
-func (m *HeroMechanismAccessor) ToIncrementalProto() proto.Message {
+func (m *HeroMechanismWrapper) ToIncrementalProto(ctx mmeutils.SyncContext) proto.Message {
 	if m == nil {
 		return nil
 	}
@@ -178,39 +194,41 @@ func (m *HeroMechanismAccessor) ToIncrementalProto() proto.Message {
 	incremental := &mme.HeroMechanism{}
 
 	// 根据脏标记位设置对应的字段
-	if m.IsDirty(HeroMechanismDirtyIdBit) {
+	if mmeutils.FieldCanBeIncrementalSynced(m, HeroMechanismDirtyIdBit, HeroMechanismFieldIndexId, ctx) {
 		v := m.GetId()
 		incremental.Id = &v
 	}
 
-	if m.IsDirty(HeroMechanismDirtyConfIdBit) {
+	if mmeutils.FieldCanBeIncrementalSynced(m, HeroMechanismDirtyConfIdBit, HeroMechanismFieldIndexConfId, ctx) {
 		v := m.GetConfId()
 		incremental.ConfId = &v
 	}
 
-	if m.IsDirty(HeroMechanismDirtyCreateTimeBit) {
+	if mmeutils.FieldCanBeIncrementalSynced(m, HeroMechanismDirtyCreateTimeBit, HeroMechanismFieldIndexCreateTime, ctx) {
 		v := m.GetCreateTime()
 		incremental.CreateTime = &v
 	}
 
-	if m.IsDirty(HeroMechanismDirtyUseTimesBit) {
+	if mmeutils.FieldCanBeIncrementalSynced(m, HeroMechanismDirtyUseTimesBit, HeroMechanismFieldIndexUseTimes, ctx) {
 		v := m.GetUseTimes()
 		incremental.UseTimes = &v
 	}
 
-	if m.IsDirty(HeroMechanismDirtySkillsBit) {
+	if mmeutils.FieldCanBeIncrementalSynced(m, HeroMechanismDirtySkillsBit, HeroMechanismFieldIndexSkills, ctx) {
 		incremental.Skills_XXXChangeList = make([]*mme.HeroMechanism_Skills_XXXMapChangeRecord, 0)
 		m.skillsAccessor.RangeOperations(func(key int32, operation xmap.MapOperation[int32]) bool {
 			switch operation.Type {
 			case xmap.SetOperation:
 				v, _ := m.skillsAccessor.Get(key)
 				incremental.Skills_XXXChangeList = append(incremental.Skills_XXXChangeList, &mme.HeroMechanism_Skills_XXXMapChangeRecord{
-					Key:   key,
-					Value: v,
+					ChangeType: mme.ChangeType_CHANGE_TYPE_SET,
+					Key:        key,
+					Value:      v,
 				})
 			case xmap.DeleteOperation:
 				incremental.Skills_XXXChangeList = append(incremental.Skills_XXXChangeList, &mme.HeroMechanism_Skills_XXXMapChangeRecord{
-					Key: key,
+					ChangeType: mme.ChangeType_CHANGE_TYPE_DELETE,
+					Key:        key,
 				})
 			}
 			return true
@@ -218,38 +236,4 @@ func (m *HeroMechanismAccessor) ToIncrementalProto() proto.Message {
 	}
 
 	return incremental
-}
-
-// ToFullProto 生成全量的 mme.HeroMechanism 数据
-// 返回包含所有字段数据的 protoMessage，用于全量同步
-func (m *HeroMechanismAccessor) ToFullProto() proto.Message {
-	if m == nil {
-		return nil
-	}
-
-	full := &mme.HeroMechanism{}
-
-	// 设置所有字段
-	id := m.GetId()
-	full.Id = &id
-
-	confId := m.GetConfId()
-	full.ConfId = &confId
-
-	createTime := m.GetCreateTime()
-	full.CreateTime = &createTime
-
-	useTimes := m.GetUseTimes()
-	full.UseTimes = &useTimes
-
-	// 复制 Skills map
-	skills := m.GetSkills()
-	if len(skills) > 0 {
-		full.Skills = make(map[int32]int32, len(skills))
-		for k, v := range skills {
-			full.Skills[k] = v
-		}
-	}
-
-	return full
 }
