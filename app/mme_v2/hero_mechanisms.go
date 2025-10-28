@@ -180,6 +180,38 @@ func (m *HeroMechanismWrapper) MatchesAll(fieldID uint8, fieldTypes ...fieldmeta
 	return m.fieldMetas.MatchesAll(fieldID, fieldTypes...)
 }
 
+// ToProto 将 HeroMechanism 数据转换为完整的 protobuf 结构体
+func (m *HeroMechanismWrapper) ToProto() *mme.HeroMechanism {
+	if m == nil || m.data == nil {
+		return nil
+	}
+
+	pb := &mme.HeroMechanism{}
+
+	// 设置所有字段
+	id := m.data.Id
+	pb.Id = &id
+
+	confId := m.data.ConfId
+	pb.ConfId = &confId
+
+	createTime := m.data.CreateTime
+	pb.CreateTime = &createTime
+
+	useTimes := m.data.UseTimes
+	pb.UseTimes = &useTimes
+
+	// 转换 Skills map
+	if m.data.Skills != nil {
+		pb.Skills = make(map[int32]int32, len(m.data.Skills))
+		for k, v := range m.data.Skills {
+			pb.Skills[k] = v
+		}
+	}
+
+	return pb
+}
+
 // ToIncrementalProto 根据脏标记位构建增量数据的 protoMessage
 // 只返回标记为脏的字段数据，用于增量同步
 func (m *HeroMechanismWrapper) ToIncrementalProto(ctx mmeutils.SyncContext) proto.Message {
