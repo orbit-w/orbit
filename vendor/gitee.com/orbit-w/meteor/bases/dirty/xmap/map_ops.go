@@ -23,17 +23,17 @@ type MapAccessor[K comparable, V any] struct {
 // NewMapAccessorWithMarker creates an accessor bound to a component field map pointer
 // and a DirtyMarker with a concrete dirty bit. This avoids closure allocations.
 // 用于值类型的 Map
-func NewMapAccessorWithMarker[K comparable, V any](m *map[K]V, marker DirtyMarker, dirtyBit int64) MapAccessor[K, V] {
-	return MapAccessor[K, V]{m: m, marker: marker, dirtyBit: dirtyBit, changeTracker: NewFinegrainedChangeTracker[K]()}
+func NewMapAccessorWithMarker[K comparable, V any](m *map[K]V, marker DirtyMarker, dirtyBit int64) *MapAccessor[K, V] {
+	return &MapAccessor[K, V]{m: m, marker: marker, dirtyBit: dirtyBit, changeTracker: NewFinegrainedChangeTracker[K]()}
 }
 
 // NewMapAccessorWithMarkerForRef creates an accessor for reference type values
 // 用于引用类型的 Map，会在 Set 时先记录 Delete 操作
-func NewMapAccessorWithMarkerForRef[K comparable, V any](m *map[K]V, marker DirtyMarker, dirtyBit int64) MapAccessor[K, V] {
-	return MapAccessor[K, V]{m: m, marker: marker, dirtyBit: dirtyBit, changeTracker: NewFinegrainedChangeTrackerForRef[K]()}
+func NewMapAccessorWithMarkerForRef[K comparable, V any](m *map[K]V, marker DirtyMarker, dirtyBit int64) *MapAccessor[K, V] {
+	return &MapAccessor[K, V]{m: m, marker: marker, dirtyBit: dirtyBit, changeTracker: NewFinegrainedChangeTrackerForRef[K]()}
 }
 
-func (op MapAccessor[K, V]) Get(key K) (V, bool) {
+func (op *MapAccessor[K, V]) Get(key K) (V, bool) {
 	if op.m == nil || *op.m == nil {
 		return op.zero, false
 	}
@@ -41,7 +41,7 @@ func (op MapAccessor[K, V]) Get(key K) (V, bool) {
 	return v, ok
 }
 
-func (op MapAccessor[K, V]) Has(key K) bool {
+func (op *MapAccessor[K, V]) Has(key K) bool {
 	if op.m == nil || *op.m == nil {
 		return false
 	}
@@ -49,7 +49,7 @@ func (op MapAccessor[K, V]) Has(key K) bool {
 	return ok
 }
 
-func (op MapAccessor[K, V]) ensureMapNoDirty() {
+func (op *MapAccessor[K, V]) ensureMapNoDirty() {
 	if op.m == nil {
 		return
 	}
@@ -58,7 +58,7 @@ func (op MapAccessor[K, V]) ensureMapNoDirty() {
 	}
 }
 
-func (op MapAccessor[K, V]) Set(key K, value V) {
+func (op *MapAccessor[K, V]) Set(key K, value V) {
 	op.ensureMapNoDirty()
 	if op.m != nil {
 		// 检查 key 是否已存在
@@ -71,7 +71,7 @@ func (op MapAccessor[K, V]) Set(key K, value V) {
 }
 
 // Upsert sets the value and returns (previous, existed).
-func (op MapAccessor[K, V]) Upsert(key K, value V) (V, bool) {
+func (op *MapAccessor[K, V]) Upsert(key K, value V) (V, bool) {
 	op.ensureMapNoDirty()
 	if op.m == nil {
 		return op.zero, false
@@ -84,7 +84,7 @@ func (op MapAccessor[K, V]) Upsert(key K, value V) (V, bool) {
 	return prev, existed
 }
 
-func (op MapAccessor[K, V]) Delete(key K) {
+func (op *MapAccessor[K, V]) Delete(key K) {
 	if op.m == nil || *op.m == nil {
 		return
 	}
@@ -95,7 +95,16 @@ func (op MapAccessor[K, V]) Delete(key K) {
 	}
 }
 
-func (op MapAccessor[K, V]) Clear() {
+// Reset resets the map accessor to a new map
+func (op *MapAccessor[K, V]) Reset(m *map[K]V) {
+	if op.m == nil || *op.m == nil {
+		return
+	}
+	op.m = m
+	op.changeTracker.Reset()
+}
+
+func (op *MapAccessor[K, V]) Clear() {
 	if op.m == nil || *op.m == nil {
 		return
 	}
@@ -107,7 +116,7 @@ func (op MapAccessor[K, V]) Clear() {
 	op.doMarkDirty()
 }
 
-func (op MapAccessor[K, V]) Range(f func(key K, value V) bool) {
+func (op *MapAccessor[K, V]) Range(f func(key K, value V) bool) {
 	if op.m == nil || *op.m == nil || f == nil {
 		return
 	}
@@ -118,7 +127,7 @@ func (op MapAccessor[K, V]) Range(f func(key K, value V) bool) {
 	}
 }
 
-func (op MapAccessor[K, V]) Len() int {
+func (op *MapAccessor[K, V]) Len() int {
 	if op.m == nil || *op.m == nil {
 		return 0
 	}
@@ -127,7 +136,7 @@ func (op MapAccessor[K, V]) Len() int {
 
 // Ensure returns the underlying map, allocating it if necessary.
 // Does not mark dirty by itself.
-func (op MapAccessor[K, V]) Ensure() map[K]V {
+func (op *MapAccessor[K, V]) Ensure() map[K]V {
 	if op.m == nil {
 		return nil
 	}
@@ -137,7 +146,7 @@ func (op MapAccessor[K, V]) Ensure() map[K]V {
 	return *op.m
 }
 
-func (op MapAccessor[K, V]) SetAll(entries map[K]V) {
+func (op *MapAccessor[K, V]) SetAll(entries map[K]V) {
 	if entries == nil {
 		return
 	}
@@ -155,7 +164,7 @@ func (op MapAccessor[K, V]) SetAll(entries map[K]V) {
 	op.doMarkDirty()
 }
 
-func (op MapAccessor[K, V]) DeleteAll(keys ...K) int {
+func (op *MapAccessor[K, V]) DeleteAll(keys ...K) int {
 	if op.m == nil || *op.m == nil || len(keys) == 0 {
 		return 0
 	}
@@ -173,21 +182,21 @@ func (op MapAccessor[K, V]) DeleteAll(keys ...K) int {
 	return count
 }
 
-func (op MapAccessor[K, V]) DeepCopy(copyMap map[K]V) {
+func (op *MapAccessor[K, V]) DeepCopy(copyMap map[K]V) {
 	if op.m == nil || *op.m == nil {
 		return
 	}
 	maps.Copy(copyMap, *op.m)
 }
 
-func (op MapAccessor[K, V]) Clone() map[K]V {
+func (op *MapAccessor[K, V]) Clone() map[K]V {
 	if op.m == nil || *op.m == nil {
 		return nil
 	}
 	return maps.Clone(*op.m)
 }
 
-func (op MapAccessor[K, V]) Pop(k K) (V, bool) {
+func (op *MapAccessor[K, V]) Pop(k K) (V, bool) {
 	if op.m == nil || *op.m == nil {
 		return op.zero, false
 	}
@@ -200,7 +209,7 @@ func (op MapAccessor[K, V]) Pop(k K) (V, bool) {
 	return v, ok
 }
 
-func (op MapAccessor[K, V]) Keys() []K {
+func (op *MapAccessor[K, V]) Keys() []K {
 	if op.m == nil || *op.m == nil {
 		return nil
 	}
@@ -211,7 +220,7 @@ func (op MapAccessor[K, V]) Keys() []K {
 	return keys
 }
 
-func (op MapAccessor[K, V]) Values() []V {
+func (op *MapAccessor[K, V]) Values() []V {
 	if op.m == nil || *op.m == nil {
 		return nil
 	}
@@ -223,7 +232,7 @@ func (op MapAccessor[K, V]) Values() []V {
 }
 
 // doMarkDirty triggers the appropriate dirty mechanism, preferring the interface-based marker.
-func (op MapAccessor[K, V]) doMarkDirty() {
+func (op *MapAccessor[K, V]) doMarkDirty() {
 	if op.marker != nil {
 		op.marker.MarkDirty(op.dirtyBit)
 		return
@@ -234,22 +243,22 @@ func (op MapAccessor[K, V]) doMarkDirty() {
 }
 
 // RangeOperations 遍历所有跟踪的操作
-func (op MapAccessor[K, V]) RangeOperations(f func(key K, operation MapOperation[K]) bool) {
+func (op *MapAccessor[K, V]) RangeOperations(f func(key K, operation MapOperation[K]) bool) {
 	op.changeTracker.RangeOperations(f)
 }
 
 // ResetOperations 重置所有跟踪的操作
-func (op MapAccessor[K, V]) ResetOperations() {
+func (op *MapAccessor[K, V]) ResetOperations() {
 	op.changeTracker.Reset()
 }
 
-func (op MapAccessor[K, V]) HasChanges() bool {
+func (op *MapAccessor[K, V]) HasChanges() bool {
 	return op.changeTracker.HasChanges()
 }
 
 // TrackSetSimple 简单的手动标记 Set 操作，不会记录 Delete
 // 适用于明确知道只需要记录 Set 操作的场景
-func (op MapAccessor[K, V]) TrackSet(key K) {
+func (op *MapAccessor[K, V]) TrackSet(key K) {
 	op.changeTracker.TrackSet(key)
 	op.doMarkDirty()
 }

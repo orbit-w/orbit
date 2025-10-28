@@ -1,6 +1,7 @@
 package mme
 
 import (
+	"maps"
 	"strings"
 
 	"gitee.com/orbit-w/meteor/bases/dirty/xmap"
@@ -42,7 +43,7 @@ type HeroMechanismWrapper struct {
 	dirtyflag.IDirtyFlag
 	fieldMetas *fieldmeta.FieldMetas
 
-	skillsAccessor xmap.MapAccessor[int32, int32]
+	skillsAccessor *xmap.MapAccessor[int32, int32]
 }
 
 func NewHeroMechanismWrapper(data *HeroMechanism) *HeroMechanismWrapper {
@@ -107,7 +108,7 @@ func (m *HeroMechanismWrapper) SetCreateTime(v int64) {
 	m.MarkDirty(HeroMechanismDirtyCreateTimeBit)
 }
 
-func (m *HeroMechanismWrapper) GetSkillAccessor() xmap.MapAccessor[int32, int32] {
+func (m *HeroMechanismWrapper) GetSkillAccessor() *xmap.MapAccessor[int32, int32] {
 	return m.skillsAccessor
 }
 
@@ -210,6 +211,39 @@ func (m *HeroMechanismWrapper) ToProto() *mme.HeroMechanism {
 	}
 
 	return pb
+}
+
+// FromProto 从 protobuf 结构体加载数据到 HeroMechanism
+func (m *HeroMechanismWrapper) FromProto(pb *mme.HeroMechanism) {
+	if m == nil || m.data == nil || pb == nil {
+		return
+	}
+
+	// 加载基础类型字段
+	if pb.Id != nil {
+		m.SetId(*pb.Id)
+	}
+
+	if pb.ConfId != nil {
+		m.SetConfId(*pb.ConfId)
+	}
+
+	if pb.CreateTime != nil {
+		m.SetCreateTime(*pb.CreateTime)
+	}
+
+	if pb.UseTimes != nil {
+		m.SetUseTimes(*pb.UseTimes)
+	}
+
+	// 加载 Skills map
+	if pb.Skills != nil {
+		// 清空现有的 Skills
+		temp := make(map[int32]int32, len(pb.Skills))
+		maps.Copy(temp, pb.Skills)
+		// 设置新的 Skills数据，并清空所有变化操作记录
+		m.skillsAccessor.Reset(&temp)
+	}
 }
 
 // ToIncrementalProto 根据脏标记位构建增量数据的 protoMessage
