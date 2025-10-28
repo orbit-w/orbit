@@ -68,7 +68,7 @@ func (m *HeroMechanism) SetId(v int64) {
 
 func (m *HeroMechanism) SetConfId(v int32) {
 	m.heroMechanism.ConfId = &v
-	m.MarkDirty(LevelUpMechanismDirtyConfIdBit)
+	m.MarkDirty(HeroMechanismDirtyConfIdBit)
 }
 
 func (m *HeroMechanism) SetUseTimes(v int32) {
