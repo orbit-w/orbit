@@ -1,8 +1,6 @@
 package mme
 
 import (
-	"strings"
-
 	"gitee.com/orbit-w/orbit/app/proto/mme"
 	dirtyflag "gitee.com/orbit-w/orbit/lib/base/dirty_flag"
 	fieldmeta "gitee.com/orbit-w/orbit/lib/base/field_meta"
@@ -93,40 +91,19 @@ func (m *LevelUpMechanismWrapper) ClearAllDirtyFlags() {
 }
 
 // BuildMongoUpdate 构建MongoDB更新操作
-func (m *LevelUpMechanismWrapper) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder, prefix string) {
+func (m *LevelUpMechanismWrapper) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder, path *mgo_builder.NestedPath) {
 	if m == nil {
 		return
 	}
 
-	// 使用 strings.Builder 优化路径构建性能
-	var pathBuilder strings.Builder
-	hasPrefix := prefix != ""
-
-	// 预分配容量，减少内存重新分配
-	// 预估：prefix长度 + "." + 最长字段名("cur_level"=9)
-	if hasPrefix {
-		pathBuilder.Grow(len(prefix) + 10)
-	}
-
-	// 辅助函数：构建字段路径
-	buildPath := func(fieldName string) string {
-		pathBuilder.Reset()
-		if hasPrefix {
-			pathBuilder.WriteString(prefix)
-			pathBuilder.WriteByte('.')
-		}
-		pathBuilder.WriteString(fieldName)
-		return pathBuilder.String()
-	}
-
 	if m.IsDirty(LevelUpMechanismDirtyCurLevelBit) {
-		builder.Set(buildPath("cur_level"), m.GetCurLevel())
+		builder.SetNestedPath(path, "cur_level", m.GetCurLevel())
 	}
 	if m.IsDirty(LevelUpMechanismDirtyCurExpBit) {
-		builder.Set(buildPath("cur_exp"), m.GetCurExp())
+		builder.SetNestedPath(path, "cur_exp", m.GetCurExp())
 	}
 	if m.IsDirty(LevelUpMechanismDirtyConfIdBit) {
-		builder.Set(buildPath("conf_id"), m.GetConfId())
+		builder.SetNestedPath(path, "conf_id", m.GetConfId())
 	}
 }
 

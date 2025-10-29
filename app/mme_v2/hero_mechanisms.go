@@ -2,7 +2,6 @@ package mme
 
 import (
 	"maps"
-	"strings"
 
 	"gitee.com/orbit-w/meteor/bases/dirty/xmap"
 	"gitee.com/orbit-w/orbit/app/proto/mme"
@@ -123,46 +122,25 @@ func (m *HeroMechanismWrapper) ClearAllDirtyFlags() {
 }
 
 // BuildMongoUpdate 构建MongoDB更新操作
-func (m *HeroMechanismWrapper) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder, prefix string) {
+func (m *HeroMechanismWrapper) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder, path *mgo_builder.NestedPath) {
 	if m == nil {
 		return
 	}
 
-	// 使用 strings.Builder 优化路径构建性能
-	var pathBuilder strings.Builder
-	hasPrefix := prefix != ""
-
-	// 预分配容量，减少内存重新分配
-	// 预估：prefix长度 + "." + 最长字段名("create_time"=11)
-	if hasPrefix {
-		pathBuilder.Grow(len(prefix) + 12)
-	}
-
-	// 辅助函数：构建字段路径
-	buildPath := func(fieldName string) string {
-		pathBuilder.Reset()
-		if hasPrefix {
-			pathBuilder.WriteString(prefix)
-			pathBuilder.WriteByte('.')
-		}
-		pathBuilder.WriteString(fieldName)
-		return pathBuilder.String()
-	}
-
 	if m.IsDirty(HeroMechanismDirtyIdBit) {
-		builder.Set(buildPath("_id"), m.GetId())
+		builder.SetNestedPath(path, "_id", m.GetId())
 	}
 	if m.IsDirty(HeroMechanismDirtyConfIdBit) {
-		builder.Set(buildPath("conf_id"), m.GetConfId())
+		builder.SetNestedPath(path, "conf_id", m.GetConfId())
 	}
 	if m.IsDirty(HeroMechanismDirtyCreateTimeBit) {
-		builder.Set(buildPath("create_time"), m.GetCreateTime())
+		builder.SetNestedPath(path, "create_time", m.GetCreateTime())
 	}
 	if m.IsDirty(HeroMechanismDirtyUseTimesBit) {
-		builder.Set(buildPath("use_times"), m.GetUseTimes())
+		builder.SetNestedPath(path, "use_times", m.GetUseTimes())
 	}
 	if m.IsDirty(HeroMechanismDirtySkillsBit) {
-		builder.Set(buildPath("skills"), m.skillsAccessor.Clone())
+		builder.SetNestedPath(path, "skills", m.skillsAccessor.Clone())
 	}
 }
 

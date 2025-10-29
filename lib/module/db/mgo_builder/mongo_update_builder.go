@@ -30,16 +30,12 @@ func NewMongoUpdateBuilder() *MongoUpdateBuilder {
 	}
 }
 
-func (b *MongoUpdateBuilder) SetNestedPath(np *NestedPath, value any) {
-	b.Set(np.Build(), value)
+func (b *MongoUpdateBuilder) SetNestedPath(np *NestedPath, fieldName string, value any) {
+	b.Set(np.BuildWithKey(fieldName), value)
 }
 
-func (b *MongoUpdateBuilder) IncNestedPath(np *NestedPath, value any) {
-	b.Inc(np.Build(), value)
-}
-
-func (b *MongoUpdateBuilder) UnsetNestedPath(np *NestedPath) {
-	b.Unset(np.Build())
+func (b *MongoUpdateBuilder) UnsetNestedPath(np *NestedPath, fieldName string) {
+	b.Unset(np.BuildWithKey(fieldName))
 }
 
 // AddOperation 添加操作
@@ -114,8 +110,10 @@ type NestedPath struct {
 }
 
 func (np *NestedPath) Field(name string) *NestedPath {
-	np.parts = append(np.parts, name)
-	return np
+	co := new(NestedPath)
+	copy(co.parts, np.parts)
+	co.parts = append(co.parts, name)
+	return co
 }
 
 // Index 添加索引
@@ -130,7 +128,7 @@ func (np *NestedPath) ArrayAll() *NestedPath {
 	return np
 }
 
-func (np *NestedPath) Build() string {
+func (np *NestedPath) BuildWithKey(key string) string {
 	var pathBuilder strings.Builder
 	for i, part := range np.parts {
 		if i > 0 {
@@ -138,5 +136,7 @@ func (np *NestedPath) Build() string {
 		}
 		pathBuilder.WriteString(part)
 	}
+	pathBuilder.WriteByte('.')
+	pathBuilder.WriteString(key)
 	return pathBuilder.String()
 }

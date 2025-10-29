@@ -98,30 +98,18 @@ func (m *HeroModuleWrapper) ClearAllDirtyFlags() {
 }
 
 // BuildMongoUpdate 构建MongoDB更新操作
-func (m *HeroModuleWrapper) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder, prefix string) {
+func (m *HeroModuleWrapper) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder, path *mgo_builder.NestedPath) {
 	if m == nil {
 		return
 	}
 
 	// 构建嵌套字段路径
 	if m.BaseWrapper != nil && m.IsDirty(HeroModuleDirtyBaseBit) {
-		basePrefix := prefix
-		if prefix != "" {
-			basePrefix = prefix + ".base"
-		} else {
-			basePrefix = "base"
-		}
-		m.BaseWrapper.BuildMongoUpdate(builder, basePrefix)
+		m.BaseWrapper.BuildMongoUpdate(builder, path.Field("base"))
 	}
 
 	if m.LevelUpWrapper != nil && m.IsDirty(HeroModuleDirtyLevelUpBit) {
-		levelUpPrefix := prefix
-		if prefix != "" {
-			levelUpPrefix = prefix + ".level_up"
-		} else {
-			levelUpPrefix = "level_up"
-		}
-		m.LevelUpWrapper.BuildMongoUpdate(builder, levelUpPrefix)
+		m.LevelUpWrapper.BuildMongoUpdate(builder, path.Field("level_up"))
 	}
 }
 

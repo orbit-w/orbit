@@ -6,6 +6,7 @@ import (
 	"gitee.com/orbit-w/orbit/app/proto/mme"
 	dirtyflag "gitee.com/orbit-w/orbit/lib/base/dirty_flag"
 	fieldmeta "gitee.com/orbit-w/orbit/lib/base/field_meta"
+	"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder"
 	mmeutils "gitee.com/orbit-w/orbit/lib/module/mme_utils"
 	xmapwrapper "gitee.com/orbit-w/orbit/lib/module/xmapwrapper"
 	"go.uber.org/zap"
@@ -95,9 +96,16 @@ func (m *HeroManagerWrapper) ClearAllDirty() {
 
 // BuildMongoUpdate 构建MongoDB更新操作
 // 注意：Manager 层级通常不直接构建 MongoDB 更新，而是由 Entity 层处理
-func (m *HeroManagerWrapper) BuildMongoUpdate() {
-	// Manager 层级通常整体替换，不进行增量更新
-	// 如果需要增量更新，可以在这里实现
+func (m *HeroManagerWrapper) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder, path *mgo_builder.NestedPath) {
+	if m == nil {
+		return
+	}
+
+	if m.IsDirty(HeroManagerDirtyHeroMapBit) {
+		copy := make(map[int64]*HeroModule, m.heroMapLink.Len())
+		m.heroMapLink.DeepCopy(&copy)
+		builder.SetNestedPath(path, "hero_map", copy)
+	}
 }
 
 func (m *HeroManagerWrapper) DeepCopy(copy *HeroManager) {
