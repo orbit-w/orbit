@@ -1,5 +1,13 @@
 package mgo_builder
 
+import (
+	"fmt"
+	"maps"
+	"strings"
+
+	"go.mongodb.org/mongo-driver/v2/bson"
+)
+
 // MongoUpdateOp 定义 MongoDB 更新操作类型
 type MongoUpdateOp string
 
@@ -12,22 +20,34 @@ const (
 
 // MongoUpdateBuilder 高效的 MongoDB 更新构建器
 type MongoUpdateBuilder struct {
-	operations map[MongoUpdateOp]UpdateFields
+	operations map[MongoUpdateOp]bson.M
 }
 
 // NewMongoUpdateBuilder 创建新的更新构建器
 func NewMongoUpdateBuilder() *MongoUpdateBuilder {
 	return &MongoUpdateBuilder{
-		operations: make(map[MongoUpdateOp]UpdateFields),
+		operations: make(map[MongoUpdateOp]bson.M),
 	}
+}
+
+func (b *MongoUpdateBuilder) SetNestedPath(np *NestedPath, value any) {
+	b.Set(np.Build(), value)
+}
+
+func (b *MongoUpdateBuilder) IncNestedPath(np *NestedPath, value any) {
+	b.Inc(np.Build(), value)
+}
+
+func (b *MongoUpdateBuilder) UnsetNestedPath(np *NestedPath) {
+	b.Unset(np.Build())
 }
 
 // AddOperation 添加操作
 func (b *MongoUpdateBuilder) AddOperation(op MongoUpdateOp, path string, value any) {
 	if b.operations[op] == nil {
-		b.operations[op] = NewUpdateFields()
+		b.operations[op] = bson.M{}
 	}
-	b.operations[op].Set(path, value)
+	b.operations[op][path] = value
 }
 
 // Set 添加 $set 操作
@@ -53,9 +73,9 @@ func (b *MongoUpdateBuilder) Merge(other *MongoUpdateBuilder) {
 
 	for op, opData := range other.operations {
 		if b.operations[op] == nil {
-			b.operations[op] = NewUpdateFields()
+			b.operations[op] = bson.M{}
 		}
-		b.operations[op].Merge(opData)
+		maps.Copy(b.operations[op], opData)
 	}
 }
 
@@ -70,10 +90,10 @@ func (b *MongoUpdateBuilder) Build() map[string]any {
 		return nil
 	}
 
-	result := make(map[string]any)
+	result := bson.M{}
 	for op, opData := range b.operations {
-		if !opData.IsEmpty() {
-			result[string(op)] = map[string]any(opData)
+		if len(opData) > 0 {
+			result[string(op)] = opData
 		}
 	}
 	return result
@@ -82,72 +102,41 @@ func (b *MongoUpdateBuilder) Build() map[string]any {
 // Reset 重置构建器状态，用于对象池回收
 func (b *MongoUpdateBuilder) Reset() {
 	for op := range b.operations {
-		b.operations[op].Clear()
+		for key := range b.operations[op] {
+			delete(b.operations[op], key)
+		}
 		delete(b.operations, op)
 	}
 }
 
-// MapChangeTracker 跟踪 Map 字段的细粒度变更
-type MapChangeTracker struct {
-	SetKeys   UpdateFields    // 设置的键值对
-	UnsetKeys map[string]bool // 删除的键
-	IncKeys   UpdateFields    // 递增的键值对
+type NestedPath struct {
+	parts []string
 }
 
-// NewMapChangeTracker 创建新的 Map 变更跟踪器
-func NewMapChangeTracker() *MapChangeTracker {
-	return &MapChangeTracker{
-		SetKeys:   NewUpdateFields(),
-		UnsetKeys: make(map[string]bool),
-		IncKeys:   NewUpdateFields(),
+func (np *NestedPath) Field(name string) *NestedPath {
+	np.parts = append(np.parts, name)
+	return np
+}
+
+// Index 添加索引
+func (np *NestedPath) Index(index int) *NestedPath {
+	np.parts = append(np.parts, fmt.Sprintf("%d", index))
+	return np
+}
+
+// ArrayAll 添加数组所有元素
+func (np *NestedPath) ArrayAll() *NestedPath {
+	np.parts = append(np.parts, "$[]")
+	return np
+}
+
+func (np *NestedPath) Build() string {
+	var pathBuilder strings.Builder
+	for i, part := range np.parts {
+		if i > 0 {
+			pathBuilder.WriteByte('.')
+		}
+		pathBuilder.WriteString(part)
 	}
-}
-
-// TrackSet 跟踪设置操作
-func (t *MapChangeTracker) TrackSet(key string, value any) {
-	t.SetKeys.Set(key, value)
-	delete(t.UnsetKeys, key) // 如果之前标记删除，现在取消
-}
-
-// TrackUnset 跟踪删除操作
-func (t *MapChangeTracker) TrackUnset(key string) {
-	t.UnsetKeys[key] = true
-	t.SetKeys.Delete(key) // 如果之前标记设置，现在取消
-}
-
-// TrackInc 跟踪递增操作
-func (t *MapChangeTracker) TrackInc(key string, value any) {
-	t.IncKeys.Set(key, value)
-}
-
-// IsEmpty 检查是否为空
-func (t *MapChangeTracker) IsEmpty() bool {
-	return t.SetKeys.IsEmpty() && len(t.UnsetKeys) == 0 && t.IncKeys.IsEmpty()
-}
-
-// ApplyToBuilder 将跟踪的变更应用到构建器
-func (t *MapChangeTracker) ApplyToBuilder(builder *MongoUpdateBuilder, pathPrefix string) {
-	for key, value := range t.SetKeys {
-		path := pathPrefix + "." + key
-		builder.Set(path, value)
-	}
-
-	for key := range t.UnsetKeys {
-		path := pathPrefix + "." + key
-		builder.Unset(path)
-	}
-
-	for key, value := range t.IncKeys {
-		path := pathPrefix + "." + key
-		builder.Inc(path, value)
-	}
-}
-
-// Reset 重置跟踪器状态，用于对象池回收
-func (t *MapChangeTracker) Reset() {
-	t.SetKeys.Clear()
-	for key := range t.UnsetKeys {
-		delete(t.UnsetKeys, key)
-	}
-	t.IncKeys.Clear()
+	return pathBuilder.String()
 }

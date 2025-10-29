@@ -12,6 +12,7 @@ require (
 	github.com/redis/go-redis/v9 v9.7.3
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/viper v1.19.0
+	go.mongodb.org/mongo-driver/v2 v2.4.0
 	go.uber.org/zap v1.27.0
 	google.golang.org/protobuf v1.36.5
 )
