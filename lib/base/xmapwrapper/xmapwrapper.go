@@ -40,7 +40,7 @@ type WrapperFactory[PbValue any, WrapperValue any] func(pb PbValue) WrapperValue
 type XMapWrapper[K comparable, PbValue any, WrapperValue Linkable] struct {
 	pbMap          *map[K]PbValue                        // protobuf map的引用
 	wrapperMap     map[K]WrapperValue                    // 包装对象map
-	mapAccessor    xmap.MapAccessor[K, PbValue]          // xmap访问器
+	mapAccessor    *xmap.MapAccessor[K, PbValue]         // xmap访问器
 	wrapperFactory WrapperFactory[PbValue, WrapperValue] // 包装器工厂函数
 	parentTracker  *dt.DirtyTracker                      // 父DirtyTracker
 	parentBit      int64                                 // 父脏标记位
@@ -188,7 +188,7 @@ func (x *XMapWrapper[K, PbValue, WrapperValue]) Clear() {
 
 // GetMapAccessor 获取MapAccessor（用于高级操作）
 func (x *XMapWrapper[K, PbValue, WrapperValue]) GetMapAccessor() *xmap.MapAccessor[K, PbValue] {
-	return &x.mapAccessor
+	return x.mapAccessor
 }
 
 // Keys 返回所有key
