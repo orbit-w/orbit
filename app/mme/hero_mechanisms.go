@@ -23,7 +23,7 @@ type HeroMechanism struct {
 	heroMechanism *mme.HeroMechanism
 	dirtyflag.IDirtyFlag
 
-	skillsAccessor xmap.MapAccessor[int32, int32]
+	skillsAccessor *xmap.MapAccessor[int32, int32]
 }
 
 func NewHeroMechanism(pt *mme.HeroMechanism) *HeroMechanism {
@@ -84,7 +84,7 @@ func (m *HeroMechanism) GetSkills() map[int32]int32 {
 	return m.heroMechanism.Skills
 }
 
-func (m *HeroMechanism) GetSkillAccessor() xmap.MapAccessor[int32, int32] {
+func (m *HeroMechanism) GetSkillAccessor() *xmap.MapAccessor[int32, int32] {
 	return m.skillsAccessor
 }
 

@@ -128,41 +128,41 @@ func (m *HeroMechanismWrapper) BuildMongoUpdate(builder *mgo_builder.MongoUpdate
 		return
 	}
 
-	// 定义字段配置，避免重复代码
-	fieldConfigs := []struct {
-		fieldName string
-		dirtyBit  int64
-		value     any
-	}{
-		{"_id", HeroMechanismDirtyIdBit, m.GetId()},
-		{"conf_id", HeroMechanismDirtyConfIdBit, m.GetConfId()},
-		{"create_time", HeroMechanismDirtyCreateTimeBit, m.GetCreateTime()},
-		{"use_times", HeroMechanismDirtyUseTimesBit, m.GetUseTimes()},
-		{"skills", HeroMechanismDirtySkillsBit, m.skillsAccessor.Clone()},
-	}
-
 	// 使用 strings.Builder 优化路径构建性能
 	var pathBuilder strings.Builder
 	hasPrefix := prefix != ""
 
 	// 预分配容量，减少内存重新分配
+	// 预估：prefix长度 + "." + 最长字段名("create_time"=11)
 	if hasPrefix {
-		pathBuilder.Grow(len(prefix) + 20) // 预估最大路径长度
+		pathBuilder.Grow(len(prefix) + 12)
 	}
 
-	// 批量处理字段更新
-	for _, config := range fieldConfigs {
-		if m.IsDirty(config.dirtyBit) {
-			pathBuilder.Reset()
-
-			if hasPrefix {
-				pathBuilder.WriteString(prefix)
-				pathBuilder.WriteByte('.')
-			}
-			pathBuilder.WriteString(config.fieldName)
-
-			builder.Set(pathBuilder.String(), config.value)
+	// 辅助函数：构建字段路径
+	buildPath := func(fieldName string) string {
+		pathBuilder.Reset()
+		if hasPrefix {
+			pathBuilder.WriteString(prefix)
+			pathBuilder.WriteByte('.')
 		}
+		pathBuilder.WriteString(fieldName)
+		return pathBuilder.String()
+	}
+
+	if m.IsDirty(HeroMechanismDirtyIdBit) {
+		builder.Set(buildPath("_id"), m.GetId())
+	}
+	if m.IsDirty(HeroMechanismDirtyConfIdBit) {
+		builder.Set(buildPath("conf_id"), m.GetConfId())
+	}
+	if m.IsDirty(HeroMechanismDirtyCreateTimeBit) {
+		builder.Set(buildPath("create_time"), m.GetCreateTime())
+	}
+	if m.IsDirty(HeroMechanismDirtyUseTimesBit) {
+		builder.Set(buildPath("use_times"), m.GetUseTimes())
+	}
+	if m.IsDirty(HeroMechanismDirtySkillsBit) {
+		builder.Set(buildPath("skills"), m.skillsAccessor.Clone())
 	}
 }
 
@@ -177,11 +177,12 @@ func (m *HeroMechanismWrapper) DeepCopy(copy *HeroMechanism) {
 	m.skillsAccessor.DeepCopy(copy.Skills)
 }
 
+// MatchesAll 判断字段是否匹配所有类型标记
 func (m *HeroMechanismWrapper) MatchesAll(fieldID uint8, fieldTypes ...fieldmeta.FieldType) bool {
 	return m.fieldMetas.MatchesAll(fieldID, fieldTypes...)
 }
 
-// ToProto 将 HeroMechanism 数据转换为完整的 protobuf 结构体
+// ToProto 将 Mechanism 数据转换为完整的 protobuf 结构体
 func (m *HeroMechanismWrapper) ToProto() *mme.HeroMechanism {
 	if m == nil || m.data == nil {
 		return nil
@@ -213,7 +214,7 @@ func (m *HeroMechanismWrapper) ToProto() *mme.HeroMechanism {
 	return pb
 }
 
-// FromProto 从 protobuf 结构体加载数据到 HeroMechanism
+// FromProto 从 protobuf 结构体加载数据到 Mechanism
 func (m *HeroMechanismWrapper) FromProto(pb *mme.HeroMechanism) {
 	if m == nil || m.data == nil || pb == nil {
 		return
