@@ -37,6 +37,15 @@ type HeroMechanism struct {
 	Skills     map[int32]int32 `bson:"skills"`
 }
 
+func (m *HeroMechanism) DeepCopy(co *HeroMechanism) {
+	if m == nil || co == nil {
+		return
+	}
+
+	*co = *m
+	maps.Copy(co.Skills, m.Skills)
+}
+
 // ToProto 将 HeroMechanism 数据转换为完整的 protobuf 结构体
 func (m *HeroMechanism) ToProto() *mme.HeroMechanism {
 	if m == nil {
