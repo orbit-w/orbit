@@ -26,6 +26,21 @@ type HeroManager struct {
 	HeroMap map[int64]*HeroModule `bson:"hero_map"`
 }
 
+func (m *HeroManager) DeepCopy(co *HeroManager) {
+	if m == nil || co == nil {
+		return
+	}
+
+	*co = *m
+	if m.HeroMap != nil {
+		co.HeroMap = make(map[int64]*HeroModule, len(m.HeroMap))
+		for k, v := range m.HeroMap {
+			co.HeroMap[k] = &HeroModule{}
+			v.DeepCopy(co.HeroMap[k])
+		}
+	}
+}
+
 // ToProto 将 HeroManager 数据转换为完整的 protobuf 结构体
 func (m *HeroManager) ToProto() *mme.HeroManager {
 	if m == nil {

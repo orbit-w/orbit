@@ -25,6 +25,24 @@ type HeroModule struct {
 	LevelUp *LevelUpMechanism `bson:"level_up"`
 }
 
+func (m *HeroModule) DeepCopy(co *HeroModule) {
+	if m == nil || co == nil {
+		return
+	}
+
+	*co = *m
+
+	if m.Base != nil {
+		co.Base = &HeroMechanism{}
+		m.Base.DeepCopy(co.Base)
+	}
+
+	if m.LevelUp != nil {
+		co.LevelUp = &LevelUpMechanism{}
+		m.LevelUp.DeepCopy(co.LevelUp)
+	}
+}
+
 // ToProto 将 HeroModule 数据转换为完整的 protobuf 结构体
 func (m *HeroModule) ToProto() *mme.HeroModule {
 	if m == nil {
