@@ -28,6 +28,26 @@ type LevelUpMechanism struct {
 	ConfId   int32 `bson:"conf_id"`
 }
 
+// ToProto 将 LevelUpMechanism 数据转换为完整的 protobuf 结构体
+func (m *LevelUpMechanism) ToProto() *mme.LevelUpMechanism {
+	if m == nil {
+		return nil
+	}
+
+	pb := &mme.LevelUpMechanism{}
+
+	curLevel := m.CurLevel
+	pb.CurLevel = &curLevel
+
+	curExp := m.CurExp
+	pb.CurExp = &curExp
+
+	confId := m.ConfId
+	pb.ConfId = &confId
+
+	return pb
+}
+
 type LevelUpMechanismWrapper struct {
 	data *LevelUpMechanism
 	dirtyflag.IDirtyFlag
@@ -136,19 +156,7 @@ func (m *LevelUpMechanismWrapper) ToProto() *mme.LevelUpMechanism {
 		return nil
 	}
 
-	pb := &mme.LevelUpMechanism{}
-
-	// 设置所有字段
-	curLevel := m.data.CurLevel
-	pb.CurLevel = &curLevel
-
-	curExp := m.data.CurExp
-	pb.CurExp = &curExp
-
-	confId := m.data.ConfId
-	pb.ConfId = &confId
-
-	return pb
+	return m.data.ToProto()
 }
 
 // FromProto 从 protobuf 结构体加载数据到 LevelUpMechanism

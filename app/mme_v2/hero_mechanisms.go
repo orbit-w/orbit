@@ -37,6 +37,34 @@ type HeroMechanism struct {
 	Skills     map[int32]int32 `bson:"skills"`
 }
 
+// ToProto 将 HeroMechanism 数据转换为完整的 protobuf 结构体
+func (m *HeroMechanism) ToProto() *mme.HeroMechanism {
+	if m == nil {
+		return nil
+	}
+
+	pb := &mme.HeroMechanism{}
+
+	id := m.Id
+	pb.Id = &id
+
+	confId := m.ConfId
+	pb.ConfId = &confId
+
+	createTime := m.CreateTime
+	pb.CreateTime = &createTime
+
+	useTimes := m.UseTimes
+	pb.UseTimes = &useTimes
+
+	if m.Skills != nil {
+		pb.Skills = make(map[int32]int32, len(m.Skills))
+		maps.Copy(pb.Skills, m.Skills)
+	}
+
+	return pb
+}
+
 type HeroMechanismWrapper struct {
 	data *HeroMechanism
 	dirtyflag.IDirtyFlag
@@ -175,30 +203,7 @@ func (m *HeroMechanismWrapper) ToProto() *mme.HeroMechanism {
 		return nil
 	}
 
-	pb := &mme.HeroMechanism{}
-
-	// 设置所有字段
-	id := m.data.Id
-	pb.Id = &id
-
-	confId := m.data.ConfId
-	pb.ConfId = &confId
-
-	createTime := m.data.CreateTime
-	pb.CreateTime = &createTime
-
-	useTimes := m.data.UseTimes
-	pb.UseTimes = &useTimes
-
-	// 转换 Skills map
-	if m.data.Skills != nil {
-		pb.Skills = make(map[int32]int32, len(m.data.Skills))
-		for k, v := range m.data.Skills {
-			pb.Skills[k] = v
-		}
-	}
-
-	return pb
+	return m.data.ToProto()
 }
 
 // FromProto 从 protobuf 结构体加载数据到 Mechanism

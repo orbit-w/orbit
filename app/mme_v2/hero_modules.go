@@ -25,6 +25,25 @@ type HeroModule struct {
 	LevelUp *LevelUpMechanism `bson:"level_up"`
 }
 
+// ToProto 将 HeroModule 数据转换为完整的 protobuf 结构体
+func (m *HeroModule) ToProto() *mme.HeroModule {
+	if m == nil {
+		return nil
+	}
+
+	pb := &mme.HeroModule{}
+
+	if m.Base != nil {
+		pb.Base = m.Base.ToProto()
+	}
+
+	if m.LevelUp != nil {
+		pb.LevelUp = m.LevelUp.ToProto()
+	}
+
+	return pb
+}
+
 type HeroModuleWrapper struct {
 	data *HeroModule
 	dirtyflag.IDirtyFlag
@@ -154,18 +173,7 @@ func (m *HeroModuleWrapper) ToProto() *mme.HeroModule {
 		return nil
 	}
 
-	pb := &mme.HeroModule{}
-
-	// 转换嵌套的 Mechanism 对象
-	if m.BaseWrapper != nil {
-		pb.Base = m.BaseWrapper.ToProto()
-	}
-
-	if m.LevelUpWrapper != nil {
-		pb.LevelUp = m.LevelUpWrapper.ToProto()
-	}
-
-	return pb
+	return m.data.ToProto()
 }
 
 // FromProto 从 protobuf 结构体加载数据到 HeroModule

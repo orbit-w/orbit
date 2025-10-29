@@ -26,6 +26,22 @@ type HeroManager struct {
 	HeroMap map[int64]*HeroModule `bson:"hero_map"`
 }
 
+// ToProto 将 HeroManager 数据转换为完整的 protobuf 结构体
+func (m *HeroManager) ToProto() *mme.HeroManager {
+	if m == nil {
+		return nil
+	}
+
+	pb := &mme.HeroManager{}
+	if m.HeroMap != nil {
+		pb.HeroMap = make(map[int64]*mme.HeroModule, len(m.HeroMap))
+		for k, v := range m.HeroMap {
+			pb.HeroMap[k] = v.ToProto()
+		}
+	}
+	return pb
+}
+
 type HeroManagerWrapper struct {
 	data *HeroManager
 	dirtyflag.IDirtyFlag
@@ -134,7 +150,7 @@ func (m *HeroManagerWrapper) ToProto() *mme.HeroManager {
 		return nil
 	}
 
-	return nil
+	return m.data.ToProto()
 }
 
 // FromProto 从 protobuf 结构体加载数据到 HeroManager

@@ -2,7 +2,6 @@ package mgo_builder
 
 import (
 	"fmt"
-	"maps"
 	"strings"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -59,20 +58,6 @@ func (b *MongoUpdateBuilder) Unset(path string) {
 // Inc 添加 $inc 操作
 func (b *MongoUpdateBuilder) Inc(path string, value any) {
 	b.AddOperation(OpInc, path, value)
-}
-
-// Merge 合并另一个构建器的操作
-func (b *MongoUpdateBuilder) Merge(other *MongoUpdateBuilder) {
-	if other == nil {
-		return
-	}
-
-	for op, opData := range other.operations {
-		if b.operations[op] == nil {
-			b.operations[op] = bson.M{}
-		}
-		maps.Copy(b.operations[op], opData)
-	}
 }
 
 // IsEmpty 检查是否为空
