@@ -28,6 +28,14 @@ type LevelUpMechanism struct {
 	ConfId   int32 `bson:"conf_id"`
 }
 
+func (m *LevelUpMechanism) DeepCopy(co *LevelUpMechanism) {
+	if m == nil || co == nil {
+		return
+	}
+
+	*co = *m
+}
+
 // ToProto 将 LevelUpMechanism 数据转换为完整的 protobuf 结构体
 func (m *LevelUpMechanism) ToProto() *mme.LevelUpMechanism {
 	if m == nil {
