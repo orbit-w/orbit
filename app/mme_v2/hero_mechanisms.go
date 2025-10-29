@@ -166,6 +166,15 @@ func (m *HeroMechanismWrapper) BuildMongoUpdate(builder *mgo_builder.MongoUpdate
 	}
 }
 
+func (m *HeroMechanismWrapper) Clone() *HeroMechanism {
+	if m == nil {
+		return nil
+	}
+	copy := &HeroMechanism{}
+	m.DeepCopy(copy)
+	return copy
+}
+
 func (m *HeroMechanismWrapper) DeepCopy(copy *HeroMechanism) {
 	if m == nil || m.data == nil || copy == nil {
 		return
@@ -249,7 +258,7 @@ func (m *HeroMechanismWrapper) FromProto(pb *mme.HeroMechanism) {
 
 // ToIncrementalProto 根据脏标记位构建增量数据的 protoMessage
 // 只返回标记为脏的字段数据，用于增量同步
-func (m *HeroMechanismWrapper) ToIncrementalProto(ctx mmeutils.SyncContext) proto.Message {
+func (m *HeroMechanismWrapper) ToIncrementalProtoWithContext(ctx mmeutils.SyncContext) proto.Message {
 	if m == nil {
 		return nil
 	}

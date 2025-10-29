@@ -130,6 +130,15 @@ func (m *LevelUpMechanismWrapper) BuildMongoUpdate(builder *mgo_builder.MongoUpd
 	}
 }
 
+func (m *LevelUpMechanismWrapper) Clone() *LevelUpMechanism {
+	if m == nil {
+		return nil
+	}
+	copy := &LevelUpMechanism{}
+	m.DeepCopy(copy)
+	return copy
+}
+
 func (m *LevelUpMechanismWrapper) DeepCopy(copy *LevelUpMechanism) {
 	if m == nil || m.data == nil || copy == nil {
 		return
@@ -187,7 +196,7 @@ func (m *LevelUpMechanismWrapper) FromProto(pb *mme.LevelUpMechanism) {
 
 // ToIncrementalProto 根据脏标记位构建增量数据的 protoMessage
 // 只返回标记为脏的字段数据，用于增量同步
-func (m *LevelUpMechanismWrapper) ToIncrementalProto(ctx mmeutils.SyncContext) proto.Message {
+func (m *LevelUpMechanismWrapper) ToIncrementalProtoWithContext(ctx mmeutils.SyncContext) proto.Message {
 	if m == nil {
 		return nil
 	}

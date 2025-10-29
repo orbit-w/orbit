@@ -125,6 +125,15 @@ func (m *HeroModuleWrapper) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBui
 	}
 }
 
+func (m *HeroModuleWrapper) Clone() *HeroModule {
+	if m == nil {
+		return nil
+	}
+	copy := &HeroModule{}
+	m.DeepCopy(copy)
+	return copy
+}
+
 func (m *HeroModuleWrapper) DeepCopy(copy *HeroModule) {
 	if m == nil || m.data == nil || copy == nil {
 		return
@@ -200,7 +209,7 @@ func (m *HeroModuleWrapper) FromProto(pb *mme.HeroModule) {
 
 // ToIncrementalProto 根据脏标记位构建增量数据的 protoMessage
 // 只返回标记为脏的字段数据，用于增量同步
-func (m *HeroModuleWrapper) ToIncrementalProto(ctx mmeutils.SyncContext) proto.Message {
+func (m *HeroModuleWrapper) ToIncrementalProtoWithContext(ctx mmeutils.SyncContext) proto.Message {
 	if m == nil {
 		return nil
 	}
@@ -215,7 +224,7 @@ func (m *HeroModuleWrapper) ToIncrementalProto(ctx mmeutils.SyncContext) proto.M
 	// 根据脏标记位设置对应的嵌套对象
 	if mmeutils.FieldCanBeIncrementalSynced(m, HeroModuleDirtyBaseBit, HeroModuleFieldIndexBase, ctx) {
 		if m.BaseWrapper != nil {
-			pb := m.BaseWrapper.ToIncrementalProto(ctx)
+			pb := m.BaseWrapper.ToIncrementalProtoWithContext(ctx)
 			if pb != nil {
 				v, ok := pb.(*mme.HeroMechanism)
 				if ok {
@@ -227,7 +236,7 @@ func (m *HeroModuleWrapper) ToIncrementalProto(ctx mmeutils.SyncContext) proto.M
 
 	if mmeutils.FieldCanBeIncrementalSynced(m, HeroModuleDirtyLevelUpBit, HeroModuleFieldIndexLevelUp, ctx) {
 		if m.LevelUpWrapper != nil {
-			pb := m.LevelUpWrapper.ToIncrementalProto(ctx)
+			pb := m.LevelUpWrapper.ToIncrementalProtoWithContext(ctx)
 			if pb != nil {
 				v, ok := pb.(*mme.LevelUpMechanism)
 				if ok {
