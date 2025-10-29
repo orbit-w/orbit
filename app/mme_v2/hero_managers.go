@@ -102,6 +102,7 @@ func (m *HeroManagerWrapper) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBu
 	}
 
 	if m.IsDirty(HeroManagerDirtyHeroMapBit) {
+		//map 结构无法做增量更新，所以需要全量拷贝
 		copy := make(map[int64]*HeroModule, m.heroMapLink.Len())
 		m.heroMapLink.DeepCopy(&copy)
 		builder.SetNestedPath(path, "hero_map", copy)
