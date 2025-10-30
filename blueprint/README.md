@@ -67,6 +67,60 @@ AMechanism:
 
 ---
 
+## 增量 map 字段自动生成规则
+
+在 blueprint YAML 中声明 map 字段（如 map<int64, SomeModule> Items: 1），代码生成工具会自动为每个 map 字段生成高效的全量和增量同步支持，规则如下：
+
+### 1. 自动 proto 字段生成与命名范式
+
+- 每个 map<KeyType, ValueType> 字段 `FieldName` ，自动生成：
+  - `map<KeyType, ValueType> FieldName = N;` // 全量同步
+  - `repeated <Struct>_<FieldName>_XXXMapChangeRecord FieldName_XXXChangeList = 1000+N;` // 增量同步
+  - 对应 change record message：
+
+```protobuf
+message <Struct>_<FieldName>_XXXMapChangeRecord {
+  <KeyType> key = 1;
+  <ValueType> value = 2;
+  bool isDelete = 3; // 若 true 为删除，false 为新增/变更
+}
+```
+
+### 2. 典型同步流程
+
+- **全量同步**：首次下发时，直接同步 map 字段。
+- **增量模式**：高频变更场景仅需同步 `FieldName_XXXChangeList`，用 isDelete 区分 set/delete，实现与本地 map 状态一致。
+- **客户端/服务端和数据库均可只消费变更记录，恢复 map 状态而无需全表覆盖**。
+
+### 3. 规则摘要
+
+- blueprint 层每声明一个 map 字段，均自动拥有全量及变更双通道能力。
+- 支持所有 key/value 基础类型及 Message 类型，保持多端与协议一致。
+- 变更记录只需增/删，无需携带历史快照。
+- 可与脏字段/bit 标记、ToIncrementalProto 等增量同步机制无缝协同。
+- （后续可扩展 message 字段，实现更丰富的数据变更表达）。
+
+---
+
+## Go自动生成map字段Accessor规则
+
+在Go代码自动生成阶段，map字段会根据Value类型自动选择访问器模式：
+
+1. **Value为值类型（如int、string、struct等）**：
+   - 自动生成 `*xmap.MapAccessor` 作为map的读写访问入口，支持KV对的批量与增量操作。
+   - 支持脏标记、变更追踪、配合增量同步协议字段无缝衔接。
+
+2. **Value为MME Object引用类型（如 *Module、*Mechanism 等）**：
+   - 自动生成 `*xmapwrapper.XMapWrapper`，管理map内的MME对象的包装与生命周期关系，递归支持子对象的脏数据同步与变更。
+   - 支持多层嵌套脏位递推，一致性强。
+
+3. **Value为其他指针/引用类型**：
+   - 代码生成器将抛出异常并阻止生成，需用户显式声明对应适配器或调整YAML声明。
+
+该自动访问器规则确保：map字段不论值类型与对象复杂度如何，都能自动适配协议增量同步和本地脏标记递归运算，提升迭代安全性。
+
+---
+
 ## YAML 文件组织规范及目录
 
 保持原有 YAML 命名和组织方式，具体内容可参考下述模式：
