@@ -267,7 +267,7 @@ func (x *WearMechanism) GetConfId() int32 {
 
 type HeroMechanism_Skills_XXXMapChangeRecord struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ChangeType    ChangeType             `protobuf:"varint,1,opt,name=ChangeType,proto3,enum=common.ChangeType" json:"ChangeType,omitempty"`
+	ChangeType    ChangeType             `protobuf:"varint,1,opt,name=ChangeType,proto3,enum=MME.ChangeType" json:"ChangeType,omitempty"`
 	Key           int32                  `protobuf:"varint,2,opt,name=Key,proto3" json:"Key,omitempty"`
 	Value         int32                  `protobuf:"varint,3,opt,name=Value,proto3" json:"Value,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -329,44 +329,43 @@ var File_protocol_mechanisms_proto protoreflect.FileDescriptor
 
 const file_protocol_mechanisms_proto_rawDesc = "" +
 	"\n" +
-	"\x19protocol/mechanisms.proto\x12\n" +
-	"mechanisms\x1a\x15protocol/common.proto\"\x90\x01\n" +
+	"\x19protocol/mechanisms.proto\x12\x03MME\x1a\x15protocol/common.proto\"\x90\x01\n" +
 	"\x10LevelUpMechanism\x12\x1f\n" +
 	"\bCurLevel\x18\x01 \x01(\x05H\x00R\bCurLevel\x88\x01\x01\x12\x1b\n" +
 	"\x06CurExp\x18\x02 \x01(\x05H\x01R\x06CurExp\x88\x01\x01\x12\x1b\n" +
 	"\x06ConfId\x18\x03 \x01(\x05H\x02R\x06ConfId\x88\x01\x01B\v\n" +
 	"\t_CurLevelB\t\n" +
 	"\a_CurExpB\t\n" +
-	"\a_ConfId\"\x91\x04\n" +
+	"\a_ConfId\"\x80\x04\n" +
 	"\rHeroMechanism\x12\x13\n" +
 	"\x02Id\x18\x01 \x01(\x03H\x00R\x02Id\x88\x01\x01\x12\x1b\n" +
 	"\x06ConfId\x18\x02 \x01(\x05H\x01R\x06ConfId\x88\x01\x01\x12#\n" +
 	"\n" +
 	"CreateTime\x18\x03 \x01(\x03H\x02R\n" +
 	"CreateTime\x88\x01\x01\x12\x1f\n" +
-	"\bUseTimes\x18\x04 \x01(\x05H\x03R\bUseTimes\x88\x01\x01\x12=\n" +
-	"\x06Skills\x18\x05 \x03(\v2%.mechanisms.HeroMechanism.SkillsEntryR\x06Skills\x12g\n" +
-	"\x14Skills_XXXChangeList\x18\xed\a \x03(\v23.mechanisms.HeroMechanism.Skills_XXXMapChangeRecordR\x13SkillsXXXChangeList\x1a9\n" +
+	"\bUseTimes\x18\x04 \x01(\x05H\x03R\bUseTimes\x88\x01\x01\x126\n" +
+	"\x06Skills\x18\x05 \x03(\v2\x1e.MME.HeroMechanism.SkillsEntryR\x06Skills\x12`\n" +
+	"\x14Skills_XXXChangeList\x18\xed\a \x03(\v2,.MME.HeroMechanism.Skills_XXXMapChangeRecordR\x13SkillsXXXChangeList\x1a9\n" +
 	"\vSkillsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\x05R\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01\x1aw\n" +
-	"\x19Skills_XXXMapChangeRecord\x122\n" +
+	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01\x1at\n" +
+	"\x19Skills_XXXMapChangeRecord\x12/\n" +
 	"\n" +
-	"ChangeType\x18\x01 \x01(\x0e2\x12.common.ChangeTypeR\n" +
+	"ChangeType\x18\x01 \x01(\x0e2\x0f.MME.ChangeTypeR\n" +
 	"ChangeType\x12\x10\n" +
 	"\x03Key\x18\x02 \x01(\x05R\x03Key\x12\x14\n" +
 	"\x05Value\x18\x03 \x01(\x05R\x05ValueB\x05\n" +
 	"\x03_IdB\t\n" +
 	"\a_ConfIdB\r\n" +
 	"\v_CreateTimeB\v\n" +
-	"\t_UseTimes\"\xa5\x01\n" +
-	"\x15ManualUnlockMechanism\x12N\n" +
-	"\tUnlockMap\x18\x01 \x03(\v20.mechanisms.ManualUnlockMechanism.UnlockMapEntryR\tUnlockMap\x1a<\n" +
+	"\t_UseTimes\"\x9e\x01\n" +
+	"\x15ManualUnlockMechanism\x12G\n" +
+	"\tUnlockMap\x18\x01 \x03(\v2).MME.ManualUnlockMechanism.UnlockMapEntryR\tUnlockMap\x1a<\n" +
 	"\x0eUnlockMapEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\x05R\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\bR\x05value:\x028\x01\"\xb5\x01\n" +
-	"\rWearMechanism\x12@\n" +
-	"\aWearMap\x18\x01 \x03(\v2&.mechanisms.WearMechanism.WearMapEntryR\aWearMap\x12\x1b\n" +
+	"\x05value\x18\x02 \x01(\bR\x05value:\x028\x01\"\xae\x01\n" +
+	"\rWearMechanism\x129\n" +
+	"\aWearMap\x18\x01 \x03(\v2\x1f.MME.WearMechanism.WearMapEntryR\aWearMap\x12\x1b\n" +
 	"\x06ConfId\x18\x02 \x01(\x05H\x00R\x06ConfId\x88\x01\x01\x1a:\n" +
 	"\fWearMapEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\x05R\x03key\x12\x14\n" +
@@ -387,22 +386,22 @@ func file_protocol_mechanisms_proto_rawDescGZIP() []byte {
 
 var file_protocol_mechanisms_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_protocol_mechanisms_proto_goTypes = []any{
-	(*LevelUpMechanism)(nil),      // 0: mechanisms.LevelUpMechanism
-	(*HeroMechanism)(nil),         // 1: mechanisms.HeroMechanism
-	(*ManualUnlockMechanism)(nil), // 2: mechanisms.ManualUnlockMechanism
-	(*WearMechanism)(nil),         // 3: mechanisms.WearMechanism
-	nil,                           // 4: mechanisms.HeroMechanism.SkillsEntry
-	(*HeroMechanism_Skills_XXXMapChangeRecord)(nil), // 5: mechanisms.HeroMechanism.Skills_XXXMapChangeRecord
-	nil,             // 6: mechanisms.ManualUnlockMechanism.UnlockMapEntry
-	nil,             // 7: mechanisms.WearMechanism.WearMapEntry
-	(ChangeType)(0), // 8: common.ChangeType
+	(*LevelUpMechanism)(nil),      // 0: MME.LevelUpMechanism
+	(*HeroMechanism)(nil),         // 1: MME.HeroMechanism
+	(*ManualUnlockMechanism)(nil), // 2: MME.ManualUnlockMechanism
+	(*WearMechanism)(nil),         // 3: MME.WearMechanism
+	nil,                           // 4: MME.HeroMechanism.SkillsEntry
+	(*HeroMechanism_Skills_XXXMapChangeRecord)(nil), // 5: MME.HeroMechanism.Skills_XXXMapChangeRecord
+	nil,             // 6: MME.ManualUnlockMechanism.UnlockMapEntry
+	nil,             // 7: MME.WearMechanism.WearMapEntry
+	(ChangeType)(0), // 8: MME.ChangeType
 }
 var file_protocol_mechanisms_proto_depIdxs = []int32{
-	4, // 0: mechanisms.HeroMechanism.Skills:type_name -> mechanisms.HeroMechanism.SkillsEntry
-	5, // 1: mechanisms.HeroMechanism.Skills_XXXChangeList:type_name -> mechanisms.HeroMechanism.Skills_XXXMapChangeRecord
-	6, // 2: mechanisms.ManualUnlockMechanism.UnlockMap:type_name -> mechanisms.ManualUnlockMechanism.UnlockMapEntry
-	7, // 3: mechanisms.WearMechanism.WearMap:type_name -> mechanisms.WearMechanism.WearMapEntry
-	8, // 4: mechanisms.HeroMechanism.Skills_XXXMapChangeRecord.ChangeType:type_name -> common.ChangeType
+	4, // 0: MME.HeroMechanism.Skills:type_name -> MME.HeroMechanism.SkillsEntry
+	5, // 1: MME.HeroMechanism.Skills_XXXChangeList:type_name -> MME.HeroMechanism.Skills_XXXMapChangeRecord
+	6, // 2: MME.ManualUnlockMechanism.UnlockMap:type_name -> MME.ManualUnlockMechanism.UnlockMapEntry
+	7, // 3: MME.WearMechanism.WearMap:type_name -> MME.WearMechanism.WearMapEntry
+	8, // 4: MME.HeroMechanism.Skills_XXXMapChangeRecord.ChangeType:type_name -> MME.ChangeType
 	5, // [5:5] is the sub-list for method output_type
 	5, // [5:5] is the sub-list for method input_type
 	5, // [5:5] is the sub-list for extension type_name

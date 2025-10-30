@@ -137,16 +137,16 @@ var File_protocol_managers_proto protoreflect.FileDescriptor
 
 const file_protocol_managers_proto_rawDesc = "" +
 	"\n" +
-	"\x17protocol/managers.proto\x12\bmanagers\x1a\x16protocol/modules.proto\"\xfb\x02\n" +
-	"\vHeroManager\x12<\n" +
-	"\aHeroMap\x18\x01 \x03(\v2\".managers.HeroManager.HeroMapEntryR\aHeroMap\x12f\n" +
-	"\x15HeroMap_XXXChangeList\x18\xe9\a \x03(\v20.managers.HeroManager.HeroMap_XXXMapChangeRecordR\x14HeroMapXXXChangeList\x1aO\n" +
+	"\x17protocol/managers.proto\x12\x03MME\x1a\x16protocol/modules.proto\"\xe9\x02\n" +
+	"\vHeroManager\x127\n" +
+	"\aHeroMap\x18\x01 \x03(\v2\x1d.MME.HeroManager.HeroMapEntryR\aHeroMap\x12a\n" +
+	"\x15HeroMap_XXXChangeList\x18\xe9\a \x03(\v2+.MME.HeroManager.HeroMap_XXXMapChangeRecordR\x14HeroMapXXXChangeList\x1aK\n" +
 	"\fHeroMapEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\x03R\x03key\x12)\n" +
-	"\x05value\x18\x02 \x01(\v2\x13.modules.HeroModuleR\x05value:\x028\x01\x1au\n" +
+	"\x03key\x18\x01 \x01(\x03R\x03key\x12%\n" +
+	"\x05value\x18\x02 \x01(\v2\x0f.MME.HeroModuleR\x05value:\x028\x01\x1aq\n" +
 	"\x1aHeroMap_XXXMapChangeRecord\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\x03R\x03key\x12)\n" +
-	"\x05value\x18\x02 \x01(\v2\x13.modules.HeroModuleR\x05value\x12\x1a\n" +
+	"\x03key\x18\x01 \x01(\x03R\x03key\x12%\n" +
+	"\x05value\x18\x02 \x01(\v2\x0f.MME.HeroModuleR\x05value\x12\x1a\n" +
 	"\bisDelete\x18\x03 \x01(\bR\bisDeleteB\aZ\x05./mmeb\x06proto3"
 
 var (
@@ -163,16 +163,16 @@ func file_protocol_managers_proto_rawDescGZIP() []byte {
 
 var file_protocol_managers_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_protocol_managers_proto_goTypes = []any{
-	(*HeroManager)(nil), // 0: managers.HeroManager
-	nil,                 // 1: managers.HeroManager.HeroMapEntry
-	(*HeroManager_HeroMap_XXXMapChangeRecord)(nil), // 2: managers.HeroManager.HeroMap_XXXMapChangeRecord
-	(*HeroModule)(nil), // 3: modules.HeroModule
+	(*HeroManager)(nil), // 0: MME.HeroManager
+	nil,                 // 1: MME.HeroManager.HeroMapEntry
+	(*HeroManager_HeroMap_XXXMapChangeRecord)(nil), // 2: MME.HeroManager.HeroMap_XXXMapChangeRecord
+	(*HeroModule)(nil), // 3: MME.HeroModule
 }
 var file_protocol_managers_proto_depIdxs = []int32{
-	1, // 0: managers.HeroManager.HeroMap:type_name -> managers.HeroManager.HeroMapEntry
-	2, // 1: managers.HeroManager.HeroMap_XXXChangeList:type_name -> managers.HeroManager.HeroMap_XXXMapChangeRecord
-	3, // 2: managers.HeroManager.HeroMapEntry.value:type_name -> modules.HeroModule
-	3, // 3: managers.HeroManager.HeroMap_XXXMapChangeRecord.value:type_name -> modules.HeroModule
+	1, // 0: MME.HeroManager.HeroMap:type_name -> MME.HeroManager.HeroMapEntry
+	2, // 1: MME.HeroManager.HeroMap_XXXChangeList:type_name -> MME.HeroManager.HeroMap_XXXMapChangeRecord
+	3, // 2: MME.HeroManager.HeroMapEntry.value:type_name -> MME.HeroModule
+	3, // 3: MME.HeroManager.HeroMap_XXXMapChangeRecord.value:type_name -> MME.HeroModule
 	4, // [4:4] is the sub-list for method output_type
 	4, // [4:4] is the sub-list for method input_type
 	4, // [4:4] is the sub-list for extension type_name

@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package mechanisms;
+package MME;
 option go_package = "./mme";
 
 import "protocol/common.proto";
@@ -21,7 +21,7 @@ message HeroMechanism {
   map<int32, int32> Skills = 5; // 技能
 
   message Skills_XXXMapChangeRecord {
-    common.ChangeType ChangeType = 1;
+    MME.ChangeType ChangeType = 1;
     int32 Key = 2;
     int32 Value = 3; 
   }

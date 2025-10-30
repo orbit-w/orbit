@@ -74,7 +74,7 @@ var File_protocol_common_proto protoreflect.FileDescriptor
 
 const file_protocol_common_proto_rawDesc = "" +
 	"\n" +
-	"\x15protocol/common.proto\x12\x06common*O\n" +
+	"\x15protocol/common.proto\x12\x03MME*O\n" +
 	"\n" +
 	"ChangeType\x12\x14\n" +
 	"\x10CHANGE_TYPE_NONE\x10\x00\x12\x13\n" +
@@ -95,7 +95,7 @@ func file_protocol_common_proto_rawDescGZIP() []byte {
 
 var file_protocol_common_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_protocol_common_proto_goTypes = []any{
-	(ChangeType)(0), // 0: common.ChangeType
+	(ChangeType)(0), // 0: MME.ChangeType
 }
 var file_protocol_common_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type

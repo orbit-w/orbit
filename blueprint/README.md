@@ -2,8 +2,80 @@
 
 ## 概述
 
-NetBluePrint 是一个基于 YAML 的网络协议设计系统，用于定义游戏中的网络消息与数据结构。通过 YAML 蓝图文件，可自动生成 Protocol Buffers (.proto) 文件，实现网络协议的标准化与自动化管理。
-MME中定义的结构，到线上后，FieldIndex不可更改，可以直接删除，但是不可复用。
+NetBluePrint 是一个基于 YAML 的网络/实体结构协议设计与自动生成系统，用于定义各类业务中的复杂实体分层数据结构及网络消息。设计核心是用抽象的蓝图（Blueprint）实现 Entity → Manager → Module → Mechanism 的多层自动化生成，并天然支持结构演变、增量同步和分布式场景。
+
+MME 架构定义了典型的四层结构，不局限于任何具体领域模型，可复用到绝大多数服务端数据建模需求中。
+
+---
+
+## MME 分层模型与自动生成（抽象规范）
+
+### 四层核心结构
+
+- **Entity（实体）**：业务载体，生命周期管理，不直接管理内部逻辑。
+- **Manager（管理器）**：聚合分片单元（如 map），以唯一 key 组织和管理多个 Module，负责查找、增删、全/增量同步。
+- **Module（模块）**：功能单元，自由组合一组 Mechanism，定义完整业务/属性能力。
+- **Mechanism（机制）**：最小的可扩展数据和逻辑单元，专注每个方向的数据与行为。
+
+### 自动生成规则
+
+- 所有结构均由 YAML → Proto → 代码自动生成，保持多端一致性。
+- 字段一旦上线，其 FieldIndex **不可更改、不可复用**，可删除但严禁插入。
+- 允许在结构“末尾”顺序追加字段。
+- Manager 层推荐 map/dictionary 扩展模式，横向分片。
+- Module 层采用组合机制，灵活拼装与插拔 Mechanism。
+- Mechanism 支持标量、数组、map 等多种基础和复合类型。
+- 从 YAML 自动生成对应 protobuf、go/typescript 等多端代码。
+- 每层自动生成脏数据追踪、全量与增量同步接口。
+
+---
+
+## 生成示例（非领域化通用范式）
+
+```yaml
+# blueprint/mme/manager.yaml
+SomeManager:
+  keyField: int64
+  module: SomeModule
+
+# blueprint/mme/modules.yaml
+SomeModule:
+  mechanisms:
+    - AMechanism
+    - BMechanism
+
+# blueprint/mme/mechanisms.yaml
+AMechanism:
+  fields:
+    Attribute1: int32
+    Scores: map<int32, int32>
+    # 脏位、增量同步、字段索引等自动编码
+```
+
+---
+
+## 协议、数据同步与进化约束
+
+### 增量同步自动生成原则： 
+- 对 map/字典类字段，系统生成 ChangeList 与 ChangeType 枚举，实现高效分段同步。
+- Wrapper 层自动集成 ToProto/FromProto/ToIncrementalProto 等接口，支持只同步变动部分。
+
+### 字段演变和约束：
+- 字段顺序一经上线不可变，仅允许 **末尾追加字段或删除字段**，FieldIndex 禁止覆盖。
+- 各结构层级组合可扩展，但原有结构、层级关系不可变。
+- YAML 蓝图变更应始终保持向后兼容，所有代码和协议由蓝图自动化生成。
+
+---
+
+## YAML 文件组织规范及目录
+
+保持原有 YAML 命名和组织方式，具体内容可参考下述模式：
+
+- headfile.yaml: 通用全局字段/配置
+- entities.yaml: 实体（Entity）定义，引用一个或多个 Manager
+- manager.yaml: Manager 及其含有的 Module 定义
+- mechanisms.yaml: Mechanism 原子机制定义
+- modules.yaml: Module 机制拼装与配置
 
 ## 目录结构
 

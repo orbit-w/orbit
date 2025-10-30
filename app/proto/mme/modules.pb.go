@@ -7,11 +7,12 @@
 package mme
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -77,11 +78,11 @@ var File_protocol_modules_proto protoreflect.FileDescriptor
 
 const file_protocol_modules_proto_rawDesc = "" +
 	"\n" +
-	"\x16protocol/modules.proto\x12\amodules\x1a\x19protocol/mechanisms.proto\"s\n" +
+	"\x16protocol/modules.proto\x12\x03MME\x1a\x19protocol/mechanisms.proto\"e\n" +
 	"\n" +
-	"HeroModule\x12-\n" +
-	"\x04Base\x18\x01 \x01(\v2\x19.mechanisms.HeroMechanismR\x04Base\x126\n" +
-	"\aLevelUp\x18\x02 \x01(\v2\x1c.mechanisms.LevelUpMechanismR\aLevelUpB\aZ\x05./mmeb\x06proto3"
+	"HeroModule\x12&\n" +
+	"\x04Base\x18\x01 \x01(\v2\x12.MME.HeroMechanismR\x04Base\x12/\n" +
+	"\aLevelUp\x18\x02 \x01(\v2\x15.MME.LevelUpMechanismR\aLevelUpB\aZ\x05./mmeb\x06proto3"
 
 var (
 	file_protocol_modules_proto_rawDescOnce sync.Once
@@ -97,13 +98,13 @@ func file_protocol_modules_proto_rawDescGZIP() []byte {
 
 var file_protocol_modules_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
 var file_protocol_modules_proto_goTypes = []any{
-	(*HeroModule)(nil),       // 0: modules.HeroModule
-	(*HeroMechanism)(nil),    // 1: mechanisms.HeroMechanism
-	(*LevelUpMechanism)(nil), // 2: mechanisms.LevelUpMechanism
+	(*HeroModule)(nil),       // 0: MME.HeroModule
+	(*HeroMechanism)(nil),    // 1: MME.HeroMechanism
+	(*LevelUpMechanism)(nil), // 2: MME.LevelUpMechanism
 }
 var file_protocol_modules_proto_depIdxs = []int32{
-	1, // 0: modules.HeroModule.Base:type_name -> mechanisms.HeroMechanism
-	2, // 1: modules.HeroModule.LevelUp:type_name -> mechanisms.LevelUpMechanism
+	1, // 0: MME.HeroModule.Base:type_name -> MME.HeroMechanism
+	2, // 1: MME.HeroModule.LevelUp:type_name -> MME.LevelUpMechanism
 	2, // [2:2] is the sub-list for method output_type
 	2, // [2:2] is the sub-list for method input_type
 	2, // [2:2] is the sub-list for extension type_name
