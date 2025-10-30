@@ -7,7 +7,7 @@ import (
 	dirtyflag "gitee.com/orbit-w/orbit/lib/base/dirty_flag"
 	fieldmeta "gitee.com/orbit-w/orbit/lib/base/field_meta"
 	"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder"
-	mmeutils "gitee.com/orbit-w/orbit/lib/module/mme_utils"
+	mmemodel "gitee.com/orbit-w/orbit/lib/module/mme_model"
 	xmapwrapper "gitee.com/orbit-w/orbit/lib/module/xmapwrapper"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
@@ -26,6 +26,7 @@ type HeroManager struct {
 	HeroMap map[int64]*HeroModule `bson:"hero_map"`
 }
 
+// 数据-深拷贝
 func (m *HeroManager) DeepCopy(co *HeroManager) {
 	if m == nil || co == nil {
 		return
@@ -41,7 +42,7 @@ func (m *HeroManager) DeepCopy(co *HeroManager) {
 	}
 }
 
-// ToProto 将 HeroManager 数据转换为完整的 protobuf 结构体
+// 数据-转换为protobuf
 func (m *HeroManager) ToProto() *mme.HeroManager {
 	if m == nil {
 		return nil
@@ -62,6 +63,7 @@ type HeroManagerWrapper struct {
 	dirtyflag.IDirtyFlag
 	fieldMetas *fieldmeta.FieldMetas
 
+	//Value为MME Object，使用xmap.MapAccessor进行包装
 	heroMapLink *xmapwrapper.XMapWrapper[int64, *HeroModule, *HeroModuleWrapper]
 }
 
@@ -140,7 +142,18 @@ func (m *HeroManagerWrapper) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBu
 	}
 }
 
-func (m *HeroManagerWrapper) DeepCopy(copy *HeroManager) {
+// 包装器-深拷贝
+func (m *HeroManagerWrapper) DeepCopy() *HeroManager {
+	if m == nil {
+		return nil
+	}
+	copy := &HeroManager{}
+	m.DeepCopyTo(copy)
+	return copy
+}
+
+// 包装器-深拷贝
+func (m *HeroManagerWrapper) DeepCopyTo(copy *HeroManager) {
 	if m == nil || m.data == nil || copy == nil {
 		return
 	}
@@ -177,7 +190,7 @@ func (m *HeroManagerWrapper) FromProto(pb *mme.HeroManager) {
 
 // ToIncrementalProto 根据脏标记位构建增量数据的 protoMessage
 // 只返回标记为脏的字段数据，用于增量同步
-func (m *HeroManagerWrapper) ToIncrementalProto(ctx mmeutils.SyncContext) proto.Message {
+func (m *HeroManagerWrapper) ToIncrementalProto(ctx mmemodel.SyncContext) proto.Message {
 	if m == nil {
 		return nil
 	}
@@ -188,7 +201,7 @@ func (m *HeroManagerWrapper) ToIncrementalProto(ctx mmeutils.SyncContext) proto.
 	}
 
 	incremental := &mme.HeroManager{}
-	if m.IsDirty(HeroManagerDirtyHeroMapBit) {
+	if mmemodel.FieldCanBeIncrementalSynced(m, HeroManagerDirtyHeroMapBit, HeroManagerFieldIndexHeroMap, ctx) {
 		incremental.HeroMap_XXXChangeList = make([]*mme.HeroManager_HeroMap_XXXMapChangeRecord, 0)
 		m.heroMapLink.RangeOperations(func(key int64, operation xmap.MapOperation[int64]) bool {
 			switch operation.Type {

@@ -8,7 +8,7 @@ import (
 	dirtyflag "gitee.com/orbit-w/orbit/lib/base/dirty_flag"
 	fieldmeta "gitee.com/orbit-w/orbit/lib/base/field_meta"
 	"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder"
-	mmeutils "gitee.com/orbit-w/orbit/lib/module/mme_utils"
+	mmemodel "gitee.com/orbit-w/orbit/lib/module/mme_model"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -37,6 +37,7 @@ type HeroMechanism struct {
 	Skills     map[int32]int32 `bson:"skills"`
 }
 
+// 数据-深拷贝
 func (m *HeroMechanism) DeepCopy(co *HeroMechanism) {
 	if m == nil || co == nil {
 		return
@@ -46,7 +47,7 @@ func (m *HeroMechanism) DeepCopy(co *HeroMechanism) {
 	maps.Copy(co.Skills, m.Skills)
 }
 
-// ToProto 将 HeroMechanism 数据转换为完整的 protobuf 结构体
+// 数据-转换为protobuf
 func (m *HeroMechanism) ToProto() *mme.HeroMechanism {
 	if m == nil {
 		return nil
@@ -79,6 +80,7 @@ type HeroMechanismWrapper struct {
 	dirtyflag.IDirtyFlag
 	fieldMetas *fieldmeta.FieldMetas
 
+	//Value为值类型，使用xmap.MapAccessor进行包装
 	skillsAccessor *xmap.MapAccessor[int32, int32]
 }
 
@@ -144,6 +146,7 @@ func (m *HeroMechanismWrapper) SetCreateTime(v int64) {
 	m.MarkDirty(HeroMechanismDirtyCreateTimeBit)
 }
 
+// 包装器-获取技能访问器
 func (m *HeroMechanismWrapper) GetSkillAccessor() *xmap.MapAccessor[int32, int32] {
 	return m.skillsAccessor
 }
@@ -181,16 +184,18 @@ func (m *HeroMechanismWrapper) BuildMongoUpdate(builder *mgo_builder.MongoUpdate
 	}
 }
 
-func (m *HeroMechanismWrapper) Clone() *HeroMechanism {
+// 包装器-深拷贝
+func (m *HeroMechanismWrapper) DeepCopy() *HeroMechanism {
 	if m == nil {
 		return nil
 	}
 	copy := &HeroMechanism{}
-	m.DeepCopy(copy)
+	m.DeepCopyTo(copy)
 	return copy
 }
 
-func (m *HeroMechanismWrapper) DeepCopy(copy *HeroMechanism) {
+// 包装器-深拷贝
+func (m *HeroMechanismWrapper) DeepCopyTo(copy *HeroMechanism) {
 	if m == nil || m.data == nil || copy == nil {
 		return
 	}
@@ -198,7 +203,9 @@ func (m *HeroMechanismWrapper) DeepCopy(copy *HeroMechanism) {
 	// 拷贝基础类型字段
 	*copy = *m.data
 
-	m.skillsAccessor.DeepCopy(copy.Skills)
+	// Value 为引用类型，需要深拷贝
+	// Value 为值类型，浅拷贝即可
+	m.skillsAccessor.Copy(copy.Skills)
 }
 
 // MatchesAll 判断字段是否匹配所有类型标记
@@ -250,7 +257,7 @@ func (m *HeroMechanismWrapper) FromProto(pb *mme.HeroMechanism) {
 
 // ToIncrementalProto 根据脏标记位构建增量数据的 protoMessage
 // 只返回标记为脏的字段数据，用于增量同步
-func (m *HeroMechanismWrapper) ToIncrementalProtoWithContext(ctx mmeutils.SyncContext) proto.Message {
+func (m *HeroMechanismWrapper) ToIncrementalProtoWithContext(ctx mmemodel.SyncContext) proto.Message {
 	if m == nil {
 		return nil
 	}
@@ -263,27 +270,27 @@ func (m *HeroMechanismWrapper) ToIncrementalProtoWithContext(ctx mmeutils.SyncCo
 	incremental := &mme.HeroMechanism{}
 
 	// 根据脏标记位设置对应的字段
-	if mmeutils.FieldCanBeIncrementalSynced(m, HeroMechanismDirtyIdBit, HeroMechanismFieldIndexId, ctx) {
+	if mmemodel.FieldCanBeIncrementalSynced(m, HeroMechanismDirtyIdBit, HeroMechanismFieldIndexId, ctx) {
 		v := m.GetId()
 		incremental.Id = &v
 	}
 
-	if mmeutils.FieldCanBeIncrementalSynced(m, HeroMechanismDirtyConfIdBit, HeroMechanismFieldIndexConfId, ctx) {
+	if mmemodel.FieldCanBeIncrementalSynced(m, HeroMechanismDirtyConfIdBit, HeroMechanismFieldIndexConfId, ctx) {
 		v := m.GetConfId()
 		incremental.ConfId = &v
 	}
 
-	if mmeutils.FieldCanBeIncrementalSynced(m, HeroMechanismDirtyCreateTimeBit, HeroMechanismFieldIndexCreateTime, ctx) {
+	if mmemodel.FieldCanBeIncrementalSynced(m, HeroMechanismDirtyCreateTimeBit, HeroMechanismFieldIndexCreateTime, ctx) {
 		v := m.GetCreateTime()
 		incremental.CreateTime = &v
 	}
 
-	if mmeutils.FieldCanBeIncrementalSynced(m, HeroMechanismDirtyUseTimesBit, HeroMechanismFieldIndexUseTimes, ctx) {
+	if mmemodel.FieldCanBeIncrementalSynced(m, HeroMechanismDirtyUseTimesBit, HeroMechanismFieldIndexUseTimes, ctx) {
 		v := m.GetUseTimes()
 		incremental.UseTimes = &v
 	}
 
-	if mmeutils.FieldCanBeIncrementalSynced(m, HeroMechanismDirtySkillsBit, HeroMechanismFieldIndexSkills, ctx) {
+	if mmemodel.FieldCanBeIncrementalSynced(m, HeroMechanismDirtySkillsBit, HeroMechanismFieldIndexSkills, ctx) {
 		incremental.Skills_XXXChangeList = make([]*mme.HeroMechanism_Skills_XXXMapChangeRecord, 0)
 		m.skillsAccessor.RangeOperations(func(key int32, operation xmap.MapOperation[int32]) bool {
 			switch operation.Type {

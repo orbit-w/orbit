@@ -17,7 +17,8 @@ type Linkable[PbValue any] interface {
 	Unlink()
 	// GetDirtyTracker 获取DirtyTracker（用于子对象的Link）
 	GetDirtyTracker() *dt.DirtyTracker
-	Clone() PbValue
+	// DeepCopy 深拷贝
+	DeepCopy() PbValue
 }
 
 // IncrementalSyncObject 增量同步对象接口
@@ -228,6 +229,7 @@ func (x *XMapWrapper[K, PbValue, WrapperValue]) RangeIncrementalSyncObject(f fun
 	}
 }
 
+// Clone 对底层Map的浅拷贝
 func (x *XMapWrapper[K, PbValue, WrapperValue]) Clone() map[K]PbValue {
 	if x == nil {
 		return nil
@@ -235,12 +237,13 @@ func (x *XMapWrapper[K, PbValue, WrapperValue]) Clone() map[K]PbValue {
 	return x.mapAccessor.Clone()
 }
 
+// DeepCopy 对底层Map的深拷贝
 func (x *XMapWrapper[K, PbValue, WrapperValue]) DeepCopy(copy *map[K]PbValue) {
 	if x == nil || copy == nil {
 		return
 	}
 	x.Range(func(key K, wrapper WrapperValue) bool {
-		(*copy)[key] = wrapper.Clone()
+		(*copy)[key] = wrapper.DeepCopy()
 		return true
 	})
 }

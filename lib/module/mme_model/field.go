@@ -1,4 +1,4 @@
-package mmeutils
+package mmemodel
 
 import (
 	"fmt"

@@ -5,7 +5,7 @@ import (
 	dirtyflag "gitee.com/orbit-w/orbit/lib/base/dirty_flag"
 	fieldmeta "gitee.com/orbit-w/orbit/lib/base/field_meta"
 	"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder"
-	mmeutils "gitee.com/orbit-w/orbit/lib/module/mme_utils"
+	mmemodel "gitee.com/orbit-w/orbit/lib/module/mme_model"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -28,6 +28,7 @@ type LevelUpMechanism struct {
 	ConfId   int32 `bson:"conf_id"`
 }
 
+// 数据-深拷贝
 func (m *LevelUpMechanism) DeepCopy(co *LevelUpMechanism) {
 	if m == nil || co == nil {
 		return
@@ -36,7 +37,7 @@ func (m *LevelUpMechanism) DeepCopy(co *LevelUpMechanism) {
 	*co = *m
 }
 
-// ToProto 将 LevelUpMechanism 数据转换为完整的 protobuf 结构体
+// 数据-转换为protobuf
 func (m *LevelUpMechanism) ToProto() *mme.LevelUpMechanism {
 	if m == nil {
 		return nil
@@ -135,16 +136,18 @@ func (m *LevelUpMechanismWrapper) BuildMongoUpdate(builder *mgo_builder.MongoUpd
 	}
 }
 
-func (m *LevelUpMechanismWrapper) Clone() *LevelUpMechanism {
+// 包装器-深拷贝
+func (m *LevelUpMechanismWrapper) DeepCopy() *LevelUpMechanism {
 	if m == nil {
 		return nil
 	}
 	copy := &LevelUpMechanism{}
-	m.DeepCopy(copy)
+	m.DeepCopyTo(copy)
 	return copy
 }
 
-func (m *LevelUpMechanismWrapper) DeepCopy(copy *LevelUpMechanism) {
+// 包装器-深拷贝
+func (m *LevelUpMechanismWrapper) DeepCopyTo(copy *LevelUpMechanism) {
 	if m == nil || m.data == nil || copy == nil {
 		return
 	}
@@ -189,7 +192,7 @@ func (m *LevelUpMechanismWrapper) FromProto(pb *mme.LevelUpMechanism) {
 
 // ToIncrementalProto 根据脏标记位构建增量数据的 protoMessage
 // 只返回标记为脏的字段数据，用于增量同步
-func (m *LevelUpMechanismWrapper) ToIncrementalProtoWithContext(ctx mmeutils.SyncContext) proto.Message {
+func (m *LevelUpMechanismWrapper) ToIncrementalProtoWithContext(ctx mmemodel.SyncContext) proto.Message {
 	if m == nil {
 		return nil
 	}
@@ -202,17 +205,17 @@ func (m *LevelUpMechanismWrapper) ToIncrementalProtoWithContext(ctx mmeutils.Syn
 	incremental := &mme.LevelUpMechanism{}
 
 	// 根据脏标记位设置对应的字段
-	if mmeutils.FieldCanBeIncrementalSynced(m, LevelUpMechanismDirtyCurLevelBit, LevelUpMechanismFieldIndexCurLevel, ctx) {
+	if mmemodel.FieldCanBeIncrementalSynced(m, LevelUpMechanismDirtyCurLevelBit, LevelUpMechanismFieldIndexCurLevel, ctx) {
 		v := m.GetCurLevel()
 		incremental.CurLevel = &v
 	}
 
-	if mmeutils.FieldCanBeIncrementalSynced(m, LevelUpMechanismDirtyCurExpBit, LevelUpMechanismFieldIndexCurExp, ctx) {
+	if mmemodel.FieldCanBeIncrementalSynced(m, LevelUpMechanismDirtyCurExpBit, LevelUpMechanismFieldIndexCurExp, ctx) {
 		v := m.GetCurExp()
 		incremental.CurExp = &v
 	}
 
-	if mmeutils.FieldCanBeIncrementalSynced(m, LevelUpMechanismDirtyConfIdBit, LevelUpMechanismFieldIndexConfId, ctx) {
+	if mmemodel.FieldCanBeIncrementalSynced(m, LevelUpMechanismDirtyConfIdBit, LevelUpMechanismFieldIndexConfId, ctx) {
 		v := m.GetConfId()
 		incremental.ConfId = &v
 	}

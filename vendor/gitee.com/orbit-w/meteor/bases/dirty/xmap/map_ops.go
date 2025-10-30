@@ -182,7 +182,9 @@ func (op *MapAccessor[K, V]) DeleteAll(keys ...K) int {
 	return count
 }
 
-func (op *MapAccessor[K, V]) DeepCopy(copyMap map[K]V) {
+// Copy copies the map to the given map
+// 浅拷贝
+func (op *MapAccessor[K, V]) Copy(copyMap map[K]V) {
 	if op.m == nil || *op.m == nil {
 		return
 	}

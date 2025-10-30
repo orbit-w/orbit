@@ -5,7 +5,7 @@ import (
 	dirtyflag "gitee.com/orbit-w/orbit/lib/base/dirty_flag"
 	fieldmeta "gitee.com/orbit-w/orbit/lib/base/field_meta"
 	"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder"
-	mmeutils "gitee.com/orbit-w/orbit/lib/module/mme_utils"
+	mmemodel "gitee.com/orbit-w/orbit/lib/module/mme_model"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -25,6 +25,7 @@ type HeroModule struct {
 	LevelUp *LevelUpMechanism `bson:"level_up"`
 }
 
+// 数据-深拷贝
 func (m *HeroModule) DeepCopy(co *HeroModule) {
 	if m == nil || co == nil {
 		return
@@ -43,7 +44,7 @@ func (m *HeroModule) DeepCopy(co *HeroModule) {
 	}
 }
 
-// ToProto 将 HeroModule 数据转换为完整的 protobuf 结构体
+// 数据-转换为protobuf
 func (m *HeroModule) ToProto() *mme.HeroModule {
 	if m == nil {
 		return nil
@@ -150,16 +151,18 @@ func (m *HeroModuleWrapper) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBui
 	}
 }
 
-func (m *HeroModuleWrapper) Clone() *HeroModule {
+// 包装器-深拷贝
+func (m *HeroModuleWrapper) DeepCopy() *HeroModule {
 	if m == nil {
 		return nil
 	}
 	copy := &HeroModule{}
-	m.DeepCopy(copy)
+	m.DeepCopyTo(copy)
 	return copy
 }
 
-func (m *HeroModuleWrapper) DeepCopy(copy *HeroModule) {
+// 包装器-深拷贝
+func (m *HeroModuleWrapper) DeepCopyTo(copy *HeroModule) {
 	if m == nil || m.data == nil || copy == nil {
 		return
 	}
@@ -169,14 +172,14 @@ func (m *HeroModuleWrapper) DeepCopy(copy *HeroModule) {
 		if copy.Base == nil {
 			copy.Base = &HeroMechanism{}
 		}
-		m.BaseWrapper.DeepCopy(copy.Base)
+		m.BaseWrapper.DeepCopyTo(copy.Base)
 	}
 
 	if m.data.LevelUp != nil {
 		if copy.LevelUp == nil {
 			copy.LevelUp = &LevelUpMechanism{}
 		}
-		m.LevelUpWrapper.DeepCopy(copy.LevelUp)
+		m.LevelUpWrapper.DeepCopyTo(copy.LevelUp)
 	}
 }
 
@@ -223,7 +226,7 @@ func (m *HeroModuleWrapper) FromProto(pb *mme.HeroModule) {
 
 // ToIncrementalProto 根据脏标记位构建增量数据的 protoMessage
 // 只返回标记为脏的字段数据，用于增量同步
-func (m *HeroModuleWrapper) ToIncrementalProtoWithContext(ctx mmeutils.SyncContext) proto.Message {
+func (m *HeroModuleWrapper) ToIncrementalProtoWithContext(ctx mmemodel.SyncContext) proto.Message {
 	if m == nil {
 		return nil
 	}
@@ -236,7 +239,7 @@ func (m *HeroModuleWrapper) ToIncrementalProtoWithContext(ctx mmeutils.SyncConte
 	incremental := &mme.HeroModule{}
 
 	// 根据脏标记位设置对应的嵌套对象
-	if mmeutils.FieldCanBeIncrementalSynced(m, HeroModuleDirtyBaseBit, HeroModuleFieldIndexBase, ctx) {
+	if mmemodel.FieldCanBeIncrementalSynced(m, HeroModuleDirtyBaseBit, HeroModuleFieldIndexBase, ctx) {
 		if m.BaseWrapper != nil {
 			pb := m.BaseWrapper.ToIncrementalProtoWithContext(ctx)
 			if pb != nil {
@@ -248,7 +251,7 @@ func (m *HeroModuleWrapper) ToIncrementalProtoWithContext(ctx mmeutils.SyncConte
 		}
 	}
 
-	if mmeutils.FieldCanBeIncrementalSynced(m, HeroModuleDirtyLevelUpBit, HeroModuleFieldIndexLevelUp, ctx) {
+	if mmemodel.FieldCanBeIncrementalSynced(m, HeroModuleDirtyLevelUpBit, HeroModuleFieldIndexLevelUp, ctx) {
 		if m.LevelUpWrapper != nil {
 			pb := m.LevelUpWrapper.ToIncrementalProtoWithContext(ctx)
 			if pb != nil {
