@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/asynkron/protoactor-go/actor"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 const (
@@ -13,13 +14,15 @@ const (
 )
 
 // PersistenceRequest 持久化请求消息
-type PersistenceRequest[IDType any] struct {
+type PersistenceRequest struct {
+	// Database 数据库名称
+	Database string
 	// Collection 集合名称
 	Collection string
 	// DocID 文档ID（MongoDB的_id字段）
-	DocID IDType
-	// Wrapper 实现了Wrapper接口的数据包装器
-	Wrapper Wrapper
+	DocID any
+	// Doc 文档
+	Doc bson.M
 	// ResponseReceiver 响应接收者（可选），用于接收持久化结果
 	ResponseReceiver *actor.PID
 	// Timeout 超时时间（可选）
@@ -47,7 +50,7 @@ type PersistenceResponse struct {
 // BatchPersistenceRequest 批量持久化请求消息
 type BatchPersistenceRequest[IDType any] struct {
 	// Requests 持久化请求列表
-	Requests []*PersistenceRequest[IDType]
+	Requests []*PersistenceRequest
 	// ResponseReceiver 响应接收者（可选）
 	ResponseReceiver *actor.PID
 }

@@ -2,7 +2,7 @@ package persistence
 
 import (
 	"context"
-	"time"
+	"strings"
 
 	"gitee.com/orbit-w/meteor/bases/misc/utils"
 	mongodbdriver "gitee.com/orbit-w/meteor/modules/database/no_sql/mongodb_driver"
@@ -11,6 +11,7 @@ import (
 	"gitee.com/orbit-w/orbit/lib/module/logger"
 	"github.com/asynkron/protoactor-go/actor"
 	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 	"go.uber.org/zap"
 )
@@ -24,15 +25,27 @@ type UpdateResult interface {
 
 // PersistenceActor 持久化Actor，负责处理持久化请求
 type PersistenceActor struct {
-	db     *mongodbdriver.VirtualMongoClient
-	logger *mlog.Logger
+	client        *mongodbdriver.VirtualMongoClient
+	logger        *mlog.Logger
+	collectionMap map[string]*mongo.Collection
+}
+
+func (p *PersistenceActor) GetCollection(dbName, collectionName string) *mongo.Collection {
+	collectionKey := GenCollectionKey(dbName, collectionName)
+	collection, ok := p.collectionMap[collectionKey]
+	if !ok {
+		collection = p.client.Client().Database(dbName).Collection(collectionName)
+		p.collectionMap[collectionKey] = collection
+	}
+	return collection
 }
 
 // NewPersistenceActor 创建新的持久化Actor
 func NewPersistenceActor(db *mongodbdriver.VirtualMongoClient) *PersistenceActor {
 	return &PersistenceActor{
-		db:     db,
-		logger: logger.GetLogger(),
+		client:        db,
+		logger:        logger.GetLogger(),
+		collectionMap: make(map[string]*mongo.Collection),
 	}
 }
 
@@ -43,12 +56,12 @@ func (p *PersistenceActor) Receive(ctx actor.Context) {
 	switch msg := ctx.Message().(type) {
 	case *actor.Started:
 		p.logger.Info("PersistenceActor started", zap.String("ActorID", ctx.Self().Id))
-
-	case *PersistenceRequest[any]:
+	case *actor.Stopping:
+		p.logger.Info("PersistenceActor stopping", zap.String("ActorID", ctx.Self().Id))
+	case *actor.Stopped:
+		p.logger.Info("PersistenceActor stopped", zap.String("ActorID", ctx.Self().Id))
+	case PersistenceRequest:
 		p.handlePersistenceRequest(ctx, msg)
-
-	case *BatchPersistenceRequest[any]:
-		p.handleBatchPersistenceRequest(ctx, msg)
 
 	default:
 		p.logger.Error("PersistenceActor received unknown message", zap.Any("Message", msg))
@@ -56,7 +69,7 @@ func (p *PersistenceActor) Receive(ctx actor.Context) {
 }
 
 // handlePersistenceRequest 处理单个持久化请求
-func (p *PersistenceActor) handlePersistenceRequest(ctx actor.Context, req *PersistenceRequest[any]) {
+func (p *PersistenceActor) handlePersistenceRequest(ctx actor.Context, req PersistenceRequest) {
 	response := p.persist(req)
 
 	// 如果有响应接收者，发送响应
@@ -68,58 +81,8 @@ func (p *PersistenceActor) handlePersistenceRequest(ctx actor.Context, req *Pers
 	}
 }
 
-// handleBatchPersistenceRequest 处理批量持久化请求
-func (p *PersistenceActor) handleBatchPersistenceRequest(ctx actor.Context, req *BatchPersistenceRequest[any]) {
-	results := make([]*PersistenceResponse, 0, len(req.Requests))
-	successCount := 0
-	failCount := 0
-
-	for _, persistenceReq := range req.Requests {
-		response := p.persist(persistenceReq)
-		results = append(results, response)
-
-		if response.Success {
-			successCount++
-		} else {
-			failCount++
-		}
-	}
-
-	batchResponse := &BatchPersistenceResponse{
-		Results:      results,
-		SuccessCount: successCount,
-		FailCount:    failCount,
-	}
-
-	// 如果有响应接收者，发送响应
-	if req.ResponseReceiver != nil {
-		ctx.Send(req.ResponseReceiver, batchResponse)
-	} else {
-		// 否则直接响应给发送者
-		ctx.Respond(batchResponse)
-	}
-}
-
 // persist 执行实际的持久化操作
-func (p *PersistenceActor) persist(req *PersistenceRequest[any]) *PersistenceResponse {
-	if req == nil {
-		return &PersistenceResponse{
-			Success:    false,
-			Error:      ErrInvalidRequest,
-			Collection: "",
-			DocumentID: nil,
-		}
-	}
-
-	if req.Wrapper == nil {
-		return &PersistenceResponse{
-			Success:    false,
-			Error:      ErrWrapperIsNil,
-			Collection: req.Collection,
-			DocumentID: req.DocID,
-		}
-	}
-
+func (p *PersistenceActor) persist(req PersistenceRequest) *PersistenceResponse {
 	if req.Collection == "" {
 		return &PersistenceResponse{
 			Success:    false,
@@ -138,29 +101,6 @@ func (p *PersistenceActor) persist(req *PersistenceRequest[any]) *PersistenceRes
 		}
 	}
 
-	// 构建更新操作
-	updateDoc := mgo_builder.WithBuilderResult(func(builder *mgo_builder.MongoUpdateBuilder) map[string]any {
-		// 创建根路径
-		path := &mgo_builder.NestedPath{}
-		// 调用Wrapper的BuildMongoUpdate方法
-		req.Wrapper.BuildMongoUpdate(builder, path)
-		return builder.Build()
-	})
-
-	// 如果没有更新操作，返回成功（无需更新）
-	if updateDoc == nil || len(updateDoc) == 0 {
-		p.logger.Debug("No update operations, skipping persistence",
-			zap.String("Collection", req.Collection),
-			zap.Any("DocumentID", req.DocID))
-		return &PersistenceResponse{
-			Success:       true,
-			Collection:    req.Collection,
-			DocumentID:    req.DocID,
-			MatchedCount:  0,
-			ModifiedCount: 0,
-		}
-	}
-
 	// 构建查询条件（使用_id）
 	filter := bson.M{"_id": req.DocID}
 
@@ -170,7 +110,7 @@ func (p *PersistenceActor) persist(req *PersistenceRequest[any]) *PersistenceRes
 		var cancel context.CancelFunc
 		timeout := req.Timeout
 		if timeout == 0 {
-			timeout = 30 * time.Second
+			timeout = MongoWriteTimeout
 		}
 		persistCtx, cancel = context.WithTimeout(context.Background(), timeout)
 		defer cancel()
@@ -179,7 +119,8 @@ func (p *PersistenceActor) persist(req *PersistenceRequest[any]) *PersistenceRes
 	// 执行MongoDB更新操作
 	// 注意：这里假设VirtualMongoClient有UpdateOne方法
 	// 如果接口不同，需要根据实际接口调整
-	result, err := p.db.Client().Database(req.Collection).Collection(req.Collection).UpdateOne(persistCtx, filter, updateDoc, options.UpdateOne())
+	collection := p.GetCollection(req.Database, req.Collection)
+	result, err := collection.UpdateOne(persistCtx, filter, req.Doc, options.UpdateOne().SetUpsert(true))
 	if err != nil {
 		p.logger.Error("Failed to persist data",
 			zap.String("Collection", req.Collection),
@@ -193,11 +134,9 @@ func (p *PersistenceActor) persist(req *PersistenceRequest[any]) *PersistenceRes
 		}
 	}
 
-	matchedCount := int64(0)
-	modifiedCount := int64(0)
 	// 根据实际的UpdateResult类型提取计数
-	matchedCount = result.MatchedCount
-	modifiedCount = result.ModifiedCount
+	matchedCount := result.MatchedCount
+	modifiedCount := result.ModifiedCount
 
 	p.logger.Debug("Data persisted successfully",
 		zap.String("Collection", req.Collection),
@@ -223,4 +162,16 @@ func NewNestedPath() *mgo_builder.NestedPath {
 func NewNestedPathWithField(fieldName string) *mgo_builder.NestedPath {
 	path := NewNestedPath()
 	return path.Field(fieldName)
+}
+
+func GenCollectionKey(dbName, collectionName string) string {
+	builder := collectionKeyPool.Get().(*strings.Builder)
+	defer func() {
+		builder.Reset()
+		collectionKeyPool.Put(builder)
+	}()
+	builder.WriteString(dbName)
+	builder.WriteByte('.')
+	builder.WriteString(collectionName)
+	return builder.String()
 }

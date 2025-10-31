@@ -1,7 +1,6 @@
 package persistence
 
 import (
-	"context"
 	"time"
 
 	mongodbdriver "gitee.com/orbit-w/meteor/modules/database/no_sql/mongodb_driver"
@@ -10,19 +9,19 @@ import (
 
 // Persistence 持久化系统，提供消息驱动的持久化服务
 type Persistence struct {
-	db          *mongodbdriver.VirtualMongoClient
+	cli         *mongodbdriver.VirtualMongoClient
 	actorPID    *actor.PID
 	actorSystem *actor.ActorSystem
 	pattern     string
 }
 
 // NewPersistence 创建新的持久化系统实例
-func NewPersistence(db *mongodbdriver.VirtualMongoClient) *Persistence {
-	if db == nil {
+func NewPersistence(cli *mongodbdriver.VirtualMongoClient) *Persistence {
+	if cli == nil {
 		panic(ErrDBNotInitialized)
 	}
 	return &Persistence{
-		db:      db,
+		cli:     cli,
 		pattern: PersistencePattern,
 	}
 }
@@ -40,7 +39,7 @@ func (p *Persistence) Start() error {
 	supervisor := actor.NewOneForOneStrategy(10, 1000, decider)
 
 	props := actor.PropsFromProducer(func() actor.Actor {
-		return NewPersistenceActor(p.db)
+		return NewPersistenceActor(p.cli)
 	}, actor.WithSupervisor(supervisor))
 
 	// 直接在Root下创建Actor
@@ -54,8 +53,9 @@ func (p *Persistence) Start() error {
 	return nil
 }
 
-// Poison 停止持久化系统, 同步等待
-func (p *Persistence) Poison(ctx context.Context) error {
+// GracefulStop 停止持久化系统, 同步等待
+// 系统会等待所有持久化请求处理完成后再停止
+func (p *Persistence) GracefulStop() error {
 	if p.actorPID != nil {
 		// 直接停止Actor
 		ctx := p.actorSystem.Root

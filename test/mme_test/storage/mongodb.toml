@@ -1,0 +1,27 @@
+# MongoDB 配置文件示例
+
+# MongoDB 连接 URI
+# 格式: mongodb://[username:password@]host1[:port1][,...hostN[:portN]][/[defaultauthdb][?options]]
+uri = "mongodb://localhost:27017"
+
+# 连接超时时间
+connect_timeout = "10s"
+
+# 连接池配置
+max_pool_size = 100        # 最大连接池大小
+min_pool_size = 10         # 最小连接池大小
+max_conn_idle_time = "5m"  # 连接最大空闲时间
+max_connecting = 2         # 最大并发连接数
+
+# 读写超时时间
+write_timeout = "15s"      # 写操作超时时间
+read_timeout = "15s"       # 读操作超时时间
+
+# 重试配置
+retry_writes = true        # 是否自动重试写操作
+retry_reads = true         # 是否自动重试读操作
+
+# 其他超时配置
+ping_timeout = "5s"        # Ping 超时时间
+disconnect_timeout = "10s" # 断开连接超时时间
+

@@ -94,6 +94,10 @@ type NestedPath struct {
 	parts []string
 }
 
+func NewNestedPath() *NestedPath {
+	return &NestedPath{parts: []string{}}
+}
+
 func (np *NestedPath) Field(name string) *NestedPath {
 	co := new(NestedPath)
 	copy(co.parts, np.parts)
