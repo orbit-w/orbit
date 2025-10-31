@@ -13,13 +13,14 @@ MME 架构定义了典型的四层结构，不局限于任何具体领域模型�
 ### 四层核心结构
 
 - **Entity（实体）**：业务载体，生命周期管理，不直接管理内部逻辑。
-- **Manager（管理器）**：聚合分片单元（如 map），以唯一 key 组织和管理多个 Module，负责查找、增删、全/增量同步。
+- **Manager（管理器）**：以单例模式或Map聚合编排Module单元，例如以map，唯一 key 组织和管理多个 Module，负责查找、增删、全/增量同步。
 - **Module（模块）**：功能单元，自由组合一组 Mechanism，定义完整业务/属性能力。
 - **Mechanism（机制）**：最小的可扩展数据和逻辑单元，专注每个方向的数据与行为。
 
 ### 自动生成规则
 
-- 所有结构均由 YAML → Proto → 代码自动生成，保持多端一致性。
+- 所有结构均由 YAML → Proto → go代码自动生成，保持多端一致性。
+- MME中Object定义和proto文件和go结构文件的定义是一一对应的。
 - 字段一旦上线，其 FieldIndex **不可更改、不可复用**，可删除但严禁插入。
 - 允许在结构“末尾”顺序追加字段。
 - Manager 层推荐 map/dictionary 扩展模式，横向分片。
@@ -27,6 +28,9 @@ MME 架构定义了典型的四层结构，不局限于任何具体领域模型�
 - Mechanism 支持标量、数组、map 等多种基础和复合类型。
 - 从 YAML 自动生成对应 protobuf、go/typescript 等多端代码。
 - 每层自动生成脏数据追踪、全量与增量同步接口。
+- 生成proto文件，默认生成optional字段。
+- Entity 对象，生成Proto message，默认自动生成Field Id int64 = 10000;
+- 自动生成DirtyBit和FieldIndex 常量，DirtyBit命名规则：{ObjName}DirtyBit{FieldName}, FieldIndex的命名规则：{ObjName}FieldIndex{FieldName}
 
 ---
 
