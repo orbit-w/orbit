@@ -37,6 +37,12 @@ type HeroMechanism struct {
 	Skills     map[int32]int32 `bson:"skills"`
 }
 
+func NewHeroMechanism() *HeroMechanism {
+	return &HeroMechanism{
+		Skills:     make(map[int32]int32),
+	}
+}
+
 // 数据-深拷贝
 func (m *HeroMechanism) DeepCopy(co *HeroMechanism) {
 	if m == nil || co == nil {

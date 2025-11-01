@@ -25,6 +25,13 @@ type HeroModule struct {
 	LevelUp *LevelUpMechanism `bson:"level_up"`
 }
 
+func NewHeroModule() *HeroModule {
+	return &HeroModule{
+		Base:    NewHeroMechanism(),
+		LevelUp: NewLevelUpMechanism(),
+	}
+}
+
 // 数据-深拷贝
 func (m *HeroModule) DeepCopy(co *HeroModule) {
 	if m == nil || co == nil {
@@ -83,15 +90,17 @@ func NewHeroModuleWrapper(data *HeroModule) *HeroModuleWrapper {
 	}
 
 	// 初始化嵌套的 Mechanism Wrapper
-	if data.Base != nil {
-		hm.BaseWrapper = NewHeroMechanismWrapper(data.Base)
-		hm.BaseWrapper.Link(hm.GetDirtyTracker(), HeroModuleDirtyBaseBit)
+	if data.Base == nil {
+		data.Base = NewHeroMechanism()
 	}
+	hm.BaseWrapper = NewHeroMechanismWrapper(data.Base)
+	hm.BaseWrapper.Link(hm.GetDirtyTracker(), HeroModuleDirtyBaseBit)
 
-	if data.LevelUp != nil {
-		hm.LevelUpWrapper = NewLevelUpMechanismWrapper(data.LevelUp)
-		hm.LevelUpWrapper.Link(hm.GetDirtyTracker(), HeroModuleDirtyLevelUpBit)
+	if data.LevelUp == nil {
+		data.LevelUp = NewLevelUpMechanism()
 	}
+	hm.LevelUpWrapper = NewLevelUpMechanismWrapper(data.LevelUp)
+	hm.LevelUpWrapper.Link(hm.GetDirtyTracker(), HeroModuleDirtyLevelUpBit)
 
 	return hm
 }

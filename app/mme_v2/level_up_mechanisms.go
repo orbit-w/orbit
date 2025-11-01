@@ -28,6 +28,10 @@ type LevelUpMechanism struct {
 	ConfId   int32 `bson:"conf_id"`
 }
 
+func NewLevelUpMechanism() *LevelUpMechanism {
+	return &LevelUpMechanism{}
+}
+
 // 数据-深拷贝
 func (m *LevelUpMechanism) DeepCopy(co *LevelUpMechanism) {
 	if m == nil || co == nil {

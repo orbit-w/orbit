@@ -6,4 +6,4 @@
 Entity:
   - PlayerEntity:
       #英雄模块
-      HeroManager HeroManager: 1
+      HeroManager HeroManager: 1 [blueprint:"access=all"]

@@ -26,6 +26,12 @@ type HeroManager struct {
 	HeroMap map[int64]*HeroModule `bson:"hero_map"`
 }
 
+func NewHeroManager() *HeroManager {
+	return &HeroManager{
+		HeroMap: make(map[int64]*HeroModule),
+	}
+}
+
 // 数据-深拷贝
 func (m *HeroManager) DeepCopy(co *HeroManager) {
 	if m == nil || co == nil {
