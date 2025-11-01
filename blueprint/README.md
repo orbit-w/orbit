@@ -31,6 +31,7 @@ MME 架构定义了典型的四层结构，不局限于任何具体领域模型�
 - 生成proto文件，默认生成optional字段。
 - Entity 对象，生成Proto message，默认自动生成Field Id int64 = 10000;
 - 自动生成DirtyBit和FieldIndex 常量，DirtyBit命名规则：{ObjName}DirtyBit{FieldName}, FieldIndex的命名规则：{ObjName}FieldIndex{FieldName}
+- FieldIndex 范围是 [0,63]
 
 ---
 
@@ -457,15 +458,22 @@ message Notify  { message ExpChange { int32 Exp = 1; Core.MMELocation Loc = 1000
 
 - 除 NetWall 外，MME 相关结构体的普通字段均生成为 `optional`（`proto3` 语义下的可选）以提升演进兼容性；`map` 与 `repeated` 不使用 `optional`。
 - 对于 `xmap<key, value> Field = id`，具体操作步骤：
--   1.按照范式XXXChange_{Field}，生成MessageName
+-   1.按照范式{Field}_XXXMapChangeRecord，生成变化记录MessageName
 -   1.生成 message MessageName , 包含三个字段：
--       1) common.ChangeType ChangeType = 1;
--       2) 字段名称是Key，类型根据xmap中指定的key类型设置。
--       3) 字段名称是Value，类型根据xmap中指定的value类型设置。
--   3.在结构体末尾生成对应的变化记录字段：`repeated MessageName MessageName = 1000 + id;`。
-- 对于Entity对象，自动生成唯一Id字段，类型是int64： `int64 XXXId = 10000;`
-- 对于Module/Manager/Mechanism对象，自动生成唯一Id字段，类型是int64： `int64 XXXId = 10000;`
-- 生成MME中Entity/Module/Manager/Mechanism四种结构体时，DirtyBit 标记位，默认 DirtyXXXIdBit int64 = 1 << 0. 其他字段根据MME yaml中定义的FieldIndex进行左移。
+-       1. common.ChangeType ChangeType = 1;
+-       2. 字段名称是Key，类型根据xmap中指定的key类型设置。
+-       3. 字段名称是Value，类型根据xmap中指定的value类型设置。
+-   3.在结构体末尾生成对应的变化记录字段：`repeated MessageName {Field}_XXXChangeList = 1000 + id;`。
+- 对于Entity对象：
+    1. 自动生成唯一Id字段，类型是int64： `int64 XXXId = 10000;`
+    2. FieldIndex的命名规范是{Object}FieldIndex{FieldName}
+    3. Id的FieldIndex默认是0.
+    4. 其他定义Field的FieldIndex从1开始，按YAML中字段定义顺序递增
+    5. DirtyBit生成规则：Dirty{ObjName}{FieldName}Bit int64 = 1 << FieldIndex
+- 对于Module/Manager/Mechanism对象：
+    1. FieldIndex的命名规范是{Object}FieldIndex{FieldName}
+    2. 定义的Field的FieldIndex从0开始，按YAML中字段定义顺序递增
+    3. DirtyBit生成规则：Dirty{ObjName}{FieldName}Bit int64 = 1 << FieldIndex
 
 示例1：
 ```yaml
@@ -478,10 +486,10 @@ Entity:
 ```protobuf
 syntax = "proto3";
 
-package entities;
+package MME;
 option go_package = "./mme";
 
-import "protocol/managers.proto";
+import "protocol/common.proto";
 // XXXId 是根据PlayerEntity结构体中Id字段自动化生成的，结构模式固定，不要修改。
 message PlayerEntity {
   managers.HeroManager HeroManager = 1;
@@ -514,7 +522,6 @@ option go_package = "./mme";
 import "protocol/common.proto";
 
 // 英雄机制
-// XXXId 是根据HeroMechanism结构体中Id字段自动化生成的。结构模式固定，不要修改。
 message HeroMechanism {
   optional int64 Id = 1;         // 英雄实例唯一Id
   optional int32 ConfId = 2;     // 英雄配置ID
@@ -522,16 +529,12 @@ message HeroMechanism {
   optional int32 UseTimes = 4;   // 英雄被使用次数
   map<int32, int32> Skills = 5; // 技能
 
-  repeated XXXChange_Skills XXXChange_Skills = 1005; // 技能变化
-
-  int64 XXXId = 10000; // 自动化生成MechanismId，范式，不可修改。
-}
-
-//XXXChange_{Skills} 是根据HeroMechanism结构体中Skills字段自动化生成的。结构模式固定，不要修改。
-message XXXChange_Skills {
-  common.ChangeType ChangeType = 1;
-  int32 Key = 2;
-  int32 Value = 3; 
+  message Skills_XXXMapChangeRecord {
+    MME.ChangeType ChangeType = 1;
+    int32 Key = 2;
+    int32 Value = 3; 
+  }
+  repeated Skills_XXXMapChangeRecord Skills_XXXChangeList = 1005; // 技能变化
 }
 ```
 
