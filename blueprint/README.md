@@ -29,10 +29,9 @@ MME 架构定义了典型的四层结构，不局限于任何具体领域模型�
 - 从 YAML 自动生成对应 protobuf、go/typescript 等多端代码。
 - 每层自动生成脏数据追踪、全量与增量同步接口。
 - 生成proto文件，默认生成optional字段。
-- Entity 对象，生成Proto message，默认自动生成Field Id int64 = 10000;
 - 自动生成DirtyBit和FieldIndex 常量，DirtyBit命名规则：{ObjName}Dirty{FieldName}Bit, FieldIndex的命名规则：{ObjName}FieldIndex{FieldName}
 - FieldIndex 范围是 [0,63]
-- 对于Entity对象，默认自动生成唯一Id字段,字段名称是XXXId，类型是int64： `int64 XXXId = 10000;`
+- 对于Entity对象，默认自动生成唯一Id字段,字段名称是XXXId，类型是int64： `int64 XXXId = 10000;`, 不可使用optional。
 ```protobuf
 syntax = "proto3";
 
