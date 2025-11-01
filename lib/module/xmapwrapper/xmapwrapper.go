@@ -71,11 +71,6 @@ func NewXMapWrapper[K comparable, PbValue any, WrapperValue Linkable[PbValue]](
 	if pbMap != nil && *pbMap != nil {
 		for key, pbValue := range *pbMap {
 			wrapper := wrapperFactory(pbValue)
-			// 使用LinkFactsAccessor链接到父对象和Key
-			tracker := func() {
-				link.mapAccessor.TrackSet(key)
-			}
-			wrapper.LinkFactsAccessor(link.parentTracker, link.parentBit, tracker)
 			link.wrapperMap[key] = wrapper
 		}
 	}
@@ -148,6 +143,27 @@ func (x *XMapWrapper[K, PbValue, WrapperValue]) Delete(key K) bool {
 	return false
 }
 
+func (x *XMapWrapper[K, PbValue, WrapperValue]) Reset(pbMap *map[K]PbValue, parentTracker *dt.DirtyTracker, parentBit int64) {
+	x.CleanLinks()
+
+	// 创建一个临时的DirtyMarker
+	marker := &tempDirtyMarker{
+		tracker: parentTracker,
+	}
+	x.pbMap = pbMap
+	x.mapAccessor = xmap.NewMapAccessorWithMarkerForRef(x.pbMap, marker, parentBit)
+
+	// 初始化现有的map元素
+	if pbMap != nil && *pbMap != nil {
+		for key, pbValue := range *pbMap {
+			wrapper := x.wrapperFactory(pbValue)
+			x.wrapperMap[key] = wrapper
+		}
+	}
+
+	x.SetParent(parentTracker, parentBit)
+}
+
 // Has 检查key是否存在
 func (x *XMapWrapper[K, PbValue, WrapperValue]) Has(key K) bool {
 	_, ok := x.wrapperMap[key]
@@ -174,6 +190,13 @@ func (x *XMapWrapper[K, PbValue, WrapperValue]) Range(f func(key K, wrapper Wrap
 
 // Clear 清空所有对象
 func (x *XMapWrapper[K, PbValue, WrapperValue]) Clear() {
+	x.CleanLinks()
+
+	// 清空protobuf map（通过MapAccessor）
+	x.mapAccessor.Clear()
+}
+
+func (x *XMapWrapper[K, PbValue, WrapperValue]) CleanLinks() {
 	// Unlink所有包装对象
 	for _, wrapper := range x.wrapperMap {
 		wrapper.Unlink()
@@ -181,9 +204,6 @@ func (x *XMapWrapper[K, PbValue, WrapperValue]) Clear() {
 
 	// 清空包装对象map
 	x.wrapperMap = make(map[K]WrapperValue)
-
-	// 清空protobuf map（通过MapAccessor）
-	x.mapAccessor.Clear()
 }
 
 // GetMapAccessor 获取MapAccessor（用于高级操作）
