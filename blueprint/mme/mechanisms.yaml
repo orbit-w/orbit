@@ -1,10 +1,5 @@
 #------机制蓝图 
 # 机制是游戏中的一个独立对象单元，可以包含多个数据结构
-# 自动生成proto文件时会生成机制的proto文件，文件名称为mechanisms.proto，文件内容为机制的定义。
-# 机制的定义和proto文件的定义是一一对应的，例如：LevelUpMechanism机制的定义和LevelUpMechanism.proto文件的定义是一一对应的。
-# 机制的定义和.go文件的定义是一一对应的，例如：LevelUpMechanism机制的定义和LevelUpMechanism.go文件的定义是一一对应的。
-# int32 CurLevel: 1 [blueprint:"access=all"]，int32类型的字段，字段名称为CurLevel，字段描述为当前等级，Field序号为1，数据访问权限为all，表示客户端和服务端都可以访问。
-# 生成proto文件，默认生成optional字段，如果需要生成required字段，可以在字段定义后面加上[blueprint:"required=true"]
 ---
 Mechanisms:
   #升级机制
@@ -28,14 +23,16 @@ Mechanisms:
           int32 Exp: 1
   #英雄机制
   - HeroMechanism:
+      #英雄实例唯一Id
+      int64 Id: 1 [blueprint:"access=all"]
       #英雄配置ID
-      int32 ConfId: 1 [blueprint:"access=all"]
+      int32 ConfId: 2 [blueprint:"access=all"]
       #玩家获得英雄的时间
-      int64 CreateTime: 2 [blueprint:"access=s"]
+      int64 CreateTime: 3 [blueprint:"access=s"]
       #英雄被使用次数
-      int32 UseTimes: 3 [blueprint:"access=all"]
+      int32 UseTimes: 4 [blueprint:"access=all"]
       #技能
-      xmap<int32, int32> Skills: 4 [blueprint:"access=all"]
+      xmap<int32, int32> Skills: 5 [blueprint:"access=all"]
   #手动解锁机制
   - ManualUnlockMechanism:
       #解锁状态

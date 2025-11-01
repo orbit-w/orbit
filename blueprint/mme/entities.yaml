@@ -1,13 +1,7 @@
 #实体定义蓝图
 ---
 #------Entity蓝图
-# 实体是游戏中的一个独立对象单元，可以包含多个模块
-# 自动生成proto文件时会生成实体的proto文件，文件名称为entities.proto，文件内容为实体的定义。
-# 实体的定义和proto文件的定义是一一对应的，例如：PlayerEntity实体的定义和PlayerEntity.proto文件的定义是一一对应的。
-# 实体的定义和.go文件的定义是一一对应的，例如：PlayerEntity实体的定义和PlayerEntity.go文件的定义是一一对应的。
-# 例如：HeroManager HeroManager: 1，HeroManager模块的定义和HeroManager字段，Field序号为1
-# 生成的proto/go struct，自动添加Id字段，Id字段类型为int64，字段名称为Id，字段描述为实例唯一Id，Field序号为10000，数据访问权限为all，表示客户端和服务端都可以访问。
-# 生成proto文件，默认生成optional字段，如果需要生成required字段，可以在字段定义后面加上[blueprint:"required=true"]
+# 实体是游戏中的一个独立对象单元，自由组合一组Manager管理器
 #Player实例
 Entity:
   - PlayerEntity:

@@ -3,11 +3,7 @@
 #------管理器蓝图 
 # 管理器是，游戏组织编排多个Module模块的容器
 # 管理器可以包含多个Module模块，每个Module模块可以包含多个Mechanism机制
-# 管理器的定义和proto文件的定义是一一对应的，例如：HeroManager管理器的定义和HeroManager.proto文件的定义是一一对应的。
-# 管理器的定义和.go文件的定义是一一对应的，例如：HeroManager管理器的定义和HeroManager.go文件的定义是一一对应的。
-#  map<int64, HeroModule> HeroMap: 1 ，生成proto文件时会生成HeroMap字段，字段类型为map<int64, HeroModule>，字段名称为HeroMap，字段描述为英雄模块映射，Field序号为1
-# 生成proto文件，默认生成optional字段，如果需要生成required字段，可以在字段定义后面加上[blueprint:"required=true"]
 Managers:
   - HeroManager:
-    map<int64, HeroModule> HeroMap: 1
+    xmap<int64, HeroModule> HeroMap: 1
 ---
