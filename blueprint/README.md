@@ -30,8 +30,23 @@ MME 架构定义了典型的四层结构，不局限于任何具体领域模型�
 - 每层自动生成脏数据追踪、全量与增量同步接口。
 - 生成proto文件，默认生成optional字段。
 - Entity 对象，生成Proto message，默认自动生成Field Id int64 = 10000;
-- 自动生成DirtyBit和FieldIndex 常量，DirtyBit命名规则：{ObjName}DirtyBit{FieldName}, FieldIndex的命名规则：{ObjName}FieldIndex{FieldName}
+- 自动生成DirtyBit和FieldIndex 常量，DirtyBit命名规则：{ObjName}Dirty{FieldName}Bit, FieldIndex的命名规则：{ObjName}FieldIndex{FieldName}
 - FieldIndex 范围是 [0,63]
+- 对于Entity对象，默认自动生成唯一Id字段,字段名称是XXXId，类型是int64： `int64 XXXId = 10000;`
+```protobuf
+syntax = "proto3";
+
+package MME;
+option go_package = "./mme";
+
+import "protocol/common.proto";
+// XXXId 是根据PlayerEntity结构体中Id字段自动化生成的，结构模式固定，不要修改。
+message PlayerEntity {
+  managers.HeroManager HeroManager = 1;
+
+  int64 XXXId = 10000;
+}
+```
 
 ---
 
@@ -74,27 +89,31 @@ AMechanism:
 
 ## 增量 map 字段自动生成规则
 
-在 blueprint YAML 中声明 map 字段（如 map<int64, SomeModule> Items: 1），代码生成工具会自动为每个 map 字段生成高效的全量和增量同步支持，规则如下：
+在 blueprint YAML 中声明 xmap 字段（如 xmap<int64, SomeModule> Items: 1），代码生成工具会自动为每个 xmap 字段生成高效的全量和增量同步支持。
 
 ### 1. 自动 proto 字段生成与命名范式
 
-- 每个 map<KeyType, ValueType> 字段 `FieldName` ，自动生成：
-  - `map<KeyType, ValueType> FieldName = N;` // 全量同步
-  - `repeated <Struct>_<FieldName>_XXXMapChangeRecord FieldName_XXXChangeList = 1000+N;` // 增量同步
+- 除 NetWall 外，MME 相关结构体的普通字段均生成为 `optional`（`proto3` 语义下的可选）以提升演进兼容性；`map` 与 `repeated` 不使用 `optional`。
+- Yaml文件中，每个 xmap<KeyType, ValueType> 字段 `FieldName` ，自动生成：
+  - `map<KeyType, ValueType> FieldName = N;` // 全量同步（xmap 在 YAML 中声明，proto 中生成为标准 map）
+  - `repeated <FieldName>_XXXMapChangeRecord FieldName_XXXChangeList = 1000+N;` // 增量同步（编号范围 1000-9999 为保留编号区间）
   - 对应 change record message：
 
 ```protobuf
-message <Struct>_<FieldName>_XXXMapChangeRecord {
-  <KeyType> key = 1;
-  <ValueType> value = 2;
-  bool isDelete = 3; // 若 true 为删除，false 为新增/变更
+message <FieldName>_XXXMapChangeRecord {
+  <KeyType> Key = 1;
+  <ValueType> Value = 2;
+  bool IsDelete = 3; // 若 true 为删除，false 为新增/变更；删除操作时 Value 字段可忽略
 }
 ```
+注意：`{FieldName}` 会被替换为实际的字段名，如 `Skills`、`HeroMap` 等。
 
 ### 2. 典型同步流程
 
 - **全量同步**：首次下发时，直接同步 map 字段。
-- **增量模式**：高频变更场景仅需同步 `FieldName_XXXChangeList`，用 isDelete 区分 set/delete，实现与本地 map 状态一致。
+- **增量模式**：高频变更场景仅需同步 `FieldName_XXXChangeList`，用 `IsDelete` 区分 set/delete：
+  - `IsDelete = false`：新增或更新操作，需要提供 `Value` 字段
+  - `IsDelete = true`：删除操作，`Value` 字段可忽略（但 proto 定义中仍需包含该字段）
 - **客户端/服务端和数据库均可只消费变更记录，恢复 map 状态而无需全表覆盖**。
 
 ### 3. 规则摘要
@@ -107,7 +126,57 @@ message <Struct>_<FieldName>_XXXMapChangeRecord {
 
 ---
 
-## Go自动生成map字段Accessor规则
+## Go代码自动生成规则：
+
+### Go结构体FieldIndex/FieldDirty 常量自动生成规则：
+- 对于Entity对象：
+    1. FieldIndex的命名规范是{Object}FieldIndex{FieldName}
+    2. Id的FieldIndex默认是0.
+    3. 其他定义Field的FieldIndex从1开始，按YAML中字段定义顺序递增
+    4. DirtyBit生成规则：Dirty{ObjName}{FieldName}Bit int64 = 1 << FieldIndex
+- 对于Module/Manager/Mechanism对象：
+    1. FieldIndex的命名规范是{Object}FieldIndex{FieldName}
+    2. 定义的Field的FieldIndex从0开始，按YAML中字段定义顺序递增
+    3. DirtyBit生成规则：Dirty{ObjName}{FieldName}Bit int64 = 1 << FieldIndex
+
+示例:
+```yaml
+---
+Mechanisms:
+  #英雄机制
+  - HeroMechanism:
+    #英雄实例唯一Id
+    int64 Id: 1 [blueprint:"access=all"]
+    #英雄配置ID
+    int32 ConfId: 2 [blueprint:"access=all"]
+    #玩家获得英雄的时间
+    int64 CreateTime: 3 [blueprint:"access=s"]
+    #英雄被使用次数
+    int32 UseTimes: 4 [blueprint:"access=all"]
+    #技能
+    xmap<int32, int32> Skills: 5 [blueprint:"access=all"]
+---
+```
+```go
+const (
+	HeroMechanismFieldIndexId = uint8(0)
+	HeroMechanismFieldIndexConfId
+	HeroMechanismFieldIndexCreateTime
+	HeroMechanismFieldIndexUseTimes
+	HeroMechanismFieldIndexSkills
+)
+
+// Dirty bits for Mechanism fields
+const (
+	HeroMechanismDirtyIdBit         int64 = 1 << HeroMechanismFieldIndexId
+	HeroMechanismDirtyConfIdBit     int64 = 1 << HeroMechanismFieldIndexConfId
+	HeroMechanismDirtyCreateTimeBit int64 = 1 << HeroMechanismFieldIndexCreateTime
+	HeroMechanismDirtyUseTimesBit   int64 = 1 << HeroMechanismFieldIndexUseTimes
+	HeroMechanismDirtySkillsBit     int64 = 1 << HeroMechanismFieldIndexSkills
+)
+```
+
+### map字段Accessor规则
 
 在Go代码自动生成阶段，map字段会根据Value类型自动选择访问器模式：
 
@@ -406,19 +475,19 @@ Mechanisms:
 
 | YAML 文件 | Proto 文件 | 说明 |
 |-----------|------------|------|
-| `blueprint/mme/headfile.yaml` | `cspb/common.proto` | 通用数据结构与字段选项 |
-| `blueprint/mme/mechanisms.yaml` | `cspb/structs.proto` | 机制数据结构 |
-| `blueprint/mme/modules.yaml` | `cspb/structs.proto` | 模块组合结构 |
-| `blueprint/mme/manager.yaml` | `cspb/structs.proto` | 管理器结构（map 到 Module） |
-| `blueprint/mme/entities.yaml` | `cspb/structs.proto` | 实体结构（引用 Manager） |
-| `blueprint/netwall/Core.yaml` | `cspb/request.proto`, `cspb/notify.proto`, `cspb/structs.proto` | 核心网络墙 |
-| `blueprint/netwall/mme.yaml` | `cspb/request.proto`, `cspb/notify.proto` | MME 网络墙 |
-| `blueprint/netwall/Sample.yaml` | `cspb/request.proto`, `cspb/notify.proto` | 示例网络墙 |
+| `blueprint/mme/headfile.yaml` | `protocol/common.proto` | 通用数据结构与字段选项 |
+| `blueprint/mme/mechanisms.yaml` | `protocol/mechanisms.proto` | 机制数据结构 |
+| `blueprint/mme/modules.yaml` | `protocol/modules.proto` | 模块组合结构 |
+| `blueprint/mme/manager.yaml` | `protocol/managers.proto` | 管理器结构（map 到 Module） |
+| `blueprint/mme/entities.yaml` | `protocol/entities.proto` | 实体结构（引用 Manager） |
+| `blueprint/netwall/Core.yaml` | `protocol/request.proto`, `protocol/notify.proto`, `protocol/structs.proto` | 核心网络墙 |
+| `blueprint/netwall/mme.yaml` | `protocol/request.proto`, `protocol/notify.proto` | MME 网络墙 |
+| `blueprint/netwall/Sample.yaml` | `protocol/request.proto`, `protocol/notify.proto` | 示例网络墙 |
 
 ### 2. 包名与 go_package
 
-- 所有 Proto 统一使用 `package pb;`
-- 统一 `option go_package = "gitee.com/orbit-w/orbit/app/proto/pb";`
+- 所有 Proto 统一使用 `package MME;`
+- 统一 `option go_package = "./mme";`（使用相对路径，实际生成路径为 `app/proto/mme`）
 
 ### 3. 网络墙消息转换
 
@@ -441,6 +510,8 @@ message Request {
 
 - 从 Mechanism 的 `Requests/Notifies` 派生出的对外接口，最终体现在 `netwall/mme.yaml` 中。
 - 为保持一致性，网络层接口中的 `Core.MMELocation Loc` 使用保留编号 `1000`；若 YAML 已显式编写 Loc（如本仓库的 `netwall/mme.yaml`），应保证其为 `1000`。若未显式声明，生成器会自动注入。
+- **保留编号范围**：
+  - `1000`：Request请求中，保留用于 `Loc` 字段
 
 示例（来自当前 YAML 的 MME 网络墙）：
 ```protobuf
@@ -454,100 +525,21 @@ message Request {
 message Notify  { message ExpChange { int32 Exp = 1; Core.MMELocation Loc = 1000; } }
 ```
 
-### 5. 数据结构转换（MME）
-
-- 除 NetWall 外，MME 相关结构体的普通字段均生成为 `optional`（`proto3` 语义下的可选）以提升演进兼容性；`map` 与 `repeated` 不使用 `optional`。
-- 对于 `xmap<key, value> Field = id`，具体操作步骤：
--   1.按照范式{Field}_XXXMapChangeRecord，生成变化记录MessageName
--   1.生成 message MessageName , 包含三个字段：
--       1. common.ChangeType ChangeType = 1;
--       2. 字段名称是Key，类型根据xmap中指定的key类型设置。
--       3. 字段名称是Value，类型根据xmap中指定的value类型设置。
--   3.在结构体末尾生成对应的变化记录字段：`repeated MessageName {Field}_XXXChangeList = 1000 + id;`。
-- 对于Entity对象：
-    1. 自动生成唯一Id字段，类型是int64： `int64 XXXId = 10000;`
-    2. FieldIndex的命名规范是{Object}FieldIndex{FieldName}
-    3. Id的FieldIndex默认是0.
-    4. 其他定义Field的FieldIndex从1开始，按YAML中字段定义顺序递增
-    5. DirtyBit生成规则：Dirty{ObjName}{FieldName}Bit int64 = 1 << FieldIndex
-- 对于Module/Manager/Mechanism对象：
-    1. FieldIndex的命名规范是{Object}FieldIndex{FieldName}
-    2. 定义的Field的FieldIndex从0开始，按YAML中字段定义顺序递增
-    3. DirtyBit生成规则：Dirty{ObjName}{FieldName}Bit int64 = 1 << FieldIndex
-
-示例1：
-```yaml
-#Player实例
-Entity:
-  - PlayerEntity:
-      #英雄模块
-      HeroManager HeroManager: 1
-```
-```protobuf
-syntax = "proto3";
-
-package MME;
-option go_package = "./mme";
-
-import "protocol/common.proto";
-// XXXId 是根据PlayerEntity结构体中Id字段自动化生成的，结构模式固定，不要修改。
-message PlayerEntity {
-  managers.HeroManager HeroManager = 1;
-
-  int64 XXXId = 10000;
-}
-```
-示例2:
-```yaml
----
-Mechanisms:
-  #英雄机制
-  - HeroMechanism:
-      #英雄配置ID
-      int32 ConfId: 1 [blueprint:"access=all"]
-      #玩家获得英雄的时间
-      int64 CreateTime: 2
-      #英雄被使用次数
-      int32 UseTimes: 3
-      #技能
-      xmap<int32, int32> Skills: 4 [blueprint:"access=all"]
----
-```
-```protobuf
-syntax = "proto3";
-
-package mechanisms;
-option go_package = "./mme";
-
-import "protocol/common.proto";
-
-// 英雄机制
-message HeroMechanism {
-  optional int64 Id = 1;         // 英雄实例唯一Id
-  optional int32 ConfId = 2;     // 英雄配置ID
-  optional int64 CreateTime = 3; // 玩家获得英雄的时间
-  optional int32 UseTimes = 4;   // 英雄被使用次数
-  map<int32, int32> Skills = 5; // 技能
-
-  message Skills_XXXMapChangeRecord {
-    MME.ChangeType ChangeType = 1;
-    int32 Key = 2;
-    int32 Value = 3; 
-  }
-  repeated Skills_XXXMapChangeRecord Skills_XXXChangeList = 1005; // 技能变化
-}
-```
-
-
-### 6. 导入语句
+### 7. 导入语句
 
 - `request.proto`、`notify.proto` 需要导入 `structs.proto` 与 `common.proto`
 - `structs.proto` 需要导入 `actor.proto`（如使用 PID 类型）
 - `common.proto` 无需导入其他文件
 
-### 7. 注释保留
+### 8. 注释保留
 
 - YAML 中 `#` 注释转换为 Proto 中 `//` 注释，并尽量保留层级。
+
+### 9. 字段访问权限（access）的实际应用：
+- 1. access=all: 客户端和服务端都可以读写。
+- 2. access=s: 仅服务端可读写，客户端只读。
+- 3. access=c: 仅客户端可读写，服务端只读。
+- 4. 生成器应在Go代码中添加相应的访问控制逻辑。
 
 ## 最佳实践
 
