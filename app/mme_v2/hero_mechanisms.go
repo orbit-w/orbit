@@ -297,14 +297,13 @@ func (m *HeroMechanismWrapper) ToIncrementalProtoWithContext(ctx mmemodel.SyncCo
 			case xmap.SetOperation:
 				v, _ := m.skillsAccessor.Get(key)
 				incremental.Skills_XXXChangeList = append(incremental.Skills_XXXChangeList, &mme.HeroMechanism_Skills_XXXMapChangeRecord{
-					ChangeType: mme.ChangeType_CHANGE_TYPE_SET,
-					Key:        key,
-					Value:      v,
+					Key:   key,
+					Value: v,
 				})
 			case xmap.DeleteOperation:
 				incremental.Skills_XXXChangeList = append(incremental.Skills_XXXChangeList, &mme.HeroMechanism_Skills_XXXMapChangeRecord{
-					ChangeType: mme.ChangeType_CHANGE_TYPE_DELETE,
-					Key:        key,
+					Key:      key,
+					IsDelete: true,
 				})
 			}
 			return true

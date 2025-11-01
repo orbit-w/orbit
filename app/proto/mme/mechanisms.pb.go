@@ -267,9 +267,9 @@ func (x *WearMechanism) GetConfId() int32 {
 
 type HeroMechanism_Skills_XXXMapChangeRecord struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ChangeType    ChangeType             `protobuf:"varint,1,opt,name=ChangeType,proto3,enum=MME.ChangeType" json:"ChangeType,omitempty"`
-	Key           int32                  `protobuf:"varint,2,opt,name=Key,proto3" json:"Key,omitempty"`
-	Value         int32                  `protobuf:"varint,3,opt,name=Value,proto3" json:"Value,omitempty"`
+	Key           int32                  `protobuf:"varint,1,opt,name=Key,proto3" json:"Key,omitempty"`
+	Value         int32                  `protobuf:"varint,2,opt,name=Value,proto3" json:"Value,omitempty"`
+	IsDelete      bool                   `protobuf:"varint,3,opt,name=IsDelete,proto3" json:"IsDelete,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -304,13 +304,6 @@ func (*HeroMechanism_Skills_XXXMapChangeRecord) Descriptor() ([]byte, []int) {
 	return file_protocol_mechanisms_proto_rawDescGZIP(), []int{1, 1}
 }
 
-func (x *HeroMechanism_Skills_XXXMapChangeRecord) GetChangeType() ChangeType {
-	if x != nil {
-		return x.ChangeType
-	}
-	return ChangeType_CHANGE_TYPE_NONE
-}
-
 func (x *HeroMechanism_Skills_XXXMapChangeRecord) GetKey() int32 {
 	if x != nil {
 		return x.Key
@@ -325,18 +318,25 @@ func (x *HeroMechanism_Skills_XXXMapChangeRecord) GetValue() int32 {
 	return 0
 }
 
+func (x *HeroMechanism_Skills_XXXMapChangeRecord) GetIsDelete() bool {
+	if x != nil {
+		return x.IsDelete
+	}
+	return false
+}
+
 var File_protocol_mechanisms_proto protoreflect.FileDescriptor
 
 const file_protocol_mechanisms_proto_rawDesc = "" +
 	"\n" +
-	"\x19protocol/mechanisms.proto\x12\x03MME\x1a\x15protocol/common.proto\"\x90\x01\n" +
+	"\x19protocol/mechanisms.proto\x12\x03MME\"\x90\x01\n" +
 	"\x10LevelUpMechanism\x12\x1f\n" +
 	"\bCurLevel\x18\x01 \x01(\x05H\x00R\bCurLevel\x88\x01\x01\x12\x1b\n" +
 	"\x06CurExp\x18\x02 \x01(\x05H\x01R\x06CurExp\x88\x01\x01\x12\x1b\n" +
 	"\x06ConfId\x18\x03 \x01(\x05H\x02R\x06ConfId\x88\x01\x01B\v\n" +
 	"\t_CurLevelB\t\n" +
 	"\a_CurExpB\t\n" +
-	"\a_ConfId\"\x80\x04\n" +
+	"\a_ConfId\"\xeb\x03\n" +
 	"\rHeroMechanism\x12\x13\n" +
 	"\x02Id\x18\x01 \x01(\x03H\x00R\x02Id\x88\x01\x01\x12\x1b\n" +
 	"\x06ConfId\x18\x02 \x01(\x05H\x01R\x06ConfId\x88\x01\x01\x12#\n" +
@@ -348,13 +348,11 @@ const file_protocol_mechanisms_proto_rawDesc = "" +
 	"\x14Skills_XXXChangeList\x18\xed\a \x03(\v2,.MME.HeroMechanism.Skills_XXXMapChangeRecordR\x13SkillsXXXChangeList\x1a9\n" +
 	"\vSkillsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\x05R\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01\x1at\n" +
-	"\x19Skills_XXXMapChangeRecord\x12/\n" +
-	"\n" +
-	"ChangeType\x18\x01 \x01(\x0e2\x0f.MME.ChangeTypeR\n" +
-	"ChangeType\x12\x10\n" +
-	"\x03Key\x18\x02 \x01(\x05R\x03Key\x12\x14\n" +
-	"\x05Value\x18\x03 \x01(\x05R\x05ValueB\x05\n" +
+	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01\x1a_\n" +
+	"\x19Skills_XXXMapChangeRecord\x12\x10\n" +
+	"\x03Key\x18\x01 \x01(\x05R\x03Key\x12\x14\n" +
+	"\x05Value\x18\x02 \x01(\x05R\x05Value\x12\x1a\n" +
+	"\bIsDelete\x18\x03 \x01(\bR\bIsDeleteB\x05\n" +
 	"\x03_IdB\t\n" +
 	"\a_ConfIdB\r\n" +
 	"\v_CreateTimeB\v\n" +
@@ -392,21 +390,19 @@ var file_protocol_mechanisms_proto_goTypes = []any{
 	(*WearMechanism)(nil),         // 3: MME.WearMechanism
 	nil,                           // 4: MME.HeroMechanism.SkillsEntry
 	(*HeroMechanism_Skills_XXXMapChangeRecord)(nil), // 5: MME.HeroMechanism.Skills_XXXMapChangeRecord
-	nil,             // 6: MME.ManualUnlockMechanism.UnlockMapEntry
-	nil,             // 7: MME.WearMechanism.WearMapEntry
-	(ChangeType)(0), // 8: MME.ChangeType
+	nil, // 6: MME.ManualUnlockMechanism.UnlockMapEntry
+	nil, // 7: MME.WearMechanism.WearMapEntry
 }
 var file_protocol_mechanisms_proto_depIdxs = []int32{
 	4, // 0: MME.HeroMechanism.Skills:type_name -> MME.HeroMechanism.SkillsEntry
 	5, // 1: MME.HeroMechanism.Skills_XXXChangeList:type_name -> MME.HeroMechanism.Skills_XXXMapChangeRecord
 	6, // 2: MME.ManualUnlockMechanism.UnlockMap:type_name -> MME.ManualUnlockMechanism.UnlockMapEntry
 	7, // 3: MME.WearMechanism.WearMap:type_name -> MME.WearMechanism.WearMapEntry
-	8, // 4: MME.HeroMechanism.Skills_XXXMapChangeRecord.ChangeType:type_name -> MME.ChangeType
-	5, // [5:5] is the sub-list for method output_type
-	5, // [5:5] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	4, // [4:4] is the sub-list for method output_type
+	4, // [4:4] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_protocol_mechanisms_proto_init() }
@@ -414,7 +410,6 @@ func file_protocol_mechanisms_proto_init() {
 	if File_protocol_mechanisms_proto != nil {
 		return
 	}
-	file_protocol_common_proto_init()
 	file_protocol_mechanisms_proto_msgTypes[0].OneofWrappers = []any{}
 	file_protocol_mechanisms_proto_msgTypes[1].OneofWrappers = []any{}
 	file_protocol_mechanisms_proto_msgTypes[3].OneofWrappers = []any{}

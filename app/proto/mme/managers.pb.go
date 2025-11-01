@@ -75,9 +75,9 @@ func (x *HeroManager) GetHeroMap_XXXChangeList() []*HeroManager_HeroMap_XXXMapCh
 
 type HeroManager_HeroMap_XXXMapChangeRecord struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Key           int64                  `protobuf:"varint,1,opt,name=key,proto3" json:"key,omitempty"`
-	Value         *HeroModule            `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
-	IsDelete      bool                   `protobuf:"varint,3,opt,name=isDelete,proto3" json:"isDelete,omitempty"`
+	Key           int64                  `protobuf:"varint,1,opt,name=Key,proto3" json:"Key,omitempty"`
+	Value         *HeroModule            `protobuf:"bytes,2,opt,name=Value,proto3" json:"Value,omitempty"`
+	IsDelete      bool                   `protobuf:"varint,3,opt,name=IsDelete,proto3" json:"IsDelete,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -145,9 +145,9 @@ const file_protocol_managers_proto_rawDesc = "" +
 	"\x03key\x18\x01 \x01(\x03R\x03key\x12%\n" +
 	"\x05value\x18\x02 \x01(\v2\x0f.MME.HeroModuleR\x05value:\x028\x01\x1aq\n" +
 	"\x1aHeroMap_XXXMapChangeRecord\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\x03R\x03key\x12%\n" +
-	"\x05value\x18\x02 \x01(\v2\x0f.MME.HeroModuleR\x05value\x12\x1a\n" +
-	"\bisDelete\x18\x03 \x01(\bR\bisDeleteB\aZ\x05./mmeb\x06proto3"
+	"\x03Key\x18\x01 \x01(\x03R\x03Key\x12%\n" +
+	"\x05Value\x18\x02 \x01(\v2\x0f.MME.HeroModuleR\x05Value\x12\x1a\n" +
+	"\bIsDelete\x18\x03 \x01(\bR\bIsDeleteB\aZ\x05./mmeb\x06proto3"
 
 var (
 	file_protocol_managers_proto_rawDescOnce sync.Once
@@ -172,7 +172,7 @@ var file_protocol_managers_proto_depIdxs = []int32{
 	1, // 0: MME.HeroManager.HeroMap:type_name -> MME.HeroManager.HeroMapEntry
 	2, // 1: MME.HeroManager.HeroMap_XXXChangeList:type_name -> MME.HeroManager.HeroMap_XXXMapChangeRecord
 	3, // 2: MME.HeroManager.HeroMapEntry.value:type_name -> MME.HeroModule
-	3, // 3: MME.HeroManager.HeroMap_XXXMapChangeRecord.value:type_name -> MME.HeroModule
+	3, // 3: MME.HeroManager.HeroMap_XXXMapChangeRecord.Value:type_name -> MME.HeroModule
 	4, // [4:4] is the sub-list for method output_type
 	4, // [4:4] is the sub-list for method input_type
 	4, // [4:4] is the sub-list for extension type_name
