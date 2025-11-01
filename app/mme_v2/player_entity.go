@@ -142,3 +142,17 @@ func (w *PlayerEntityWrapper) DeepCopyTo(copy *PlayerEntity) {
 	// 拷贝所有 HeroModule
 	w.HeroManagerWrapper.DeepCopyTo(copy.HeroManager)
 }
+
+// MatchesAll 判断字段是否匹配所有类型标记
+func (w *PlayerEntityWrapper) MatchesAll(fieldID uint8, fieldTypes ...fieldmeta.FieldType) bool {
+	return w.fieldMetas.MatchesAll(fieldID, fieldTypes...)
+}
+
+// ToProto 将 PlayerEntity 数据转换为完整的 protobuf 结构体
+func (w *PlayerEntityWrapper) ToProto() *mme.PlayerEntity {
+	if w == nil || w.data == nil {
+		return nil
+	}
+
+	return w.data.ToProto()
+}
