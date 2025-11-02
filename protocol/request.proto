@@ -8,16 +8,16 @@ import "protocol/structs.proto";
 import "protocol/common.proto";
 
 message Request {
-  message Rsp {
+  message AskLevelUp {
+  }
+
+  message SearchBook {
   }
 
   message HeartBeat {
   }
 
   message RequestB {
-  }
-
-  message Rsp {
   }
 
   message Rsp {

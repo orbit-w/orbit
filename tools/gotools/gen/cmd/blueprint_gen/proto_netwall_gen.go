@@ -90,17 +90,12 @@ func (g *ProtoGenerator) generateRequestProto(outputDir string, allRequests map[
 	sb.WriteString("message Request {\n")
 	
 	// 生成所有 NetWall 的 Request
-	for netwallName, requests := range allRequests {
+	for _, requests := range allRequests {
 		for _, req := range requests {
 			sb.WriteString(fmt.Sprintf("  message %s {\n", req.Name))
 			
 			// 生成字段
 			for _, field := range req.Fields {
-				// MME NetWall 需要确保 Loc 字段存在（编号 1000）
-				if netwallName == "MME" && field.Number == 1000 && !req.HasMMELocation() {
-					req.EnsureMMELocation()
-				}
-				
 				protoType := ToProtoType(field.Type)
 				sb.WriteString(fmt.Sprintf("    %s %s = %d;\n", protoType, field.Name, field.Number))
 			}
@@ -138,17 +133,12 @@ func (g *ProtoGenerator) generateNotifyProto(outputDir string, allNotifies map[s
 	sb.WriteString("message Notify {\n")
 	
 	// 生成所有 NetWall 的 Notify
-	for netwallName, notifies := range allNotifies {
+	for _, notifies := range allNotifies {
 		for _, notify := range notifies {
 			sb.WriteString(fmt.Sprintf("  message %s {\n", notify.Name))
 			
 			// 生成字段
 			for _, field := range notify.Fields {
-				// MME NetWall 需要确保 Loc 字段存在（编号 1000）
-				if netwallName == "MME" && field.Number == 1000 && !notify.HasMMELocation() {
-					notify.EnsureMMELocation()
-				}
-				
 				protoType := ToProtoType(field.Type)
 				sb.WriteString(fmt.Sprintf("    %s %s = %d;\n", protoType, field.Name, field.Number))
 			}

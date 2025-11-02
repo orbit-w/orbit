@@ -6,14 +6,12 @@ option go_package = "./mme";
 
 import "protocol/common.proto";
 
-// 升级机制
 message LevelUpMechanism {
   optional int32 CurLevel = 1;
   optional int32 CurExp = 2;
   optional int32 ConfId = 3;
 }
 
-// 英雄机制
 message HeroMechanism {
   optional int64 Id = 1;
   optional int32 ConfId = 2;
@@ -29,12 +27,10 @@ message HeroMechanism {
   repeated Skills_XXXMapChangeRecord Skills_XXXChangeList = 1005; // Skills变化
 }
 
-// 手动解锁机制
 message ManualUnlockMechanism {
   map<int32, bool> UnlockMap = 1;
 }
 
-// 穿戴机制
 message WearMechanism {
   map<int32, int32> WearMap = 1;
   optional int32 ConfId = 2;

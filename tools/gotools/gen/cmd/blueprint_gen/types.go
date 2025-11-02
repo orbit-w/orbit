@@ -104,10 +104,10 @@ type Entity struct {
 
 // HeadFileConfig 头文件配置
 type HeadFileConfig struct {
-	EntityFields              map[string]interface{}
-	ModuleFields              map[string]interface{}
+	EntityFields              map[string]any
+	ModuleFields              map[string]any
 	ModuleStorageOption       []string
-	MechanismFields           map[string]interface{}
+	MechanismFields           map[string]any
 	MechanismDataFieldOptions map[string]FieldOptionDefinition
 	CommonDataStructs         []DataStruct
 }

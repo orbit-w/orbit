@@ -198,31 +198,3 @@ func parseNetWallNotify(notifyItem interface{}) NetWallMessage {
 	return notify
 }
 
-// HasMMELocation 检查是否有 MMELocation 字段（编号 1000）
-func (req *NetWallMessage) HasMMELocation() bool {
-	for _, field := range req.Fields {
-		if field.Number == 1000 {
-			return true
-		}
-	}
-	return false
-}
-
-// EnsureMMELocation 确保 MMELocation 字段存在（仅对 MME NetWall）
-func (req *NetWallMessage) EnsureMMELocation() {
-	if req.HasMMELocation() {
-		return
-	}
-	
-	// 添加 MMELocation 字段
-	locField := Field{
-		Name:   "Loc",
-		Number: 1000,
-		Type: FieldType{
-			ValueType: "Core.MMELocation",
-		},
-	}
-	
-	req.Fields = append(req.Fields, locField)
-}
-

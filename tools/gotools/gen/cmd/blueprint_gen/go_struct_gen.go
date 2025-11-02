@@ -118,7 +118,6 @@ func (g *GoStructGenerator) generateMechanismFiles(outputDir string) error {
 		sb.WriteString("}\n\n")
 		
 		// 生成 ToProto 方法
-		sb.WriteString(fmt.Sprintf("// 数据-转换为protobuf\n"))
 		sb.WriteString(fmt.Sprintf("func (m *%s) ToProto() *mme.%s {\n", mech.Name, mech.Name))
 		sb.WriteString("\tif m == nil {\n")
 		sb.WriteString("\t\treturn nil\n")

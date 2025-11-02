@@ -21,7 +21,6 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// 升级机制
 type LevelUpMechanism struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	CurLevel      *int32                 `protobuf:"varint,1,opt,name=CurLevel,proto3,oneof" json:"CurLevel,omitempty"`
@@ -82,7 +81,6 @@ func (x *LevelUpMechanism) GetConfId() int32 {
 	return 0
 }
 
-// 英雄机制
 type HeroMechanism struct {
 	state                protoimpl.MessageState                     `protogen:"open.v1"`
 	Id                   *int64                                     `protobuf:"varint,1,opt,name=Id,proto3,oneof" json:"Id,omitempty"`
@@ -167,7 +165,6 @@ func (x *HeroMechanism) GetSkills_XXXChangeList() []*HeroMechanism_Skills_XXXMap
 	return nil
 }
 
-// 手动解锁机制
 type ManualUnlockMechanism struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	UnlockMap     map[int32]bool         `protobuf:"bytes,1,rep,name=UnlockMap,proto3" json:"UnlockMap,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
@@ -212,7 +209,6 @@ func (x *ManualUnlockMechanism) GetUnlockMap() map[int32]bool {
 	return nil
 }
 
-// 穿戴机制
 type WearMechanism struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	WearMap       map[int32]int32        `protobuf:"bytes,1,rep,name=WearMap,proto3" json:"WearMap,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
