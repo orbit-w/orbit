@@ -144,6 +144,27 @@ func (m *HeroModuleWrapper) ClearAllDirtyFlags() {
 	}
 }
 
+// Reset 所有增量同步容器不会记录删除/Set变化记录
+// 通过新数据对应修改所有字段
+func (m *HeroModuleWrapper) Reset(newData *HeroModule) {
+	if m == nil || m.data == nil {
+		return
+	}
+
+	// 重新构建脏标系统
+	m.IDirtyFlag.ClearAllDirty()
+
+	// 加载 Base 数据
+	if m.BaseWrapper != nil {
+		m.BaseWrapper.Reset(NewHeroMechanism())
+	}
+
+	if m.LevelUpWrapper != nil {
+		// 加载 LevelUp 数据
+		m.LevelUpWrapper.Reset(NewLevelUpMechanism())
+	}
+}
+
 // BuildMongoUpdate 构建MongoDB更新操作
 func (m *HeroModuleWrapper) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder, path *mgo_builder.NestedPath) {
 	if m == nil {
@@ -213,18 +234,11 @@ func (m *HeroModuleWrapper) FromProto(pb *mme.HeroModule) {
 	}
 
 	// 加载 Base 数据
-	if pb.Base != nil {
-		m.data.Base = &HeroMechanism{}
-		m.BaseWrapper = NewHeroMechanismWrapper(m.data.Base)
-		m.BaseWrapper.Link(m.GetDirtyTracker(), HeroModuleDirtyBaseBit)
+	if m.BaseWrapper != nil {
 		m.BaseWrapper.FromProto(pb.Base)
 	}
 
-	// 加载 LevelUp 数据
-	if pb.LevelUp != nil {
-		m.data.LevelUp = &LevelUpMechanism{}
-		m.LevelUpWrapper = NewLevelUpMechanismWrapper(m.data.LevelUp)
-		m.LevelUpWrapper.Link(m.GetDirtyTracker(), HeroModuleDirtyLevelUpBit)
+	if m.LevelUpWrapper != nil {
 		m.LevelUpWrapper.FromProto(pb.LevelUp)
 	}
 }

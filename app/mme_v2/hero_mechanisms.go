@@ -167,6 +167,29 @@ func (m *HeroMechanismWrapper) ClearAllDirtyFlags() {
 	m.skillsAccessor.ResetOperations()
 }
 
+// Reset 所有增量同步容器不会记录删除/Set变化记录
+// 通过新数据对应修改所有字段
+func (m *HeroMechanismWrapper) Reset(newData *HeroMechanism) {
+	if newData == nil {
+		return
+	}
+
+	// 重新构建脏标系统
+	m.IDirtyFlag.ClearAllDirty()
+
+	m.SetId(newData.Id)
+
+	m.SetConfId(newData.ConfId)
+
+	m.SetUseTimes(newData.UseTimes)
+
+	m.SetCreateTime(newData.CreateTime)
+
+	m.data.Skills = make(map[int32]int32)
+	maps.Copy(m.data.Skills, newData.Skills)
+	m.skillsAccessor.Reset(&m.data.Skills)
+}
+
 // BuildMongoUpdate 构建MongoDB更新操作
 func (m *HeroMechanismWrapper) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder, path *mgo_builder.NestedPath) {
 	if m == nil {

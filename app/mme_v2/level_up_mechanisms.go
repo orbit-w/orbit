@@ -123,6 +123,23 @@ func (m *LevelUpMechanismWrapper) ClearAllDirtyFlags() {
 	m.ClearAllDirty()
 }
 
+// Reset 所有增量同步容器不会记录删除/Set变化记录
+// 通过新数据对应修改所有字段
+func (m *LevelUpMechanismWrapper) Reset(newData *LevelUpMechanism) {
+	if newData == nil {
+		return
+	}
+
+	// 重新构建脏标系统
+	m.IDirtyFlag.ClearAllDirty()
+
+	m.SetConfId(newData.ConfId)
+
+	m.SetCurExp(newData.CurExp)
+
+	m.SetCurLevel(newData.CurLevel)
+}
+
 // BuildMongoUpdate 构建MongoDB更新操作
 func (m *LevelUpMechanismWrapper) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder, path *mgo_builder.NestedPath) {
 	if m == nil {

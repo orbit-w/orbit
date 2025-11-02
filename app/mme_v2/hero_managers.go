@@ -133,6 +133,20 @@ func (m *HeroManagerWrapper) ClearAllDirty() {
 	})
 }
 
+func (m *HeroManagerWrapper) Reset(newData *HeroManager) {
+	if m == nil || m.data == nil {
+		return
+	}
+
+	// 重新构建脏标系统
+	m.IDirtyFlag.ClearAllDirty()
+
+	// xmap全量覆盖数据，不需要处理Value的逻辑
+	data := NewHeroManager()
+	m.data = data
+	m.heroMapLink.Reset(&m.data.HeroMap)
+}
+
 // BuildMongoUpdate 构建MongoDB更新操作
 // 注意：Manager 层级通常不直接构建 MongoDB 更新，而是由 Entity 层处理
 func (m *HeroManagerWrapper) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder, path *mgo_builder.NestedPath) {
@@ -193,21 +207,12 @@ func (m *HeroManagerWrapper) FromProto(pb *mme.HeroManager) {
 		return
 	}
 
-	// 重新构建脏标系统
-	m.IDirtyFlag.ClearAllDirty()
-
-	// xmap全量覆盖数据
-	data := NewHeroManager()
-	m.data = data
-	m.heroMapLink.Reset(&m.data.HeroMap)
-
 	for key := range pb.HeroMap {
 		pbValue := pb.HeroMap[key]
 		v := NewHeroModule()
 		wrapper := m.heroMapLink.SetWithoutTrack(key, v)
 		wrapper.FromProto(pbValue)
 	}
-
 }
 
 // ToIncrementalProto 根据脏标记位构建增量数据的 protoMessage
