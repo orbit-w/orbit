@@ -1,8 +1,8 @@
 package xmapwrapper
 
 import (
+	"gitee.com/orbit-w/meteor/bases/container/xmap"
 	dt "gitee.com/orbit-w/meteor/bases/dirty/dirty_tracker"
-	"gitee.com/orbit-w/meteor/bases/dirty/xmap"
 )
 
 // Linkable 定义可链接对象的接口
@@ -54,6 +54,7 @@ type XMapWrapper[K comparable, PbValue any, WrapperValue Linkable[PbValue]] stru
 func NewXMapWrapper[K comparable, PbValue any, WrapperValue Linkable[PbValue]](
 	pbMap *map[K]PbValue,
 	marker xmap.DirtyMarker,
+	parentTracker *dt.DirtyTracker,
 	dirtyBit int64,
 	wrapperFactory WrapperFactory[PbValue, WrapperValue],
 ) *XMapWrapper[K, PbValue, WrapperValue] {
@@ -62,34 +63,27 @@ func NewXMapWrapper[K comparable, PbValue any, WrapperValue Linkable[PbValue]](
 		pbMap:          pbMap,
 		wrapperMap:     make(map[K]WrapperValue),
 		wrapperFactory: wrapperFactory,
+		parentTracker:  parentTracker,
+		parentBit:      dirtyBit,
 	}
 
 	// 创建MapAccessor
 	link.mapAccessor = xmap.NewMapAccessorWithMarkerForRef(pbMap, marker, dirtyBit)
 
-	// 初始化现有的map元素
-	if pbMap != nil && *pbMap != nil {
-		for key, pbValue := range *pbMap {
-			wrapper := wrapperFactory(pbValue)
-			link.wrapperMap[key] = wrapper
-		}
-	}
-
 	return link
 }
 
-// SetParent 设置父DirtyTracker（必须在初始化完成后调用）
-func (x *XMapWrapper[K, PbValue, WrapperValue]) SetParent(parentTracker *dt.DirtyTracker, parentBit int64) {
-	x.parentTracker = parentTracker
-	x.parentBit = parentBit
-
-	// 重新链接所有已存在的包装对象
-	for key, wrapper := range x.wrapperMap {
-		wrapper.Unlink()
-		tracker := func() {
-			x.mapAccessor.TrackSet(key)
+func (x *XMapWrapper[K, PbValue, WrapperValue]) linkAll() {
+	// 初始化现有的map元素
+	if x.pbMap != nil && *x.pbMap != nil {
+		for key, pbValue := range *x.pbMap {
+			wrapper := x.wrapperFactory(pbValue)
+			tracker := func() {
+				x.mapAccessor.TrackSet(key)
+			}
+			wrapper.LinkFactsAccessor(x.parentTracker, x.parentBit, tracker)
+			x.wrapperMap[key] = wrapper
 		}
-		wrapper.LinkFactsAccessor(x.parentTracker, x.parentBit, tracker)
 	}
 }
 
@@ -125,6 +119,28 @@ func (x *XMapWrapper[K, PbValue, WrapperValue]) Set(key K, pbValue PbValue) Wrap
 	return wrapper
 }
 
+func (x *XMapWrapper[K, PbValue, WrapperValue]) SetWithoutTrack(key K, pbValue PbValue) WrapperValue {
+	// 处理旧对象的Unlink
+	x.Delete(key)
+
+	// 创建新的包装对象
+	wrapper := x.wrapperFactory(pbValue)
+
+	// Link到父对象和xmap的FactsAccessor
+	tracker := func() {
+		x.mapAccessor.TrackSet(key)
+	}
+	wrapper.LinkFactsAccessor(x.parentTracker, x.parentBit, tracker)
+
+	// 更新protobuf map（通过MapAccessor，会自动处理TrackSetWithDelete）
+	x.mapAccessor.SetWithoutTrack(key, pbValue)
+
+	// 更新包装对象map
+	x.wrapperMap[key] = wrapper
+
+	return wrapper
+}
+
 // Delete 删除对象
 // 返回是否成功删除
 func (x *XMapWrapper[K, PbValue, WrapperValue]) Delete(key K) bool {
@@ -143,25 +159,13 @@ func (x *XMapWrapper[K, PbValue, WrapperValue]) Delete(key K) bool {
 	return false
 }
 
-func (x *XMapWrapper[K, PbValue, WrapperValue]) Reset(pbMap *map[K]PbValue, parentTracker *dt.DirtyTracker, parentBit int64) {
+func (x *XMapWrapper[K, PbValue, WrapperValue]) Reset(pbMap *map[K]PbValue) {
 	x.CleanLinks()
 
-	// 创建一个临时的DirtyMarker
-	marker := &tempDirtyMarker{
-		tracker: parentTracker,
-	}
 	x.pbMap = pbMap
-	x.mapAccessor = xmap.NewMapAccessorWithMarkerForRef(x.pbMap, marker, parentBit)
+	x.mapAccessor.Reset(x.pbMap)
 
-	// 初始化现有的map元素
-	if pbMap != nil && *pbMap != nil {
-		for key, pbValue := range *pbMap {
-			wrapper := x.wrapperFactory(pbValue)
-			x.wrapperMap[key] = wrapper
-		}
-	}
-
-	x.SetParent(parentTracker, parentBit)
+	x.linkAll()
 }
 
 // Has 检查key是否存在

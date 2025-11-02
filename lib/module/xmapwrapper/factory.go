@@ -17,8 +17,8 @@ func NewXMapWrapperWithParent[K comparable, PbValue any, WrapperValue Linkable[P
 		tracker: parentTracker,
 	}
 
-	link := NewXMapWrapper(pbMap, marker, parentBit, wrapperFactory)
-	link.SetParent(parentTracker, parentBit)
+	link := NewXMapWrapper(pbMap, marker, parentTracker, parentBit, wrapperFactory)
+	link.linkAll()
 
 	return link
 }
