@@ -156,3 +156,15 @@ func (w *PlayerEntityWrapper) ToProto() *mme.PlayerEntity {
 
 	return w.data.ToProto()
 }
+
+// FromProto 从 protobuf 结构体加载数据到 PlayerEntity
+func (w *PlayerEntityWrapper) FromProto(pb *mme.PlayerEntity) {
+	if w == nil || w.data == nil || pb == nil {
+		return
+	}
+
+	w.HeroManagerWrapper.FromProto(pb.HeroManager)
+}
+
+// ToIncrementalProto 根据脏标记位构建增量数据的 protoMessage
+// 只返回标记为脏的字段数据，用于增量同步

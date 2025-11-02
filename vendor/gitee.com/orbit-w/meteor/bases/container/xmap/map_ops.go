@@ -70,6 +70,15 @@ func (op *MapAccessor[K, V]) Set(key K, value V) {
 	}
 }
 
+func (op *MapAccessor[K, V]) SetWithoutTrack(key K, value V) {
+	op.ensureMapNoDirty()
+	if op.m != nil {
+		// 检查 key 是否已存在
+		(*op.m)[key] = value
+		op.doMarkDirty()
+	}
+}
+
 // Upsert sets the value and returns (previous, existed).
 func (op *MapAccessor[K, V]) Upsert(key K, value V) (V, bool) {
 	op.ensureMapNoDirty()
@@ -102,6 +111,7 @@ func (op *MapAccessor[K, V]) Reset(m *map[K]V) {
 	}
 	op.m = m
 	op.changeTracker.Reset()
+	op.doMarkDirty()
 }
 
 func (op *MapAccessor[K, V]) Clear() {

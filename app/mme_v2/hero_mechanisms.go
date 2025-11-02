@@ -3,7 +3,7 @@ package mme
 import (
 	"maps"
 
-	"gitee.com/orbit-w/meteor/bases/dirty/xmap"
+	"gitee.com/orbit-w/meteor/bases/container/xmap"
 	"gitee.com/orbit-w/orbit/app/proto/mme"
 	dirtyflag "gitee.com/orbit-w/orbit/lib/base/dirty_flag"
 	fieldmeta "gitee.com/orbit-w/orbit/lib/base/field_meta"
@@ -39,7 +39,7 @@ type HeroMechanism struct {
 
 func NewHeroMechanism() *HeroMechanism {
 	return &HeroMechanism{
-		Skills:     make(map[int32]int32),
+		Skills: make(map[int32]int32),
 	}
 }
 
@@ -258,6 +258,7 @@ func (m *HeroMechanismWrapper) FromProto(pb *mme.HeroMechanism) {
 		maps.Copy(temp, pb.Skills)
 		// 设置新的 Skills数据，并清空所有变化操作记录
 		m.skillsAccessor.Reset(&temp)
+
 	}
 }
 

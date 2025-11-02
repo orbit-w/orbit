@@ -1,7 +1,7 @@
 package mme
 
 import (
-	"gitee.com/orbit-w/meteor/bases/dirty/xmap"
+	"gitee.com/orbit-w/meteor/bases/container/xmap"
 	"gitee.com/orbit-w/meteor/modules/mlog"
 	"gitee.com/orbit-w/orbit/app/proto/mme"
 	dirtyflag "gitee.com/orbit-w/orbit/lib/base/dirty_flag"
@@ -192,6 +192,22 @@ func (m *HeroManagerWrapper) FromProto(pb *mme.HeroManager) {
 	if m == nil || m.data == nil || pb == nil {
 		return
 	}
+
+	// 重新构建脏标系统
+	m.IDirtyFlag = dirtyflag.NewDirtyFlag()
+
+	// xmap全量覆盖数据
+	data := NewHeroManager()
+	m.data = data
+	m.heroMapLink.Reset(&m.data.HeroMap)
+
+	for key := range pb.HeroMap {
+		pbValue := pb.HeroMap[key]
+		v := NewHeroModule()
+		wrapper := m.heroMapLink.SetWithoutTrack(key, v)
+		wrapper.FromProto(pbValue)
+	}
+
 }
 
 // ToIncrementalProto 根据脏标记位构建增量数据的 protoMessage
