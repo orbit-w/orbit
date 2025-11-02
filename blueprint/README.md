@@ -12,10 +12,40 @@ MME 架构定义了典型的四层结构，不局限于任何具体领域模型�
 
 ### 四层核心结构
 
-- **Entity（实体）**：业务载体，生命周期管理，不直接管理内部逻辑。
+- **Entity（实体）**：业务载体，生命周期管理，不直接管理内部逻辑。包含一个或多个 Manager，作为顶层数据结构。
 - **Manager（管理器）**：以单例模式或Map聚合编排Module单元，例如以map，唯一 key 组织和管理多个 Module，负责查找、增删、全/增量同步。
-- **Module（模块）**：功能单元，自由组合一组 Mechanism，定义完整业务/属性能力。
-- **Mechanism（机制）**：最小的可扩展数据和逻辑单元，专注每个方向的数据与行为。
+- **Module（模块）**：功能单元，自由组合一组 Mechanism，定义完整业务/属性能力。一个 Module 可包含多个 Mechanism，实现功能组合。
+- **Mechanism（机制）**：最小的可扩展数据和逻辑单元，专注每个方向的数据与行为。包含具体的业务字段、请求和通知定义。
+
+### 实际代码结构示例
+
+```go
+// Entity 层：PlayerEntity
+type PlayerEntity struct {
+    XXXId       int64
+    HeroManager *HeroManager
+}
+
+// Manager 层：HeroManager
+type HeroManager struct {
+    HeroMap map[int64]*HeroModule  // map 组织多个 Module
+}
+
+// Module 层：HeroModule
+type HeroModule struct {
+    Base    *HeroMechanism      // 组合 Mechanism
+    LevelUp *LevelUpMechanism   // 组合 Mechanism
+}
+
+// Mechanism 层：HeroMechanism
+type HeroMechanism struct {
+    Id         int64
+    ConfId     int32
+    CreateTime int64
+    UseTimes   int32
+    Skills     map[int32]int32  // 值类型 map
+}
+```
 
 ### 自动生成规则
 
@@ -191,6 +221,182 @@ const (
    - 代码生成器将抛出异常并阻止生成，需用户显式声明对应适配器或调整YAML声明。
 
 该自动访问器规则确保：map字段不论值类型与对象复杂度如何，都能自动适配协议增量同步和本地脏标记递归运算，提升迭代安全性。
+
+---
+
+## Go Wrapper 层架构
+
+MME 架构为每一层（Entity、Manager、Module、Mechanism）自动生成对应的 Wrapper 包装器，提供统一的脏标记追踪、增量同步、数据转换和持久化能力。
+
+### Wrapper 核心功能
+
+每个 Wrapper 包含以下核心组件：
+
+1. **数据层（Data）**：原始结构体，存储实际业务数据
+2. **脏标记追踪（IDirtyFlag）**：位标记系统，追踪字段变更
+3. **字段元数据（FieldMetas）**：管理字段的同步类型和访问权限
+4. **嵌套 Wrapper 链接**：建立父子层级的脏标记传递关系
+
+### 脏标记链接机制
+
+Wrapper 层通过 `Link` 机制建立层级间的脏标记传递链：
+
+- **Entity → Manager**：Entity 的脏标记变化会自动触发 Manager 层的脏标记
+- **Manager → Module**：通过 `XMapWrapper` 管理 map 中的 Module，Module 脏标记向上传递
+- **Module → Mechanism**：Module 通过 `Link` 方法将 Mechanism 的脏标记关联到自身
+
+示例：
+```go
+// Module 层链接 Mechanism
+hm.BaseWrapper.Link(hm.GetDirtyTracker(), HeroModuleDirtyBaseBit)
+
+// Manager 层通过 XMapWrapper 自动链接 Module
+heroMapLink = xmapwrapper.NewXMapWrapperWithParent(
+    &data.HeroMap,
+    hm.GetDirtyTracker(),
+    HeroManagerDirtyHeroMapBit,
+    NewHeroModuleWrapper,
+)
+```
+
+### 标准接口方法
+
+每个 Wrapper 自动生成以下标准接口：
+
+- `InitFieldContext()`：初始化字段元数据上下文，设置字段同步类型
+- `ToProto()`：将数据转换为完整的 protobuf 结构体
+- `FromProto()`：从 protobuf 结构体加载数据
+- `ToIncrementalProtoWithContext(ctx SyncContext)`：根据脏标记生成增量同步数据
+- `BuildMongoUpdate()`：构建 MongoDB 增量更新操作
+- `DeepCopy()` / `DeepCopyTo()`：深拷贝数据
+- `ClearAllDirty()`：清除所有脏标记
+
+### 增量同步上下文（SyncContext）
+
+系统支持两种同步上下文：
+
+- **SyncContextServer**：服务端同步，所有字段都可同步
+- **SyncContextClient**：客户端同步，仅同步标记为 `FieldTypeSync` 的字段
+
+通过 `FieldCanBeIncrementalSynced()` 方法判断字段是否可以在指定上下文中增量同步，结合字段的 `access` 权限（all/s/c）和字段元数据，实现细粒度的同步控制。
+
+### 字段元数据（FieldMetas）
+
+`FieldMetas` 管理系统字段的元信息：
+
+- **FieldType**：字段类型标记，如 `FieldTypeSync`（需要同步）、`FieldTypeLogin`（登录时加载）等
+- **MatchesAll()**：判断字段是否匹配所有指定的类型标记，用于同步控制
+
+示例：
+```go
+// 初始化字段上下文
+m.fieldMetas.SetFieldType(HeroMechanismFieldIndexId, fieldmeta.FieldTypeSync)
+m.fieldMetas.SetFieldType(HeroMechanismFieldIndexCreateTime, fieldmeta.FieldTypeSync)
+
+// 判断字段是否可同步
+if mmemodel.FieldCanBeIncrementalSynced(m, HeroMechanismDirtyIdBit, HeroMechanismFieldIndexId, ctx) {
+    // 生成增量数据
+}
+```
+
+### Wrapper 层级结构示例
+
+```
+PlayerEntityWrapper
+├── data: *PlayerEntity
+├── IDirtyFlag: 脏标记追踪器
+├── FieldMetas: 字段元数据
+└── HeroManagerWrapper
+    ├── data: *HeroManager
+    ├── heroMapLink: *XMapWrapper[int64, *HeroModule, *HeroModuleWrapper]
+    └── HeroModuleWrapper (通过 map 访问)
+        ├── data: *HeroModule
+        ├── BaseWrapper: *HeroMechanismWrapper
+        └── LevelUpWrapper: *LevelUpMechanismWrapper
+            ├── data: *LevelUpMechanism
+            └── skillsAccessor: *MapAccessor[int32, int32] (如果存在 map 字段)
+```
+
+### 数据持久化支持
+
+Wrapper 层自动生成 `BuildMongoUpdate()` 方法，支持 MongoDB 的增量更新：
+
+- 仅更新标记为脏的字段
+- 支持嵌套字段路径
+- 对于 map 字段，全量覆盖（MongoDB map 字段更新限制）
+
+### Map 操作追踪机制
+
+对于 map 字段，系统通过 `MapAccessor`（值类型）或 `XMapWrapper`（MME Object 类型）追踪所有操作：
+
+**MapAccessor（值类型 map）**：
+- 记录 Set、Delete 操作
+- 通过 `RangeOperations()` 遍历所有变更操作
+- 支持增量同步时生成 `ChangeList`
+
+**XMapWrapper（MME Object map）**：
+- 管理 map 中每个 Object 的 Wrapper 生命周期
+- 追踪 Object 的增删改操作
+- 递归支持子对象的脏标记传递
+- 支持增量同步时，嵌套 Object 的增量数据生成
+
+示例（值类型 map 增量同步）：
+```go
+if mmemodel.FieldCanBeIncrementalSynced(m, HeroMechanismDirtySkillsBit, HeroMechanismFieldIndexSkills, ctx) {
+    incremental.Skills_XXXChangeList = make([]*mme.HeroMechanism_Skills_XXXMapChangeRecord, 0)
+    m.skillsAccessor.RangeOperations(func(key int32, operation xmap.MapOperation[int32]) bool {
+        switch operation.Type {
+        case xmap.SetOperation:
+            v, _ := m.skillsAccessor.Get(key)
+            incremental.Skills_XXXChangeList = append(incremental.Skills_XXXChangeList, &mme.HeroMechanism_Skills_XXXMapChangeRecord{
+                Key:   key,
+                Value: v,
+            })
+        case xmap.DeleteOperation:
+            incremental.Skills_XXXChangeList = append(incremental.Skills_XXXChangeList, &mme.HeroMechanism_Skills_XXXMapChangeRecord{
+                Key:      key,
+                IsDelete: true,
+            })
+        }
+        return true
+    })
+}
+```
+
+### 增量同步完整流程
+
+1. **数据变更**：通过 Wrapper 的 Setter 方法修改数据，自动标记脏位
+2. **脏标记传递**：子对象的脏标记通过 Link 机制向上传递
+3. **生成增量数据**：调用 `ToIncrementalProtoWithContext(ctx)` 生成增量 protobuf
+4. **同步判断**：根据 `SyncContext` 和字段元数据判断字段是否可同步
+5. **网络传输**：将增量数据序列化并发送到客户端/服务端
+6. **数据合并**：接收端通过 `FromProto()` 或增量合并逻辑更新本地数据
+7. **清除脏标记**：同步完成后调用 `ClearAllDirty()` 清除脏标记
+
+### Wrapper 使用示例
+
+```go
+// 创建 Entity Wrapper
+entity := NewPlayerEntity()
+wrapper := NewPlayerEntityWrapper(entity)
+
+// 初始化字段上下文（设置同步类型）
+wrapper.InitFieldContext()
+
+// 修改数据（自动标记脏位）
+heroWrapper := wrapper.GetHeroManager().HeroMap_Set(1, NewHeroModule())
+heroWrapper.GetBase().SetConfId(100)
+
+// 获取增量同步数据（仅包含变更字段）
+incremental := wrapper.ToIncrementalProto(mmemodel.SyncContextClient)
+
+// 持久化到 MongoDB（仅更新脏字段）
+builder := mgo_builder.NewMongoUpdateBuilder()
+wrapper.BuildMongoUpdate(builder, mgo_builder.NewNestedPath("player"))
+
+// 同步完成后清除脏标记
+wrapper.ClearAllDirty()
+```
 
 ---
 
@@ -621,3 +827,52 @@ message Notify  { message ExpChange { int32 Exp = 1; Core.MMELocation Loc = 1000
 ```
 
 以上内容已与当前 `mme` 目录下的 YAML 定义对齐，并引入 Manager 层级，确保从 YAML 到 Proto 的生成规则清晰一致。
+
+---
+
+## 架构优势与总结
+
+### MME 架构核心优势
+
+1. **分层清晰，职责明确**
+   - Entity 负责生命周期管理
+   - Manager 负责集合管理（map 模式）
+   - Module 负责功能组合（多个 Mechanism）
+   - Mechanism 负责原子能力（数据+行为）
+
+2. **自动化程度高**
+   - 从 YAML 蓝图自动生成 Proto、Go 代码
+   - 自动生成脏标记系统、增量同步、持久化接口
+   - 减少手写代码，降低出错概率
+
+3. **支持高效增量同步**
+   - 位标记脏追踪系统，精确追踪字段变更
+   - 支持 map 字段的增量变更列表
+   - 支持多种同步上下文（Server/Client）
+   - 结合字段元数据和访问权限，实现细粒度同步控制
+
+4. **类型安全与扩展性**
+   - 强类型约束，编译期检查
+   - 字段演变有严格规则，保证向后兼容
+   - 支持灵活的机制组合，易于扩展新功能
+
+5. **数据一致性保证**
+   - 统一的 Wrapper 层提供一致的操作接口
+   - 脏标记链接机制确保层级间数据一致性
+   - 支持深拷贝、全量/增量转换
+
+### 典型应用场景
+
+- **游戏玩家数据管理**：Entity(PlayerEntity) → Manager(HeroManager/ItemManager) → Module(HeroModule/ItemModule) → Mechanism(LevelUp/Equip)
+- **配置管理系统**：Entity(ConfigEntity) → Manager(ConfigManager) → Module(ConfigModule) → Mechanism(Version/Auth)
+- **多端数据同步**：服务端与客户端通过增量同步协议，仅传输变更字段，节省带宽
+
+### 设计原则总结
+
+1. **字段编号不可变**：一旦上线，FieldIndex 和字段编号不可修改，只能追加或删除
+2. **向后兼容优先**：所有结构演变必须保持向后兼容
+3. **自动化优先**：尽可能通过代码生成减少手写代码
+4. **增量同步优先**：优先使用增量同步，减少网络传输和数据库更新开销
+5. **类型安全优先**：通过强类型和编译期检查，减少运行时错误
+
+以上架构设计已在生产环境中验证，提供了高效、安全、可维护的数据建模和同步解决方案。
