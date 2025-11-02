@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package Core;
+option go_package = "./mme";
+
+
+import "protocol/structs.proto";
+import "protocol/common.proto";
+
+message Request {
+  message Rsp {
+  }
+
+  message HeartBeat {
+  }
+
+  message RequestB {
+  }
+
+  message Rsp {
+  }
+
+  message Rsp {
+  }
+
+}

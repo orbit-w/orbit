@@ -24,9 +24,9 @@ const (
 // 升级机制
 type LevelUpMechanism struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	CurLevel      *int32                 `protobuf:"varint,1,opt,name=CurLevel,proto3,oneof" json:"CurLevel,omitempty"` // 当前等级
-	CurExp        *int32                 `protobuf:"varint,2,opt,name=CurExp,proto3,oneof" json:"CurExp,omitempty"`     // 当前经验值
-	ConfId        *int32                 `protobuf:"varint,3,opt,name=ConfId,proto3,oneof" json:"ConfId,omitempty"`     // 走哪套升级配置
+	CurLevel      *int32                 `protobuf:"varint,1,opt,name=CurLevel,proto3,oneof" json:"CurLevel,omitempty"`
+	CurExp        *int32                 `protobuf:"varint,2,opt,name=CurExp,proto3,oneof" json:"CurExp,omitempty"`
+	ConfId        *int32                 `protobuf:"varint,3,opt,name=ConfId,proto3,oneof" json:"ConfId,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -85,12 +85,12 @@ func (x *LevelUpMechanism) GetConfId() int32 {
 // 英雄机制
 type HeroMechanism struct {
 	state                protoimpl.MessageState                     `protogen:"open.v1"`
-	Id                   *int64                                     `protobuf:"varint,1,opt,name=Id,proto3,oneof" json:"Id,omitempty"`                                                                              // 英雄实例唯一Id
-	ConfId               *int32                                     `protobuf:"varint,2,opt,name=ConfId,proto3,oneof" json:"ConfId,omitempty"`                                                                      // 英雄配置ID
-	CreateTime           *int64                                     `protobuf:"varint,3,opt,name=CreateTime,proto3,oneof" json:"CreateTime,omitempty"`                                                              // 玩家获得英雄的时间
-	UseTimes             *int32                                     `protobuf:"varint,4,opt,name=UseTimes,proto3,oneof" json:"UseTimes,omitempty"`                                                                  // 英雄被使用次数
-	Skills               map[int32]int32                            `protobuf:"bytes,5,rep,name=Skills,proto3" json:"Skills,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"` // 技能
-	Skills_XXXChangeList []*HeroMechanism_Skills_XXXMapChangeRecord `protobuf:"bytes,1005,rep,name=Skills_XXXChangeList,json=SkillsXXXChangeList,proto3" json:"Skills_XXXChangeList,omitempty"`                     // 技能变化
+	Id                   *int64                                     `protobuf:"varint,1,opt,name=Id,proto3,oneof" json:"Id,omitempty"`
+	ConfId               *int32                                     `protobuf:"varint,2,opt,name=ConfId,proto3,oneof" json:"ConfId,omitempty"`
+	CreateTime           *int64                                     `protobuf:"varint,3,opt,name=CreateTime,proto3,oneof" json:"CreateTime,omitempty"`
+	UseTimes             *int32                                     `protobuf:"varint,4,opt,name=UseTimes,proto3,oneof" json:"UseTimes,omitempty"`
+	Skills               map[int32]int32                            `protobuf:"bytes,5,rep,name=Skills,proto3" json:"Skills,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
+	Skills_XXXChangeList []*HeroMechanism_Skills_XXXMapChangeRecord `protobuf:"bytes,1005,rep,name=Skills_XXXChangeList,json=SkillsXXXChangeList,proto3" json:"Skills_XXXChangeList,omitempty"` // Skills变化
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -170,7 +170,7 @@ func (x *HeroMechanism) GetSkills_XXXChangeList() []*HeroMechanism_Skills_XXXMap
 // 手动解锁机制
 type ManualUnlockMechanism struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	UnlockMap     map[int32]bool         `protobuf:"bytes,1,rep,name=UnlockMap,proto3" json:"UnlockMap,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"` // 解锁状态
+	UnlockMap     map[int32]bool         `protobuf:"bytes,1,rep,name=UnlockMap,proto3" json:"UnlockMap,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -215,8 +215,8 @@ func (x *ManualUnlockMechanism) GetUnlockMap() map[int32]bool {
 // 穿戴机制
 type WearMechanism struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	WearMap       map[int32]int32        `protobuf:"bytes,1,rep,name=WearMap,proto3" json:"WearMap,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"` // 穿戴状态
-	ConfId        *int32                 `protobuf:"varint,2,opt,name=ConfId,proto3,oneof" json:"ConfId,omitempty"`                                                                        // 走哪套穿戴配置
+	WearMap       map[int32]int32        `protobuf:"bytes,1,rep,name=WearMap,proto3" json:"WearMap,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
+	ConfId        *int32                 `protobuf:"varint,2,opt,name=ConfId,proto3,oneof" json:"ConfId,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -329,7 +329,7 @@ var File_protocol_mechanisms_proto protoreflect.FileDescriptor
 
 const file_protocol_mechanisms_proto_rawDesc = "" +
 	"\n" +
-	"\x19protocol/mechanisms.proto\x12\x03MME\"\x90\x01\n" +
+	"\x19protocol/mechanisms.proto\x12\x03MME\x1a\x15protocol/common.proto\"\x90\x01\n" +
 	"\x10LevelUpMechanism\x12\x1f\n" +
 	"\bCurLevel\x18\x01 \x01(\x05H\x00R\bCurLevel\x88\x01\x01\x12\x1b\n" +
 	"\x06CurExp\x18\x02 \x01(\x05H\x01R\x06CurExp\x88\x01\x01\x12\x1b\n" +
@@ -410,6 +410,7 @@ func file_protocol_mechanisms_proto_init() {
 	if File_protocol_mechanisms_proto != nil {
 		return
 	}
+	file_protocol_common_proto_init()
 	file_protocol_mechanisms_proto_msgTypes[0].OneofWrappers = []any{}
 	file_protocol_mechanisms_proto_msgTypes[1].OneofWrappers = []any{}
 	file_protocol_mechanisms_proto_msgTypes[3].OneofWrappers = []any{}

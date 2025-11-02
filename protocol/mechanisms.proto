@@ -3,36 +3,40 @@ syntax = "proto3";
 package MME;
 option go_package = "./mme";
 
+
+import "protocol/common.proto";
+
 // 升级机制
 message LevelUpMechanism {
-  optional int32 CurLevel = 1;  // 当前等级
-  optional int32 CurExp = 2;    // 当前经验值
-  optional int32 ConfId = 3;    // 走哪套升级配置
+  optional int32 CurLevel = 1;
+  optional int32 CurExp = 2;
+  optional int32 ConfId = 3;
 }
 
 // 英雄机制
 message HeroMechanism {
-  optional int64 Id = 1;         // 英雄实例唯一Id
-  optional int32 ConfId = 2;     // 英雄配置ID
-  optional int64 CreateTime = 3; // 玩家获得英雄的时间
-  optional int32 UseTimes = 4;   // 英雄被使用次数
-  map<int32, int32> Skills = 5; // 技能
+  optional int64 Id = 1;
+  optional int32 ConfId = 2;
+  optional int64 CreateTime = 3;
+  optional int32 UseTimes = 4;
+  map<int32, int32> Skills = 5;
 
   message Skills_XXXMapChangeRecord {
     int32 Key = 1;
-    int32 Value = 2; 
+    int32 Value = 2;
     bool IsDelete = 3;
   }
-  repeated Skills_XXXMapChangeRecord Skills_XXXChangeList = 1005; // 技能变化
+  repeated Skills_XXXMapChangeRecord Skills_XXXChangeList = 1005; // Skills变化
 }
 
 // 手动解锁机制
 message ManualUnlockMechanism {
-  map<int32, bool> UnlockMap = 1;  // 解锁状态
+  map<int32, bool> UnlockMap = 1;
 }
 
 // 穿戴机制
 message WearMechanism {
-  map<int32, int32> WearMap = 1;  // 穿戴状态
-  optional int32 ConfId = 2;               // 走哪套穿戴配置
+  map<int32, int32> WearMap = 1;
+  optional int32 ConfId = 2;
 }
+

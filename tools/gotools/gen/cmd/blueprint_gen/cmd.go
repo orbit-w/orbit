@@ -1,0 +1,99 @@
+package blueprint_gen
+
+import (
+	"fmt"
+	
+	"github.com/spf13/cobra"
+)
+
+var (
+	blueprintGenCmd = &cobra.Command{
+		Use:   "blueprintgen",
+		Short: "Generate proto and Go code from blueprint YAML files",
+		Long: `Generate protobuf files and MME Go code from blueprint YAML files.
+This tool parses YAML files in the blueprint directory and generates:
+- Protocol buffer files in the protocol/ directory
+- MME Go structure files in the app/mme/ directory`,
+		Run: runBlueprintGen,
+	}
+)
+
+func runBlueprintGen(cmd *cobra.Command, args []string) {
+	blueprintDir, _ := cmd.Flags().GetString("blueprint-dir")
+	protoOutput, _ := cmd.Flags().GetString("proto-output")
+	goOutput, _ := cmd.Flags().GetString("go-output")
+	debug, _ := cmd.Flags().GetBool("debug")
+	
+	if debug {
+		println("Starting blueprint code generation...")
+		println("Blueprint directory:", blueprintDir)
+		println("Proto output directory:", protoOutput)
+		println("Go output directory:", goOutput)
+	}
+	
+	// 解析 YAML 文件
+	parser := NewParser(blueprintDir)
+	if err := parser.Parse(); err != nil {
+		cmd.PrintErrln("Failed to parse YAML files:", err)
+		return
+	}
+	
+	data := parser.GetData()
+	if debug {
+		fmt.Printf("Parsed %d entities\n", len(data.Entities))
+		for _, e := range data.Entities {
+			fmt.Printf("  Entity: %s, Fields: %d\n", e.Name, len(e.Fields))
+		}
+		fmt.Printf("Parsed %d managers\n", len(data.Managers))
+		for _, m := range data.Managers {
+			fmt.Printf("  Manager: %s, Fields: %d\n", m.Name, len(m.Fields))
+			for _, f := range m.Fields {
+				fmt.Printf("    Field: %s (xmap=%v, key=%s, value=%s)\n", f.Name, f.IsXMap, f.KeyType, f.ModuleName)
+			}
+		}
+		fmt.Printf("Parsed %d modules\n", len(data.Modules))
+		for _, m := range data.Modules {
+			fmt.Printf("  Module: %s, Mechanisms: %d\n", m.Name, len(m.Mechanisms))
+		}
+		fmt.Printf("Parsed %d mechanisms\n", len(data.Mechanisms))
+		for _, m := range data.Mechanisms {
+			fmt.Printf("  Mechanism: %s, DataFields: %d\n", m.Name, len(m.DataFields))
+		}
+		fmt.Printf("Parsed %d netwalls\n", len(data.NetWalls))
+	}
+	
+	// 生成 Proto 文件
+	protoGen := NewProtoGenerator(data)
+	if err := protoGen.Generate(protoOutput); err != nil {
+		cmd.PrintErrln("Failed to generate proto files:", err)
+		return
+	}
+	
+	if debug {
+		println("Proto files generated successfully")
+	}
+	
+	// 生成 Go 文件
+	goGen := NewGoStructGenerator(data)
+	if err := goGen.Generate(goOutput); err != nil {
+		cmd.PrintErrln("Failed to generate Go files:", err)
+		return
+	}
+	
+	if debug {
+		println("Go files generated successfully")
+	}
+	
+	cmd.Println("Blueprint code generation completed successfully!")
+}
+
+// InitCmd 初始化命令
+func InitCmd(father *cobra.Command) {
+	blueprintGenCmd.Flags().String("blueprint-dir", "blueprint", "Directory containing blueprint YAML files")
+	blueprintGenCmd.Flags().String("proto-output", "protocol", "Output directory for proto files")
+	blueprintGenCmd.Flags().String("go-output", "app/mme", "Output directory for Go files")
+	blueprintGenCmd.Flags().Bool("debug", false, "Enable debug mode")
+	
+	father.AddCommand(blueprintGenCmd)
+}
+

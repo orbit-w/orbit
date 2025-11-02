@@ -25,6 +25,8 @@ type HeroModule struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Base          *HeroMechanism         `protobuf:"bytes,1,opt,name=Base,proto3" json:"Base,omitempty"`
 	LevelUp       *LevelUpMechanism      `protobuf:"bytes,2,opt,name=LevelUp,proto3" json:"LevelUp,omitempty"`
+	TalentUnlock  *ManualUnlockMechanism `protobuf:"bytes,3,opt,name=TalentUnlock,proto3" json:"TalentUnlock,omitempty"`
+	SkinWear      *WearMechanism         `protobuf:"bytes,4,opt,name=SkinWear,proto3" json:"SkinWear,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -73,15 +75,31 @@ func (x *HeroModule) GetLevelUp() *LevelUpMechanism {
 	return nil
 }
 
+func (x *HeroModule) GetTalentUnlock() *ManualUnlockMechanism {
+	if x != nil {
+		return x.TalentUnlock
+	}
+	return nil
+}
+
+func (x *HeroModule) GetSkinWear() *WearMechanism {
+	if x != nil {
+		return x.SkinWear
+	}
+	return nil
+}
+
 var File_protocol_modules_proto protoreflect.FileDescriptor
 
 const file_protocol_modules_proto_rawDesc = "" +
 	"\n" +
-	"\x16protocol/modules.proto\x12\x03MME\x1a\x19protocol/mechanisms.proto\"e\n" +
+	"\x16protocol/modules.proto\x12\x03MME\x1a\x19protocol/mechanisms.proto\"\xd5\x01\n" +
 	"\n" +
 	"HeroModule\x12&\n" +
 	"\x04Base\x18\x01 \x01(\v2\x12.MME.HeroMechanismR\x04Base\x12/\n" +
-	"\aLevelUp\x18\x02 \x01(\v2\x15.MME.LevelUpMechanismR\aLevelUpB\aZ\x05./mmeb\x06proto3"
+	"\aLevelUp\x18\x02 \x01(\v2\x15.MME.LevelUpMechanismR\aLevelUp\x12>\n" +
+	"\fTalentUnlock\x18\x03 \x01(\v2\x1a.MME.ManualUnlockMechanismR\fTalentUnlock\x12.\n" +
+	"\bSkinWear\x18\x04 \x01(\v2\x12.MME.WearMechanismR\bSkinWearB\aZ\x05./mmeb\x06proto3"
 
 var (
 	file_protocol_modules_proto_rawDescOnce sync.Once
@@ -97,18 +115,22 @@ func file_protocol_modules_proto_rawDescGZIP() []byte {
 
 var file_protocol_modules_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
 var file_protocol_modules_proto_goTypes = []any{
-	(*HeroModule)(nil),       // 0: MME.HeroModule
-	(*HeroMechanism)(nil),    // 1: MME.HeroMechanism
-	(*LevelUpMechanism)(nil), // 2: MME.LevelUpMechanism
+	(*HeroModule)(nil),            // 0: MME.HeroModule
+	(*HeroMechanism)(nil),         // 1: MME.HeroMechanism
+	(*LevelUpMechanism)(nil),      // 2: MME.LevelUpMechanism
+	(*ManualUnlockMechanism)(nil), // 3: MME.ManualUnlockMechanism
+	(*WearMechanism)(nil),         // 4: MME.WearMechanism
 }
 var file_protocol_modules_proto_depIdxs = []int32{
 	1, // 0: MME.HeroModule.Base:type_name -> MME.HeroMechanism
 	2, // 1: MME.HeroModule.LevelUp:type_name -> MME.LevelUpMechanism
-	2, // [2:2] is the sub-list for method output_type
-	2, // [2:2] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	3, // 2: MME.HeroModule.TalentUnlock:type_name -> MME.ManualUnlockMechanism
+	4, // 3: MME.HeroModule.SkinWear:type_name -> MME.WearMechanism
+	4, // [4:4] is the sub-list for method output_type
+	4, // [4:4] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_protocol_modules_proto_init() }
