@@ -194,7 +194,7 @@ func (m *HeroManagerWrapper) FromProto(pb *mme.HeroManager) {
 	}
 
 	// 重新构建脏标系统
-	m.IDirtyFlag = dirtyflag.NewDirtyFlag()
+	m.IDirtyFlag.ClearAllDirty()
 
 	// xmap全量覆盖数据
 	data := NewHeroManager()
