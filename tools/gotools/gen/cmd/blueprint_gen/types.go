@@ -1,5 +1,15 @@
 package blueprint_gen
 
+// ObjectType MME 对象类型
+type ObjectType string
+
+const (
+	ObjectTypeEntity    ObjectType = "Entity"
+	ObjectTypeManager   ObjectType = "Manager"
+	ObjectTypeModule    ObjectType = "Module"
+	ObjectTypeMechanism ObjectType = "Mechanism"
+)
+
 // FieldOption 字段选项
 type FieldOption struct {
 	Access string // access=all/s/c
