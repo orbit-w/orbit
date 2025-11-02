@@ -214,21 +214,17 @@ func (m *HeroModuleWrapper) FromProto(pb *mme.HeroModule) {
 
 	// 加载 Base 数据
 	if pb.Base != nil {
-		if m.data.Base == nil {
-			m.data.Base = &HeroMechanism{}
-			m.BaseWrapper = NewHeroMechanismWrapper(m.data.Base)
-			m.BaseWrapper.Link(m.GetDirtyTracker(), HeroModuleDirtyBaseBit)
-		}
+		m.data.Base = &HeroMechanism{}
+		m.BaseWrapper = NewHeroMechanismWrapper(m.data.Base)
+		m.BaseWrapper.Link(m.GetDirtyTracker(), HeroModuleDirtyBaseBit)
 		m.BaseWrapper.FromProto(pb.Base)
 	}
 
 	// 加载 LevelUp 数据
 	if pb.LevelUp != nil {
-		if m.data.LevelUp == nil {
-			m.data.LevelUp = &LevelUpMechanism{}
-			m.LevelUpWrapper = NewLevelUpMechanismWrapper(m.data.LevelUp)
-			m.LevelUpWrapper.Link(m.GetDirtyTracker(), HeroModuleDirtyLevelUpBit)
-		}
+		m.data.LevelUp = &LevelUpMechanism{}
+		m.LevelUpWrapper = NewLevelUpMechanismWrapper(m.data.LevelUp)
+		m.LevelUpWrapper.Link(m.GetDirtyTracker(), HeroModuleDirtyLevelUpBit)
 		m.LevelUpWrapper.FromProto(pb.LevelUp)
 	}
 }
