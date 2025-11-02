@@ -5,6 +5,8 @@ import (
 	dirtyflag "gitee.com/orbit-w/orbit/lib/base/dirty_flag"
 	fieldmeta "gitee.com/orbit-w/orbit/lib/base/field_meta"
 	"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder"
+	mmemodel "gitee.com/orbit-w/orbit/lib/module/mme_model"
+	"google.golang.org/protobuf/proto"
 )
 
 const (
@@ -105,6 +107,19 @@ func (w *PlayerEntityWrapper) ClearAllDirty() {
 	w.HeroManagerWrapper.ClearAllDirty()
 }
 
+func (w *PlayerEntityWrapper) Reset(newData *HeroManager) {
+	if w == nil || w.data == nil {
+		return
+	}
+
+	// 重新构建脏标系统
+	w.IDirtyFlag.ClearAllDirty()
+
+	data := NewPlayerEntity()
+	w.data = data
+	w.HeroManagerWrapper.Reset(data.HeroManager)
+}
+
 func (w *PlayerEntityWrapper) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder, path *mgo_builder.NestedPath) {
 	if w == nil {
 		return
@@ -168,3 +183,36 @@ func (w *PlayerEntityWrapper) FromProto(pb *mme.PlayerEntity) {
 
 // ToIncrementalProto 根据脏标记位构建增量数据的 protoMessage
 // 只返回标记为脏的字段数据，用于增量同步
+func (w *PlayerEntityWrapper) ToIncrementalProto(ctx mmemodel.SyncContext) proto.Message {
+	if w == nil {
+		return nil
+	}
+
+	// 如果没有脏标记，返回 nil
+	if !w.HasAnyDirty() {
+		return nil
+	}
+
+	incremental := &mme.PlayerEntity{}
+
+	// 根据脏标记位设置对应的字段
+	if mmemodel.FieldCanBeIncrementalSynced(w, PlayerEntityDirtyIdBit, PlayerEntityFieldIndexId, ctx) {
+		v := w.GetId()
+		incremental.XXXId = v
+	}
+
+	// 根据脏标记位设置对应的嵌套对象
+	if mmemodel.FieldCanBeIncrementalSynced(w, PlayerEntityDirtyHeroManagerBit, PlayerEntityFieldIndexHeroManager, ctx) {
+		if w.HeroManagerWrapper != nil {
+			pb := w.HeroManagerWrapper.ToIncrementalProto(ctx)
+			if pb != nil {
+				v, ok := pb.(*mme.HeroManager)
+				if ok {
+					incremental.HeroManager = v
+				}
+			}
+		}
+	}
+
+	return incremental
+}
