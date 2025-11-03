@@ -5,13 +5,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	
-	"gopkg.in/yaml.v3"
 )
 
 // parseNetWallFiles 解析 NetWall YAML 文件
 func (p *Parser) parseNetWallFiles() error {
-	netwallDir := filepath.Join(p.blueprintDir, "netwall")
+	netwallDir := p.ResolvePath("netwall")
 	
 	// 检查目录是否存在
 	if _, err := os.Stat(netwallDir); os.IsNotExist(err) {
@@ -44,13 +42,8 @@ func (p *Parser) parseNetWallFiles() error {
 
 // parseNetWallFile 解析单个 NetWall YAML 文件
 func (p *Parser) parseNetWallFile(filePath string) error {
-	data, err := os.ReadFile(filePath)
+	yamlData, err := p.ReadYAMLFile(filePath)
 	if err != nil {
-		return err
-	}
-	
-	var yamlData map[string]interface{}
-	if err := yaml.Unmarshal(data, &yamlData); err != nil {
 		return err
 	}
 	
@@ -67,9 +60,14 @@ func (p *Parser) parseNetWallFile(filePath string) error {
 		// 解析 Requests
 		if requests, ok := netwallData["Requests"].([]interface{}); ok {
 			for _, reqItem := range requests {
-				req := parseNetWallRequest(reqItem)
-				if req.Name != "" {
-					netwall.Requests = append(netwall.Requests, req)
+				req, err := p.ParseRequestOrNotify(reqItem, true)
+				if err == nil && req.Name != "" {
+					netwall.Requests = append(netwall.Requests, NetWallMessage{
+						Name:    req.Name,
+						Fields: req.Fields,
+						Rsp:     req.Rsp,
+						Comment: req.Comment,
+					})
 				}
 			}
 		}
@@ -77,9 +75,13 @@ func (p *Parser) parseNetWallFile(filePath string) error {
 		// 解析 Notifies
 		if notifies, ok := netwallData["Notifies"].([]interface{}); ok {
 			for _, notifyItem := range notifies {
-				notify := parseNetWallNotify(notifyItem)
-				if notify.Name != "" {
-					netwall.Notifies = append(netwall.Notifies, notify)
+				notify, err := p.ParseNotifyOnly(notifyItem)
+				if err == nil && notify.Name != "" {
+					netwall.Notifies = append(netwall.Notifies, NetWallMessage{
+						Name:    notify.Name,
+						Fields:  notify.Fields,
+						Comment: notify.Comment,
+					})
 				}
 			}
 		}
@@ -96,13 +98,9 @@ func (p *Parser) parseNetWallFile(filePath string) error {
 					
 					if dsDataMap, ok := dsData.(map[string]interface{}); ok {
 						// 解析字段
-						for fieldName, fieldDef := range dsDataMap {
-							if fieldStr, ok := fieldDef.(string); ok {
-								field, err := ParseFieldDefinition(fieldName + " " + fieldStr)
-								if err == nil {
-									dataStruct.Fields = append(dataStruct.Fields, field)
-								}
-							}
+						fields, err := p.ParseMessageFields(dsDataMap)
+						if err == nil {
+							dataStruct.Fields = fields
 						}
 					} else if dsData == nil {
 						// 空结构体
@@ -123,78 +121,4 @@ func (p *Parser) parseNetWallFile(filePath string) error {
 	return nil
 }
 
-// parseNetWallRequest 解析 NetWall Request
-func parseNetWallRequest(reqItem interface{}) NetWallMessage {
-	req := NetWallMessage{}
-	
-	if reqMap, ok := reqItem.(map[string]interface{}); ok {
-		for name, data := range reqMap {
-			req.Name = name
-			
-			if dataMap, ok := data.(map[string]interface{}); ok {
-				fields := make([]Field, 0)
-				for fieldName, fieldDef := range dataMap {
-					if fieldName == "Rsp" {
-						// 解析响应
-						if rspData, ok := fieldDef.(map[string]interface{}); ok {
-							rsp := Response{}
-							for rspFieldName, rspFieldDef := range rspData {
-								if fieldStr, ok := rspFieldDef.(string); ok {
-									field, err := ParseFieldDefinition(rspFieldName + " " + fieldStr)
-									if err == nil {
-										rsp.Fields = append(rsp.Fields, field)
-									}
-								}
-							}
-							req.Rsp = &rsp
-						}
-					} else {
-						// 解析请求字段
-						if fieldStr, ok := fieldDef.(string); ok {
-							field, err := ParseFieldDefinition(fieldName + " " + fieldStr)
-							if err == nil {
-								fields = append(fields, field)
-							}
-						}
-					}
-				}
-				req.Fields = fields
-			}
-		}
-	} else if reqName, ok := reqItem.(string); ok {
-		// 简单请求，无参数
-		req.Name = reqName
-	}
-	
-	return req
-}
-
-// parseNetWallNotify 解析 NetWall Notify
-func parseNetWallNotify(notifyItem interface{}) NetWallMessage {
-	notify := NetWallMessage{}
-	
-	if notifyMap, ok := notifyItem.(map[string]interface{}); ok {
-		for name, data := range notifyMap {
-			notify.Name = name
-			
-			if dataMap, ok := data.(map[string]interface{}); ok {
-				fields := make([]Field, 0)
-				for fieldName, fieldDef := range dataMap {
-					if fieldStr, ok := fieldDef.(string); ok {
-						field, err := ParseFieldDefinition(fieldName + " " + fieldStr)
-						if err == nil {
-							fields = append(fields, field)
-						}
-					}
-				}
-				notify.Fields = fields
-			}
-		}
-	} else if notifyName, ok := notifyItem.(string); ok {
-		// 简单通知，无参数
-		notify.Name = notifyName
-	}
-	
-	return notify
-}
 

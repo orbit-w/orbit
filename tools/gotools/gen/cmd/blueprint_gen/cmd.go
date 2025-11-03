@@ -4,6 +4,7 @@ import (
 	"fmt"
 	
 	"github.com/spf13/cobra"
+	blueprint_types "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types"
 )
 
 var (
@@ -48,7 +49,24 @@ func runBlueprintGen(cmd *cobra.Command, args []string) {
 		for _, m := range data.Managers {
 			fmt.Printf("  Manager: %s, Fields: %d\n", m.Name, len(m.Fields))
 			for _, f := range m.Fields {
-				fmt.Printf("    Field: %s (xmap=%v, key=%s, value=%s)\n", f.Name, f.IsXMap, f.KeyType, f.ModuleName)
+				isXMap := f.Type.Kind == blueprint_types.FieldKindXMap
+				keyType := "unknown"
+				valueType := "unknown"
+				if f.Type.KeyType != nil {
+					if f.Type.KeyType.TypeName != "" {
+						keyType = f.Type.KeyType.TypeName
+					} else {
+						keyType = f.Type.KeyType.String()
+					}
+				}
+				if f.Type.ValueType != nil {
+					if f.Type.ValueType.TypeName != "" {
+						valueType = f.Type.ValueType.TypeName
+					} else {
+						valueType = f.Type.ValueType.String()
+					}
+				}
+				fmt.Printf("    Field: %s (xmap=%v, key=%s, value=%s)\n", f.Name, isXMap, keyType, valueType)
 			}
 		}
 		fmt.Printf("Parsed %d modules\n", len(data.Modules))
@@ -57,7 +75,7 @@ func runBlueprintGen(cmd *cobra.Command, args []string) {
 		}
 		fmt.Printf("Parsed %d mechanisms\n", len(data.Mechanisms))
 		for _, m := range data.Mechanisms {
-			fmt.Printf("  Mechanism: %s, DataFields: %d\n", m.Name, len(m.DataFields))
+			fmt.Printf("  Mechanism: %s, Fields: %d\n", m.Name, len(m.Fields))
 		}
 		fmt.Printf("Parsed %d netwalls\n", len(data.NetWalls))
 	}

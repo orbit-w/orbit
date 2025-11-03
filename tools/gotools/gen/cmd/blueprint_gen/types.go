@@ -1,5 +1,9 @@
 package blueprint_gen
 
+import (
+	types "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types"
+)
+
 // ObjectType MME 对象类型
 type ObjectType string
 
@@ -34,11 +38,6 @@ type Field struct {
 	Comment string
 }
 
-// MechanismDataField 机制数据字段
-type MechanismDataField struct {
-	Field
-}
-
 // Request 请求定义
 type Request struct {
 	Name    string
@@ -62,40 +61,23 @@ type Notify struct {
 
 // Mechanism 机制定义
 type Mechanism struct {
-	Name       string
-	DataFields []MechanismDataField
-	Settings   map[string]interface{}
-	Requests   []Request
-	Notifies   []Notify
-}
-
-// ModuleMechanismRef Module 中引用的 Mechanism
-type ModuleMechanismRef struct {
-	MechanismName string
-	FieldName     string
-	Number        int32
-	Settings      map[string]interface{}
+	Name     string
+	Fields   []*types.Field
+	Settings map[string]any
+	Requests []Request
+	Notifies []Notify
 }
 
 // Module 模块定义
 type Module struct {
 	Name       string
-	Mechanisms []ModuleMechanismRef
-}
-
-// ManagerField Manager 中的字段（通常是 map<key, Module>）
-type ManagerField struct {
-	Name       string
-	KeyType    string
-	ModuleName string
-	Number     int32
-	IsXMap     bool
+	Mechanisms []*types.Field // 使用 types.Field 替代 ModuleMechanismRef
 }
 
 // Manager 管理器定义
 type Manager struct {
 	Name   string
-	Fields []ManagerField
+	Fields []*types.Field // 使用 types.Field 替代 ManagerField
 }
 
 // EntityField Entity 中的字段（通常是 Manager）

@@ -3,16 +3,22 @@ package blueprint_gen
 import (
 	"fmt"
 	"strings"
+
+	blueprint_types "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types"
 )
 
 // ProtoGenerator Proto 文件生成器
 type ProtoGenerator struct {
-	data *BlueprintData
+	data          *BlueprintData
+	typeConverter *TypeConverter
 }
 
 // NewProtoGenerator 创建新的 Proto 生成器
 func NewProtoGenerator(data *BlueprintData) *ProtoGenerator {
-	return &ProtoGenerator{data: data}
+	return &ProtoGenerator{
+		data:          data,
+		typeConverter: NewTypeConverter("mme"),
+	}
 }
 
 // Generate 生成所有 Proto 文件
@@ -21,87 +27,91 @@ func (g *ProtoGenerator) Generate(outputDir string) error {
 	if err := g.generateCommonProto(outputDir); err != nil {
 		return fmt.Errorf("failed to generate common.proto: %w", err)
 	}
-	
+
 	// 生成 mechanisms.proto
 	if err := g.generateMechanismsProto(outputDir); err != nil {
 		return fmt.Errorf("failed to generate mechanisms.proto: %w", err)
 	}
-	
+
 	// 生成 modules.proto
 	if err := g.generateModulesProto(outputDir); err != nil {
 		return fmt.Errorf("failed to generate modules.proto: %w", err)
 	}
-	
+
 	// 生成 managers.proto
 	if err := g.generateManagersProto(outputDir); err != nil {
 		return fmt.Errorf("failed to generate managers.proto: %w", err)
 	}
-	
+
 	// 生成 entities.proto
 	if err := g.generateEntitiesProto(outputDir); err != nil {
 		return fmt.Errorf("failed to generate entities.proto: %w", err)
 	}
-	
+
 	// 生成 NetWall proto 文件
 	if err := g.generateNetWallProto(outputDir); err != nil {
 		return fmt.Errorf("failed to generate NetWall proto: %w", err)
 	}
-	
+
 	return nil
 }
 
 // generateProtoHeader 生成 Proto 文件头部
-func generateProtoHeader(packageName string, imports []string) string {
-	sb := strings.Builder{}
-	sb.WriteString("syntax = \"proto3\";\n\n")
-	sb.WriteString(fmt.Sprintf("package %s;\n", packageName))
-	sb.WriteString("option go_package = \"./mme\";\n\n")
-	
+func (g *ProtoGenerator) generateProtoHeader(packageName string, imports []string) string {
+	builder := NewCodeBuilder()
+	builder.SetIndentStr("")
+
+	builder.WriteLine("syntax = \"proto3\";")
+	builder.WriteEmptyLine()
+	builder.WriteLine("package %s;", packageName)
+	builder.WriteLine("option go_package = \"./mme\";")
+	builder.WriteEmptyLine()
+
 	if len(imports) > 0 {
-		sb.WriteString("\n")
+		builder.WriteEmptyLine()
 		for _, imp := range imports {
-			sb.WriteString(fmt.Sprintf("import \"%s\";\n", imp))
+			builder.WriteLine("import \"%s\";", imp)
 		}
-		sb.WriteString("\n")
+		builder.WriteEmptyLine()
 	}
-	
-	return sb.String()
+
+	return builder.String()
 }
 
-// generateFieldProto 生成字段的 Proto 定义
-func generateFieldProto(field Field, fieldNumber int32) string {
-	sb := strings.Builder{}
-	
+// generateFieldProto 生成字段的 Proto 定义（新版本，使用 *blueprint_types.Field）
+func (g *ProtoGenerator) generateFieldProto(field *blueprint_types.Field, fieldNumber int32) string {
+	builder := NewCodeBuilder()
+	builder.SetIndentStr("  ")
+
 	// 添加注释
 	if field.Comment != "" {
-		sb.WriteString(fmt.Sprintf("  // %s\n", field.Comment))
+		builder.WriteLine("// %s", field.Comment)
 	}
-	
-	// 添加 optional 标记（仅对非 map/repeated 的标量字段）
-	protoType := ToProtoType(field.Type)
-	isOptional := !field.Type.IsMap && !field.Type.IsXMap && !field.Type.IsRepeated && 
-		field.Type.BaseType != "" && !strings.Contains(protoType, ".")
-	
-	if isOptional {
-		sb.WriteString("  optional ")
-	}
-	
+
+	// 添加 optional 标记
+	protoType := g.typeConverter.ToProtoType(&field.Type)
+	isOptional := g.typeConverter.IsOptionalInProto(&field.Type)
+
 	// 确保字段名不包含冒号
 	fieldName := strings.TrimSuffix(field.Name, ":")
 	fieldName = strings.TrimSpace(fieldName)
-	
-	// map 字段前面需要加空格
-	if field.Type.IsMap || field.Type.IsXMap {
-		sb.WriteString(fmt.Sprintf("  %s %s = %d;", protoType, fieldName, fieldNumber))
+
+	// 构建字段定义
+	if isOptional {
+		builder.WriteLine("optional %s %s = %d;", protoType, fieldName, fieldNumber)
 	} else {
-		sb.WriteString(fmt.Sprintf("%s %s = %d;", protoType, fieldName, fieldNumber))
+		builder.WriteLine("%s %s = %d;", protoType, fieldName, fieldNumber)
 	}
-	
-	if field.Comment != "" {
-		sb.WriteString(fmt.Sprintf("  // %s", field.Comment))
-	}
-	sb.WriteString("\n")
-	
-	return sb.String()
+
+	return builder.String()
 }
 
+// generateFieldProtoFromOldField 从旧的 Field 类型生成 Proto 定义（用于兼容）
+func (g *ProtoGenerator) generateFieldProtoFromOldField(field Field, fieldNumber int32) string {
+	// 转换为新的 Field 类型
+	typesField, err := ConvertFieldToTypesField(field)
+	if err != nil {
+		return "" // 转换失败，返回空字符串
+	}
+	return g.generateFieldProto(typesField, fieldNumber)
+}

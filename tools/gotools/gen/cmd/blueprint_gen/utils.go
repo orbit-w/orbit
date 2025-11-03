@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	types "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types"
 )
 
 // ParseFieldType 解析字段类型字符串
@@ -166,7 +168,7 @@ func FileExists(filePath string) bool {
 	return err == nil
 }
 
-// ToProtoType 将 YAML 类型转换为 Proto 类型
+// ToProtoType 将 YAML 类型转换为 Proto 类型（旧版本，用于兼容）
 func ToProtoType(ft FieldType) string {
 	if ft.IsRepeated {
 		return ft.BaseType
@@ -179,6 +181,34 @@ func ToProtoType(ft FieldType) string {
 		return ft.ValueType
 	}
 	return ft.BaseType
+}
+
+// ToProtoTypeFromTypesFieldType 将新的 types.FieldType 转换为 Proto 类型
+func ToProtoTypeFromTypesFieldType(ft *types.FieldType) string {
+	if ft == nil {
+		return "unknown"
+	}
+
+	switch ft.Kind {
+	case types.FieldKindRepeated:
+		if ft.ValueType != nil {
+			return ToProtoTypeFromTypesFieldType(ft.ValueType)
+		}
+		return "unknown"
+	case types.FieldKindMap, types.FieldKindXMap:
+		if ft.KeyType != nil && ft.ValueType != nil {
+			keyType := ToProtoTypeFromTypesFieldType(ft.KeyType)
+			valueType := ToProtoTypeFromTypesFieldType(ft.ValueType)
+			return fmt.Sprintf("map<%s, %s>", keyType, valueType)
+		}
+		return "map<unknown, unknown>"
+	default:
+		if ft.TypeName != "" {
+			return ft.TypeName
+		}
+		// 基础类型
+		return ft.Kind.String()
+	}
 }
 
 // ToGoType 将 YAML 类型转换为 Go 类型
@@ -236,4 +266,106 @@ func CamelToSnake(s string) string {
 		result.WriteRune(r)
 	}
 	return strings.ToLower(result.String())
+}
+
+// ConvertFieldToTypesField 将旧的 Field 转换为新的 *types.Field
+func ConvertFieldToTypesField(oldField Field) (*types.Field, error) {
+	newField := &types.Field{
+		Name:    oldField.Name,
+		Number:  oldField.Number,
+		Comment: oldField.Comment,
+		Options: types.FieldOption{
+			Access: oldField.Options.Access,
+		},
+	}
+
+	// 转换 FieldType
+	oldType := oldField.Type
+	newType, err := convertFieldTypeToTypesFieldType(oldType)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert field type: %w", err)
+	}
+	newField.Type = *newType
+
+	return newField, nil
+}
+
+// convertFieldTypeToTypesFieldType 将旧的 FieldType 转换为新的 *types.FieldType
+func convertFieldTypeToTypesFieldType(oldType FieldType) (*types.FieldType, error) {
+	newType := &types.FieldType{}
+
+	if oldType.IsRepeated {
+		// 处理 repeated 类型
+		newType.Kind = types.FieldKindRepeated
+		newType.Label = types.FieldLabelRepeated
+
+		// 构建内部类型字符串
+		var innerTypeStr string
+		if oldType.IsMap || oldType.IsXMap {
+			mapPrefix := "map"
+			if oldType.IsXMap {
+				mapPrefix = "xmap"
+			}
+			innerTypeStr = fmt.Sprintf("%s<%s, %s>", mapPrefix, oldType.KeyType, oldType.ValueType)
+		} else if oldType.ValueType != "" {
+			innerTypeStr = oldType.ValueType
+		} else {
+			innerTypeStr = oldType.BaseType
+		}
+
+		// 递归解析内部类型
+		valueType, err := types.ParseTypeString(innerTypeStr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse repeated element type: %w", err)
+		}
+		newType.ValueType = valueType
+	} else if oldType.IsXMap {
+		// 处理 xmap 类型
+		newType.Kind = types.FieldKindXMap
+		newType.Label = types.FieldLabelOptional
+
+		// 递归解析 key 和 value 类型
+		keyType, err := types.ParseTypeString(oldType.KeyType)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse xmap key type: %w", err)
+		}
+		valueType, err := types.ParseTypeString(oldType.ValueType)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse xmap value type: %w", err)
+		}
+		newType.KeyType = keyType
+		newType.ValueType = valueType
+	} else if oldType.IsMap {
+		// 处理 map 类型
+		newType.Kind = types.FieldKindMap
+		newType.Label = types.FieldLabelOptional
+
+		// 递归解析 key 和 value 类型
+		keyType, err := types.ParseTypeString(oldType.KeyType)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse map key type: %w", err)
+		}
+		valueType, err := types.ParseTypeString(oldType.ValueType)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse map value type: %w", err)
+		}
+		newType.KeyType = keyType
+		newType.ValueType = valueType
+	} else {
+		// 处理基础类型或消息类型
+		var typeStr string
+		if oldType.ValueType != "" {
+			typeStr = oldType.ValueType
+		} else {
+			typeStr = oldType.BaseType
+		}
+
+		parsedType, err := types.ParseTypeString(typeStr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse type string: %w", err)
+		}
+		newType = parsedType
+	}
+
+	return newType, nil
 }

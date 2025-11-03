@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	types "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types"
 )
 
 // GoWrapperGenerator Go Wrapper 生成器
@@ -22,7 +24,7 @@ func (g *GoWrapperGenerator) Generate(outputDir string) error {
 	if err := g.generateMechanismWrappers(outputDir); err != nil {
 		return fmt.Errorf("failed to generate mechanism wrappers: %w", err)
 	}
-	
+
 	// TODO: 生成 Module、Manager、Entity Wrapper
 	return nil
 }
@@ -30,41 +32,41 @@ func (g *GoWrapperGenerator) Generate(outputDir string) error {
 // generateMechanismWrappers 生成 Mechanism Wrapper
 func (g *GoWrapperGenerator) generateMechanismWrappers(outputDir string) error {
 	packageName := "mme"
-	
+
 	for _, mech := range g.data.Mechanisms {
 		sb := strings.Builder{}
-		
+
 		// Wrapper 代码（不包含 package 和 import，因为这些会从已有文件中获取）
-		
+
 		// 生成 Wrapper 结构体
 		wrapperName := mech.Name + "Wrapper"
 		sb.WriteString(fmt.Sprintf("type %s struct {\n", wrapperName))
 		sb.WriteString(fmt.Sprintf("\tdata *%s\n", mech.Name))
 		sb.WriteString("\tdirtyflag.IDirtyFlag\n")
 		sb.WriteString("\tfieldMetas *fieldmeta.FieldMetas\n\n")
-		
+
 		// 生成 map 访问器字段
-		for _, field := range mech.DataFields {
-			if field.Type.IsXMap || field.Type.IsMap {
+		for _, field := range mech.Fields {
+			if field.Type.Kind == types.FieldKindXMap || field.Type.Kind == types.FieldKindMap {
 				// 判断 Value 类型
 				if g.isMMEObjectType(field.Type.ValueType) {
 					// MME Object 类型，使用 XMapWrapper
-					sb.WriteString(fmt.Sprintf("\t// Value 为 MME Object 类型，使用 XMapWrapper\n"))
+					sb.WriteString("\t// Value 为 MME Object 类型，使用 XMapWrapper\n")
 					// TODO: 生成 XMapWrapper 字段
 				} else {
 					// 值类型，使用 MapAccessor
-					keyType := toGoBaseTypeSimple(field.Type.KeyType)
-					valueType := toGoBaseTypeSimple(field.Type.ValueType)
+					keyType := toGoBaseTypeFromFieldType(field.Type.KeyType)
+					valueType := toGoBaseTypeFromFieldType(field.Type.ValueType)
 					accessorFieldName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Accessor"
-					sb.WriteString(fmt.Sprintf("\t// Value 为值类型，使用 xmap.MapAccessor 进行包装\n"))
+					sb.WriteString("\t// Value 为值类型，使用 xmap.MapAccessor 进行包装\n")
 					sb.WriteString(fmt.Sprintf("\t%s *xmap.MapAccessor[%s, %s]\n",
 						accessorFieldName, keyType, valueType))
 				}
 			}
 		}
-		
+
 		sb.WriteString("}\n\n")
-		
+
 		// 生成 New 构造函数
 		sb.WriteString(fmt.Sprintf("func New%s(data *%s) *%s {\n", wrapperName, mech.Name, wrapperName))
 		sb.WriteString("\tif data == nil {\n")
@@ -75,23 +77,23 @@ func (g *GoWrapperGenerator) generateMechanismWrappers(outputDir string) error {
 		sb.WriteString("\t\tIDirtyFlag: dirtyflag.NewDirtyFlag(),\n")
 		sb.WriteString("\t\tfieldMetas: fieldmeta.NewFieldMetas(),\n")
 		sb.WriteString("\t}\n\n")
-		
+
 		// 初始化 map 访问器
-		for _, field := range mech.DataFields {
-			if (field.Type.IsXMap || field.Type.IsMap) && !g.isMMEObjectType(field.Type.ValueType) {
+		for _, field := range mech.Fields {
+			if (field.Type.Kind == types.FieldKindXMap || field.Type.Kind == types.FieldKindMap) && !g.isMMEObjectType(field.Type.ValueType) {
 				accessorName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Accessor"
 				dirtyBitName := fmt.Sprintf("%sDirty%sBit", mech.Name, field.Name)
 				sb.WriteString(fmt.Sprintf("\tw.%s = xmap.NewMapAccessorWithMarker(&w.data.%s, w, %s)\n",
 					accessorName, field.Name, dirtyBitName))
 			}
 		}
-		
+
 		sb.WriteString("\treturn w\n")
 		sb.WriteString("}\n\n")
-		
+
 		// 生成 InitFieldContext 方法
 		sb.WriteString(fmt.Sprintf("func (w *%s) InitFieldContext() {\n", wrapperName))
-		for _, field := range mech.DataFields {
+		for _, field := range mech.Fields {
 			fieldIndexName := fmt.Sprintf("%sFieldIndex%s", mech.Name, field.Name)
 			// 根据 access 选项设置字段类型
 			if field.Options.Access == "all" || field.Options.Access == "s" || field.Options.Access == "" {
@@ -100,21 +102,21 @@ func (g *GoWrapperGenerator) generateMechanismWrappers(outputDir string) error {
 			}
 		}
 		sb.WriteString("}\n\n")
-		
+
 		// 生成 Name 方法
 		sb.WriteString(fmt.Sprintf("func (w *%s) Name() string {\n", wrapperName))
 		sb.WriteString(fmt.Sprintf("\treturn \"%s\"\n", mech.Name))
 		sb.WriteString("}\n\n")
-		
+
 		// 生成 Getter 和 Setter 方法
-		for _, field := range mech.DataFields {
-			if field.Type.IsXMap || field.Type.IsMap {
+		for _, field := range mech.Fields {
+			if field.Type.Kind == types.FieldKindXMap || field.Type.Kind == types.FieldKindMap {
 				// Map 字段生成访问器方法
 				accessorName := strings.ToLower(field.Name[0:1]) + field.Name[1:]
 				methodName := strings.ToUpper(field.Name[0:1]) + field.Name[1:]
 				if !g.isMMEObjectType(field.Type.ValueType) {
-					keyType := toGoBaseTypeSimple(field.Type.KeyType)
-					valueType := toGoBaseTypeSimple(field.Type.ValueType)
+					keyType := toGoBaseTypeFromFieldType(field.Type.KeyType)
+					valueType := toGoBaseTypeFromFieldType(field.Type.ValueType)
 					sb.WriteString(fmt.Sprintf("// 包装器-获取%s访问器\n", field.Name))
 					sb.WriteString(fmt.Sprintf("func (w *%s) Get%sAccessor() *xmap.MapAccessor[%s, %s] {\n",
 						wrapperName, methodName, keyType, valueType))
@@ -123,10 +125,10 @@ func (g *GoWrapperGenerator) generateMechanismWrappers(outputDir string) error {
 				}
 			} else {
 				// 普通字段生成 Getter 和 Setter
-				goType := ToGoType(field.Type, packageName)
+				goType := ToGoTypeFromTypesFieldType(&field.Type, packageName)
 				methodName := strings.ToUpper(field.Name[0:1]) + field.Name[1:]
 				dirtyBitName := fmt.Sprintf("%sDirty%sBit", mech.Name, field.Name)
-				
+
 				// Getter
 				if strings.HasPrefix(goType, "*") {
 					// 指针类型
@@ -139,7 +141,7 @@ func (g *GoWrapperGenerator) generateMechanismWrappers(outputDir string) error {
 					sb.WriteString(fmt.Sprintf("\treturn w.data.%s\n", field.Name))
 					sb.WriteString("}\n\n")
 				}
-				
+
 				// Setter
 				sb.WriteString(fmt.Sprintf("func (w *%s) Set%s(v %s) {\n", wrapperName, methodName, strings.TrimPrefix(goType, "*")))
 				sb.WriteString(fmt.Sprintf("\tw.data.%s = v\n", field.Name))
@@ -147,29 +149,29 @@ func (g *GoWrapperGenerator) generateMechanismWrappers(outputDir string) error {
 				sb.WriteString("}\n\n")
 			}
 		}
-		
+
 		// 生成 ClearAllDirty 方法
 		sb.WriteString(fmt.Sprintf("func (w *%s) ClearAllDirty() {\n", wrapperName))
 		sb.WriteString("\tw.IDirtyFlag.ClearAllDirty()\n")
-		for _, field := range mech.DataFields {
-			if (field.Type.IsXMap || field.Type.IsMap) && !g.isMMEObjectType(field.Type.ValueType) {
+		for _, field := range mech.Fields {
+			if (field.Type.Kind == types.FieldKindXMap || field.Type.Kind == types.FieldKindMap) && !g.isMMEObjectType(field.Type.ValueType) {
 				accessorName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Accessor"
 				sb.WriteString(fmt.Sprintf("\tw.%s.ResetOperations()\n", accessorName))
 			}
 		}
 		sb.WriteString("}\n\n")
-		
+
 		// 生成 BuildMongoUpdate 方法
 		sb.WriteString(fmt.Sprintf("func (w *%s) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder, path *mgo_builder.NestedPath) {\n", wrapperName))
 		sb.WriteString("\tif w == nil {\n")
 		sb.WriteString("\t\treturn\n")
 		sb.WriteString("\t}\n\n")
-		
-		for _, field := range mech.DataFields {
+
+		for _, field := range mech.Fields {
 			dirtyBitName := fmt.Sprintf("%sDirty%sBit", mech.Name, field.Name)
 			fieldNameSnake := CamelToSnake(field.Name)
-			
-			if field.Type.IsXMap || field.Type.IsMap {
+
+			if field.Type.Kind == types.FieldKindXMap || field.Type.Kind == types.FieldKindMap {
 				sb.WriteString(fmt.Sprintf("\tif w.IsDirty(%s) {\n", dirtyBitName))
 				if !g.isMMEObjectType(field.Type.ValueType) {
 					accessorName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Accessor"
@@ -181,7 +183,7 @@ func (g *GoWrapperGenerator) generateMechanismWrappers(outputDir string) error {
 				sb.WriteString("\t}\n")
 			} else {
 				sb.WriteString(fmt.Sprintf("\tif w.IsDirty(%s) {\n", dirtyBitName))
-				goType := ToGoType(field.Type, packageName)
+				goType := ToGoTypeFromTypesFieldType(&field.Type, packageName)
 				if strings.HasPrefix(goType, "*") {
 					sb.WriteString(fmt.Sprintf("\t\tif w.data.%s != nil {\n", field.Name))
 					sb.WriteString(fmt.Sprintf("\t\t\tbuilder.SetNestedPath(path, \"%s\", *w.data.%s)\n",
@@ -195,7 +197,7 @@ func (g *GoWrapperGenerator) generateMechanismWrappers(outputDir string) error {
 			}
 		}
 		sb.WriteString("}\n\n")
-		
+
 		// 生成 ToIncrementalProtoWithContext 方法
 		sb.WriteString("// ToIncrementalProtoWithContext 根据脏标记位构建增量数据的 protoMessage\n")
 		sb.WriteString("// 只返回标记为脏的字段数据，用于增量同步\n")
@@ -208,25 +210,26 @@ func (g *GoWrapperGenerator) generateMechanismWrappers(outputDir string) error {
 		sb.WriteString("\t\treturn nil\n")
 		sb.WriteString("\t}\n\n")
 		sb.WriteString(fmt.Sprintf("\tincremental := &mme.%s{}\n\n", mech.Name))
-		
-		for _, field := range mech.DataFields {
+
+		for _, field := range mech.Fields {
 			fieldIndexName := fmt.Sprintf("%sFieldIndex%s", mech.Name, field.Name)
 			dirtyBitName := fmt.Sprintf("%sDirty%sBit", mech.Name, field.Name)
-			
-			if field.Type.IsXMap || field.Type.IsMap {
+
+			if field.Type.Kind == types.FieldKindXMap || field.Type.Kind == types.FieldKindMap {
 				// Map 字段生成 ChangeList
 				sb.WriteString(fmt.Sprintf("\tif mmemodel.FieldCanBeIncrementalSynced(w, %s, %s, ctx) {\n",
 					dirtyBitName, fieldIndexName))
 				changeListName := field.Name + "_XXXChangeList"
 				recordName := fmt.Sprintf("%s_%s_XXXMapChangeRecord", mech.Name, field.Name)
-				
+
 				sb.WriteString(fmt.Sprintf("\t\tincremental.%s = make([]*mme.%s, 0)\n",
 					changeListName, recordName))
-				
+
 				if !g.isMMEObjectType(field.Type.ValueType) {
 					accessorName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Accessor"
+					keyType := toGoBaseTypeFromFieldType(field.Type.KeyType)
 					sb.WriteString(fmt.Sprintf("\t\tw.%s.RangeOperations(func(key %s, operation xmap.MapOperation[%s]) bool {\n",
-						accessorName, toGoBaseTypeSimple(field.Type.KeyType), toGoBaseTypeSimple(field.Type.KeyType)))
+						accessorName, keyType, keyType))
 					sb.WriteString("\t\t\tswitch operation.Type {\n")
 					sb.WriteString("\t\t\tcase xmap.SetOperation:\n")
 					sb.WriteString(fmt.Sprintf("\t\t\t\tv, _ := w.%s.Get(key)\n", accessorName))
@@ -252,10 +255,11 @@ func (g *GoWrapperGenerator) generateMechanismWrappers(outputDir string) error {
 				// 普通字段
 				sb.WriteString(fmt.Sprintf("\tif mmemodel.FieldCanBeIncrementalSynced(w, %s, %s, ctx) {\n",
 					dirtyBitName, fieldIndexName))
-				goType := ToGoType(field.Type, packageName)
+				goType := ToGoTypeFromTypesFieldType(&field.Type, packageName)
 				if strings.HasPrefix(goType, "*") {
-					sb.WriteString(fmt.Sprintf("\t\tv := w.Get%s()\n", strings.ToUpper(field.Name[0:1])+field.Name[1:]))
-					sb.WriteString(fmt.Sprintf("\t\tif v != nil {\n"))
+					methodName := strings.ToUpper(field.Name[0:1]) + field.Name[1:]
+					sb.WriteString(fmt.Sprintf("\t\tv := w.Get%s()\n", methodName))
+					sb.WriteString("\t\tif v != nil {\n")
 					sb.WriteString(fmt.Sprintf("\t\t\tincremental.%s = v\n", field.Name))
 					sb.WriteString("\t\t}\n")
 				} else {
@@ -265,14 +269,14 @@ func (g *GoWrapperGenerator) generateMechanismWrappers(outputDir string) error {
 				sb.WriteString("\t}\n")
 			}
 		}
-		
+
 		sb.WriteString("\treturn incremental\n")
 		sb.WriteString("}\n\n")
-		
+
 		// 写入文件（追加到机制文件）
 		fileName := fmt.Sprintf("%s_mechanisms.go", strings.ToLower(mech.Name))
 		filePath := fmt.Sprintf("%s/%s", outputDir, fileName)
-		
+
 		// 读取现有文件内容（如果存在）
 		existingContent := ""
 		if FileExists(filePath) {
@@ -280,7 +284,7 @@ func (g *GoWrapperGenerator) generateMechanismWrappers(outputDir string) error {
 				existingContent = data
 			}
 		}
-		
+
 		// 追加新内容（如果文件已存在，在末尾添加换行）
 		var newContent string
 		if existingContent != "" {
@@ -295,12 +299,32 @@ func (g *GoWrapperGenerator) generateMechanismWrappers(outputDir string) error {
 			return err
 		}
 	}
-	
+
 	return nil
 }
 
 // isMMEObjectType 判断是否是 MME Object 类型
-func (g *GoWrapperGenerator) isMMEObjectType(typeName string) bool {
+func (g *GoWrapperGenerator) isMMEObjectType(fieldType *types.FieldType) bool {
+	if fieldType == nil {
+		return false
+	}
+
+	// 如果是 Map/XMap，检查 ValueType
+	if fieldType.Kind == types.FieldKindMap || fieldType.Kind == types.FieldKindXMap {
+		if fieldType.ValueType != nil {
+			return g.isMMEObjectType(fieldType.ValueType)
+		}
+		return false
+	}
+
+	// 获取类型名称
+	typeName := ""
+	if fieldType.TypeName != "" {
+		typeName = fieldType.TypeName
+	} else {
+		typeName = fieldType.Kind.String()
+	}
+
 	// 检查是否是 Module 或 Mechanism 类型
 	for _, module := range g.data.Modules {
 		if module.Name == typeName {
@@ -313,6 +337,17 @@ func (g *GoWrapperGenerator) isMMEObjectType(typeName string) bool {
 		}
 	}
 	return false
+}
+
+// getTypeNameFromFieldType 从 FieldType 获取类型名称字符串
+func getTypeNameFromFieldType(ft *types.FieldType) string {
+	if ft == nil {
+		return "unknown"
+	}
+	if ft.TypeName != "" {
+		return ft.TypeName
+	}
+	return ft.Kind.String()
 }
 
 // toGoBaseTypeSimple 转换基础类型（不带包名）
@@ -335,6 +370,74 @@ func toGoBaseTypeSimple(typeStr string) string {
 	}
 }
 
+// toGoBaseTypeFromFieldType 从 FieldType 获取 Go 基础类型字符串（不带包名）
+func toGoBaseTypeFromFieldType(ft *types.FieldType) string {
+	if ft == nil {
+		return "unknown"
+	}
+
+	if ft.TypeName != "" {
+		// 如果是消息类型，提取类型名称
+		return ft.TypeName
+	}
+
+	// 基础类型
+	switch ft.Kind {
+	case types.FieldKindInt32:
+		return "int32"
+	case types.FieldKindInt64:
+		return "int64"
+	case types.FieldKindString:
+		return "string"
+	case types.FieldKindBool:
+		return "bool"
+	case types.FieldKindFloat:
+		return "float32"
+	case types.FieldKindDouble:
+		return "float64"
+	default:
+		return ft.Kind.String()
+	}
+}
+
+// ToGoTypeFromTypesFieldType 将新的 types.FieldType 转换为 Go 类型
+func ToGoTypeFromTypesFieldType(ft *types.FieldType, packageName string) string {
+	if ft == nil {
+		return "unknown"
+	}
+
+	switch ft.Kind {
+	case types.FieldKindRepeated:
+		if ft.ValueType != nil {
+			return "[]" + ToGoTypeFromTypesFieldType(ft.ValueType, packageName)
+		}
+		return "[]unknown"
+	case types.FieldKindMap, types.FieldKindXMap:
+		if ft.KeyType != nil && ft.ValueType != nil {
+			keyType := ToGoTypeFromTypesFieldType(ft.KeyType, packageName)
+			valueType := ToGoTypeFromTypesFieldType(ft.ValueType, packageName)
+			return fmt.Sprintf("map[%s]%s", keyType, valueType)
+		}
+		return "map[unknown]unknown"
+	default:
+		typeName := getTypeNameFromFieldType(ft)
+		// 基础类型
+		baseType := toGoBaseTypeFromFieldType(ft)
+		if baseType != typeName && baseType != "unknown" {
+			return baseType
+		}
+		// 消息类型
+		if strings.Contains(typeName, ".") {
+			return typeName
+		}
+		// MME 类型，添加包名前缀
+		if packageName != "" {
+			return fmt.Sprintf("*%s.%s", packageName, typeName)
+		}
+		return "*" + typeName
+	}
+}
+
 // ReadFileContent 读取文件内容
 func ReadFileContent(filePath string) (string, error) {
 	data, err := os.ReadFile(filePath)
@@ -343,5 +446,3 @@ func ReadFileContent(filePath string) (string, error) {
 	}
 	return string(data), nil
 }
-
-
