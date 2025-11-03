@@ -201,45 +201,31 @@ func (g *GoWrapperGenerator) generateMechanismWrappers(outputDir string) error {
 			dirtyBitName := fmt.Sprintf("%sDirty%sBit", mech.Name, field.Name)
 
 			if field.Type.Kind == types.FieldKindXMap || field.Type.Kind == types.FieldKindMap {
-				// Map 字段生成 ChangeList
-				sb.WriteString(fmt.Sprintf("\tif mmemodel.FieldCanBeIncrementalSynced(w, %s, %s, ctx) {\n",
-					dirtyBitName, fieldIndexName))
-				changeListName := field.Name + "_XXXChangeList"
-				recordName := fmt.Sprintf("%s_%s_XXXMapChangeRecord", mech.Name, field.Name)
-
-				sb.WriteString(fmt.Sprintf("\t\tincremental.%s = make([]*mme.%s, 0)\n",
-					changeListName, recordName))
-
-				if !g.isMMEObjectType(field.Type.ValueType) {
-					accessorName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Accessor"
-					keyType := ToGoBaseTypeFromFieldType(field.Type.KeyType)
-					sb.WriteString(fmt.Sprintf("\t\tw.%s.RangeOperations(func(key %s, operation xmap.MapOperation[%s]) bool {\n",
-						accessorName, keyType, keyType))
-					sb.WriteString("\t\t\tswitch operation.Type {\n")
-					sb.WriteString("\t\t\tcase xmap.SetOperation:\n")
-					sb.WriteString(fmt.Sprintf("\t\t\t\tv, _ := w.%s.Get(key)\n", accessorName))
-					sb.WriteString(fmt.Sprintf("\t\t\t\tincremental.%s = append(incremental.%s, &mme.%s{\n",
-						changeListName, changeListName, recordName))
-					sb.WriteString("\t\t\t\t\tKey:   key,\n")
-					sb.WriteString("\t\t\t\t\tValue: v,\n")
-					sb.WriteString("\t\t\t\t})\n")
-					sb.WriteString("\t\t\tcase xmap.DeleteOperation:\n")
-					sb.WriteString(fmt.Sprintf("\t\t\t\tincremental.%s = append(incremental.%s, &mme.%s{\n",
-						changeListName, changeListName, recordName))
-					sb.WriteString("\t\t\t\t\tKey:      key,\n")
-					sb.WriteString("\t\t\t\t\tIsDelete: true,\n")
-					sb.WriteString("\t\t\t\t})\n")
-					sb.WriteString("\t\t\t}\n")
-					sb.WriteString("\t\t\treturn true\n")
-					sb.WriteString("\t\t})\n")
+				// Map 类型直接全量同步，不使用增量同步逻辑
+				// xmap 字段使用 mmemodel.FieldCanBeIncrementalSynced 快捷方法
+				if g.isContainerType(&field.Type) {
+					// xmap 字段：使用 mmemodel.FieldCanBeIncrementalSynced
+					sb.WriteString(fmt.Sprintf("\tif mmemodel.FieldCanBeIncrementalSynced(w, %s, %s, ctx) {\n",
+						dirtyBitName, fieldIndexName))
 				} else {
-					sb.WriteString(fmt.Sprintf("\t\t// TODO: Handle MME Object map field %s\n", field.Name))
+					// map 字段：使用 IsDirty
+					sb.WriteString(fmt.Sprintf("\tif w.IsDirty(%s) {\n", dirtyBitName))
+				}
+				
+				accessorName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Accessor"
+				
+				if !g.isReferenceType(field.Type.ValueType) {
+					// 值类型，直接调用 Clone
+					sb.WriteString(fmt.Sprintf("\t\tincremental.%s = w.%s.Clone()\n",
+						field.Name, accessorName))
+				} else {
+					// 引用类型，留 TODO
+					sb.WriteString(fmt.Sprintf("\t\t// TODO: Handle reference type map field %s (full sync)\n", field.Name))
 				}
 				sb.WriteString("\t}\n")
 			} else {
-				// 普通字段 - 基础类型转换为指针
-				sb.WriteString(fmt.Sprintf("\tif mmemodel.FieldCanBeIncrementalSynced(w, %s, %s, ctx) {\n",
-					dirtyBitName, fieldIndexName))
+				// 非xmap字段，使用 IsDirty 方法判断脏标记
+				sb.WriteString(fmt.Sprintf("\tif w.IsDirty(%s) {\n", dirtyBitName))
 				methodName := strings.ToUpper(field.Name[0:1]) + field.Name[1:]
 				sb.WriteString(fmt.Sprintf("\t\tv := w.Get%s()\n", methodName))
 				sb.WriteString(fmt.Sprintf("\t\tincremental.%s = &v\n", field.Name))
@@ -314,6 +300,34 @@ func (g *GoWrapperGenerator) isMMEObjectType(fieldType *types.FieldType) bool {
 		}
 	}
 	return false
+}
+
+// isReferenceType 判断是否是引用类型（MME Object 或 Message 类型）
+func (g *GoWrapperGenerator) isReferenceType(fieldType *types.FieldType) bool {
+	if fieldType == nil {
+		return false
+	}
+
+	// 如果是 Map/XMap，检查 ValueType
+	if fieldType.Kind == types.FieldKindMap || fieldType.Kind == types.FieldKindXMap {
+		if fieldType.ValueType != nil {
+			return g.isReferenceType(fieldType.ValueType)
+		}
+		return false
+	}
+
+	// Message 类型和 MME Object 类型都是引用类型
+	return fieldType.Kind == types.FieldKindMessage || fieldType.Kind == types.FieldKindMMEObject || g.isMMEObjectType(fieldType)
+}
+
+// isContainerType 判断是否是容器类型（xmap、xslice等，需要增量同步的容器）
+// 注意可扩展性，后续可能还会有 xslice 容器
+func (g *GoWrapperGenerator) isContainerType(fieldType *types.FieldType) bool {
+	if fieldType == nil {
+		return false
+	}
+	// xmap 是容器类型，后续可能还会有 xslice 等
+	return fieldType.Kind == types.FieldKindXMap
 }
 
 // getTypeNameFromFieldType 从 FieldType 获取类型名称字符串
