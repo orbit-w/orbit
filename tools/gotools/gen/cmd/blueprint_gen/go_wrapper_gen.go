@@ -237,6 +237,56 @@ func (g *GoWrapperGenerator) generateMechanismWrappers(outputDir string) error {
 		sb.WriteString("\treturn incremental\n")
 		sb.WriteString("}\n\n")
 
+		// 生成 ToProto 方法
+		sb.WriteString("// ToProto 将 Mechanism 数据转换为完整的 protobuf 结构体\n")
+		sb.WriteString(fmt.Sprintf("func (w *%s) ToProto() *mme.%s {\n", wrapperName, mech.Name))
+		sb.WriteString("\tif w == nil || w.data == nil {\n")
+		sb.WriteString("\t\treturn nil\n")
+		sb.WriteString("\t}\n\n")
+		sb.WriteString("\treturn w.data.ToProto()\n")
+		sb.WriteString("}\n\n")
+
+		// 生成 FromProto 方法
+		sb.WriteString("// FromProto 从 protobuf 结构体加载数据到 Mechanism\n")
+		sb.WriteString(fmt.Sprintf("func (w *%s) FromProto(pb *mme.%s) {\n", wrapperName, mech.Name))
+		sb.WriteString("\tif w == nil || w.data == nil || pb == nil {\n")
+		sb.WriteString("\t\treturn\n")
+		sb.WriteString("\t}\n\n")
+
+		for _, field := range mech.Fields {
+			if field.Type.Kind == types.FieldKindXMap || field.Type.Kind == types.FieldKindMap {
+				// Map 字段需要特殊处理
+				sb.WriteString(fmt.Sprintf("\t// 加载 %s map\n", field.Name))
+				sb.WriteString(fmt.Sprintf("\tif pb.%s != nil {\n", field.Name))
+
+				if !g.isMMEObjectType(field.Type.ValueType) {
+					// 值类型 map，使用 accessor 的 Reset 方法
+					accessorName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Accessor"
+					sb.WriteString("\t\t// 清空现有的 map\n")
+					keyType := ToGoBaseTypeFromFieldType(field.Type.KeyType)
+					valueType := ToGoBaseTypeFromFieldType(field.Type.ValueType)
+					sb.WriteString(fmt.Sprintf("\t\ttemp := make(map[%s]%s, len(pb.%s))\n",
+						keyType, valueType, field.Name))
+					sb.WriteString(fmt.Sprintf("\t\tmaps.Copy(temp, pb.%s)\n", field.Name))
+					sb.WriteString("\t\t// 设置新的 map 数据，并清空所有变化操作记录\n")
+					sb.WriteString(fmt.Sprintf("\t\tw.%s.Reset(&temp)\n", accessorName))
+				} else {
+					// MME Object 类型 map，需要递归处理
+					sb.WriteString(fmt.Sprintf("\t\t// TODO: Handle MME Object map field %s\n", field.Name))
+				}
+				sb.WriteString("\t}\n")
+			} else {
+				// 普通字段，使用 Setter 方法
+				methodName := strings.ToUpper(field.Name[0:1]) + field.Name[1:]
+				sb.WriteString(fmt.Sprintf("\t// 加载基础类型字段 %s\n", field.Name))
+				sb.WriteString(fmt.Sprintf("\tif pb.%s != nil {\n", field.Name))
+				sb.WriteString(fmt.Sprintf("\t\tw.Set%s(*pb.%s)\n", methodName, field.Name))
+				sb.WriteString("\t}\n")
+			}
+		}
+
+		sb.WriteString("}\n\n")
+
 		// 写入文件（追加到机制文件）
 		fileName := fmt.Sprintf("%s_mechanisms.go", CamelToSnake(mech.Name))
 		filePath := fmt.Sprintf("%s/%s", outputDir, fileName)
