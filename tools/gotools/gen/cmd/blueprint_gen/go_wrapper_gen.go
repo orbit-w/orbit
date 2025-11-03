@@ -108,6 +108,12 @@ func (g *GoWrapperGenerator) generateMechanismWrappers(outputDir string) error {
 		sb.WriteString(fmt.Sprintf("\treturn \"%s\"\n", mech.Name))
 		sb.WriteString("}\n\n")
 
+		// 生成 MatchesAll 方法（实现 IFieldMetaContext 接口）
+		sb.WriteString("// MatchesAll 判断字段是否匹配所有类型标记\n")
+		sb.WriteString(fmt.Sprintf("func (w *%s) MatchesAll(fieldID uint8, fieldTypes ...fieldmeta.FieldType) bool {\n", wrapperName))
+		sb.WriteString("\treturn w.fieldMetas.MatchesAll(fieldID, fieldTypes...)\n")
+		sb.WriteString("}\n\n")
+
 		// 生成 Getter 和 Setter 方法
 		for _, field := range mech.Fields {
 			if field.Type.Kind == types.FieldKindXMap || field.Type.Kind == types.FieldKindMap {
