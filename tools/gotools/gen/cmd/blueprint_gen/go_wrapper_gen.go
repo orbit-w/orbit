@@ -208,18 +208,12 @@ func (g *GoWrapperGenerator) generateMechanismWrappers(outputDir string) error {
 
 			if field.Type.Kind == types.FieldKindXMap || field.Type.Kind == types.FieldKindMap {
 				// Map 类型直接全量同步，不使用增量同步逻辑
-				// xmap 字段使用 mmemodel.FieldCanBeIncrementalSynced 快捷方法
-				if g.isContainerType(&field.Type) {
-					// xmap 字段：使用 mmemodel.FieldCanBeIncrementalSynced
-					sb.WriteString(fmt.Sprintf("\tif mmemodel.FieldCanBeIncrementalSynced(w, %s, %s, ctx) {\n",
-						dirtyBitName, fieldIndexName))
-				} else {
-					// map 字段：使用 IsDirty
-					sb.WriteString(fmt.Sprintf("\tif w.IsDirty(%s) {\n", dirtyBitName))
-				}
-				
+				// 所有 map/xmap 字段都使用 mmemodel.FieldCanBeIncrementalSynced 快捷方法进行脏标记判断
+				sb.WriteString(fmt.Sprintf("\tif mmemodel.FieldCanBeIncrementalSynced(w, %s, %s, ctx) {\n",
+					dirtyBitName, fieldIndexName))
+
 				accessorName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Accessor"
-				
+
 				if !g.isReferenceType(field.Type.ValueType) {
 					// 值类型，直接调用 Clone
 					sb.WriteString(fmt.Sprintf("\t\tincremental.%s = w.%s.Clone()\n",
@@ -230,8 +224,9 @@ func (g *GoWrapperGenerator) generateMechanismWrappers(outputDir string) error {
 				}
 				sb.WriteString("\t}\n")
 			} else {
-				// 非xmap字段，使用 IsDirty 方法判断脏标记
-				sb.WriteString(fmt.Sprintf("\tif w.IsDirty(%s) {\n", dirtyBitName))
+				// 所有字段都使用 mmemodel.FieldCanBeIncrementalSynced 快捷方法进行脏标记判断
+				sb.WriteString(fmt.Sprintf("\tif mmemodel.FieldCanBeIncrementalSynced(w, %s, %s, ctx) {\n",
+					dirtyBitName, fieldIndexName))
 				methodName := strings.ToUpper(field.Name[0:1]) + field.Name[1:]
 				sb.WriteString(fmt.Sprintf("\t\tv := w.Get%s()\n", methodName))
 				sb.WriteString(fmt.Sprintf("\t\tincremental.%s = &v\n", field.Name))
