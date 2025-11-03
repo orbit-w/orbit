@@ -55,8 +55,8 @@ func (g *GoWrapperGenerator) generateMechanismWrappers(outputDir string) error {
 					// TODO: 生成 XMapWrapper 字段
 				} else {
 					// 值类型，使用 MapAccessor
-					keyType := toGoBaseTypeFromFieldType(field.Type.KeyType)
-					valueType := toGoBaseTypeFromFieldType(field.Type.ValueType)
+					keyType := ToGoBaseTypeFromFieldType(field.Type.KeyType)
+					valueType := ToGoBaseTypeFromFieldType(field.Type.ValueType)
 					accessorFieldName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Accessor"
 					sb.WriteString("\t// Value 为值类型，使用 xmap.MapAccessor 进行包装\n")
 					sb.WriteString(fmt.Sprintf("\t%s *xmap.MapAccessor[%s, %s]\n",
@@ -115,8 +115,8 @@ func (g *GoWrapperGenerator) generateMechanismWrappers(outputDir string) error {
 				accessorName := strings.ToLower(field.Name[0:1]) + field.Name[1:]
 				methodName := strings.ToUpper(field.Name[0:1]) + field.Name[1:]
 				if !g.isMMEObjectType(field.Type.ValueType) {
-					keyType := toGoBaseTypeFromFieldType(field.Type.KeyType)
-					valueType := toGoBaseTypeFromFieldType(field.Type.ValueType)
+					keyType := ToGoBaseTypeFromFieldType(field.Type.KeyType)
+					valueType := ToGoBaseTypeFromFieldType(field.Type.ValueType)
 					sb.WriteString(fmt.Sprintf("// 包装器-获取%s访问器\n", field.Name))
 					sb.WriteString(fmt.Sprintf("func (w *%s) Get%sAccessor() *xmap.MapAccessor[%s, %s] {\n",
 						wrapperName, methodName, keyType, valueType))
@@ -129,21 +129,13 @@ func (g *GoWrapperGenerator) generateMechanismWrappers(outputDir string) error {
 				methodName := strings.ToUpper(field.Name[0:1]) + field.Name[1:]
 				dirtyBitName := fmt.Sprintf("%sDirty%sBit", mech.Name, field.Name)
 
-				// Getter
-				if strings.HasPrefix(goType, "*") {
-					// 指针类型
-					sb.WriteString(fmt.Sprintf("func (w *%s) Get%s() %s {\n", wrapperName, methodName, goType))
-					sb.WriteString(fmt.Sprintf("\treturn w.data.%s\n", field.Name))
-					sb.WriteString("}\n\n")
-				} else {
-					// 值类型
-					sb.WriteString(fmt.Sprintf("func (w *%s) Get%s() %s {\n", wrapperName, methodName, strings.TrimPrefix(goType, "*")))
-					sb.WriteString(fmt.Sprintf("\treturn w.data.%s\n", field.Name))
-					sb.WriteString("}\n\n")
-				}
+				// Getter - 基础类型返回值类型，不是指针
+				sb.WriteString(fmt.Sprintf("func (w *%s) Get%s() %s {\n", wrapperName, methodName, goType))
+				sb.WriteString(fmt.Sprintf("\treturn w.data.%s\n", field.Name))
+				sb.WriteString("}\n\n")
 
-				// Setter
-				sb.WriteString(fmt.Sprintf("func (w *%s) Set%s(v %s) {\n", wrapperName, methodName, strings.TrimPrefix(goType, "*")))
+				// Setter - 基础类型接受值类型
+				sb.WriteString(fmt.Sprintf("func (w *%s) Set%s(v %s) {\n", wrapperName, methodName, goType))
 				sb.WriteString(fmt.Sprintf("\tw.data.%s = v\n", field.Name))
 				sb.WriteString(fmt.Sprintf("\tw.MarkDirty(%s)\n", dirtyBitName))
 				sb.WriteString("}\n\n")
@@ -183,16 +175,9 @@ func (g *GoWrapperGenerator) generateMechanismWrappers(outputDir string) error {
 				sb.WriteString("\t}\n")
 			} else {
 				sb.WriteString(fmt.Sprintf("\tif w.IsDirty(%s) {\n", dirtyBitName))
-				goType := ToGoTypeFromTypesFieldType(&field.Type, packageName)
-				if strings.HasPrefix(goType, "*") {
-					sb.WriteString(fmt.Sprintf("\t\tif w.data.%s != nil {\n", field.Name))
-					sb.WriteString(fmt.Sprintf("\t\t\tbuilder.SetNestedPath(path, \"%s\", *w.data.%s)\n",
-						fieldNameSnake, field.Name))
-					sb.WriteString("\t\t}\n")
-				} else {
-					sb.WriteString(fmt.Sprintf("\t\tbuilder.SetNestedPath(path, \"%s\", w.data.%s)\n",
-						fieldNameSnake, field.Name))
-				}
+				methodName := strings.ToUpper(field.Name[0:1]) + field.Name[1:]
+				sb.WriteString(fmt.Sprintf("\t\tbuilder.SetNestedPath(path, \"%s\", w.Get%s())\n",
+					fieldNameSnake, methodName))
 				sb.WriteString("\t}\n")
 			}
 		}
@@ -227,7 +212,7 @@ func (g *GoWrapperGenerator) generateMechanismWrappers(outputDir string) error {
 
 				if !g.isMMEObjectType(field.Type.ValueType) {
 					accessorName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Accessor"
-					keyType := toGoBaseTypeFromFieldType(field.Type.KeyType)
+					keyType := ToGoBaseTypeFromFieldType(field.Type.KeyType)
 					sb.WriteString(fmt.Sprintf("\t\tw.%s.RangeOperations(func(key %s, operation xmap.MapOperation[%s]) bool {\n",
 						accessorName, keyType, keyType))
 					sb.WriteString("\t\t\tswitch operation.Type {\n")
@@ -252,20 +237,12 @@ func (g *GoWrapperGenerator) generateMechanismWrappers(outputDir string) error {
 				}
 				sb.WriteString("\t}\n")
 			} else {
-				// 普通字段
+				// 普通字段 - 基础类型转换为指针
 				sb.WriteString(fmt.Sprintf("\tif mmemodel.FieldCanBeIncrementalSynced(w, %s, %s, ctx) {\n",
 					dirtyBitName, fieldIndexName))
-				goType := ToGoTypeFromTypesFieldType(&field.Type, packageName)
-				if strings.HasPrefix(goType, "*") {
-					methodName := strings.ToUpper(field.Name[0:1]) + field.Name[1:]
-					sb.WriteString(fmt.Sprintf("\t\tv := w.Get%s()\n", methodName))
-					sb.WriteString("\t\tif v != nil {\n")
-					sb.WriteString(fmt.Sprintf("\t\t\tincremental.%s = v\n", field.Name))
-					sb.WriteString("\t\t}\n")
-				} else {
-					sb.WriteString(fmt.Sprintf("\t\tv := w.Get%s()\n", strings.ToUpper(field.Name[0:1])+field.Name[1:]))
-					sb.WriteString(fmt.Sprintf("\t\tincremental.%s = &v\n", field.Name))
-				}
+				methodName := strings.ToUpper(field.Name[0:1]) + field.Name[1:]
+				sb.WriteString(fmt.Sprintf("\t\tv := w.Get%s()\n", methodName))
+				sb.WriteString(fmt.Sprintf("\t\tincremental.%s = &v\n", field.Name))
 				sb.WriteString("\t}\n")
 			}
 		}
@@ -274,7 +251,7 @@ func (g *GoWrapperGenerator) generateMechanismWrappers(outputDir string) error {
 		sb.WriteString("}\n\n")
 
 		// 写入文件（追加到机制文件）
-		fileName := fmt.Sprintf("%s_mechanisms.go", strings.ToLower(mech.Name))
+		fileName := fmt.Sprintf("%s_mechanisms.go", CamelToSnake(mech.Name))
 		filePath := fmt.Sprintf("%s/%s", outputDir, fileName)
 
 		// 读取现有文件内容（如果存在）
@@ -370,36 +347,6 @@ func toGoBaseTypeSimple(typeStr string) string {
 	}
 }
 
-// toGoBaseTypeFromFieldType 从 FieldType 获取 Go 基础类型字符串（不带包名）
-func toGoBaseTypeFromFieldType(ft *types.FieldType) string {
-	if ft == nil {
-		return "unknown"
-	}
-
-	if ft.TypeName != "" {
-		// 如果是消息类型，提取类型名称
-		return ft.TypeName
-	}
-
-	// 基础类型
-	switch ft.Kind {
-	case types.FieldKindInt32:
-		return "int32"
-	case types.FieldKindInt64:
-		return "int64"
-	case types.FieldKindString:
-		return "string"
-	case types.FieldKindBool:
-		return "bool"
-	case types.FieldKindFloat:
-		return "float32"
-	case types.FieldKindDouble:
-		return "float64"
-	default:
-		return ft.Kind.String()
-	}
-}
-
 // ToGoTypeFromTypesFieldType 将新的 types.FieldType 转换为 Go 类型
 func ToGoTypeFromTypesFieldType(ft *types.FieldType, packageName string) string {
 	if ft == nil {
@@ -419,22 +366,34 @@ func ToGoTypeFromTypesFieldType(ft *types.FieldType, packageName string) string 
 			return fmt.Sprintf("map[%s]%s", keyType, valueType)
 		}
 		return "map[unknown]unknown"
-	default:
+	case types.FieldKindInt32, types.FieldKindInt64, types.FieldKindUInt32, types.FieldKindUInt64,
+		types.FieldKindFloat, types.FieldKindDouble, types.FieldKindBool, types.FieldKindString, types.FieldKindBytes:
+		// 基础类型直接返回值类型，不带指针和包名
+		return ToGoBaseTypeFromFieldType(ft)
+	case types.FieldKindMMEObject:
+		// MME Object 类型，添加包名前缀和指针
 		typeName := getTypeNameFromFieldType(ft)
-		// 基础类型
-		baseType := toGoBaseTypeFromFieldType(ft)
-		if baseType != typeName && baseType != "unknown" {
-			return baseType
-		}
-		// 消息类型
-		if strings.Contains(typeName, ".") {
-			return typeName
-		}
-		// MME 类型，添加包名前缀
-		if packageName != "" {
-			return fmt.Sprintf("*%s.%s", packageName, typeName)
+		// 去掉包名前缀，只取类型名
+		if idx := strings.LastIndex(typeName, "."); idx >= 0 {
+			typeName = typeName[idx+1:]
 		}
 		return "*" + typeName
+	case types.FieldKindMessage:
+		// 消息类型
+		typeName := getTypeNameFromFieldType(ft)
+		if strings.Contains(typeName, ".") {
+			// 外部包类型，直接返回
+			return typeName
+		}
+		// 本地消息类型，可能是其他包的类型，保持原样
+		return typeName
+	default:
+		// 其他类型（如 Enum），尝试获取类型名
+		typeName := getTypeNameFromFieldType(ft)
+		if typeName != "" && typeName != "unknown" {
+			return typeName
+		}
+		return "unknown"
 	}
 }
 

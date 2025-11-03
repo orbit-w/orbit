@@ -64,7 +64,7 @@ func (g *GoStructGenerator) generateMechanismFiles(outputDir string) error {
 		sb.WriteString("\t\"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder\"\n")
 		sb.WriteString("\tmmemodel \"gitee.com/orbit-w/orbit/lib/module/mme_model\"\n")
 
-		// 检查是否有 map 字段需要 xmap
+		// 检查是否有 map 字段需要 maps 包
 		hasMap := false
 		for _, field := range mech.Fields {
 			if field.Type.Kind == types.FieldKindXMap || field.Type.Kind == types.FieldKindMap {
@@ -73,6 +73,7 @@ func (g *GoStructGenerator) generateMechanismFiles(outputDir string) error {
 			}
 		}
 		if hasMap {
+			sb.WriteString("\t\"maps\"\n")
 			sb.WriteString("\t\"gitee.com/orbit-w/meteor/bases/container/xmap\"\n")
 			sb.WriteString("\txmapwrapper \"gitee.com/orbit-w/orbit/lib/module/xmapwrapper\"\n")
 		}
@@ -108,7 +109,22 @@ func (g *GoStructGenerator) generateMechanismFiles(outputDir string) error {
 
 		// 生成 New 构造函数
 		sb.WriteString(fmt.Sprintf("func New%s() *%s {\n", mech.Name, mech.Name))
-		sb.WriteString(fmt.Sprintf("\treturn &%s{}\n", mech.Name))
+		sb.WriteString(fmt.Sprintf("\treturn &%s{\n", mech.Name))
+		// 初始化 map 字段
+		hasMapInit := false
+		for _, field := range mech.Fields {
+			if field.Type.Kind == types.FieldKindXMap || field.Type.Kind == types.FieldKindMap {
+				if !hasMapInit {
+					hasMapInit = true
+				}
+				sb.WriteString(fmt.Sprintf("\t\t%s: make(%s),\n", field.Name, ToGoTypeFromTypesFieldType(&field.Type, packageName)))
+			}
+		}
+		if hasMapInit {
+			sb.WriteString("\t}\n")
+		} else {
+			sb.WriteString("\t}\n")
+		}
 		sb.WriteString("}\n\n")
 
 		// 生成 DeepCopy 方法
@@ -117,6 +133,12 @@ func (g *GoStructGenerator) generateMechanismFiles(outputDir string) error {
 		sb.WriteString("\t\treturn\n")
 		sb.WriteString("\t}\n\n")
 		sb.WriteString("\t*co = *m\n")
+		// 深拷贝 map 字段
+		for _, field := range mech.Fields {
+			if field.Type.Kind == types.FieldKindXMap || field.Type.Kind == types.FieldKindMap {
+				sb.WriteString(fmt.Sprintf("\tmaps.Copy(co.%s, m.%s)\n", field.Name, field.Name))
+			}
+		}
 		sb.WriteString("}\n\n")
 
 		// 生成 ToProto 方法
@@ -129,18 +151,16 @@ func (g *GoStructGenerator) generateMechanismFiles(outputDir string) error {
 		for _, field := range mech.Fields {
 			if field.Type.Kind == types.FieldKindXMap || field.Type.Kind == types.FieldKindMap {
 				// Map 字段需要特殊处理
-				sb.WriteString(fmt.Sprintf("\t// TODO: Handle map field %s\n", field.Name))
+				sb.WriteString(fmt.Sprintf("\tif m.%s != nil {\n", field.Name))
+				keyType := ToGoBaseTypeFromFieldType(field.Type.KeyType)
+				valueType := ToGoBaseTypeFromFieldType(field.Type.ValueType)
+				sb.WriteString(fmt.Sprintf("\t\tpb.%s = make(map[%s]%s, len(m.%s))\n", field.Name, keyType, valueType, field.Name))
+				sb.WriteString(fmt.Sprintf("\t\tmaps.Copy(pb.%s, m.%s)\n", field.Name, field.Name))
+				sb.WriteString("\t}\n")
 			} else if field.Type.Kind != types.FieldKindMessage && field.Type.Kind != types.FieldKindMMEObject {
-				// 基础类型
-				goType := ToGoTypeFromTypesFieldType(&field.Type, packageName)
-				if strings.HasPrefix(goType, "*") {
-					// 指针类型
-					sb.WriteString(fmt.Sprintf("\tif m.%s != nil {\n", field.Name))
-					sb.WriteString(fmt.Sprintf("\t\tpb.%s = m.%s\n", field.Name, field.Name))
-					sb.WriteString("\t}\n")
-				} else {
-					sb.WriteString(fmt.Sprintf("\tpb.%s = &m.%s\n", field.Name, field.Name))
-				}
+				// 基础类型（值类型）
+				sb.WriteString(fmt.Sprintf("\t%s := m.%s\n", strings.ToLower(field.Name), field.Name))
+				sb.WriteString(fmt.Sprintf("\tpb.%s = &%s\n", field.Name, strings.ToLower(field.Name)))
 			} else {
 				// 消息类型或 MME Object 类型
 				sb.WriteString(fmt.Sprintf("\tif m.%s != nil {\n", field.Name))
@@ -153,7 +173,7 @@ func (g *GoStructGenerator) generateMechanismFiles(outputDir string) error {
 		sb.WriteString("}\n\n")
 
 		// 写入文件
-		fileName := fmt.Sprintf("%s_mechanisms.go", strings.ToLower(mech.Name))
+		fileName := fmt.Sprintf("%s_mechanisms.go", CamelToSnake(mech.Name))
 		filePath := fmt.Sprintf("%s/%s", outputDir, fileName)
 		if err := WriteFile(filePath, sb.String()); err != nil {
 			return err

@@ -268,6 +268,36 @@ func CamelToSnake(s string) string {
 	return strings.ToLower(result.String())
 }
 
+// ToGoBaseTypeFromFieldType 从 FieldType 获取 Go 基础类型字符串（不带包名）
+func ToGoBaseTypeFromFieldType(ft *types.FieldType) string {
+	if ft == nil {
+		return "unknown"
+	}
+
+	if ft.TypeName != "" {
+		// 如果是消息类型，提取类型名称
+		return ft.TypeName
+	}
+
+	// 基础类型
+	switch ft.Kind {
+	case types.FieldKindInt32:
+		return "int32"
+	case types.FieldKindInt64:
+		return "int64"
+	case types.FieldKindString:
+		return "string"
+	case types.FieldKindBool:
+		return "bool"
+	case types.FieldKindFloat:
+		return "float32"
+	case types.FieldKindDouble:
+		return "float64"
+	default:
+		return ft.Kind.String()
+	}
+}
+
 // ConvertFieldToTypesField 将旧的 Field 转换为新的 *types.Field
 func ConvertFieldToTypesField(oldField Field) (*types.Field, error) {
 	newField := &types.Field{
