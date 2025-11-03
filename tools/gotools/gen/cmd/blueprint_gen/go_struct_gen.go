@@ -64,17 +64,26 @@ func (g *GoStructGenerator) generateMechanismFiles(outputDir string) error {
 		sb.WriteString("\t\"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder\"\n")
 		sb.WriteString("\tmmemodel \"gitee.com/orbit-w/orbit/lib/module/mme_model\"\n")
 
-		// 检查是否有 map 字段需要 maps 包
+		// 检查是否有 map/xmap 字段需要 maps 包
 		hasMap := false
+		hasXMap := false
 		for _, field := range mech.Fields {
 			if field.Type.Kind == types.FieldKindXMap || field.Type.Kind == types.FieldKindMap {
 				hasMap = true
+			}
+			if field.Type.Kind == types.FieldKindXMap {
+				hasXMap = true
+			}
+			if hasMap && hasXMap {
 				break
 			}
 		}
 		if hasMap {
 			sb.WriteString("\t\"maps\"\n")
 			sb.WriteString("\t\"gitee.com/orbit-w/meteor/bases/container/xmap\"\n")
+		}
+		// 只有 xmap 字段才需要 xmapwrapper
+		if hasXMap {
 			sb.WriteString("\txmapwrapper \"gitee.com/orbit-w/orbit/lib/module/xmapwrapper\"\n")
 		}
 
