@@ -9,12 +9,12 @@ import (
 
 // ProtoGenerator Proto 文件生成器
 type ProtoGenerator struct {
-	data          *BlueprintData
+	data          *BlueprintContext
 	typeConverter *TypeConverter
 }
 
 // NewProtoGenerator 创建新的 Proto 生成器
-func NewProtoGenerator(data *BlueprintData) *ProtoGenerator {
+func NewProtoGenerator(data *BlueprintContext) *ProtoGenerator {
 	return &ProtoGenerator{
 		data:          data,
 		typeConverter: NewTypeConverter("mme"),

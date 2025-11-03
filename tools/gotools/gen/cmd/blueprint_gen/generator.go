@@ -8,7 +8,7 @@ import (
 
 // Generator 代码生成器通用接口
 type Generator interface {
-	Generate(data *BlueprintData, outputDir string) error
+	Generate(ctx *BlueprintContext, outputDir string) error
 	Name() string
 }
 
@@ -25,19 +25,19 @@ func NewTemplateGenerator(name string) *TemplateGenerator {
 		name:      name,
 		templates: make(map[string]*template.Template),
 		templateFunc: template.FuncMap{
-			"toProtoType":      ToProtoTypeFromTypesFieldType,
-			"toGoType":          ToGoTypeFromTypesFieldType,
-			"toLower":           strings.ToLower,
-			"toUpper":           strings.ToUpper,
-			"camelToSnake":      CamelToSnake,
-			"firstLower":         firstLower,
-			"firstUpper":         firstUpper,
-			"join":              strings.Join,
-			"contains":          strings.Contains,
-			"hasPrefix":          strings.HasPrefix,
-			"hasSuffix":          strings.HasSuffix,
-			"trimPrefix":         strings.TrimPrefix,
-			"trimSuffix":         strings.TrimSuffix,
+			"toProtoType":  ToProtoTypeFromTypesFieldType,
+			"toGoType":     ToGoTypeFromTypesFieldType,
+			"toLower":      strings.ToLower,
+			"toUpper":      strings.ToUpper,
+			"camelToSnake": CamelToSnake,
+			"firstLower":   firstLower,
+			"firstUpper":   firstUpper,
+			"join":         strings.Join,
+			"contains":     strings.Contains,
+			"hasPrefix":    strings.HasPrefix,
+			"hasSuffix":    strings.HasSuffix,
+			"trimPrefix":   strings.TrimPrefix,
+			"trimSuffix":   strings.TrimSuffix,
 		},
 	}
 }
@@ -74,15 +74,15 @@ func (g *TemplateGenerator) Name() string {
 
 // CodeBuilder 代码构建器
 type CodeBuilder struct {
-	sb      strings.Builder
-	indent  int
+	sb        strings.Builder
+	indent    int
 	indentStr string
 }
 
 // NewCodeBuilder 创建新的代码构建器
 func NewCodeBuilder() *CodeBuilder {
 	return &CodeBuilder{
-		indent:     0,
+		indent:    0,
 		indentStr: "\t",
 	}
 }
@@ -156,4 +156,3 @@ func firstUpper(s string) string {
 	}
 	return strings.ToUpper(s[:1]) + s[1:]
 }
-

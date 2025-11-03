@@ -99,7 +99,7 @@ func (p *Parser) parseEntities() error {
 						}
 					}
 
-					p.ctx.Entities = append(p.ctx.Entities, entity)
+					p.ctx.AddEntity(entity)
 				}
 			}
 		}
@@ -174,7 +174,7 @@ func (p *Parser) parseManagers() error {
 				// 添加所有有字段的 Manager
 				for _, manager := range managersInMap {
 					if len(manager.Fields) > 0 {
-						p.ctx.Managers = append(p.ctx.Managers, *manager)
+						p.ctx.AddManager(*manager)
 					}
 				}
 			}
@@ -310,7 +310,7 @@ func (p *Parser) parseModules() error {
 						}
 					}
 
-					p.ctx.Modules = append(p.ctx.Modules, module)
+					p.ctx.AddModule(module)
 				}
 			}
 		}
@@ -413,7 +413,7 @@ func (p *Parser) parseMechanisms() error {
 						// 但是需要处理这种情况，避免 panic
 					}
 
-					p.ctx.Mechanisms = append(p.ctx.Mechanisms, mechanism)
+					p.ctx.AddMechanism(mechanism)
 				}
 			}
 		}

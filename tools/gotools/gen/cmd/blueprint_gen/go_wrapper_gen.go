@@ -10,11 +10,11 @@ import (
 
 // GoWrapperGenerator Go Wrapper 生成器
 type GoWrapperGenerator struct {
-	data *BlueprintData
+	data *BlueprintContext
 }
 
 // NewGoWrapperGenerator 创建新的 Go Wrapper 生成器
-func NewGoWrapperGenerator(data *BlueprintData) *GoWrapperGenerator {
+func NewGoWrapperGenerator(data *BlueprintContext) *GoWrapperGenerator {
 	return &GoWrapperGenerator{data: data}
 }
 

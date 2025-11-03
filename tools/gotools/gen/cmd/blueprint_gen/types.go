@@ -139,12 +139,60 @@ type NetWallFile struct {
 	DataStructs []DataStruct
 }
 
-// BlueprintData 解析后的蓝图数据
-type BlueprintData struct {
-	HeadFile   *HeadFileConfig
-	Entities   []Entity
-	Managers   []Manager
-	Modules    []Module
-	Mechanisms []Mechanism
-	NetWalls   []NetWallFile
+// BlueprintContext 解析后的蓝图数据
+type BlueprintContext struct {
+	HeadFile      *HeadFileConfig
+	Entities      []Entity
+	Managers      []Manager
+	Modules       []Module
+	Mechanisms    []Mechanism
+	NetWalls      []NetWallFile
+	ObjectTypeMap map[string]ObjectType
+}
+
+func NewBlueprintContext() *BlueprintContext {
+	return &BlueprintContext{
+		Entities:      make([]Entity, 0),
+		Managers:      make([]Manager, 0),
+		Modules:       make([]Module, 0),
+		Mechanisms:    make([]Mechanism, 0),
+		NetWalls:      make([]NetWallFile, 0),
+		ObjectTypeMap: make(map[string]ObjectType),
+	}
+}
+
+func (ctx *BlueprintContext) AddEntity(entity Entity) {
+	ctx.Entities = append(ctx.Entities, entity)
+	ctx.ObjectTypeMap[entity.Name] = ObjectTypeEntity
+}
+
+func (ctx *BlueprintContext) AddManager(manager Manager) {
+	ctx.Managers = append(ctx.Managers, manager)
+	ctx.ObjectTypeMap[manager.Name] = ObjectTypeManager
+}
+
+func (ctx *BlueprintContext) AddModule(module Module) {
+	ctx.Modules = append(ctx.Modules, module)
+	ctx.ObjectTypeMap[module.Name] = ObjectTypeModule
+}
+
+func (ctx *BlueprintContext) AddMechanism(mechanism Mechanism) {
+	ctx.Mechanisms = append(ctx.Mechanisms, mechanism)
+	ctx.ObjectTypeMap[mechanism.Name] = ObjectTypeMechanism
+}
+
+func (ctx *BlueprintContext) AddNetWall(netWall NetWall) {
+	ctx.NetWalls = append(ctx.NetWalls, NetWallFile{
+		NetWall: netWall,
+	})
+}
+
+// AddNetWallFile 添加 NetWallFile
+func (ctx *BlueprintContext) AddNetWallFile(netWallFile NetWallFile) {
+	ctx.NetWalls = append(ctx.NetWalls, netWallFile)
+}
+
+// SetHeadFile 设置头文件配置
+func (ctx *BlueprintContext) SetHeadFile(headFile *HeadFileConfig) {
+	ctx.HeadFile = headFile
 }

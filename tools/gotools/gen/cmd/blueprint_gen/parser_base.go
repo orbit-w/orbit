@@ -12,25 +12,19 @@ import (
 // BaseParser 通用解析器基类
 type BaseParser struct {
 	blueprintDir string
-	ctx          *BlueprintData
+	ctx          *BlueprintContext
 }
 
 // NewBaseParser 创建基础解析器
 func NewBaseParser(blueprintDir string) *BaseParser {
 	return &BaseParser{
 		blueprintDir: blueprintDir,
-		ctx: &BlueprintData{
-			Entities:   make([]Entity, 0),
-			Managers:   make([]Manager, 0),
-			Modules:    make([]Module, 0),
-			Mechanisms: make([]Mechanism, 0),
-			NetWalls:   make([]NetWallFile, 0),
-		},
+		ctx:          NewBlueprintContext(),
 	}
 }
 
 // GetContext 获取解析后的蓝图上下文
-func (p *BaseParser) GetContext() *BlueprintData {
+func (p *BaseParser) GetContext() *BlueprintContext {
 	return p.ctx
 }
 

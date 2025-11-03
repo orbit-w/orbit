@@ -117,7 +117,7 @@ func (p *Parser) parseNetWallFile(filePath string) error {
 		}
 	}
 	
-	p.ctx.NetWalls = append(p.ctx.NetWalls, netwallFile)
+	p.ctx.AddNetWallFile(netwallFile)
 	return nil
 }
 

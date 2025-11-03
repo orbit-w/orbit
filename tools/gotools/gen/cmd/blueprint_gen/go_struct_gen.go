@@ -9,11 +9,11 @@ import (
 
 // GoStructGenerator Go 结构体生成器
 type GoStructGenerator struct {
-	ctx *BlueprintData
+	ctx *BlueprintContext
 }
 
 // NewGoStructGenerator 创建新的 Go 结构体生成器
-func NewGoStructGenerator(_ctx *BlueprintData) *GoStructGenerator {
+func NewGoStructGenerator(_ctx *BlueprintContext) *GoStructGenerator {
 	return &GoStructGenerator{ctx: _ctx}
 }
 
