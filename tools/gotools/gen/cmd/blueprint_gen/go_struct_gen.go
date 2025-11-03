@@ -231,25 +231,16 @@ func (g *GoStructGenerator) isMMEObjectType(fieldType *types.FieldType) bool {
 	}
 
 	// 检查是否是 Module、Mechanism、Manager 或 Entity 类型
-	for _, module := range g.ctx.Modules {
-		if module.Name == typeName {
-			return true
-		}
+	objectType, ok := g.ctx.ObjectTypeMap[typeName]
+	if !ok {
+		return false
 	}
-	for _, mech := range g.ctx.Mechanisms {
-		if mech.Name == typeName {
-			return true
-		}
-	}
-	for _, manager := range g.ctx.Managers {
-		if manager.Name == typeName {
-			return true
-		}
-	}
-	for _, entity := range g.ctx.Entities {
-		if entity.Name == typeName {
-			return true
-		}
-	}
-	return false
+
+	return isMMEObjectType(objectType)
+}
+
+// isMMEObjectType 判断是否是 MME Object 类型
+func isMMEObjectType(objectType ObjectType) bool {
+	return objectType == ObjectTypeModule || objectType == ObjectTypeMechanism ||
+		objectType == ObjectTypeManager || objectType == ObjectTypeEntity
 }
