@@ -3,6 +3,7 @@ package blueprint_gen
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -166,6 +167,32 @@ func WriteFile(filePath, content string) error {
 func FileExists(filePath string) bool {
 	_, err := os.Stat(filePath)
 	return err == nil
+}
+
+// FormatGoFiles 格式化指定目录下的所有 Go 文件
+// 使用 go fmt 命令格式化整个目录及其子目录下的所有 Go 文件
+func FormatGoFiles(dir string) error {
+	// 检查目录是否存在
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		return fmt.Errorf("directory does not exist: %s", dir)
+	}
+
+	// 获取绝对路径，确保 go fmt 能正确工作
+	absDir, err := filepath.Abs(dir)
+	if err != nil {
+		return fmt.Errorf("failed to get absolute path: %w", err)
+	}
+
+	// 执行 go fmt 格式化整个目录
+	// go fmt ./... 会格式化当前目录及所有子目录下的 Go 文件
+	cmd := exec.Command("go", "fmt", "./...")
+	cmd.Dir = absDir
+
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to format Go files: %w, output: %s", err, string(output))
+	}
+
+	return nil
 }
 
 // ToProtoType 将 YAML 类型转换为 Proto 类型（旧版本，用于兼容）

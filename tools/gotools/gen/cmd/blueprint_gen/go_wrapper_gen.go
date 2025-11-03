@@ -253,7 +253,19 @@ func (g *GoWrapperGenerator) generateMechanismWrappers(outputDir string) error {
 		sb.WriteString("\t\treturn\n")
 		sb.WriteString("\t}\n\n")
 
-		for _, field := range mech.Fields {
+		// 按字段编号排序，保证与 YAML 中定义的顺序一致
+		sortedFields := make([]*types.Field, len(mech.Fields))
+		copy(sortedFields, mech.Fields)
+		// 冒泡排序按 Number 字段排序
+		for i := 0; i < len(sortedFields)-1; i++ {
+			for j := i + 1; j < len(sortedFields); j++ {
+				if sortedFields[i].Number > sortedFields[j].Number {
+					sortedFields[i], sortedFields[j] = sortedFields[j], sortedFields[i]
+				}
+			}
+		}
+
+		for _, field := range sortedFields {
 			if field.Type.Kind == types.FieldKindXMap || field.Type.Kind == types.FieldKindMap {
 				// Map 字段需要特殊处理
 				sb.WriteString(fmt.Sprintf("\t// 加载 %s map\n", field.Name))

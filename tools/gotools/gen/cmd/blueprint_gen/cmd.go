@@ -102,6 +102,14 @@ func runBlueprintGen(cmd *cobra.Command, args []string) {
 		println("Go files generated successfully")
 	}
 
+	// 格式化生成的 Go 文件
+	if err := FormatGoFiles(goOutput); err != nil {
+		cmd.PrintErrln("Warning: Failed to format Go files:", err)
+		// 不中断流程，仅打印警告
+	} else if debug {
+		println("Go files formatted successfully")
+	}
+
 	cmd.Println("Blueprint code generation completed successfully!")
 }
 
