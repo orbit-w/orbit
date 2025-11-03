@@ -2,9 +2,9 @@ package blueprint_gen
 
 import (
 	"fmt"
-	
-	"github.com/spf13/cobra"
+
 	blueprint_types "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types"
+	"github.com/spf13/cobra"
 )
 
 var (
@@ -24,22 +24,22 @@ func runBlueprintGen(cmd *cobra.Command, args []string) {
 	protoOutput, _ := cmd.Flags().GetString("proto-output")
 	goOutput, _ := cmd.Flags().GetString("go-output")
 	debug, _ := cmd.Flags().GetBool("debug")
-	
+
 	if debug {
 		println("Starting blueprint code generation...")
 		println("Blueprint directory:", blueprintDir)
 		println("Proto output directory:", protoOutput)
 		println("Go output directory:", goOutput)
 	}
-	
+
 	// 解析 YAML 文件
 	parser := NewParser(blueprintDir)
 	if err := parser.Parse(); err != nil {
 		cmd.PrintErrln("Failed to parse YAML files:", err)
 		return
 	}
-	
-	data := parser.GetData()
+
+	data := parser.GetContext()
 	if debug {
 		fmt.Printf("Parsed %d entities\n", len(data.Entities))
 		for _, e := range data.Entities {
@@ -79,29 +79,29 @@ func runBlueprintGen(cmd *cobra.Command, args []string) {
 		}
 		fmt.Printf("Parsed %d netwalls\n", len(data.NetWalls))
 	}
-	
+
 	// 生成 Proto 文件
 	protoGen := NewProtoGenerator(data)
 	if err := protoGen.Generate(protoOutput); err != nil {
 		cmd.PrintErrln("Failed to generate proto files:", err)
 		return
 	}
-	
+
 	if debug {
 		println("Proto files generated successfully")
 	}
-	
+
 	// 生成 Go 文件
 	goGen := NewGoStructGenerator(data)
 	if err := goGen.Generate(goOutput); err != nil {
 		cmd.PrintErrln("Failed to generate Go files:", err)
 		return
 	}
-	
+
 	if debug {
 		println("Go files generated successfully")
 	}
-	
+
 	cmd.Println("Blueprint code generation completed successfully!")
 }
 
@@ -111,7 +111,6 @@ func InitCmd(father *cobra.Command) {
 	blueprintGenCmd.Flags().String("proto-output", "protocol", "Output directory for proto files")
 	blueprintGenCmd.Flags().String("go-output", "app/mme", "Output directory for Go files")
 	blueprintGenCmd.Flags().Bool("debug", false, "Enable debug mode")
-	
+
 	father.AddCommand(blueprintGenCmd)
 }
-

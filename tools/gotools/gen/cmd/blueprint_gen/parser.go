@@ -147,6 +147,6 @@ func (p *Parser) parseHeadFile() error {
 		}
 	}
 
-	p.data.HeadFile = config
+	p.ctx.HeadFile = config
 	return nil
 }

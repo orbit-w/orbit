@@ -12,14 +12,14 @@ import (
 // BaseParser 通用解析器基类
 type BaseParser struct {
 	blueprintDir string
-	data         *BlueprintData
+	ctx          *BlueprintData
 }
 
 // NewBaseParser 创建基础解析器
 func NewBaseParser(blueprintDir string) *BaseParser {
 	return &BaseParser{
 		blueprintDir: blueprintDir,
-		data: &BlueprintData{
+		ctx: &BlueprintData{
 			Entities:   make([]Entity, 0),
 			Managers:   make([]Manager, 0),
 			Modules:    make([]Module, 0),
@@ -29,9 +29,9 @@ func NewBaseParser(blueprintDir string) *BaseParser {
 	}
 }
 
-// GetData 获取解析后的数据
-func (p *BaseParser) GetData() *BlueprintData {
-	return p.data
+// GetContext 获取解析后的蓝图上下文
+func (p *BaseParser) GetContext() *BlueprintData {
+	return p.ctx
 }
 
 // ReadYAMLFile 读取并解析 YAML 文件
@@ -87,7 +87,7 @@ func (p *BaseParser) ParseFieldDefinitionToTypesField(fieldDef string) (*types.F
 // ParseMessageFields 解析消息字段（通用逻辑）
 func (p *BaseParser) ParseMessageFields(fieldsMap map[string]interface{}) ([]Field, error) {
 	result := make([]Field, 0)
-	
+
 	for fieldName, fieldDef := range fieldsMap {
 		if fieldStr, ok := fieldDef.(string); ok {
 			field, err := ParseFieldDefinition(fieldName + " " + fieldStr)
@@ -97,30 +97,30 @@ func (p *BaseParser) ParseMessageFields(fieldsMap map[string]interface{}) ([]Fie
 			result = append(result, field)
 		}
 	}
-	
+
 	return result, nil
 }
 
 // ParseMessageFieldsToTypes 解析消息字段为 types.Field 列表（通用逻辑）
 func (p *BaseParser) ParseMessageFieldsToTypes(fieldsMap map[string]interface{}) ([]*types.Field, error) {
 	result := make([]*types.Field, 0)
-	
+
 	for fieldName, fieldDef := range fieldsMap {
 		if fieldStr, ok := fieldDef.(string); ok {
 			field, err := ParseFieldDefinition(fieldName + " " + fieldStr)
 			if err != nil {
 				continue // 跳过解析失败的字段
 			}
-			
+
 			typesField, err := ConvertFieldToTypesField(field)
 			if err != nil {
 				continue // 跳过转换失败的字段
 			}
-			
+
 			result = append(result, typesField)
 		}
 	}
-	
+
 	return result, nil
 }
 
@@ -186,4 +186,3 @@ func (p *BaseParser) ParseNotifyOnly(item interface{}) (Notify, error) {
 
 	return notify, nil
 }
-

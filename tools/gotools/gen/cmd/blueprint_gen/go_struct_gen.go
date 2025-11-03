@@ -9,12 +9,12 @@ import (
 
 // GoStructGenerator Go 结构体生成器
 type GoStructGenerator struct {
-	data *BlueprintData
+	ctx *BlueprintData
 }
 
 // NewGoStructGenerator 创建新的 Go 结构体生成器
-func NewGoStructGenerator(data *BlueprintData) *GoStructGenerator {
-	return &GoStructGenerator{data: data}
+func NewGoStructGenerator(_ctx *BlueprintData) *GoStructGenerator {
+	return &GoStructGenerator{ctx: _ctx}
 }
 
 // Generate 生成所有 Go 文件
@@ -40,7 +40,7 @@ func (g *GoStructGenerator) Generate(outputDir string) error {
 	}
 
 	// 生成 Wrapper 文件
-	wrapperGen := NewGoWrapperGenerator(g.data)
+	wrapperGen := NewGoWrapperGenerator(g.ctx)
 	if err := wrapperGen.Generate(outputDir); err != nil {
 		return fmt.Errorf("failed to generate wrapper files: %w", err)
 	}
@@ -52,7 +52,7 @@ func (g *GoStructGenerator) Generate(outputDir string) error {
 func (g *GoStructGenerator) generateMechanismFiles(outputDir string) error {
 	packageName := "mme"
 
-	for _, mech := range g.data.Mechanisms {
+	for _, mech := range g.ctx.Mechanisms {
 		sb := strings.Builder{}
 
 		// 文件头部
@@ -66,24 +66,22 @@ func (g *GoStructGenerator) generateMechanismFiles(outputDir string) error {
 
 		// 检查是否有 map/xmap 字段需要 maps 包
 		hasMap := false
-		hasXMap := false
+		hasXMapWithMMEObject := false
 		for _, field := range mech.Fields {
 			if field.Type.Kind == types.FieldKindXMap || field.Type.Kind == types.FieldKindMap {
 				hasMap = true
 			}
-			if field.Type.Kind == types.FieldKindXMap {
-				hasXMap = true
-			}
-			if hasMap && hasXMap {
-				break
+			// 检查 xmap 字段的 Value 类型是否是 MME Object（Linkable）
+			if field.Type.Kind == types.FieldKindXMap && g.isMMEObjectType(field.Type.ValueType) {
+				hasXMapWithMMEObject = true
 			}
 		}
 		if hasMap {
 			sb.WriteString("\t\"maps\"\n")
 			sb.WriteString("\t\"gitee.com/orbit-w/meteor/bases/container/xmap\"\n")
 		}
-		// 只有 xmap 字段才需要 xmapwrapper
-		if hasXMap {
+		// 只有当 xmap Value 是 MME Object（Linkable）类型时才需要 xmapwrapper
+		if hasXMapWithMMEObject {
 			sb.WriteString("\txmapwrapper \"gitee.com/orbit-w/orbit/lib/module/xmapwrapper\"\n")
 		}
 
@@ -208,4 +206,50 @@ func (g *GoStructGenerator) generateManagerFiles(outputDir string) error {
 func (g *GoStructGenerator) generateEntityFiles(outputDir string) error {
 	// TODO: 实现 Entity 文件生成
 	return nil
+}
+
+// isMMEObjectType 判断是否是 MME Object 类型（Linkable）
+func (g *GoStructGenerator) isMMEObjectType(fieldType *types.FieldType) bool {
+	if fieldType == nil {
+		return false
+	}
+
+	// 如果是 Map/XMap，检查 ValueType
+	if fieldType.Kind == types.FieldKindMap || fieldType.Kind == types.FieldKindXMap {
+		if fieldType.ValueType != nil {
+			return g.isMMEObjectType(fieldType.ValueType)
+		}
+		return false
+	}
+
+	// 获取类型名称
+	typeName := ""
+	if fieldType.TypeName != "" {
+		typeName = fieldType.TypeName
+	} else {
+		typeName = fieldType.Kind.String()
+	}
+
+	// 检查是否是 Module、Mechanism、Manager 或 Entity 类型
+	for _, module := range g.ctx.Modules {
+		if module.Name == typeName {
+			return true
+		}
+	}
+	for _, mech := range g.ctx.Mechanisms {
+		if mech.Name == typeName {
+			return true
+		}
+	}
+	for _, manager := range g.ctx.Managers {
+		if manager.Name == typeName {
+			return true
+		}
+	}
+	for _, entity := range g.ctx.Entities {
+		if entity.Name == typeName {
+			return true
+		}
+	}
+	return false
 }
