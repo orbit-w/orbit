@@ -2,6 +2,7 @@ package blueprint_gen
 
 import (
 	"fmt"
+	"maps"
 	"sort"
 	"strings"
 
@@ -167,10 +168,6 @@ func (p *Parser) parseManagers(items []any) {
 			continue
 		}
 
-		for key := range managerMap {
-			fmt.Println("managerMap key", key)
-		}
-
 		// 遍历 map，区分 Manager 名称和字段定义
 		// Manager 名称：key 不包含特殊字符（<, >, :），value 可能是 nil 或 map
 		// 字段定义：key 包含特殊字符（<, >, :）
@@ -211,7 +208,6 @@ func (p *Parser) parseManagerFromMap(managerName string, managerData any, manage
 		fieldsMap = managerMap
 	}
 
-	// 解析字段（过滤掉 Manager 名称，只保留字段定义）
 	fields := p.parseManagerFields(fieldsMap, managerName)
 	manager.Fields = fields
 
@@ -229,16 +225,6 @@ func (p *Parser) parseManagerFields(fieldsMap map[string]any, managerName string
 	}
 
 	return parseFieldsFromMap(fieldsMap, nil)
-}
-
-// containsSpecialChars 检查字符串是否包含特殊字符
-func containsSpecialChars(s string, specialChars []string) bool {
-	for _, char := range specialChars {
-		if strings.Contains(s, char) {
-			return true
-		}
-	}
-	return false
 }
 
 // parseModules 解析 modules.yaml
@@ -390,62 +376,55 @@ func (p *Parser) parseMechanisms() error {
 
 	if mechanismList, ok := yamlData["Mechanisms"].([]any); ok {
 		for _, mechItem := range mechanismList {
-			if mechMap, ok := mechItem.(map[string]any); ok {
-				for mechName, mechData := range mechMap {
-					// 跳过 Settings, Requests, Notifies 这些不是 Mechanism 的 key
-					if mechName == "Settings" || mechName == "Requests" || mechName == "Notifies" {
-						continue
-					}
-
-					mechanism := Mechanism{Name: mechName}
-
-					if mechDataMap, ok := mechData.(map[string]any); ok {
-						// 解析 Settings
-						if settings, ok := mechDataMap["Settings"].(map[string]any); ok {
-							mechanism.Settings = settings
-						}
-
-						// 解析 Requests
-						if requests, ok := mechDataMap["Requests"].([]any); ok {
-							for _, reqItem := range requests {
-								req, err := p.ParseRequestOrNotify(reqItem, true)
-								if err == nil && req.Name != "" {
-									mechanism.Requests = append(mechanism.Requests, req)
-								}
-							}
-						}
-
-						// 解析 Notifies
-						if notifies, ok := mechDataMap["Notifies"].([]any); ok {
-							for _, notifyItem := range notifies {
-								notify, err := p.ParseNotifyOnly(notifyItem)
-								if err == nil && notify.Name != "" {
-									mechanism.Notifies = append(mechanism.Notifies, notify)
-								}
-							}
-						}
-
-						// 使用通用解析函数解析数据字段（过滤掉 Settings、Requests、Notifies）
-						config := &FieldParserConfig{
-							FilterFunc: func(key string, value any) bool {
-								// 过滤掉 Settings、Requests、Notifies
-								return key == "Settings" || key == "Requests" || key == "Notifies"
-							},
-						}
-
-						mechanism.Fields = parseFieldsFromMap(mechDataMap, config)
-					} else {
-						// mechData 不是 map，可能是其他类型（应该不会发生）
-						// 但是需要处理这种情况，避免 panic
-					}
-
-					p.ctx.AddMechanism(mechanism)
-				}
+			m := p.parseMechanismItem(mechItem.(map[string]any))
+			if m != nil {
+				p.ctx.AddMechanism(m)
 			}
 		}
 	}
 
 	return nil
+}
+
+func (p *Parser) parseMechanismItem(mechItem map[string]any) *Mechanism {
+	mechanism := &Mechanism{}
+	for mechKey, mechData := range mechItem {
+		switch mechKey {
+		case MechanismKeyWordSettings:
+			settings := mechData.(map[string]any)
+			maps.Copy(mechanism.Settings, settings)
+		case MechanismKeyWordRequests:
+			requests := mechData.([]any)
+			for _, reqItem := range requests {
+				req, err := p.ParseRequestOrNotify(reqItem, true)
+				if err == nil && req.Name != "" {
+					mechanism.Requests = append(mechanism.Requests, req)
+				}
+			}
+		case MechanismKeyWordNotifies:
+			notifies := mechData.([]any)
+			for _, notifyItem := range notifies {
+				notify, err := p.ParseNotifyOnly(notifyItem)
+				if err == nil && notify.Name != "" {
+					mechanism.Notifies = append(mechanism.Notifies, notify)
+				}
+			}
+		default:
+			// 解析结构体名称和Fields
+			mechanism.Name = mechKey
+			mechFieldsMap := mechData.(map[string]any)
+			config := &FieldParserConfig{
+				FilterFunc: func(key string, value any) bool {
+					// 过滤掉 Settings、Requests、Notifies
+					return key == "Settings" || key == "Requests" || key == "Notifies"
+				},
+			}
+
+			mechanism.Fields = parseFieldsFromMap(mechFieldsMap, config)
+		}
+	}
+
+	return mechanism
 }
 
 // ============================================================================
@@ -515,6 +494,7 @@ func parseFieldsFromMap(fieldsMap map[string]any, config *FieldParserConfig) []*
 // fieldValue: 字段值，可能是编号、字符串或其他类型
 // 返回: 完整的字段定义字符串
 func buildFieldDefinition(fieldKey string, fieldValue any) string {
+	fmt.Println("buildFieldDefinition fieldKey", fieldKey, "fieldValue", fieldValue)
 	if fieldValue == nil {
 		return fieldKey
 	}

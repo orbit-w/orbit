@@ -323,3 +323,13 @@ func ToGoBaseTypeFromFieldType(ft *types.FieldType) string {
 		return ft.Kind.String()
 	}
 }
+
+// containsSpecialChars 检查字符串是否包含特殊字符
+func containsSpecialChars(s string, specialChars []string) bool {
+	for _, char := range specialChars {
+		if strings.Contains(s, char) {
+			return true
+		}
+	}
+	return false
+}

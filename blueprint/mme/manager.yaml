@@ -5,5 +5,5 @@
 # 管理器可以包含多个Module模块，每个Module模块可以包含多个Mechanism机制
 Managers:
   - HeroManager:
-    xmap<int64, HeroModule> HeroMap: 1
+      xmap<int64, HeroModule> HeroMap: 1
 ---

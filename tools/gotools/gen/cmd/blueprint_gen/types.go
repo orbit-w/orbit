@@ -142,7 +142,7 @@ type BlueprintContext struct {
 	Entities      []Entity
 	Managers      []Manager
 	Modules       []Module
-	Mechanisms    []Mechanism
+	Mechanisms    []*Mechanism
 	NetWalls      []NetWallFile
 	ObjectTypeMap map[string]ObjectType
 }
@@ -152,7 +152,7 @@ func NewBlueprintContext() *BlueprintContext {
 		Entities:      make([]Entity, 0),
 		Managers:      make([]Manager, 0),
 		Modules:       make([]Module, 0),
-		Mechanisms:    make([]Mechanism, 0),
+		Mechanisms:    make([]*Mechanism, 0),
 		NetWalls:      make([]NetWallFile, 0),
 		ObjectTypeMap: make(map[string]ObjectType),
 	}
@@ -173,7 +173,7 @@ func (ctx *BlueprintContext) AddModule(module Module) {
 	ctx.ObjectTypeMap[module.Name] = ObjectTypeModule
 }
 
-func (ctx *BlueprintContext) AddMechanism(mechanism Mechanism) {
+func (ctx *BlueprintContext) AddMechanism(mechanism *Mechanism) {
 	ctx.Mechanisms = append(ctx.Mechanisms, mechanism)
 	ctx.ObjectTypeMap[mechanism.Name] = ObjectTypeMechanism
 }
