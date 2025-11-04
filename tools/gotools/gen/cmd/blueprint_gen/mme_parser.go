@@ -404,6 +404,7 @@ func (p *Parser) parseMechanismItem(mechItem map[string]any) *Mechanism {
 				}
 			}
 		case MechanismKeyWordNotifies:
+			//解析通知列表
 			notifies := mechData.([]any)
 			for _, notifyItem := range notifies {
 				notify, err := p.ParseNotifyOnly(notifyItem)
