@@ -12,6 +12,14 @@ type Field struct {
 	Metadata *FieldMetadata
 }
 
+func (f *Field) IsMapField() bool {
+	return f.Type.Kind == FieldKindMap
+}
+
+func (f *Field) IsXMapField() bool {
+	return f.Type.Kind == FieldKindXMap
+}
+
 // FieldOption 字段选项
 type FieldOption struct {
 	Access string // access=all/s/c

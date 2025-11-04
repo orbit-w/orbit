@@ -239,7 +239,7 @@ func (g *GoStructGenerator) generateMechanismFiles(outputDir string) error {
 		sb.WriteString("}\n\n")
 
 		// 写入文件
-		fileName := fmt.Sprintf("%s_mechanisms.go", CamelToSnake(mech.Name))
+		fileName := GetMechanismFileName(mech.Name)
 		filePath := fmt.Sprintf("%s/%s", outputDir, fileName)
 		if err := WriteFile(filePath, sb.String()); err != nil {
 			return err
@@ -260,7 +260,14 @@ func (g *GoStructGenerator) generateModuleFiles(outputDir string) error {
 		sb.WriteString(fmt.Sprintf("package %s\n\n", packageName))
 		sb.WriteString("import (\n")
 		sb.WriteString("\t\"gitee.com/orbit-w/orbit/app/proto/mme\"\n")
-		sb.WriteString("\t\"maps\"\n")
+		sb.WriteString("\tdirtyflag \"gitee.com/orbit-w/orbit/lib/base/dirty_flag\"\n")
+		sb.WriteString("\tfieldmeta \"gitee.com/orbit-w/orbit/lib/base/field_meta\"\n")
+		sb.WriteString("\t\"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder\"\n")
+		sb.WriteString("\tmmemodel \"gitee.com/orbit-w/orbit/lib/module/mme_model\"\n")
+		sb.WriteString("\t\"google.golang.org/protobuf/proto\"\n")
+		if module.HasMapField() {
+			sb.WriteString("\t\"maps\"\n")
+		}
 		sb.WriteString(")\n\n")
 
 		// 生成 FieldIndex 常量
@@ -348,7 +355,7 @@ func (g *GoStructGenerator) generateModuleFiles(outputDir string) error {
 		sb.WriteString("}\n\n")
 
 		// 写入文件
-		fileName := fmt.Sprintf("%s_modules.go", CamelToSnake(module.Name))
+		fileName := GetModuleFileName(module.Name)
 		filePath := fmt.Sprintf("%s/%s", outputDir, fileName)
 		if err := WriteFile(filePath, sb.String()); err != nil {
 			return err
@@ -484,7 +491,7 @@ func (g *GoStructGenerator) generateManagerFiles(outputDir string) error {
 		sb.WriteString("}\n\n")
 
 		// 写入文件
-		fileName := fmt.Sprintf("%s_managers.go", CamelToSnake(manager.Name))
+		fileName := GetManagerFileName(manager.Name)
 		filePath := fmt.Sprintf("%s/%s", outputDir, fileName)
 		if err := WriteFile(filePath, sb.String()); err != nil {
 			return err
@@ -594,7 +601,7 @@ func (g *GoStructGenerator) generateEntityFiles(outputDir string) error {
 		sb.WriteString("}\n\n")
 
 		// 写入文件
-		fileName := fmt.Sprintf("%s_entities.go", CamelToSnake(entity.Name))
+		fileName := GetEntityFileName(entity.Name)
 		filePath := fmt.Sprintf("%s/%s", outputDir, fileName)
 		if err := WriteFile(filePath, sb.String()); err != nil {
 			return err

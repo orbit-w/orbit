@@ -250,6 +250,50 @@ func CamelToSnake(s string) string {
 	return strings.ToLower(result.String())
 }
 
+// GetMechanismFileName 生成 Mechanism 文件名
+// 例如: HeroMechanism -> hero_mechanism.go
+func GetMechanismFileName(name string) string {
+	snake := CamelToSnake(name)
+	// 去掉末尾的 _mechanism，然后加上 _mechanism.go
+	if strings.HasSuffix(snake, "_mechanism") {
+		return snake + ".go"
+	}
+	return snake + "_mechanism.go"
+}
+
+// GetModuleFileName 生成 Module 文件名
+// 例如: HeroModule -> hero_modules.go
+func GetModuleFileName(name string) string {
+	snake := CamelToSnake(name)
+	// 去掉末尾的 _module，然后加上 _modules
+	if strings.HasSuffix(snake, "_module") {
+		return strings.TrimSuffix(snake, "_module") + "_modules.go"
+	}
+	return snake + "_modules.go"
+}
+
+// GetManagerFileName 生成 Manager 文件名
+// 例如: HeroManager -> hero_managers.go
+func GetManagerFileName(name string) string {
+	snake := CamelToSnake(name)
+	// 去掉末尾的 _manager，然后加上 _managers
+	if strings.HasSuffix(snake, "_manager") {
+		return strings.TrimSuffix(snake, "_manager") + "_managers.go"
+	}
+	return snake + "_managers.go"
+}
+
+// GetEntityFileName 生成 Entity 文件名
+// 例如: PlayerEntity -> player_entity.go (注意：Entity 使用单数)
+func GetEntityFileName(name string) string {
+	snake := CamelToSnake(name)
+	// 去掉末尾的 _entity，然后加上 _entity.go (单数)
+	if strings.HasSuffix(snake, "_entity") {
+		return snake + ".go"
+	}
+	return snake + "_entity.go"
+}
+
 // ToGoBaseTypeFromFieldType 从 FieldType 获取 Go 基础类型字符串（不带包名）
 func ToGoBaseTypeFromFieldType(ft *types.FieldType) string {
 	if ft == nil {

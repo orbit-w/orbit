@@ -49,16 +49,40 @@ type Mechanism struct {
 	Notifies []Notify
 }
 
+func (m *Mechanism) HasMapField() bool {
+	return hasMapField(m.Fields)
+}
+
+func (m *Mechanism) HasXMapField() bool {
+	return hasXMapField(m.Fields)
+}
+
 // Module 模块定义
 type Module struct {
 	Name       string
 	Mechanisms []*types.Field // 使用 types.Field 替代 ModuleMechanismRef
 }
 
+func (m *Module) HasMapField() bool {
+	return hasMapField(m.Mechanisms)
+}
+
+func (m *Module) HasXMapField() bool {
+	return hasXMapField(m.Mechanisms)
+}
+
 // Manager 管理器定义
 type Manager struct {
 	Name   string
 	Fields []*types.Field // 使用 types.Field 替代 ManagerField
+}
+
+func (m *Manager) HasMapField() bool {
+	return hasMapField(m.Fields)
+}
+
+func (m *Manager) HasXMapField() bool {
+	return hasXMapField(m.Fields)
 }
 
 // Entity 实体定义
@@ -168,4 +192,22 @@ func (ctx *BlueprintContext) AddNetWallFile(netWallFile NetWallFile) {
 // SetHeadFile 设置头文件配置
 func (ctx *BlueprintContext) SetHeadFile(headFile *HeadFileConfig) {
 	ctx.HeadFile = headFile
+}
+
+func hasMapField(fields []*types.Field) bool {
+	for _, field := range fields {
+		if field.IsMapField() {
+			return true
+		}
+	}
+	return false
+}
+
+func hasXMapField(fields []*types.Field) bool {
+	for _, field := range fields {
+		if field.IsXMapField() {
+			return true
+		}
+	}
+	return false
 }
