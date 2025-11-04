@@ -413,14 +413,7 @@ func (p *Parser) parseMechanismItem(mechItem map[string]any) *Mechanism {
 			// 解析结构体名称和Fields
 			mechanism.Name = mechKey
 			mechFieldsMap := mechData.(map[string]any)
-			config := &FieldParserConfig{
-				FilterFunc: func(key string, value any) bool {
-					// 过滤掉 Settings、Requests、Notifies
-					return key == "Settings" || key == "Requests" || key == "Notifies"
-				},
-			}
-
-			mechanism.Fields = parseFieldsFromMap(mechFieldsMap, config)
+			mechanism.Fields = parseFieldsFromMap(mechFieldsMap, nil)
 		}
 	}
 
@@ -433,11 +426,6 @@ func (p *Parser) parseMechanismItem(mechItem map[string]any) *Mechanism {
 
 // FieldParserConfig 字段解析配置
 type FieldParserConfig struct {
-	// FilterFunc 用于过滤字段，返回 true 表示跳过该字段
-	FilterFunc func(key string, value any) bool
-	// BuildFieldDefFunc 用于构建字段定义字符串
-	// 如果为 nil，使用默认的 buildFieldDefinition
-	BuildFieldDefFunc func(key string, value any) string
 	// ParseFieldFunc 用于解析字段，返回 *types.Field
 	// 如果为 nil，使用默认的 parseAndConvertFieldDefinition
 	ParseFieldFunc func(fieldDef string) *types.Field
@@ -451,21 +439,8 @@ func parseFieldsFromMap(fieldsMap map[string]any, config *FieldParserConfig) []*
 	fields := make([]*types.Field, 0)
 
 	for fieldKey, fieldValue := range fieldsMap {
-		// 应用过滤函数
-		if config != nil && config.FilterFunc != nil {
-			if config.FilterFunc(fieldKey, fieldValue) {
-				continue
-			}
-		}
-
 		// 构建字段定义
-		var fieldDef string
-		if config != nil && config.BuildFieldDefFunc != nil {
-			fieldDef = config.BuildFieldDefFunc(fieldKey, fieldValue)
-		} else {
-			fieldDef = buildFieldDefinition(fieldKey, fieldValue)
-		}
-
+		fieldDef := buildFieldDefinition(fieldKey, fieldValue)
 		if fieldDef == "" {
 			continue
 		}
