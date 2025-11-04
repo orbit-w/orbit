@@ -387,12 +387,14 @@ func (p *Parser) parseMechanisms() error {
 }
 
 func (p *Parser) parseMechanismItem(mechItem map[string]any) *Mechanism {
-	mechanism := &Mechanism{}
+	mechanism := NewMechanism()
 	for mechKey, mechData := range mechItem {
 		switch mechKey {
 		case MechanismKeyWordSettings:
 			settings := mechData.(map[string]any)
-			maps.Copy(mechanism.Settings, settings)
+			if settings != nil {
+				maps.Copy(mechanism.Settings, settings)
+			}
 		case MechanismKeyWordRequests:
 			requests := mechData.([]any)
 			for _, reqItem := range requests {
@@ -469,7 +471,6 @@ func parseFieldsFromMap(fieldsMap map[string]any, config *FieldParserConfig) []*
 // fieldValue: 字段值，可能是编号、字符串或其他类型
 // 返回: 完整的字段定义字符串
 func buildFieldDefinition(fieldKey string, fieldValue any) string {
-	fmt.Println("buildFieldDefinition fieldKey", fieldKey, "fieldValue", fieldValue)
 	if fieldValue == nil {
 		return fieldKey
 	}

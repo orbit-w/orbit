@@ -49,6 +49,15 @@ type Mechanism struct {
 	Notifies []Notify
 }
 
+func NewMechanism() *Mechanism {
+	return &Mechanism{
+		Fields:   make([]*types.Field, 0),
+		Settings: make(map[string]any),
+		Requests: make([]Request, 0),
+		Notifies: make([]Notify, 0),
+	}
+}
+
 func (m *Mechanism) HasMapField() bool {
 	return hasMapField(m.Fields)
 }
