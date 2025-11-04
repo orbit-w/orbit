@@ -16,7 +16,7 @@ func (p *Parser) parseMMEFiles() error {
 	}
 
 	// 解析 manager.yaml
-	if err := p.parseManagers(); err != nil {
+	if err := p.ParseManagers(); err != nil {
 		return fmt.Errorf("failed to parse managers: %w", err)
 	}
 
@@ -138,8 +138,8 @@ func extractNumberFromValue(value any) int32 {
 	}
 }
 
-// parseManagers 解析 manager.yaml
-func (p *Parser) parseManagers() error {
+// ParseManagers 解析 manager.yaml
+func (p *Parser) ParseManagers() error {
 	filePath := p.ResolvePath("mme", "manager.yaml")
 	if !FileExists(filePath) {
 		return nil
@@ -150,39 +150,95 @@ func (p *Parser) parseManagers() error {
 		return err
 	}
 
-	if managerList, ok := yamlData["Managers"].([]any); ok {
-		for _, managerItem := range managerList {
-			if managerMap, ok := managerItem.(map[string]any); ok {
-				// 首先找出所有 Manager 名称（不包含 < 或 > 或 : 的 key）
-				objectNames := findObjectNamesInMap(managerMap, []string{"<", ">", ":"})
-				managersInMap := make(map[string]*Manager)
-				for name := range objectNames {
-					managersInMap[name] = &Manager{Name: name}
-				}
+	managerList, ok := yamlData["Managers"].([]any)
+	if !ok {
+		return nil
+	}
 
-				// 使用通用解析函数解析字段
-				config := &FieldParserConfig{
-					FilterFunc: func(key string, value any) bool {
-						// 跳过 Manager 名称
-						return objectNames[key]
-					},
-				}
+	p.parseManagers(managerList)
 
-				fields := parseFieldsFromMap(managerMap, config)
+	return nil
+}
 
-				// 将字段添加到对应的 Manager（目前假设只有一个 Manager）
-				for _, manager := range managersInMap {
-					manager.Fields = fields
-					if len(manager.Fields) > 0 {
-						p.ctx.AddManager(*manager)
-					}
-					break // 只处理第一个 Manager
-				}
+func (p *Parser) parseManagers(items []any) {
+	for _, item := range items {
+		managerMap, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+
+		for key := range managerMap {
+			fmt.Println("managerMap key", key)
+		}
+
+		// 遍历 map，区分 Manager 名称和字段定义
+		// Manager 名称：key 不包含特殊字符（<, >, :），value 可能是 nil 或 map
+		// 字段定义：key 包含特殊字符（<, >, :）
+		for managerName, managerData := range managerMap {
+			// 判断是否为 Manager 名称（不包含特殊字符的 key）
+			if containsSpecialChars(managerName, []string{"<", ">", ":"}) {
+				panic(fmt.Sprintf("managerName %s contains special chars", managerName))
+			}
+
+			// 这是 Manager 名称
+			manager := p.parseManagerFromMap(managerName, managerData, managerMap)
+			if len(manager.Fields) > 0 {
+				p.ctx.AddManager(manager)
 			}
 		}
 	}
+}
 
-	return nil
+// parseManagerFromMap 从 map 数据中解析单个 Manager 对象
+// managerName: Manager 名称
+// managerData: Manager 数据，可能是 nil 或包含字段定义的 map
+// managerMap: 完整的 managerMap，用于从平铺结构中提取字段
+// 返回: 解析后的 Manager
+func (p *Parser) parseManagerFromMap(managerName string, managerData any, managerMap map[string]any) Manager {
+	manager := Manager{Name: managerName}
+
+	// 判断字段定义的位置
+	var fieldsMap map[string]any
+	if managerData != nil {
+		// 如果 managerData 是 map，则字段定义在其中
+		if dataMap, ok := managerData.(map[string]any); ok {
+			fieldsMap = dataMap
+		}
+	}
+
+	// 如果 managerData 是 nil 或不是 map，字段定义在平铺的 managerMap 中
+	if fieldsMap == nil {
+		fieldsMap = managerMap
+	}
+
+	// 解析字段（过滤掉 Manager 名称，只保留字段定义）
+	fields := p.parseManagerFields(fieldsMap, managerName)
+	manager.Fields = fields
+
+	return manager
+}
+
+// parseManagerFields 解析 Manager 的字段
+// fieldsMap: 包含字段定义的 map
+// managerName: Manager 名称，用于验证
+// 返回: 解析后的字段列表（已按编号排序）
+func (p *Parser) parseManagerFields(fieldsMap map[string]any, managerName string) []*types.Field {
+	// 如果 fieldsMap 中包含 managerName，说明 yaml 文件结构有问题
+	if _, exists := fieldsMap[managerName]; exists {
+		panic(fmt.Sprintf("fieldsMap contains managerName '%s', which indicates a malformed yaml structure", managerName))
+	}
+
+	return parseFieldsFromMap(fieldsMap, nil)
+}
+
+// containsSpecialChars 检查字符串是否包含特殊字符
+func containsSpecialChars(s string, specialChars []string) bool {
+	for _, char := range specialChars {
+		if strings.Contains(s, char) {
+			return true
+		}
+	}
+	return false
 }
 
 // parseModules 解析 modules.yaml
@@ -500,26 +556,4 @@ func sortFieldsByNumber(fields []*types.Field) {
 	sort.Slice(fields, func(i, j int) bool {
 		return fields[i].Number < fields[j].Number
 	})
-}
-
-// findObjectNamesInMap 从 map 中找出对象名称（不包含特殊字符的 key）
-// 用于识别 Manager、Module 等对象名称
-// specialChars: 特殊字符列表，如果 key 包含这些字符，则认为不是对象名称
-func findObjectNamesInMap(dataMap map[string]any, specialChars []string) map[string]bool {
-	objectNames := make(map[string]bool)
-
-	for key := range dataMap {
-		isObjectName := true
-		for _, char := range specialChars {
-			if strings.Contains(key, char) {
-				isObjectName = false
-				break
-			}
-		}
-		if isObjectName {
-			objectNames[key] = true
-		}
-	}
-
-	return objectNames
 }
