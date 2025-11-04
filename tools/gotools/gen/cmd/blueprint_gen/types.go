@@ -14,48 +14,29 @@ const (
 	ObjectTypeMechanism ObjectType = "Mechanism"
 )
 
-// FieldOption 字段选项
+// FieldOption 字段选项（保留用于兼容，但应该使用 types.FieldOption）
 type FieldOption struct {
 	Access string // access=all/s/c
-}
-
-// FieldType 字段类型定义
-type FieldType struct {
-	BaseType   string // int32, int64, string, bool, float, double
-	IsMap      bool
-	IsXMap     bool
-	IsRepeated bool
-	KeyType    string // map/xmap 的 key 类型
-	ValueType  string // map/xmap 的 value 类型，或基础类型
-}
-
-// Field 字段定义
-type Field struct {
-	Name    string
-	Type    FieldType
-	Number  int32 // 字段编号
-	Options FieldOption
-	Comment string
 }
 
 // Request 请求定义
 type Request struct {
 	Name    string
-	Fields  []Field
+	Fields  []*types.Field
 	Rsp     *Response
 	Comment string
 }
 
 // Response 响应定义
 type Response struct {
-	Fields  []Field
+	Fields  []*types.Field
 	Comment string
 }
 
 // Notify 通知定义
 type Notify struct {
 	Name    string
-	Fields  []Field
+	Fields  []*types.Field
 	Comment string
 }
 
@@ -80,18 +61,10 @@ type Manager struct {
 	Fields []*types.Field // 使用 types.Field 替代 ManagerField
 }
 
-// EntityField Entity 中的字段（通常是 Manager）
-type EntityField struct {
-	Name        string
-	ManagerName string
-	Number      int32
-	Options     FieldOption
-}
-
 // Entity 实体定义
 type Entity struct {
 	Name   string
-	Fields []EntityField
+	Fields []*types.Field // 使用 types.Field 替代 EntityField
 }
 
 // HeadFileConfig 头文件配置
@@ -115,13 +88,13 @@ type FieldOptionDefinition struct {
 // DataStruct 通用数据结构
 type DataStruct struct {
 	Name   string
-	Fields []Field
+	Fields []*types.Field
 }
 
 // NetWallMessage NetWall 消息定义
 type NetWallMessage struct {
 	Name    string
-	Fields  []Field
+	Fields  []*types.Field
 	Rsp     *Response // 仅用于 Request
 	Comment string
 }

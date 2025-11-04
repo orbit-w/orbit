@@ -213,7 +213,7 @@ func (g *ProtoGenerator) generateEntitiesProto(outputDir string) error {
 
 		// 生成 Manager 字段
 		for _, field := range entity.Fields {
-			fieldType := fmt.Sprintf("MME.%s", field.ManagerName)
+			fieldType := fmt.Sprintf("MME.%s", field.Type.TypeName)
 			// 确保编号不为 0
 			fieldNum := field.Number
 			if fieldNum == 0 {

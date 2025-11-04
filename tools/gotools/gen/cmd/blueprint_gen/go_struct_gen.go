@@ -532,10 +532,7 @@ func (g *GoStructGenerator) generateEntityFiles(outputDir string) error {
 		sb.WriteString(fmt.Sprintf("type %s struct {\n", entity.Name))
 		sb.WriteString("\tXXXId int64\n")
 		for _, field := range entity.Fields {
-			goType := ToGoTypeFromTypesFieldType(&types.FieldType{
-				Kind:     types.FieldKindMMEObject,
-				TypeName: field.ManagerName,
-			}, packageName)
+			goType := ToGoTypeFromTypesFieldType(&field.Type, packageName)
 			sb.WriteString(fmt.Sprintf("\t%s %s\n", field.Name, goType))
 		}
 		sb.WriteString("}\n\n")
@@ -544,7 +541,7 @@ func (g *GoStructGenerator) generateEntityFiles(outputDir string) error {
 		sb.WriteString(fmt.Sprintf("func New%s() *%s {\n", entity.Name, entity.Name))
 		sb.WriteString(fmt.Sprintf("\treturn &%s{\n", entity.Name))
 		for _, field := range entity.Fields {
-			typeName := field.ManagerName
+			typeName := field.Type.TypeName
 			sb.WriteString(fmt.Sprintf("\t\t%s: New%s(),\n", field.Name, typeName))
 		}
 		sb.WriteString("\t}\n")
@@ -557,7 +554,8 @@ func (g *GoStructGenerator) generateEntityFiles(outputDir string) error {
 		sb.WriteString("\t}\n\n")
 		sb.WriteString("\t*co = *e\n")
 		for _, field := range entity.Fields {
-			sb.WriteString(fmt.Sprintf("\tco.%s = &%s{}\n", field.Name, field.ManagerName))
+			typeName := field.Type.TypeName
+			sb.WriteString(fmt.Sprintf("\tco.%s = &%s{}\n", field.Name, typeName))
 			sb.WriteString(fmt.Sprintf("\te.%s.DeepCopy(co.%s)\n", field.Name, field.Name))
 		}
 		sb.WriteString("}\n\n")
@@ -585,9 +583,10 @@ func (g *GoStructGenerator) generateEntityFiles(outputDir string) error {
 		sb.WriteString("\t}\n\n")
 		sb.WriteString("\te.XXXId = pb.XXXId\n\n")
 		for _, field := range entity.Fields {
+			typeName := field.Type.TypeName
 			sb.WriteString(fmt.Sprintf("\tif pb.%s != nil {\n", field.Name))
 			sb.WriteString(fmt.Sprintf("\t\tif e.%s == nil {\n", field.Name))
-			sb.WriteString(fmt.Sprintf("\t\t\te.%s = New%s()\n", field.Name, field.ManagerName))
+			sb.WriteString(fmt.Sprintf("\t\t\te.%s = New%s()\n", field.Name, typeName))
 			sb.WriteString("\t\t}\n")
 			sb.WriteString(fmt.Sprintf("\t\te.%s.FromProto(pb.%s)\n", field.Name, field.Name))
 			sb.WriteString("\t}\n")

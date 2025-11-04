@@ -2,6 +2,7 @@ package blueprint_gen
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	types "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types"
@@ -44,68 +45,97 @@ func (p *Parser) parseEntities() error {
 		return err
 	}
 
-	if entityList, ok := yamlData["Entity"].([]interface{}); ok {
-		for _, entityItem := range entityList {
-			if entityMap, ok := entityItem.(map[string]interface{}); ok {
-				for entityName, entityData := range entityMap {
-					entity := Entity{Name: entityName}
+	entityList, ok := yamlData["Entity"].([]any)
+	if !ok {
+		return nil
+	}
 
-					// entityData 可能是 map，包含字段定义
-					// 格式: { "HeroManager HeroManager": "1 [blueprint:\"access=all\"]" }
-					if fieldsMap, ok := entityData.(map[string]interface{}); ok {
-						for fieldKey, fieldValue := range fieldsMap {
-							// fieldKey 格式: "HeroManager HeroManager" 或 "HeroManager HeroManager: 1"
-							// fieldValue 格式: "1 [blueprint:\"access=all\"]" 或数字
+	for _, entityItem := range entityList {
+		entityMap, ok := entityItem.(map[string]any)
+		if !ok {
+			continue
+		}
 
-							// fieldKey 格式: "HeroManager HeroManager"
-							// fieldValue 格式: "1 [blueprint:\"access=all\"]" 或数字
-
-							// 先提取类型名和字段名
-							keyParts := strings.Fields(fieldKey)
-							if len(keyParts) >= 2 {
-								field := EntityField{}
-								field.ManagerName = keyParts[0] // 类型名
-								field.Name = keyParts[1]        // 字段名
-
-								// 从 fieldValue 提取编号和选项
-								if fieldValue != nil {
-									if valueStr, ok := fieldValue.(string); ok {
-										// valueStr 格式: "1 [blueprint:\"access=all\"]"
-										valueParts := strings.Fields(valueStr)
-										if len(valueParts) > 0 {
-											var num int32
-											numStr := valueParts[0]
-											// 移除可能的选项部分
-											if idx := strings.Index(numStr, "["); idx != -1 {
-												field.Options = ParseFieldOptions(valueStr[idx:])
-												numStr = numStr[:idx]
-											} else if len(valueParts) > 1 {
-												// 选项在下一个元素
-												field.Options = ParseFieldOptions(valueParts[1])
-											}
-											if _, err := fmt.Sscanf(numStr, "%d", &num); err == nil {
-												field.Number = num
-											}
-										}
-									} else if num, ok := fieldValue.(int); ok {
-										field.Number = int32(num)
-									}
-								}
-
-								if field.Number > 0 {
-									entity.Fields = append(entity.Fields, field)
-								}
-							}
-						}
-					}
-
-					p.ctx.AddEntity(entity)
-				}
+		for entityName, entityData := range entityMap {
+			entity := p.parseEntityFromMap(entityName, entityData)
+			if len(entity.Fields) > 0 {
+				p.ctx.AddEntity(entity)
 			}
 		}
 	}
 
 	return nil
+}
+
+// parseEntityFromMap 从 map 数据中解析单个 Entity
+// entityName: 实体名称
+// entityData: 实体数据，通常是包含字段定义的 map
+func (p *Parser) parseEntityFromMap(entityName string, entityData any) Entity {
+	entity := Entity{Name: entityName}
+
+	fieldsMap, ok := entityData.(map[string]any)
+	if !ok {
+		return entity
+	}
+
+	// Entity 字段格式特殊（"ManagerName FieldName"），需要特殊处理
+	for fieldKey, fieldValue := range fieldsMap {
+		field := parseEntityField(fieldKey, fieldValue)
+		if field != nil {
+			entity.Fields = append(entity.Fields, field)
+		}
+	}
+
+	// 按字段编号排序，保证字段顺序
+	sortFieldsByNumber(entity.Fields)
+
+	return entity
+}
+
+// parseEntityField 解析 EntityField，返回 *types.Field
+// fieldKey 格式: "HeroManager HeroManager"
+// fieldValue 格式: "1 [blueprint:\"access=all\"]" 或数字
+func parseEntityField(fieldKey string, fieldValue any) *types.Field {
+	// 使用通用工具函数构建字段定义字符串
+	fieldDef := buildFieldDefinition(fieldKey, fieldValue)
+	if fieldDef == "" {
+		return nil
+	}
+
+	// 使用通用工具函数解析字段定义
+	field := parseAndConvertFieldDefinition(fieldDef)
+	if field == nil {
+		return nil
+	}
+
+	// Entity 字段的特殊处理：类型是 MMEObject，TypeName 是 ManagerName
+	// 从 fieldKey 提取 ManagerName（第一个词）
+	keyParts := strings.Fields(fieldKey)
+	if len(keyParts) < 2 {
+		return nil
+	}
+	managerName := keyParts[0]
+
+	// 调整类型信息为 MMEObject
+	field.Type.Kind = types.FieldKindMMEObject
+	field.Type.Label = types.FieldLabelOptional
+	field.Type.TypeName = managerName
+
+	return field
+}
+
+// extractNumberFromValue 从值中提取数字（支持多种数字类型）
+func extractNumberFromValue(value any) int32 {
+	switch v := value.(type) {
+	case int:
+		return int32(v)
+	case int32:
+		return v
+	case int64:
+		return int32(v)
+	default:
+		return 0
+	}
 }
 
 // parseManagers 解析 manager.yaml
@@ -120,62 +150,33 @@ func (p *Parser) parseManagers() error {
 		return err
 	}
 
-	if managerList, ok := yamlData["Managers"].([]interface{}); ok {
+	if managerList, ok := yamlData["Managers"].([]any); ok {
 		for _, managerItem := range managerList {
-			if managerMap, ok := managerItem.(map[string]interface{}); ok {
+			if managerMap, ok := managerItem.(map[string]any); ok {
 				// 首先找出所有 Manager 名称（不包含 < 或 > 或 : 的 key）
+				objectNames := findObjectNamesInMap(managerMap, []string{"<", ">", ":"})
 				managersInMap := make(map[string]*Manager)
-				for key := range managerMap {
-					if !strings.Contains(key, "<") && !strings.Contains(key, ">") && !strings.Contains(key, ":") {
-						managersInMap[key] = &Manager{Name: key}
-					}
+				for name := range objectNames {
+					managersInMap[name] = &Manager{Name: name}
 				}
 
-				// 然后处理所有字段（包含 < 或 > 的 key）
-				for fieldKey, fieldValue := range managerMap {
-					// 跳过 Manager 名称
-					if managersInMap[fieldKey] != nil {
-						continue
-					}
-
-					// fieldKey 是字段定义字符串，格式: "xmap<int64, HeroModule> HeroMap: 1"
-					// 或者: "xmap<int64, HeroModule> HeroMap"
-					// fieldValue 是字段编号（可能是 int 或 nil）
-
-					// 构建完整的字段定义
-					fieldDef := fieldKey
-					if fieldValue != nil {
-						// 如果 fieldValue 是数字，添加到定义中
-						if num, ok := fieldValue.(int); ok {
-							fieldDef = fmt.Sprintf("%s: %d", fieldKey, num)
-						} else if num, ok := fieldValue.(int32); ok {
-							fieldDef = fmt.Sprintf("%s: %d", fieldKey, num)
-						} else if num, ok := fieldValue.(int64); ok {
-							fieldDef = fmt.Sprintf("%s: %d", fieldKey, num)
-						}
-					}
-
-					// 解析字段定义
-					field, err := ParseFieldDefinition(fieldDef)
-					if err == nil {
-						// 转换为 types.Field
-						typesField, err := ConvertFieldToTypesField(field)
-						if err == nil {
-							// 找到对应的 Manager（如果有多个 Manager，可能需要更复杂的逻辑）
-							// 目前假设只有一个 Manager
-							for _, manager := range managersInMap {
-								manager.Fields = append(manager.Fields, typesField)
-								break // 只添加到第一个 Manager
-							}
-						}
-					}
+				// 使用通用解析函数解析字段
+				config := &FieldParserConfig{
+					FilterFunc: func(key string, value any) bool {
+						// 跳过 Manager 名称
+						return objectNames[key]
+					},
 				}
 
-				// 添加所有有字段的 Manager
+				fields := parseFieldsFromMap(managerMap, config)
+
+				// 将字段添加到对应的 Manager（目前假设只有一个 Manager）
 				for _, manager := range managersInMap {
+					manager.Fields = fields
 					if len(manager.Fields) > 0 {
 						p.ctx.AddManager(*manager)
 					}
+					break // 只处理第一个 Manager
 				}
 			}
 		}
@@ -196,27 +197,27 @@ func (p *Parser) parseModules() error {
 		return err
 	}
 
-	if moduleList, ok := yamlData["Modules"].([]interface{}); ok {
+	if moduleList, ok := yamlData["Modules"].([]any); ok {
 		for _, moduleItem := range moduleList {
-			if moduleMap, ok := moduleItem.(map[string]interface{}); ok {
+			if moduleMap, ok := moduleItem.(map[string]any); ok {
 				for moduleName, moduleData := range moduleMap {
 					module := Module{Name: moduleName}
 
 					// moduleData 是列表，包含 Mechanism 引用
 					// 格式: [{ "HeroMechanism Base": 1, Settings: {...} }, { "LevelUpMechanism LevelUp": 2, Settings: {...} }]
-					if mechanismsList, ok := moduleData.([]interface{}); ok {
+					if mechanismsList, ok := moduleData.([]any); ok {
 						for _, mechItem := range mechanismsList {
-							if mechMap, ok := mechItem.(map[string]interface{}); ok {
+							if mechMap, ok := mechItem.(map[string]any); ok {
 								var fieldDef string
 								var fieldNumber int32
-								var settings map[string]interface{}
+								var settings map[string]any
 
 								// mechMap 的 key 是字段定义字符串，格式: "HeroMechanism Base"
 								// value 是编号或 Settings
 								for key, value := range mechMap {
 									if key == "Settings" {
 										// 处理 Settings
-										if settingsMap, ok := value.(map[string]interface{}); ok {
+										if settingsMap, ok := value.(map[string]any); ok {
 											settings = settingsMap
 										}
 									} else {
@@ -292,11 +293,11 @@ func (p *Parser) parseModules() error {
 										if settings != nil {
 											if field.Metadata == nil {
 												field.Metadata = &types.FieldMetadata{
-													CustomOptions: make(map[string]interface{}),
+													CustomOptions: make(map[string]any),
 												}
 											}
 											if field.Metadata.CustomOptions == nil {
-												field.Metadata.CustomOptions = make(map[string]interface{})
+												field.Metadata.CustomOptions = make(map[string]any)
 											}
 											field.Metadata.CustomOptions["Settings"] = settings
 										}
@@ -331,9 +332,9 @@ func (p *Parser) parseMechanisms() error {
 		return err
 	}
 
-	if mechanismList, ok := yamlData["Mechanisms"].([]interface{}); ok {
+	if mechanismList, ok := yamlData["Mechanisms"].([]any); ok {
 		for _, mechItem := range mechanismList {
-			if mechMap, ok := mechItem.(map[string]interface{}); ok {
+			if mechMap, ok := mechItem.(map[string]any); ok {
 				for mechName, mechData := range mechMap {
 					// 跳过 Settings, Requests, Notifies 这些不是 Mechanism 的 key
 					if mechName == "Settings" || mechName == "Requests" || mechName == "Notifies" {
@@ -342,17 +343,14 @@ func (p *Parser) parseMechanisms() error {
 
 					mechanism := Mechanism{Name: mechName}
 
-					if mechDataMap, ok := mechData.(map[string]interface{}); ok {
-						// 解析数据字段
-						fields := make([]*types.Field, 0)
-
+					if mechDataMap, ok := mechData.(map[string]any); ok {
 						// 解析 Settings
-						if settings, ok := mechDataMap["Settings"].(map[string]interface{}); ok {
+						if settings, ok := mechDataMap["Settings"].(map[string]any); ok {
 							mechanism.Settings = settings
 						}
 
 						// 解析 Requests
-						if requests, ok := mechDataMap["Requests"].([]interface{}); ok {
+						if requests, ok := mechDataMap["Requests"].([]any); ok {
 							for _, reqItem := range requests {
 								req, err := p.ParseRequestOrNotify(reqItem, true)
 								if err == nil && req.Name != "" {
@@ -362,7 +360,7 @@ func (p *Parser) parseMechanisms() error {
 						}
 
 						// 解析 Notifies
-						if notifies, ok := mechDataMap["Notifies"].([]interface{}); ok {
+						if notifies, ok := mechDataMap["Notifies"].([]any); ok {
 							for _, notifyItem := range notifies {
 								notify, err := p.ParseNotifyOnly(notifyItem)
 								if err == nil && notify.Name != "" {
@@ -371,43 +369,15 @@ func (p *Parser) parseMechanisms() error {
 							}
 						}
 
-						// 解析数据字段（其他所有字段）
-						// key 是字段定义字符串，格式: "int32 CurLevel: 1 [blueprint:\"access=all\"]"
-						// value 可能是 nil、数字或其他元数据
-						for key, value := range mechDataMap {
-							if key != "Settings" && key != "Requests" && key != "Notifies" {
-								// 这是一个数据字段定义
-								// key 格式: "int32 CurLevel: 1 [blueprint:\"access=all\"]" 或 "int32 CurLevel"
-								// value 可能是 nil 或数字
-
-								// 构建完整的字段定义
-								fieldDef := key
-								if value != nil {
-									// 如果 value 是数字，添加到定义中
-									if num, ok := value.(int); ok {
-										fieldDef = fmt.Sprintf("%s: %d", key, num)
-									} else if num, ok := value.(int32); ok {
-										fieldDef = fmt.Sprintf("%s: %d", key, num)
-									} else if num, ok := value.(int64); ok {
-										fieldDef = fmt.Sprintf("%s: %d", key, num)
-									} else if valueStr, ok := value.(string); ok {
-										// value 是字符串，格式: "1 [blueprint:\"access=all\"]"
-										fieldDef = key + ": " + valueStr
-									}
-								}
-
-								// 解析字段定义并转换为 *types.Field
-								field, err := ParseFieldDefinition(fieldDef)
-								if err == nil {
-									typesField, err := ConvertFieldToTypesField(field)
-									if err == nil {
-										fields = append(fields, typesField)
-									}
-								}
-							}
+						// 使用通用解析函数解析数据字段（过滤掉 Settings、Requests、Notifies）
+						config := &FieldParserConfig{
+							FilterFunc: func(key string, value any) bool {
+								// 过滤掉 Settings、Requests、Notifies
+								return key == "Settings" || key == "Requests" || key == "Notifies"
+							},
 						}
 
-						mechanism.Fields = fields
+						mechanism.Fields = parseFieldsFromMap(mechDataMap, config)
 					} else {
 						// mechData 不是 map，可能是其他类型（应该不会发生）
 						// 但是需要处理这种情况，避免 panic
@@ -420,4 +390,136 @@ func (p *Parser) parseMechanisms() error {
 	}
 
 	return nil
+}
+
+// ============================================================================
+// 通用解析工具函数
+// ============================================================================
+
+// FieldParserConfig 字段解析配置
+type FieldParserConfig struct {
+	// FilterFunc 用于过滤字段，返回 true 表示跳过该字段
+	FilterFunc func(key string, value any) bool
+	// BuildFieldDefFunc 用于构建字段定义字符串
+	// 如果为 nil，使用默认的 buildFieldDefinition
+	BuildFieldDefFunc func(key string, value any) string
+	// ParseFieldFunc 用于解析字段，返回 *types.Field
+	// 如果为 nil，使用默认的 parseAndConvertFieldDefinition
+	ParseFieldFunc func(fieldDef string) *types.Field
+}
+
+// parseFieldsFromMap 从 map 中解析字段（通用函数）
+// fieldsMap: 包含字段定义的 map
+// config: 解析配置
+// 返回: 解析后的字段列表（已按编号排序）
+func parseFieldsFromMap(fieldsMap map[string]any, config *FieldParserConfig) []*types.Field {
+	fields := make([]*types.Field, 0)
+
+	for fieldKey, fieldValue := range fieldsMap {
+		// 应用过滤函数
+		if config != nil && config.FilterFunc != nil {
+			if config.FilterFunc(fieldKey, fieldValue) {
+				continue
+			}
+		}
+
+		// 构建字段定义
+		var fieldDef string
+		if config != nil && config.BuildFieldDefFunc != nil {
+			fieldDef = config.BuildFieldDefFunc(fieldKey, fieldValue)
+		} else {
+			fieldDef = buildFieldDefinition(fieldKey, fieldValue)
+		}
+
+		if fieldDef == "" {
+			continue
+		}
+
+		// 解析字段
+		var field *types.Field
+		if config != nil && config.ParseFieldFunc != nil {
+			field = config.ParseFieldFunc(fieldDef)
+		} else {
+			field = parseAndConvertFieldDefinition(fieldDef)
+		}
+
+		if field != nil {
+			fields = append(fields, field)
+		}
+	}
+
+	// 按字段编号排序，保证字段顺序
+	sortFieldsByNumber(fields)
+
+	return fields
+}
+
+// buildFieldDefinition 构建字段定义字符串（通用函数）
+// fieldKey: 字段键，可能是完整的字段定义字符串，也可能是字段名
+// fieldValue: 字段值，可能是编号、字符串或其他类型
+// 返回: 完整的字段定义字符串
+func buildFieldDefinition(fieldKey string, fieldValue any) string {
+	if fieldValue == nil {
+		return fieldKey
+	}
+
+	// 如果 fieldValue 是数字，添加到定义中
+	if num := extractNumberFromValue(fieldValue); num > 0 {
+		// 检查 fieldKey 是否已经包含编号
+		if strings.Contains(fieldKey, ":") {
+			return fieldKey
+		}
+		return fmt.Sprintf("%s: %d", fieldKey, num)
+	}
+
+	// 如果 fieldValue 是字符串，追加到定义中
+	if valueStr, ok := fieldValue.(string); ok {
+		// 检查 fieldKey 是否已经包含该字符串
+		if strings.Contains(fieldKey, valueStr) {
+			return fieldKey
+		}
+		return fieldKey + ": " + valueStr
+	}
+
+	return fieldKey
+}
+
+// parseAndConvertFieldDefinition 解析字段定义并转换为 *types.Field（通用函数）
+// fieldDef: 字段定义字符串，格式: "int32 FieldName: 1 [blueprint:\"access=all\"]"
+// 返回: 解析后的 *types.Field，如果解析失败返回 nil
+func parseAndConvertFieldDefinition(fieldDef string) *types.Field {
+	field, err := ParseFieldDefinition(fieldDef)
+	if err != nil {
+		return nil
+	}
+	return field
+}
+
+// sortFieldsByNumber 按字段编号排序字段列表（通用函数）
+func sortFieldsByNumber(fields []*types.Field) {
+	sort.Slice(fields, func(i, j int) bool {
+		return fields[i].Number < fields[j].Number
+	})
+}
+
+// findObjectNamesInMap 从 map 中找出对象名称（不包含特殊字符的 key）
+// 用于识别 Manager、Module 等对象名称
+// specialChars: 特殊字符列表，如果 key 包含这些字符，则认为不是对象名称
+func findObjectNamesInMap(dataMap map[string]any, specialChars []string) map[string]bool {
+	objectNames := make(map[string]bool)
+
+	for key := range dataMap {
+		isObjectName := true
+		for _, char := range specialChars {
+			if strings.Contains(key, char) {
+				isObjectName = false
+				break
+			}
+		}
+		if isObjectName {
+			objectNames[key] = true
+		}
+	}
+
+	return objectNames
 }

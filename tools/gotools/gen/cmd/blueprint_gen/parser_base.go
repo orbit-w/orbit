@@ -65,22 +65,12 @@ func (p *BaseParser) ResolvePath(paths ...string) string {
 
 // ParseFieldDefinitionToTypesField 将字段定义字符串解析为 types.Field
 func (p *BaseParser) ParseFieldDefinitionToTypesField(fieldDef string) (*types.Field, error) {
-	field, err := ParseFieldDefinition(fieldDef)
-	if err != nil {
-		return nil, err
-	}
-
-	typesField, err := ConvertFieldToTypesField(field)
-	if err != nil {
-		return nil, fmt.Errorf("failed to convert field: %w", err)
-	}
-
-	return typesField, nil
+	return ParseFieldDefinition(fieldDef)
 }
 
-// ParseMessageFields 解析消息字段（通用逻辑）
-func (p *BaseParser) ParseMessageFields(fieldsMap map[string]interface{}) ([]Field, error) {
-	result := make([]Field, 0)
+// ParseMessageFields 解析消息字段（通用逻辑），统一使用 *types.Field
+func (p *BaseParser) ParseMessageFields(fieldsMap map[string]interface{}) ([]*types.Field, error) {
+	result := make([]*types.Field, 0)
 
 	for fieldName, fieldDef := range fieldsMap {
 		if fieldStr, ok := fieldDef.(string); ok {
@@ -96,26 +86,9 @@ func (p *BaseParser) ParseMessageFields(fieldsMap map[string]interface{}) ([]Fie
 }
 
 // ParseMessageFieldsToTypes 解析消息字段为 types.Field 列表（通用逻辑）
+// 现在直接使用 ParseMessageFields，因为已经统一使用 *types.Field
 func (p *BaseParser) ParseMessageFieldsToTypes(fieldsMap map[string]interface{}) ([]*types.Field, error) {
-	result := make([]*types.Field, 0)
-
-	for fieldName, fieldDef := range fieldsMap {
-		if fieldStr, ok := fieldDef.(string); ok {
-			field, err := ParseFieldDefinition(fieldName + " " + fieldStr)
-			if err != nil {
-				continue // 跳过解析失败的字段
-			}
-
-			typesField, err := ConvertFieldToTypesField(field)
-			if err != nil {
-				continue // 跳过转换失败的字段
-			}
-
-			result = append(result, typesField)
-		}
-	}
-
-	return result, nil
+	return p.ParseMessageFields(fieldsMap)
 }
 
 // ParseRequestOrNotify 解析请求或通知（通用逻辑）
@@ -128,7 +101,7 @@ func (p *BaseParser) ParseRequestOrNotify(item interface{}, parseResponse bool) 
 
 			if dataMap, ok := data.(map[string]interface{}); ok {
 				// 解析字段
-				fields := make([]Field, 0)
+				fields := make([]*types.Field, 0)
 				for fieldName, fieldDef := range dataMap {
 					if fieldName == "Rsp" && parseResponse {
 						// 解析响应

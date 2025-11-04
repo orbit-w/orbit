@@ -106,12 +106,10 @@ func (g *ProtoGenerator) generateFieldProto(field *blueprint_types.Field, fieldN
 	return builder.String()
 }
 
-// generateFieldProtoFromOldField 从旧的 Field 类型生成 Proto 定义（用于兼容）
-func (g *ProtoGenerator) generateFieldProtoFromOldField(field Field, fieldNumber int32) string {
-	// 转换为新的 Field 类型
-	typesField, err := ConvertFieldToTypesField(field)
-	if err != nil {
-		return "" // 转换失败，返回空字符串
+// generateFieldProtoFromOldField 从 Field 类型生成 Proto 定义（已统一使用 *blueprint_types.Field）
+func (g *ProtoGenerator) generateFieldProtoFromOldField(field *blueprint_types.Field, fieldNumber int32) string {
+	if field == nil {
+		return ""
 	}
-	return g.generateFieldProto(typesField, fieldNumber)
+	return g.generateFieldProto(field, fieldNumber)
 }

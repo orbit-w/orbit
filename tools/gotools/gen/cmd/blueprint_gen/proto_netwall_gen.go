@@ -96,7 +96,7 @@ func (g *ProtoGenerator) generateRequestProto(outputDir string, allRequests map[
 
 			// 生成字段
 			for _, field := range req.Fields {
-				protoType := ToProtoType(field.Type)
+				protoType := ToProtoType(&field.Type)
 				sb.WriteString(fmt.Sprintf("    %s %s = %d;\n", protoType, field.Name, field.Number))
 			}
 
@@ -139,7 +139,7 @@ func (g *ProtoGenerator) generateNotifyProto(outputDir string, allNotifies map[s
 
 			// 生成字段
 			for _, field := range notify.Fields {
-				protoType := ToProtoType(field.Type)
+				protoType := ToProtoType(&field.Type)
 				sb.WriteString(fmt.Sprintf("    %s %s = %d;\n", protoType, field.Name, field.Number))
 			}
 
