@@ -33,6 +33,9 @@ func (p *Parser) Parse() error {
 		return fmt.Errorf("failed to parse NetWall files: %w", err)
 	}
 
+	// 检查 Entity 字段类型是否符合要求
+	p.ctx.CheckEntityFields()
+
 	return nil
 }
 
@@ -49,18 +52,18 @@ func (p *Parser) parseHeadFile() error {
 	}
 
 	config := &HeadFileConfig{
-		EntityFields:              make(map[string]interface{}),
-		ModuleFields:              make(map[string]interface{}),
-		MechanismFields:           make(map[string]interface{}),
+		EntityFields:              make(map[string]any),
+		ModuleFields:              make(map[string]any),
+		MechanismFields:           make(map[string]any),
 		MechanismDataFieldOptions: make(map[string]FieldOptionDefinition),
 		CommonDataStructs:         make([]DataStruct, 0),
 	}
 
 	// 遍历列表项
 	for _, item := range yamlData {
-		if itemMap, ok := item.(map[string]interface{}); ok {
+		if itemMap, ok := item.(map[string]any); ok {
 			// 解析 EntityFields
-			if entityFields, ok := itemMap["EntityFields"].(map[string]interface{}); ok {
+			if entityFields, ok := itemMap["EntityFields"].(map[string]any); ok {
 				for k, v := range entityFields {
 					config.EntityFields[k] = v
 				}
@@ -70,14 +73,14 @@ func (p *Parser) parseHeadFile() error {
 			}
 
 			// 解析 ModuleFields
-			if moduleFields, ok := itemMap["ModuleFields"].(map[string]interface{}); ok {
+			if moduleFields, ok := itemMap["ModuleFields"].(map[string]any); ok {
 				for k, v := range moduleFields {
 					config.ModuleFields[k] = v
 				}
 			}
 
 			// 解析 ModuleStorageOption
-			if moduleStorageOption, ok := itemMap["ModuleStorageOption"].(map[string]interface{}); ok {
+			if moduleStorageOption, ok := itemMap["ModuleStorageOption"].(map[string]any); ok {
 				if choices, ok := moduleStorageOption["Choices"].([]interface{}); ok {
 					config.ModuleStorageOption = make([]string, 0, len(choices))
 					for _, choice := range choices {
@@ -89,19 +92,19 @@ func (p *Parser) parseHeadFile() error {
 			}
 
 			// 解析 MechanismFields
-			if mechanismFields, ok := itemMap["MechanismFields"].(map[string]interface{}); ok {
+			if mechanismFields, ok := itemMap["MechanismFields"].(map[string]any); ok {
 				for k, v := range mechanismFields {
 					config.MechanismFields[k] = v
 				}
 			}
 
 			// 解析 MechanismDataFieldOptions
-			if options, ok := itemMap["MechanismDataFieldOption"].([]interface{}); ok {
+			if options, ok := itemMap["MechanismDataFieldOption"].([]any); ok {
 				for _, opt := range options {
-					if optMap, ok := opt.(map[string]interface{}); ok {
+					if optMap, ok := opt.(map[string]any); ok {
 						for name, def := range optMap {
 							optionDef := FieldOptionDefinition{}
-							if defMap, ok := def.(map[string]interface{}); ok {
+							if defMap, ok := def.(map[string]any); ok {
 								if defaultVal, ok := defMap["Default"].(string); ok {
 									optionDef.Default = defaultVal
 								}
@@ -111,7 +114,7 @@ func (p *Parser) parseHeadFile() error {
 								if desc, ok := defMap["Description"].(string); ok {
 									optionDef.Description = desc
 								}
-								if choices, ok := defMap["Choices"].([]interface{}); ok {
+								if choices, ok := defMap["Choices"].([]any); ok {
 									optionDef.Choices = make([]string, 0, len(choices))
 									for _, choice := range choices {
 										if s, ok := choice.(string); ok {
@@ -127,11 +130,11 @@ func (p *Parser) parseHeadFile() error {
 			}
 
 			// 解析 CommonDataStruct
-			if commonStructs, ok := itemMap["CommonDataStruct"].([]interface{}); ok {
+			if commonStructs, ok := itemMap["CommonDataStruct"].([]any); ok {
 				for _, cs := range commonStructs {
-					if csMap, ok := cs.(map[string]interface{}); ok {
+					if csMap, ok := cs.(map[string]any); ok {
 						for name, fields := range csMap {
-							if fieldsMap, ok := fields.(map[string]interface{}); ok {
+							if fieldsMap, ok := fields.(map[string]any); ok {
 								structFields, err := p.ParseMessageFields(fieldsMap)
 								if err == nil {
 									config.CommonDataStructs = append(config.CommonDataStructs, DataStruct{

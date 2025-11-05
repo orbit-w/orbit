@@ -12,7 +12,7 @@ import (
 // parseMMEFiles 解析 MME YAML 文件
 func (p *Parser) parseMMEFiles() error {
 	// 解析 entities.yaml
-	if err := p.parseEntities(); err != nil {
+	if err := p.ParseEntities(); err != nil {
 		return fmt.Errorf("failed to parse entities: %w", err)
 	}
 
@@ -22,20 +22,20 @@ func (p *Parser) parseMMEFiles() error {
 	}
 
 	// 解析 modules.yaml
-	if err := p.parseModules(); err != nil {
+	if err := p.ParseModules(); err != nil {
 		return fmt.Errorf("failed to parse modules: %w", err)
 	}
 
 	// 解析 mechanisms.yaml
-	if err := p.parseMechanisms(); err != nil {
+	if err := p.ParseMechanisms(); err != nil {
 		return fmt.Errorf("failed to parse mechanisms: %w", err)
 	}
 
 	return nil
 }
 
-// parseEntities 解析 entities.yaml
-func (p *Parser) parseEntities() error {
+// ParseEntities 解析 entities.yaml
+func (p *Parser) ParseEntities() error {
 	filePath := p.ResolvePath("mme", "entities.yaml")
 	if !FileExists(filePath) {
 		return nil
@@ -81,48 +81,17 @@ func (p *Parser) parseEntityFromMap(entityName string, entityData any) Entity {
 
 	// Entity 字段格式特殊（"ManagerName FieldName"），需要特殊处理
 	for fieldKey, fieldValue := range fieldsMap {
-		field := parseEntityField(fieldKey, fieldValue)
-		if field != nil {
-			entity.Fields = append(entity.Fields, field)
+		field := parseField(nil, fieldKey, fieldValue)
+		if field == nil {
+			panic(fmt.Sprintf("failed to parse field %s", fieldKey))
 		}
+		entity.Fields = append(entity.Fields, field)
 	}
 
 	// 按字段编号排序，保证字段顺序
 	sortFieldsByNumber(entity.Fields)
 
 	return entity
-}
-
-// parseEntityField 解析 EntityField，返回 *types.Field
-// fieldKey 格式: "HeroManager HeroManager"
-// fieldValue 格式: "1 [blueprint:\"access=all\"]" 或数字
-func parseEntityField(fieldKey string, fieldValue any) *types.Field {
-	// 使用通用工具函数构建字段定义字符串
-	fieldDef := buildFieldDefinition(fieldKey, fieldValue)
-	if fieldDef == "" {
-		return nil
-	}
-
-	// 使用通用工具函数解析字段定义
-	field := parseAndConvertFieldDefinition(fieldDef)
-	if field == nil {
-		return nil
-	}
-
-	// Entity 字段的特殊处理：类型是 MMEObject，TypeName 是 ManagerName
-	// 从 fieldKey 提取 ManagerName（第一个词）
-	keyParts := strings.Fields(fieldKey)
-	if len(keyParts) < 2 {
-		return nil
-	}
-	managerName := keyParts[0]
-
-	// 调整类型信息为 MMEObject
-	field.Type.Kind = types.FieldKindMMEObject
-	field.Type.Label = types.FieldLabelOptional
-	field.Type.TypeName = managerName
-
-	return field
 }
 
 // extractNumberFromValue 从值中提取数字（支持多种数字类型）
@@ -228,7 +197,7 @@ func (p *Parser) parseManagerFields(fieldsMap map[string]any, managerName string
 }
 
 // parseModules 解析 modules.yaml
-func (p *Parser) parseModules() error {
+func (p *Parser) ParseModules() error {
 	filePath := p.ResolvePath("mme", "modules.yaml")
 	if !FileExists(filePath) {
 		return nil
@@ -239,131 +208,51 @@ func (p *Parser) parseModules() error {
 		return err
 	}
 
-	if moduleList, ok := yamlData["Modules"].([]any); ok {
-		for _, moduleItem := range moduleList {
-			if moduleMap, ok := moduleItem.(map[string]any); ok {
-				for moduleName, moduleData := range moduleMap {
-					module := Module{Name: moduleName}
-
-					// moduleData 是列表，包含 Mechanism 引用
-					// 格式: [{ "HeroMechanism Base": 1, Settings: {...} }, { "LevelUpMechanism LevelUp": 2, Settings: {...} }]
-					if mechanismsList, ok := moduleData.([]any); ok {
-						for _, mechItem := range mechanismsList {
-							if mechMap, ok := mechItem.(map[string]any); ok {
-								var fieldDef string
-								var fieldNumber int32
-								var settings map[string]any
-
-								// mechMap 的 key 是字段定义字符串，格式: "HeroMechanism Base"
-								// value 是编号或 Settings
-								for key, value := range mechMap {
-									if key == "Settings" {
-										// 处理 Settings
-										if settingsMap, ok := value.(map[string]any); ok {
-											settings = settingsMap
-										}
-									} else {
-										// key 是字段定义字符串，格式: "HeroMechanism Base"
-										// value 是编号（int）或 nil
-
-										// 先尝试从 value 获取编号
-										if value != nil {
-											if num, ok := value.(int); ok {
-												fieldNumber = int32(num)
-											} else if num, ok := value.(int32); ok {
-												fieldNumber = num
-											} else if num, ok := value.(int64); ok {
-												fieldNumber = int32(num)
-											}
-										}
-
-										// 构建字段定义字符串，格式: "HeroMechanism FieldName: Number"
-										if fieldNumber != 0 {
-											fieldDef = fmt.Sprintf("%s: %d", key, fieldNumber)
-										} else {
-											fieldDef = key
-										}
-
-										// 如果从 value 没有获取到编号，尝试从 key 中解析（key 可能包含编号）
-										if fieldNumber == 0 {
-											// 解析字段定义: "HeroMechanism Base: 1"
-											parts2 := strings.Fields(fieldDef)
-											if len(parts2) >= 3 {
-												for i, part := range parts2 {
-													if strings.HasPrefix(part, ":") && i+1 < len(parts2) {
-														var num int32
-														if _, err := fmt.Sscanf(parts2[i+1], "%d", &num); err == nil {
-															fieldNumber = num
-															fieldDef = fmt.Sprintf("%s: %d", key, num)
-														}
-														break
-													}
-												}
-											}
-										}
-									}
-								}
-
-								// 解析字段定义，创建 types.Field
-								if fieldDef != "" {
-									// 解析字段定义：格式 "HeroMechanism FieldName: Number"
-									parts := strings.Fields(fieldDef)
-									if len(parts) >= 2 {
-										mechanismName := parts[0]
-										fieldName := strings.TrimSuffix(parts[1], ":")
-
-										// 如果编号为 0，尝试从字段定义中解析
-										if fieldNumber == 0 && len(parts) >= 3 {
-											if _, err := fmt.Sscanf(parts[2], "%d", &fieldNumber); err != nil {
-												fieldNumber = 0
-											}
-										}
-
-										// 创建 types.Field
-										field := &types.Field{
-											Name:   fieldName,
-											Number: fieldNumber,
-											Type: types.FieldType{
-												Kind:     types.FieldKindMMEObject, // Mechanism 是 MME Object 类型
-												Label:    types.FieldLabelOptional,
-												TypeName: mechanismName,
-											},
-											Options: types.FieldOption{},
-										}
-
-										// 如果有 Settings，将其存储到 Metadata 的 CustomOptions 中
-										if settings != nil {
-											if field.Metadata == nil {
-												field.Metadata = &types.FieldMetadata{
-													CustomOptions: make(map[string]any),
-												}
-											}
-											if field.Metadata.CustomOptions == nil {
-												field.Metadata.CustomOptions = make(map[string]any)
-											}
-											field.Metadata.CustomOptions["Settings"] = settings
-										}
-
-										if fieldNumber > 0 {
-											module.Mechanisms = append(module.Mechanisms, field)
-										}
-									}
-								}
-							}
-						}
-					}
-
-					p.ctx.AddModule(module)
-				}
-			}
+	moduleList := yamlData["Modules"].([]any)
+	for _, moduleItem := range moduleList {
+		moduleMap := moduleItem.(map[string]any)
+		module := NewModule()
+		for moduleName, moduleData := range moduleMap {
+			module.Name = moduleName
+			p.parseModuleItem(module, moduleData.([]any))
+		}
+		if len(module.Fields) > 0 {
+			p.ctx.AddModule(module)
 		}
 	}
 
 	return nil
 }
 
-// parseMechanisms 解析 mechanisms.yaml
-func (p *Parser) parseMechanisms() error {
+// parseModuleItem 解析 Module 的单个 Item
+// module: 模块
+// moduleItem: 模块的 Item，通常是包含字段定义/Settings定义的 map
+// 返回: 解析后的 Module
+func (p *Parser) parseModuleItem(module *Module, moduleItem []any) {
+	for i := range moduleItem {
+		keyWordItem := moduleItem[i]
+		keyWordItemMap := keyWordItem.(map[string]any)
+		for keyWord, keyWordItem := range keyWordItemMap {
+			switch keyWord {
+			case ModuleKeyWordSettings:
+				settings := keyWordItem.(map[string]any)
+				if settings != nil {
+					maps.Copy(module.Settings, settings)
+				}
+			default:
+				//如果不是其他特殊关键字，则认为是Field定义
+				field := parseField(nil, keyWord, keyWordItem)
+				if field == nil {
+					panic(fmt.Sprintf("failed to parse field %s", keyWord))
+				}
+				module.Fields = append(module.Fields, field)
+			}
+		}
+	}
+}
+
+// ParseMechanisms 解析 mechanisms.yaml
+func (p *Parser) ParseMechanisms() error {
 	filePath := p.ResolvePath("mme", "mechanisms.yaml")
 	if !FileExists(filePath) {
 		return nil
@@ -442,29 +331,35 @@ func parseFieldsFromMap(fieldsMap map[string]any, config *FieldParserConfig) []*
 	fields := make([]*types.Field, 0)
 
 	for fieldKey, fieldValue := range fieldsMap {
-		// 构建字段定义
-		fieldDef := buildFieldDefinition(fieldKey, fieldValue)
-		if fieldDef == "" {
-			continue
+		field := parseField(config, fieldKey, fieldValue)
+		if field == nil {
+			panic(fmt.Sprintf("failed to parse field %s", fieldKey))
 		}
-
-		// 解析字段
-		var field *types.Field
-		if config != nil && config.ParseFieldFunc != nil {
-			field = config.ParseFieldFunc(fieldDef)
-		} else {
-			field = parseAndConvertFieldDefinition(fieldDef)
-		}
-
-		if field != nil {
-			fields = append(fields, field)
-		}
+		fields = append(fields, field)
 	}
 
 	// 按字段编号排序，保证字段顺序
 	sortFieldsByNumber(fields)
 
 	return fields
+}
+
+func parseField(config *FieldParserConfig, fieldKey string, fieldValue any) *types.Field {
+	// 构建字段定义
+	fieldDef := buildFieldDefinition(fieldKey, fieldValue)
+	if fieldDef == "" {
+		return nil
+	}
+
+	// 解析字段
+	var field *types.Field
+	if config != nil && config.ParseFieldFunc != nil {
+		field = config.ParseFieldFunc(fieldDef)
+	} else {
+		field = parseAndConvertFieldDefinition(fieldDef)
+	}
+
+	return field
 }
 
 // buildFieldDefinition 构建字段定义字符串（通用函数）

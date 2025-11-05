@@ -5,3 +5,7 @@ const (
 	MechanismKeyWordRequests = "Requests"
 	MechanismKeyWordNotifies = "Notifies"
 )
+
+const (
+	ModuleKeyWordSettings = "Settings"
+)

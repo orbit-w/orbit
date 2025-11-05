@@ -110,7 +110,7 @@ func (g *ProtoGenerator) generateModulesProto(outputDir string) error {
 		sb.WriteString(fmt.Sprintf("message %s {\n", module.Name))
 
 		// 生成 Mechanism 引用字段（Module 中的 Mechanism 字段不应该是 optional）
-		for _, field := range module.Mechanisms {
+		for _, field := range module.Fields {
 			// 从 field.Type.TypeName 获取 Mechanism 名称
 			mechanismName := field.Type.TypeName
 			if mechanismName == "" {

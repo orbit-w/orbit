@@ -71,7 +71,7 @@ func runBlueprintGen(cmd *cobra.Command, args []string) {
 		}
 		fmt.Printf("Parsed %d modules\n", len(data.Modules))
 		for _, m := range data.Modules {
-			fmt.Printf("  Module: %s, Mechanisms: %d\n", m.Name, len(m.Mechanisms))
+			fmt.Printf("  Module: %s, Mechanisms: %d\n", m.Name, len(m.Fields))
 		}
 		fmt.Printf("Parsed %d mechanisms\n", len(data.Mechanisms))
 		for _, m := range data.Mechanisms {

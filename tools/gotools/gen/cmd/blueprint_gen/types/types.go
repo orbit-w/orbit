@@ -9,6 +9,7 @@ import (
 type FieldType struct {
 	Kind         FieldKind  // 字段类型种类（参考 descriptorpb）
 	Label        FieldLabel // 字段标签（OPTIONAL, REQUIRED, REPEATED）
+	Name         string     // 类型名称
 	TypeName     string     // 消息类型完整名称（带包名），如 "mme.HeroManager"
 	Extendee     string     // 如果是扩展字段，扩展的消息类型名称
 	DefaultValue string     // 默认值
@@ -17,6 +18,64 @@ type FieldType struct {
 	// Map/XMap/Repeated 类型信息（递归类型支持）
 	KeyType   *FieldType // map/xmap 的 key 类型，nil 表示无（对于 repeated 类型）
 	ValueType *FieldType // map/xmap 的 value 类型，或 repeated 的元素类型
+}
+
+func (ft FieldType) IsMapField() bool {
+	return ft.Kind == FieldKindMap
+}
+
+func (ft FieldType) IsXMapField() bool {
+	return ft.Kind == FieldKindXMap
+}
+
+func (ft FieldType) IsMMEObjectType() bool {
+	return ft.Kind == FieldKindMMEObject
+}
+
+// isXMapValueMMEObject 判断xmap的Value类型是否是MMEObject
+// xmap Value不允许是map/xmap/repeated类型
+func (ft FieldType) IsXMapValueMMEObject() bool {
+	if !ft.IsXMapField() {
+		panic("field type is not xmap field")
+	}
+	if ft.ValueType == nil {
+		panic("field value type is nil")
+	}
+
+	return ft.ValueType.Kind == FieldKindMMEObject
+}
+
+func (ft FieldType) IsMapValueMMEObject() bool {
+	if !ft.IsMapField() {
+		panic("field type is not map field")
+	}
+	if ft.ValueType == nil {
+		panic("field value type is nil")
+	}
+
+	return ft.ValueType.Kind == FieldKindMMEObject
+}
+
+// 判断字段类型是基础类型还是MMEObject
+// 基础类型包括：int32, int64, uint32, uint64, float, double, bool, string, bytes
+func (ft FieldType) IsFieldBaseType() bool {
+	switch ft.Kind {
+	case FieldKindInt32,
+		FieldKindInt64,
+		FieldKindUInt32,
+		FieldKindUInt64,
+		FieldKindFloat,
+		FieldKindDouble,
+		FieldKindBool,
+		FieldKindString,
+		FieldKindBytes:
+		return true
+	case FieldKindMMEObject,
+		FieldKindMessage:
+		return false
+	default:
+		panic(fmt.Sprintf("unknown field kind: %s", ft.Kind))
+	}
 }
 
 // FieldKind 字段类型种类（参考 descriptorpb 的设计）
@@ -167,6 +226,7 @@ func ParseTypeString(typeStr string) (*FieldType, error) {
 	if strings.HasPrefix(typeStr, "xmap<") {
 		ft.Kind = FieldKindXMap
 		ft.Label = FieldLabelOptional
+		ft.Name = "xmap"
 		return parseMapTypeRecursive(typeStr[5:], ft)
 	}
 
@@ -174,6 +234,7 @@ func ParseTypeString(typeStr string) (*FieldType, error) {
 	if strings.HasPrefix(typeStr, "map<") {
 		ft.Kind = FieldKindMap
 		ft.Label = FieldLabelOptional
+		ft.Name = "map"
 		return parseMapTypeRecursive(typeStr[4:], ft)
 	}
 
@@ -185,6 +246,7 @@ func ParseTypeString(typeStr string) (*FieldType, error) {
 func parseRepeatedType(typeStr string, ft *FieldType) (*FieldType, error) {
 	ft.Kind = FieldKindRepeated
 	ft.Label = FieldLabelRepeated
+	ft.Name = "repeated"
 
 	// 提取内部类型字符串
 	innerTypeStr := strings.TrimSpace(typeStr[8:])
@@ -205,6 +267,15 @@ func parseRepeatedType(typeStr string, ft *FieldType) (*FieldType, error) {
 	return ft, nil
 }
 
+// extractTypeName 从完整类型名称中提取不带包名的类型名称
+// 例如: "mme.HeroManager" -> "HeroManager", "HeroManager" -> "HeroManager"
+func extractTypeName(fullTypeName string) string {
+	if lastDot := strings.LastIndex(fullTypeName, "."); lastDot >= 0 {
+		return fullTypeName[lastDot+1:]
+	}
+	return fullTypeName
+}
+
 // parseBaseOrMessageType 解析基础类型或消息类型
 func parseBaseOrMessageType(typeStr string, ft *FieldType) *FieldType {
 	ft.Label = FieldLabelOptional
@@ -214,6 +285,8 @@ func parseBaseOrMessageType(typeStr string, ft *FieldType) *FieldType {
 
 	// 如果成功识别为基础类型，直接返回
 	if ft.Kind != FieldKindUnknown {
+		// 对于基础类型，设置 Name 为类型名称
+		ft.Name = typeStr
 		// 对于已知的基础类型，不需要设置 TypeName
 		// 但如果是 enum 或 MMEObject 等需要名称的类型，保留原逻辑
 		if ft.Kind == FieldKindEnum || ft.Kind == FieldKindMMEObject {
@@ -226,6 +299,7 @@ func parseBaseOrMessageType(typeStr string, ft *FieldType) *FieldType {
 	if isMMEObjectType(typeStr) {
 		ft.Kind = FieldKindMMEObject
 		ft.TypeName = typeStr
+		ft.Name = extractTypeName(typeStr)
 		return ft
 	}
 
@@ -234,6 +308,7 @@ func parseBaseOrMessageType(typeStr string, ft *FieldType) *FieldType {
 	// 不包含点号的可能是自定义类型名称
 	ft.Kind = FieldKindMessage
 	ft.TypeName = typeStr
+	ft.Name = extractTypeName(typeStr)
 	return ft
 }
 

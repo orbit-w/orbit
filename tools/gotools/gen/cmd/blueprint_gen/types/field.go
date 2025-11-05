@@ -12,12 +12,21 @@ type Field struct {
 	Metadata *FieldMetadata
 }
 
+// GetTypeName 获取字段类型名称，如 map, xmap, repeated, HeroManager等基础类型或MMEObject类型
+func (f *Field) GetTypeName() string {
+	return f.Type.Name
+}
+
 func (f *Field) IsMapField() bool {
-	return f.Type.Kind == FieldKindMap
+	return f.Type.IsMapField()
 }
 
 func (f *Field) IsXMapField() bool {
-	return f.Type.Kind == FieldKindXMap
+	return f.Type.IsXMapField()
+}
+
+func (f *Field) IsMMEObjectType() bool {
+	return f.Type.IsMMEObjectType()
 }
 
 // FieldOption 字段选项

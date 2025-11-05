@@ -1,6 +1,8 @@
 package blueprint_gen
 
 import (
+	"fmt"
+
 	types "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types"
 )
 
@@ -62,22 +64,31 @@ func (m *Mechanism) HasMapField() bool {
 	return hasMapField(m.Fields)
 }
 
-func (m *Mechanism) HasXMapField() bool {
+func (m *Mechanism) HasXMapField() (bool, *types.Field) {
 	return hasXMapField(m.Fields)
 }
 
 // Module 模块定义
 type Module struct {
-	Name       string
-	Mechanisms []*types.Field // 使用 types.Field 替代 ModuleMechanismRef
+	Name     string
+	Settings map[string]any
+	Fields   []*types.Field // 使用 types.Field 替代 ModuleMechanismRef
+}
+
+func NewModule() *Module {
+	return &Module{
+		Settings: make(map[string]any),
+		Fields:   make([]*types.Field, 0),
+	}
 }
 
 func (m *Module) HasMapField() bool {
-	return hasMapField(m.Mechanisms)
+	return hasMapField(m.Fields)
 }
 
 func (m *Module) HasXMapField() bool {
-	return hasXMapField(m.Mechanisms)
+	hasXMap, _ := hasXMapField(m.Fields)
+	return hasXMap
 }
 
 // Manager 管理器定义
@@ -91,7 +102,8 @@ func (m *Manager) HasMapField() bool {
 }
 
 func (m *Manager) HasXMapField() bool {
-	return hasXMapField(m.Fields)
+	hasXMap, _ := hasXMapField(m.Fields)
+	return hasXMap
 }
 
 // Entity 实体定义
@@ -150,7 +162,7 @@ type BlueprintContext struct {
 	HeadFile      *HeadFileConfig
 	Entities      []Entity
 	Managers      []Manager
-	Modules       []Module
+	Modules       []*Module
 	Mechanisms    []*Mechanism
 	NetWalls      []NetWallFile
 	ObjectTypeMap map[string]ObjectType
@@ -160,7 +172,7 @@ func NewBlueprintContext() *BlueprintContext {
 	return &BlueprintContext{
 		Entities:      make([]Entity, 0),
 		Managers:      make([]Manager, 0),
-		Modules:       make([]Module, 0),
+		Modules:       make([]*Module, 0),
 		Mechanisms:    make([]*Mechanism, 0),
 		NetWalls:      make([]NetWallFile, 0),
 		ObjectTypeMap: make(map[string]ObjectType),
@@ -177,7 +189,7 @@ func (ctx *BlueprintContext) AddManager(manager Manager) {
 	ctx.ObjectTypeMap[manager.Name] = ObjectTypeManager
 }
 
-func (ctx *BlueprintContext) AddModule(module Module) {
+func (ctx *BlueprintContext) AddModule(module *Module) {
 	ctx.Modules = append(ctx.Modules, module)
 	ctx.ObjectTypeMap[module.Name] = ObjectTypeModule
 }
@@ -198,6 +210,26 @@ func (ctx *BlueprintContext) AddNetWallFile(netWallFile NetWallFile) {
 	ctx.NetWalls = append(ctx.NetWalls, netWallFile)
 }
 
+// CheckFields 检查Entity所有字段是否符合要求
+func (ctx *BlueprintContext) CheckEntityFields() {
+	for _, entity := range ctx.Entities {
+		for _, field := range entity.Fields {
+			if !field.IsMMEObjectType() {
+				panic(fmt.Sprintf("entity %s 的 %s 字段类型不支持，必须是 MMEObject 类型", entity.Name, field.Name))
+			}
+			fieldName := field.GetTypeName()
+			t, ok := ctx.ObjectTypeMap[fieldName]
+			if !ok {
+				panic(fmt.Sprintf("entity %s 的 %s 字段类型不支持，必须是 MMEObject 类型", entity.Name, field.Name))
+			}
+
+			if t != ObjectTypeManager {
+				panic(fmt.Sprintf("entity %s 的 %s 字段类型不支持，必须是 Manager 类型", entity.Name, field.Name))
+			}
+		}
+	}
+}
+
 // SetHeadFile 设置头文件配置
 func (ctx *BlueprintContext) SetHeadFile(headFile *HeadFileConfig) {
 	ctx.HeadFile = headFile
@@ -212,11 +244,59 @@ func hasMapField(fields []*types.Field) bool {
 	return false
 }
 
-func hasXMapField(fields []*types.Field) bool {
+func hasXMapField(fields []*types.Field) (bool, *types.Field) {
 	for _, field := range fields {
 		if field.IsXMapField() {
-			return true
+			return true, field
 		}
 	}
-	return false
+	return false, nil
+}
+
+// field 中存在xmap，且xmap的Value类型是基础类型
+func hasXMapValueIsBaseType(fields []*types.Field) (bool, *types.Field) {
+	for _, field := range fields {
+		if field.IsXMapField() {
+			if field.Type.ValueType.IsFieldBaseType() {
+				return true, field
+			}
+		}
+	}
+	return false, nil
+}
+
+// field 中存在map，且map的Value类型是基础类型
+func hasMapValueIsBaseType(fields []*types.Field) (bool, *types.Field) {
+	for _, field := range fields {
+		if field.IsMapField() {
+			if field.Type.ValueType.IsFieldBaseType() {
+				return true, field
+			}
+		}
+	}
+	return false, nil
+}
+
+// field 中存在xmap，且xmap的Value类型是 MMEObject 或 Message
+func hasXMapValueIsMMEObjectOrMessage(fields []*types.Field) (bool, *types.Field) {
+	for _, field := range fields {
+		if field.IsXMapField() {
+			if field.Type.IsXMapValueMMEObject() {
+				return true, field
+			}
+		}
+	}
+	return false, nil
+}
+
+// field 中存在map，且map的Value类型是 MMEObject 或 Message
+func hasMapValueIsMMEObjectOrMessage(fields []*types.Field) (bool, *types.Field) {
+	for _, field := range fields {
+		if field.IsMapField() {
+			if field.Type.IsMapValueMMEObject() {
+				return true, field
+			}
+		}
+	}
+	return false, nil
 }

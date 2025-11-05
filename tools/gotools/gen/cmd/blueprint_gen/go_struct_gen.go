@@ -64,25 +64,25 @@ func (g *GoStructGenerator) generateMechanismFiles(outputDir string) error {
 		sb.WriteString("\t\"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder\"\n")
 		sb.WriteString("\tmmemodel \"gitee.com/orbit-w/orbit/lib/module/mme_model\"\n")
 
-		// 检查是否有 map/xmap 字段需要 maps 包
-		hasMap := false
-		hasXMapWithMMEObject := false
-		for _, field := range mech.Fields {
-			if field.Type.Kind == types.FieldKindXMap || field.Type.Kind == types.FieldKindMap {
-				hasMap = true
-			}
-			// 检查 xmap 字段的 Value 类型是否是 MME Object（Linkable）
-			if field.Type.Kind == types.FieldKindXMap && g.isMMEObjectType(field.Type.ValueType) {
-				hasXMapWithMMEObject = true
-			}
+		// 检查xmap的Value类型是 MMEObject 或 Message, 需要使用xmapwrapper
+		if ok, _ := hasXMapValueIsMMEObjectOrMessage(mech.Fields); ok {
+			sb.WriteString("\txmapwrapper \"gitee.com/orbit-w/orbit/lib/module/xmapwrapper\"\n")
 		}
-		if hasMap {
+
+		//TODO: 检查map的Value类型是 MMEObject 或 Message, 需要特殊处理
+		if ok, field := hasMapValueIsMMEObjectOrMessage(mech.Fields); ok {
+			panic(fmt.Sprintf("map的Value类型是 MMEObject 或 Message, 需要特殊处理: %+v", field.Name))
+		}
+
+		// 检查map的Value类型是基础类型, 需要特殊处理
+		if ok, _ := hasMapValueIsBaseType(mech.Fields); ok {
+			sb.WriteString("\t\"maps\"\n")
+		}
+
+		// 检查xmap的Value类型是基础类型, 需要特殊处理
+		if ok, _ := hasXMapValueIsBaseType(mech.Fields); ok {
 			sb.WriteString("\t\"maps\"\n")
 			sb.WriteString("\t\"gitee.com/orbit-w/meteor/bases/container/xmap\"\n")
-		}
-		// 只有当 xmap Value 是 MME Object（Linkable）类型时才需要 xmapwrapper
-		if hasXMapWithMMEObject {
-			sb.WriteString("\txmapwrapper \"gitee.com/orbit-w/orbit/lib/module/xmapwrapper\"\n")
 		}
 
 		sb.WriteString("\t\"google.golang.org/protobuf/proto\"\n")
@@ -272,7 +272,7 @@ func (g *GoStructGenerator) generateModuleFiles(outputDir string) error {
 
 		// 生成 FieldIndex 常量
 		sb.WriteString("const (\n")
-		for idx, field := range module.Mechanisms {
+		for idx, field := range module.Fields {
 			fieldIndexName := fmt.Sprintf("%sFieldIndex%s", module.Name, field.Name)
 			sb.WriteString(fmt.Sprintf("\t%s = uint8(%d)\n", fieldIndexName, idx))
 		}
@@ -281,7 +281,7 @@ func (g *GoStructGenerator) generateModuleFiles(outputDir string) error {
 		// 生成 DirtyBit 常量
 		sb.WriteString(fmt.Sprintf("// Dirty bits for %s fields\n", module.Name))
 		sb.WriteString("const (\n")
-		for _, field := range module.Mechanisms {
+		for _, field := range module.Fields {
 			dirtyBitName := fmt.Sprintf("%sDirty%sBit", module.Name, field.Name)
 			sb.WriteString(fmt.Sprintf("\t%s int64 = 1 << %sFieldIndex%s\n",
 				dirtyBitName, module.Name, field.Name))
@@ -290,7 +290,7 @@ func (g *GoStructGenerator) generateModuleFiles(outputDir string) error {
 
 		// 生成结构体
 		sb.WriteString(fmt.Sprintf("type %s struct {\n", module.Name))
-		for _, field := range module.Mechanisms {
+		for _, field := range module.Fields {
 			goType := ToGoTypeFromTypesFieldType(&field.Type, packageName)
 			sb.WriteString(fmt.Sprintf("\t%s %s\n", field.Name, goType))
 		}
@@ -299,7 +299,7 @@ func (g *GoStructGenerator) generateModuleFiles(outputDir string) error {
 		// 生成 New 构造函数
 		sb.WriteString(fmt.Sprintf("func New%s() *%s {\n", module.Name, module.Name))
 		sb.WriteString(fmt.Sprintf("\treturn &%s{\n", module.Name))
-		for _, field := range module.Mechanisms {
+		for _, field := range module.Fields {
 			// Mechanism 类型需要创建新对象
 			if g.isMMEObjectType(&field.Type) {
 				typeName := strings.TrimPrefix(ToGoBaseTypeFromFieldType(&field.Type), "*")
@@ -315,7 +315,7 @@ func (g *GoStructGenerator) generateModuleFiles(outputDir string) error {
 		sb.WriteString("\t\treturn\n")
 		sb.WriteString("\t}\n\n")
 		sb.WriteString("\t*co = *m\n")
-		for _, field := range module.Mechanisms {
+		for _, field := range module.Fields {
 			sb.WriteString(fmt.Sprintf("\tif m.%s != nil {\n", field.Name))
 			typeName := strings.TrimPrefix(ToGoBaseTypeFromFieldType(&field.Type), "*")
 			sb.WriteString(fmt.Sprintf("\t\tco.%s = &%s{}\n", field.Name, typeName))
@@ -330,7 +330,7 @@ func (g *GoStructGenerator) generateModuleFiles(outputDir string) error {
 		sb.WriteString("\t\treturn nil\n")
 		sb.WriteString("\t}\n\n")
 		sb.WriteString(fmt.Sprintf("\tpb := &mme.%s{}\n\n", module.Name))
-		for _, field := range module.Mechanisms {
+		for _, field := range module.Fields {
 			sb.WriteString(fmt.Sprintf("\tif m.%s != nil {\n", field.Name))
 			sb.WriteString(fmt.Sprintf("\t\tpb.%s = m.%s.ToProto()\n", field.Name, field.Name))
 			sb.WriteString("\t}\n")
@@ -343,7 +343,7 @@ func (g *GoStructGenerator) generateModuleFiles(outputDir string) error {
 		sb.WriteString("\tif m == nil || pb == nil {\n")
 		sb.WriteString("\t\treturn\n")
 		sb.WriteString("\t}\n\n")
-		for _, field := range module.Mechanisms {
+		for _, field := range module.Fields {
 			sb.WriteString(fmt.Sprintf("\tif pb.%s != nil {\n", field.Name))
 			sb.WriteString(fmt.Sprintf("\t\tif m.%s == nil {\n", field.Name))
 			typeName := strings.TrimPrefix(ToGoBaseTypeFromFieldType(&field.Type), "*")
@@ -376,7 +376,6 @@ func (g *GoStructGenerator) generateManagerFiles(outputDir string) error {
 		sb.WriteString(fmt.Sprintf("package %s\n\n", packageName))
 		sb.WriteString("import (\n")
 		sb.WriteString("\t\"gitee.com/orbit-w/orbit/app/proto/mme\"\n")
-		sb.WriteString("\t\"maps\"\n")
 		sb.WriteString(")\n\n")
 
 		// 生成 FieldIndex 常量
@@ -512,7 +511,6 @@ func (g *GoStructGenerator) generateEntityFiles(outputDir string) error {
 		sb.WriteString(fmt.Sprintf("package %s\n\n", packageName))
 		sb.WriteString("import (\n")
 		sb.WriteString("\t\"gitee.com/orbit-w/orbit/app/proto/mme\"\n")
-		sb.WriteString("\t\"maps\"\n")
 		sb.WriteString(")\n\n")
 
 		// 生成 FieldIndex 常量（Entity的Id字段默认是0）
