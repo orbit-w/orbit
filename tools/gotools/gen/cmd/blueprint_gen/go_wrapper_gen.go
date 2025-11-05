@@ -30,7 +30,12 @@ func (g *GoWrapperGenerator) Generate(outputDir string) error {
 		return fmt.Errorf("failed to generate module wrappers: %w", err)
 	}
 
-	// TODO: 生成 Manager、Entity Wrapper
+	// 生成 Manager Wrapper
+	if err := g.generateManagerWrappers(outputDir); err != nil {
+		return fmt.Errorf("failed to generate manager wrappers: %w", err)
+	}
+
+	// TODO: 生成 Entity Wrapper
 	return nil
 }
 
@@ -924,4 +929,484 @@ func (g *GoWrapperGenerator) generateModuleWrappers(outputDir string) error {
 	}
 
 	return nil
+}
+
+// generateManagerWrappers 生成 Manager Wrapper
+func (g *GoWrapperGenerator) generateManagerWrappers(outputDir string) error {
+	packageName := "mme"
+
+	for _, manager := range g.data.Managers {
+		sb := strings.Builder{}
+
+		// 生成 Wrapper 结构体
+		wrapperName := manager.Name + "Wrapper"
+		sb.WriteString(fmt.Sprintf("type %s struct {\n", wrapperName))
+		sb.WriteString(fmt.Sprintf("\tdata *%s\n", manager.Name))
+		sb.WriteString("\tdirtyflag.IDirtyFlag\n")
+		sb.WriteString("\tfieldMetas *fieldmeta.FieldMetas\n\n")
+
+		// 生成 map 字段的 XMapWrapper（Manager 的 map 字段的 value 通常是 Module 类型）
+		for _, field := range manager.Fields {
+			if field.Type.IsXMapField() || field.Type.IsMapField() {
+				// Manager 的 map 字段的 value 必须是 MME Object（Module 类型）
+				if field.Type.IsXMapField() {
+					if !field.Type.IsXMapValueMMEObject() {
+						panic(fmt.Sprintf("manager %s 的xmap字段 %s 的Value类型必须是 MMEObject 类型（Module）", manager.Name, field.Name))
+					}
+				} else if field.Type.IsMapField() {
+					if !field.Type.IsMapValueMMEObject() {
+						panic(fmt.Sprintf("manager %s 的map字段 %s 的Value类型必须是 MMEObject 类型（Module）", manager.Name, field.Name))
+					}
+				}
+
+				keyType := ToGoBaseTypeFromFieldType(field.Type.KeyType)
+				valueType := strings.TrimPrefix(ToGoBaseTypeFromFieldType(field.Type.ValueType), "*")
+				wrapperTypeName := valueType + "Wrapper"
+				linkFieldName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Link"
+				sb.WriteString("\t//Value为MME Object，使用xmap.MapAccessor进行包装\n")
+				sb.WriteString(fmt.Sprintf("\t%s *xmapwrapper.XMapWrapper[%s, *%s, *%s]\n",
+					linkFieldName, keyType, valueType, wrapperTypeName))
+			}
+		}
+
+		sb.WriteString("}\n\n")
+
+		// 生成 New 构造函数
+		sb.WriteString(fmt.Sprintf("func New%s(data *%s) *%s {\n", wrapperName, manager.Name, wrapperName))
+		sb.WriteString("\tif data == nil {\n")
+		sb.WriteString("\t\tpanic(\"data is nil\")\n")
+		sb.WriteString("\t}\n")
+		sb.WriteString(fmt.Sprintf("\tm := &%s{\n", wrapperName))
+		sb.WriteString("\t\tdata:       data,\n")
+		sb.WriteString("\t\tIDirtyFlag: dirtyflag.NewDirtyFlag(),\n")
+		sb.WriteString("\t\tfieldMetas: fieldmeta.NewFieldMetas(),\n")
+		sb.WriteString("\t}\n\n")
+
+		// 初始化 XMapWrapper
+		for _, field := range manager.Fields {
+			if field.Type.IsXMapField() || field.Type.IsMapField() {
+				valueType := strings.TrimPrefix(ToGoBaseTypeFromFieldType(field.Type.ValueType), "*")
+				linkFieldName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Link"
+				dirtyBitName := fmt.Sprintf("%sDirty%sBit", manager.Name, field.Name)
+				newWrapperFuncName := fmt.Sprintf("New%sWrapper", valueType)
+				sb.WriteString(fmt.Sprintf("\tm.%s = xmapwrapper.NewXMapWrapperWithParent(\n",
+					linkFieldName))
+				sb.WriteString(fmt.Sprintf("\t\t&data.%s,\n", field.Name))
+				sb.WriteString("\t\tm.GetDirtyTracker(),\n")
+				sb.WriteString(fmt.Sprintf("\t\t%s,\n", dirtyBitName))
+				sb.WriteString(fmt.Sprintf("\t\t%s,\n", newWrapperFuncName))
+				sb.WriteString("\t)\n\n")
+			}
+		}
+
+		sb.WriteString("\treturn m\n")
+		sb.WriteString("}\n\n")
+
+		// 生成 InitFieldContext 方法
+		sb.WriteString(fmt.Sprintf("func (m *%s) InitFieldContext() {\n", wrapperName))
+		for _, field := range manager.Fields {
+			fieldIndexName := fmt.Sprintf("%sFieldIndex%s", manager.Name, field.Name)
+			// 根据 access 选项设置字段类型
+			if field.Options.Access == "all" || field.Options.Access == "s" || field.Options.Access == "" {
+				sb.WriteString(fmt.Sprintf("\tm.fieldMetas.SetFieldType(%s, fieldmeta.FieldTypeSync)\n",
+					fieldIndexName))
+			}
+		}
+		sb.WriteString("\n")
+		// 初始化所有 Module 的字段上下文
+		for _, field := range manager.Fields {
+			if field.Type.IsXMapField() || field.Type.IsMapField() {
+				linkFieldName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Link"
+				keyType := ToGoBaseTypeFromFieldType(field.Type.KeyType)
+				valueType := strings.TrimPrefix(ToGoBaseTypeFromFieldType(field.Type.ValueType), "*")
+				wrapperTypeName := valueType + "Wrapper"
+				sb.WriteString(fmt.Sprintf("\t// 初始化所有 %s 的字段上下文\n", valueType))
+				sb.WriteString(fmt.Sprintf("\tm.%s.Range(func(key %s, wrapper *%s) bool {\n",
+					linkFieldName, keyType, wrapperTypeName))
+				sb.WriteString("\t\twrapper.InitFieldContext()\n")
+				sb.WriteString("\t\treturn true\n")
+				sb.WriteString("\t})\n")
+			}
+		}
+		sb.WriteString("}\n\n")
+
+		// 生成 Name 方法
+		sb.WriteString("// Manager 唯一名称\n")
+		sb.WriteString(fmt.Sprintf("func (m *%s) Name() string {\n", wrapperName))
+		sb.WriteString(fmt.Sprintf("\treturn \"%s\"\n", manager.Name))
+		sb.WriteString("}\n\n")
+
+		// 生成 MatchesAll 方法
+		sb.WriteString("// MatchesAll 判断字段是否匹配所有类型标记\n")
+		sb.WriteString(fmt.Sprintf("func (m *%s) MatchesAll(fieldID uint8, fieldTypes ...fieldmeta.FieldType) bool {\n", wrapperName))
+		sb.WriteString("\treturn m.fieldMetas.MatchesAll(fieldID, fieldTypes...)\n")
+		sb.WriteString("}\n\n")
+
+		// 生成 map 字段的工具方法（Set, Delete, Range）
+		for _, field := range manager.Fields {
+			if field.Type.IsXMapField() || field.Type.IsMapField() {
+				keyType := ToGoBaseTypeFromFieldType(field.Type.KeyType)
+				valueType := strings.TrimPrefix(ToGoBaseTypeFromFieldType(field.Type.ValueType), "*")
+				wrapperTypeName := valueType + "Wrapper"
+				linkFieldName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Link"
+				methodPrefix := strings.ToUpper(field.Name[0:1]) + field.Name[1:]
+
+				// Set 方法
+				sb.WriteString(fmt.Sprintf("// Set%s 设置/添加%s模块\n", methodPrefix, valueType))
+				sb.WriteString(fmt.Sprintf("func (m *%s) %s_Set(id %s, %sPb *%s) *%s {\n",
+					wrapperName, field.Name, keyType, strings.ToLower(valueType[0:1])+valueType[1:], valueType, wrapperTypeName))
+				sb.WriteString(fmt.Sprintf("\treturn m.%s.Set(id, %sPb)\n", linkFieldName, strings.ToLower(valueType[0:1])+valueType[1:]+"Pb"))
+				sb.WriteString("}\n\n")
+
+				// Delete 方法
+				sb.WriteString(fmt.Sprintf("// Delete%s 删除%s模块\n", methodPrefix, valueType))
+				sb.WriteString(fmt.Sprintf("func (m *%s) %s_Delete(id %s) bool {\n",
+					wrapperName, field.Name, keyType))
+				sb.WriteString(fmt.Sprintf("\treturn m.%s.Delete(id)\n", linkFieldName))
+				sb.WriteString("}\n\n")
+
+				// Range 方法
+				sb.WriteString(fmt.Sprintf("// Range%s 遍历所有%s\n", methodPrefix, valueType))
+				sb.WriteString(fmt.Sprintf("func (m *%s) %s_Range(f func(id %s, %s *%s) bool) {\n",
+					wrapperName, field.Name, keyType, strings.ToLower(valueType[0:1])+valueType[1:], wrapperTypeName))
+				sb.WriteString(fmt.Sprintf("\tm.%s.Range(f)\n", linkFieldName))
+				sb.WriteString("}\n\n")
+			}
+		}
+
+		// 生成 ClearAllDirty 方法
+		sb.WriteString(fmt.Sprintf("func (m *%s) ClearAllDirty() {\n", wrapperName))
+		sb.WriteString("\tm.IDirtyFlag.ClearAllDirty()\n\n")
+		sb.WriteString("\t// 清空xmaplink中所有object的脏标记\n")
+		for _, field := range manager.Fields {
+			if field.Type.IsXMapField() || field.Type.IsMapField() {
+				linkFieldName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Link"
+				sb.WriteString(fmt.Sprintf("\tm.%s.RangeIncrementalSyncObject(func(key interface{}, object xmapwrapper.IncrementalSyncObject) (stop bool) {\n",
+					linkFieldName))
+				sb.WriteString("\t\tobject.ClearAllDirty()\n")
+				sb.WriteString("\t\treturn false\n")
+				sb.WriteString("\t})\n")
+			}
+		}
+		sb.WriteString("}\n\n")
+
+		// 生成 Reset 方法
+		sb.WriteString(fmt.Sprintf("func (m *%s) Reset(newData *%s) {\n", wrapperName, manager.Name))
+		sb.WriteString("\tif m == nil || m.data == nil {\n")
+		sb.WriteString("\t\treturn\n")
+		sb.WriteString("\t}\n\n")
+		sb.WriteString("\t// 重新构建脏标系统\n")
+		sb.WriteString("\tm.IDirtyFlag.ClearAllDirty()\n\n")
+		sb.WriteString("\t// xmap全量覆盖数据，不需要处理Value的逻辑\n")
+		sb.WriteString(fmt.Sprintf("\tdata := New%s()\n", manager.Name))
+		sb.WriteString("\tm.data = data\n")
+		for _, field := range manager.Fields {
+			if field.Type.IsXMapField() || field.Type.IsMapField() {
+				linkFieldName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Link"
+				sb.WriteString(fmt.Sprintf("\tm.%s.Reset(&m.data.%s)\n", linkFieldName, field.Name))
+			}
+		}
+		sb.WriteString("}\n\n")
+
+		// 生成 BuildMongoUpdate 方法
+		sb.WriteString("// BuildMongoUpdate 构建MongoDB更新操作\n")
+		sb.WriteString("// 注意：Manager 层级通常不直接构建 MongoDB 更新，而是由 Entity 层处理\n")
+		sb.WriteString(fmt.Sprintf("func (m *%s) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder, path *mgo_builder.NestedPath) {\n", wrapperName))
+		sb.WriteString("\tif m == nil {\n")
+		sb.WriteString("\t\treturn\n")
+		sb.WriteString("\t}\n\n")
+		for _, field := range manager.Fields {
+			if field.Type.IsXMapField() || field.Type.IsMapField() {
+				dirtyBitName := fmt.Sprintf("%sDirty%sBit", manager.Name, field.Name)
+				linkFieldName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Link"
+				fieldNameSnake := CamelToSnake(field.Name)
+				valueType := strings.TrimPrefix(ToGoBaseTypeFromFieldType(field.Type.ValueType), "*")
+				sb.WriteString(fmt.Sprintf("\tif m.IsDirty(%s) {\n", dirtyBitName))
+				sb.WriteString("\t\t//map 结构无法做增量更新，所以需要全量拷贝\n")
+				sb.WriteString(fmt.Sprintf("\t\tcopy := make(map[%s]*%s, m.%s.Len())\n",
+					ToGoBaseTypeFromFieldType(field.Type.KeyType), valueType, linkFieldName))
+				sb.WriteString(fmt.Sprintf("\t\tm.%s.DeepCopy(&copy)\n", linkFieldName))
+				sb.WriteString(fmt.Sprintf("\t\tbuilder.SetNestedPath(path, \"%s\", copy)\n", fieldNameSnake))
+				sb.WriteString("\t}\n")
+			}
+		}
+		sb.WriteString("}\n\n")
+
+		// 生成 DeepCopy 方法
+		sb.WriteString("// 包装器-深拷贝\n")
+		sb.WriteString(fmt.Sprintf("func (m *%s) DeepCopy() *%s {\n", wrapperName, manager.Name))
+		sb.WriteString("\tif m == nil {\n")
+		sb.WriteString("\t\treturn nil\n")
+		sb.WriteString("\t}\n")
+		sb.WriteString(fmt.Sprintf("\tcopy := &%s{}\n", manager.Name))
+		sb.WriteString("\tm.DeepCopyTo(copy)\n")
+		sb.WriteString("\treturn copy\n")
+		sb.WriteString("}\n\n")
+
+		// 生成 DeepCopyTo 方法
+		sb.WriteString("// 包装器-深拷贝\n")
+		sb.WriteString(fmt.Sprintf("func (m *%s) DeepCopyTo(copy *%s) {\n", wrapperName, manager.Name))
+		sb.WriteString("\tif m == nil || m.data == nil || copy == nil {\n")
+		sb.WriteString("\t\treturn\n")
+		sb.WriteString("\t}\n\n")
+		for _, field := range manager.Fields {
+			if field.Type.IsXMapField() || field.Type.IsMapField() {
+				linkFieldName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Link"
+				keyType := ToGoBaseTypeFromFieldType(field.Type.KeyType)
+				valueType := strings.TrimPrefix(ToGoBaseTypeFromFieldType(field.Type.ValueType), "*")
+				sb.WriteString("\t// 初始化目标 map\n")
+				sb.WriteString(fmt.Sprintf("\tif copy.%s == nil {\n", field.Name))
+				sb.WriteString(fmt.Sprintf("\t\tcopy.%s = make(map[%s]*%s, len(m.data.%s))\n",
+					field.Name, keyType, valueType, field.Name))
+				sb.WriteString("\t}\n\n")
+				sb.WriteString(fmt.Sprintf("\t// 拷贝所有 %s\n", valueType))
+				sb.WriteString(fmt.Sprintf("\tm.%s.DeepCopy(&copy.%s)\n", linkFieldName, field.Name))
+			}
+		}
+		sb.WriteString("}\n\n")
+
+		// 生成 ToProto 方法
+		sb.WriteString(fmt.Sprintf("// ToProto 将 %s 数据转换为完整的 protobuf 结构体\n", manager.Name))
+		sb.WriteString(fmt.Sprintf("func (m *%s) ToProto() *mme.%s {\n", wrapperName, manager.Name))
+		sb.WriteString("\tif m == nil || m.data == nil {\n")
+		sb.WriteString("\t\treturn nil\n")
+		sb.WriteString("\t}\n\n")
+		sb.WriteString("\treturn m.data.ToProto()\n")
+		sb.WriteString("}\n\n")
+
+		// 生成 FromProto 方法
+		sb.WriteString(fmt.Sprintf("// FromProto 从 protobuf 结构体加载数据到 %s\n", manager.Name))
+		sb.WriteString(fmt.Sprintf("func (m *%s) FromProto(pb *mme.%s) {\n", wrapperName, manager.Name))
+		sb.WriteString("\tif m == nil || m.data == nil || pb == nil {\n")
+		sb.WriteString("\t\treturn\n")
+		sb.WriteString("\t}\n\n")
+		for _, field := range manager.Fields {
+			if field.Type.IsXMapField() || field.Type.IsMapField() {
+				linkFieldName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Link"
+				valueType := strings.TrimPrefix(ToGoBaseTypeFromFieldType(field.Type.ValueType), "*")
+				sb.WriteString(fmt.Sprintf("\tfor key := range pb.%s {\n", field.Name))
+				sb.WriteString(fmt.Sprintf("\t\tpbValue := pb.%s[key]\n", field.Name))
+				sb.WriteString(fmt.Sprintf("\t\tv := New%s()\n", valueType))
+				sb.WriteString(fmt.Sprintf("\t\twrapper := m.%s.SetWithoutTrack(key, v)\n", linkFieldName))
+				sb.WriteString("\t\twrapper.FromProto(pbValue)\n")
+				sb.WriteString("\t}\n")
+			}
+		}
+		sb.WriteString("}\n\n")
+
+		// 生成 ToIncrementalProto 方法
+		sb.WriteString("// ToIncrementalProto 根据脏标记位构建增量数据的 protoMessage\n")
+		sb.WriteString("// 只返回标记为脏的字段数据，用于增量同步\n")
+		sb.WriteString(fmt.Sprintf("func (m *%s) ToIncrementalProto(ctx mmemodel.SyncContext) proto.Message {\n", wrapperName))
+		sb.WriteString("\tif m == nil {\n")
+		sb.WriteString("\t\treturn nil\n")
+		sb.WriteString("\t}\n\n")
+		sb.WriteString("\t// 如果没有脏标记，返回 nil\n")
+		sb.WriteString("\tif !m.HasAnyDirty() {\n")
+		sb.WriteString("\t\treturn nil\n")
+		sb.WriteString("\t}\n\n")
+		sb.WriteString(fmt.Sprintf("\tincremental := &mme.%s{}\n", manager.Name))
+		for _, field := range manager.Fields {
+			if field.Type.IsXMapField() || field.Type.IsMapField() {
+				fieldIndexName := fmt.Sprintf("%sFieldIndex%s", manager.Name, field.Name)
+				dirtyBitName := fmt.Sprintf("%sDirty%sBit", manager.Name, field.Name)
+				linkFieldName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Link"
+				keyType := ToGoBaseTypeFromFieldType(field.Type.KeyType)
+				valueType := strings.TrimPrefix(ToGoBaseTypeFromFieldType(field.Type.ValueType), "*")
+				protoValueType := fmt.Sprintf("*mme.%s", valueType)
+				sb.WriteString(fmt.Sprintf("\tif mmemodel.FieldCanBeIncrementalSynced(m, %s, %s, ctx) {\n",
+					dirtyBitName, fieldIndexName))
+				sb.WriteString(fmt.Sprintf("\t\tincremental.%s_XXXChangeList = make([]*mme.%s_%s_XXXMapChangeRecord, 0)\n",
+					field.Name, manager.Name, field.Name))
+				sb.WriteString(fmt.Sprintf("\t\tm.%s.RangeOperations(func(key %s, operation xmap.MapOperation[%s]) bool {\n",
+					linkFieldName, keyType, keyType))
+				sb.WriteString("\t\t\tswitch operation.Type {\n")
+				sb.WriteString("\t\t\tcase xmap.SetOperation:\n")
+				sb.WriteString(fmt.Sprintf("\t\t\t\t%s, _ := m.%s.Get(key)\n",
+					strings.ToLower(valueType[0:1])+valueType[1:], linkFieldName))
+				sb.WriteString(fmt.Sprintf("\t\t\t\tpb := %s.ToIncrementalProtoWithContext(ctx)\n",
+					strings.ToLower(valueType[0:1])+valueType[1:]))
+				sb.WriteString(fmt.Sprintf("\t\t\t\tv, ok := pb.(%s)\n", protoValueType))
+				sb.WriteString("\t\t\t\tif ok {\n")
+				sb.WriteString(fmt.Sprintf("\t\t\t\t\tincremental.%s_XXXChangeList = append(incremental.%s_XXXChangeList, &mme.%s_%s_XXXMapChangeRecord{\n",
+					field.Name, field.Name, manager.Name, field.Name))
+				sb.WriteString("\t\t\t\t\t\tKey:   key,\n")
+				sb.WriteString("\t\t\t\t\t\tValue: v,\n")
+				sb.WriteString("\t\t\t\t\t})\n")
+				sb.WriteString("\t\t\t\t} else {\n")
+				sb.WriteString(fmt.Sprintf("\t\t\t\t\tmlog.Error(\"%s.ToIncrementalProto\", zap.Any(\"key\", key), zap.Any(\"operation\", operation))\n",
+					manager.Name))
+				sb.WriteString("\t\t\t\t}\n")
+				sb.WriteString("\t\t\t\treturn true\n")
+				sb.WriteString("\t\t\tcase xmap.DeleteOperation:\n")
+				sb.WriteString(fmt.Sprintf("\t\t\t\tincremental.%s_XXXChangeList = append(incremental.%s_XXXChangeList, &mme.%s_%s_XXXMapChangeRecord{\n",
+					field.Name, field.Name, manager.Name, field.Name))
+				sb.WriteString("\t\t\t\t\tKey:      key,\n")
+				sb.WriteString("\t\t\t\t\tIsDelete: true,\n")
+				sb.WriteString("\t\t\t\t})\n")
+				sb.WriteString("\t\t\t\treturn true\n")
+				sb.WriteString("\t\t\t}\n")
+				sb.WriteString("\t\t\treturn true\n")
+				sb.WriteString("\t\t})\n\n")
+				sb.WriteString("\t}\n")
+			}
+		}
+		sb.WriteString("\treturn incremental\n")
+		sb.WriteString("}\n\n")
+
+		// 写入文件（追加到 Manager 文件）
+		fileName := GetManagerFileName(manager.Name)
+		filePath := fmt.Sprintf("%s/%s", outputDir, fileName)
+
+		// 读取现有文件内容（如果存在）
+		existingContent := ""
+		if FileExists(filePath) {
+			if data, err := ReadFileContent(filePath); err == nil {
+				existingContent = data
+				// 检查并确保必要的导入存在
+				existingContent = ensureManagerImports(existingContent)
+			}
+		}
+
+		// 追加新内容（如果文件已存在，在末尾添加换行）
+		var newContent string
+		if existingContent != "" {
+			// 确保现有内容以换行结尾
+			existingContent = strings.TrimRight(existingContent, " \n\r\t")
+			newContent = existingContent + "\n\n" + sb.String()
+		} else {
+			// 如果文件不存在，需要添加 package 声明和导入
+			imports := "import (\n"
+			imports += "\t\"gitee.com/orbit-w/meteor/bases/container/xmap\"\n"
+			imports += "\t\"gitee.com/orbit-w/meteor/modules/mlog\"\n"
+			imports += "\t\"gitee.com/orbit-w/orbit/app/proto/mme\"\n"
+			imports += "\tdirtyflag \"gitee.com/orbit-w/orbit/lib/base/dirty_flag\"\n"
+			imports += "\tfieldmeta \"gitee.com/orbit-w/orbit/lib/base/field_meta\"\n"
+			imports += "\t\"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder\"\n"
+			imports += "\tmmemodel \"gitee.com/orbit-w/orbit/lib/module/mme_model\"\n"
+			imports += "\txmapwrapper \"gitee.com/orbit-w/orbit/lib/module/xmapwrapper\"\n"
+			imports += "\t\"go.uber.org/zap\"\n"
+			imports += "\t\"google.golang.org/protobuf/proto\"\n"
+			imports += ")\n\n"
+			newContent = fmt.Sprintf("package %s\n\n%s", packageName, imports) + sb.String()
+		}
+		if err := WriteFile(filePath, newContent); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// ensureManagerImports 确保Manager文件包含必要的导入
+func ensureManagerImports(content string) string {
+	// 检查是否已经包含必要的导入
+	hasXMap := strings.Contains(content, "gitee.com/orbit-w/meteor/bases/container/xmap")
+	hasMlog := strings.Contains(content, "gitee.com/orbit-w/meteor/modules/mlog")
+	hasDirtyFlag := strings.Contains(content, "dirtyflag")
+	hasFieldMeta := strings.Contains(content, "fieldmeta")
+	hasMgoBuilder := strings.Contains(content, "mgo_builder")
+	hasMmeModel := strings.Contains(content, "mmemodel")
+	hasXMapWrapper := strings.Contains(content, "xmapwrapper")
+	hasZap := strings.Contains(content, "go.uber.org/zap")
+	hasProto := strings.Contains(content, "google.golang.org/protobuf/proto")
+
+	// 如果所有导入都已存在，直接返回
+	if hasXMap && hasMlog && hasDirtyFlag && hasFieldMeta && hasMgoBuilder && hasMmeModel && hasXMapWrapper && hasZap && hasProto {
+		return content
+	}
+
+	// 查找 import 块的位置
+	importStart := strings.Index(content, "import (")
+	if importStart == -1 {
+		// 如果没有 import 块，在 package 声明后添加
+		packageEnd := strings.Index(content, "\n\n")
+		if packageEnd == -1 {
+			packageEnd = len(content)
+		}
+		imports := "\nimport (\n"
+		imports += "\t\"gitee.com/orbit-w/meteor/bases/container/xmap\"\n"
+		imports += "\t\"gitee.com/orbit-w/meteor/modules/mlog\"\n"
+		imports += "\t\"gitee.com/orbit-w/orbit/app/proto/mme\"\n"
+		if !hasDirtyFlag {
+			imports += "\tdirtyflag \"gitee.com/orbit-w/orbit/lib/base/dirty_flag\"\n"
+		}
+		if !hasFieldMeta {
+			imports += "\tfieldmeta \"gitee.com/orbit-w/orbit/lib/base/field_meta\"\n"
+		}
+		if !hasMgoBuilder {
+			imports += "\t\"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder\"\n"
+		}
+		if !hasMmeModel {
+			imports += "\tmmemodel \"gitee.com/orbit-w/orbit/lib/module/mme_model\"\n"
+		}
+		if !hasXMapWrapper {
+			imports += "\txmapwrapper \"gitee.com/orbit-w/orbit/lib/module/xmapwrapper\"\n"
+		}
+		if !hasZap {
+			imports += "\t\"go.uber.org/zap\"\n"
+		}
+		if !hasProto {
+			imports += "\t\"google.golang.org/protobuf/proto\"\n"
+		}
+		imports += ")\n"
+		return content[:packageEnd+2] + imports + content[packageEnd+2:]
+	}
+
+	// 找到 import 块的结束位置
+	importEnd := strings.Index(content[importStart:], ")\n")
+	if importEnd == -1 {
+		importEnd = strings.Index(content[importStart:], ")\r\n")
+	}
+	if importEnd == -1 {
+		return content
+	}
+	importEnd += importStart + 2
+
+	// 在 import 块中添加缺失的导入
+	importBlock := content[importStart:importEnd]
+	lines := strings.Split(importBlock, "\n")
+
+	// 检查每一行，添加缺失的导入
+	missingImports := []string{}
+	if !hasXMap {
+		missingImports = append(missingImports, "\t\"gitee.com/orbit-w/meteor/bases/container/xmap\"")
+	}
+	if !hasMlog {
+		missingImports = append(missingImports, "\t\"gitee.com/orbit-w/meteor/modules/mlog\"")
+	}
+	if !hasDirtyFlag {
+		missingImports = append(missingImports, "\tdirtyflag \"gitee.com/orbit-w/orbit/lib/base/dirty_flag\"")
+	}
+	if !hasFieldMeta {
+		missingImports = append(missingImports, "\tfieldmeta \"gitee.com/orbit-w/orbit/lib/base/field_meta\"")
+	}
+	if !hasMgoBuilder {
+		missingImports = append(missingImports, "\t\"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder\"")
+	}
+	if !hasMmeModel {
+		missingImports = append(missingImports, "\tmmemodel \"gitee.com/orbit-w/orbit/lib/module/mme_model\"")
+	}
+	if !hasXMapWrapper {
+		missingImports = append(missingImports, "\txmapwrapper \"gitee.com/orbit-w/orbit/lib/module/xmapwrapper\"")
+	}
+	if !hasZap {
+		missingImports = append(missingImports, "\t\"go.uber.org/zap\"")
+	}
+	if !hasProto {
+		missingImports = append(missingImports, "\t\"google.golang.org/protobuf/proto\"")
+	}
+
+	if len(missingImports) == 0 {
+		return content
+	}
+
+	// 在 import 块的倒数第二行（在 ")" 之前）插入缺失的导入
+	newImportBlock := strings.Join(lines[:len(lines)-1], "\n")
+	for _, imp := range missingImports {
+		newImportBlock += "\n" + imp
+	}
+	newImportBlock += "\n" + lines[len(lines)-1]
+
+	return content[:importStart] + newImportBlock + content[importEnd:]
 }
