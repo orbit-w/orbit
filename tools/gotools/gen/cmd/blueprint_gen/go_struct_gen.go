@@ -55,38 +55,8 @@ func (g *GoStructGenerator) generateMechanismFiles(outputDir string) error {
 	for _, mech := range g.ctx.Mechanisms {
 		sb := strings.Builder{}
 
-		// 文件头部
-		sb.WriteString(fmt.Sprintf("package %s\n\n", packageName))
-		sb.WriteString("import (\n")
-		sb.WriteString("\t\"gitee.com/orbit-w/orbit/app/proto/mme\"\n")
-		sb.WriteString("\tdirtyflag \"gitee.com/orbit-w/orbit/lib/base/dirty_flag\"\n")
-		sb.WriteString("\tfieldmeta \"gitee.com/orbit-w/orbit/lib/base/field_meta\"\n")
-		sb.WriteString("\t\"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder\"\n")
-		sb.WriteString("\tmmemodel \"gitee.com/orbit-w/orbit/lib/module/mme_model\"\n")
-
-		// 检查xmap的Value类型是 MMEObject 或 Message, 需要使用xmapwrapper
-		if ok, _ := hasXMapValueIsMMEObjectOrMessage(mech.Fields); ok {
-			sb.WriteString("\txmapwrapper \"gitee.com/orbit-w/orbit/lib/module/xmapwrapper\"\n")
-		}
-
-		//TODO: 检查map的Value类型是 MMEObject 或 Message, 需要特殊处理
-		if ok, field := hasMapValueIsMMEObjectOrMessage(mech.Fields); ok {
-			panic(fmt.Sprintf("map的Value类型是 MMEObject 或 Message, 需要特殊处理: %+v", field.Name))
-		}
-
-		// 检查map的Value类型是基础类型, 需要特殊处理
-		if ok, _ := hasMapValueIsBaseType(mech.Fields); ok {
-			sb.WriteString("\t\"maps\"\n")
-		}
-
-		// 检查xmap的Value类型是基础类型, 需要特殊处理
-		if ok, _ := hasXMapValueIsBaseType(mech.Fields); ok {
-			sb.WriteString("\t\"maps\"\n")
-			sb.WriteString("\t\"gitee.com/orbit-w/meteor/bases/container/xmap\"\n")
-		}
-
-		sb.WriteString("\t\"google.golang.org/protobuf/proto\"\n")
-		sb.WriteString(")\n\n")
+		imports := g.GenerateImport(mech, packageName)
+		sb.WriteString(imports)
 
 		// 生成 FieldIndex 常量
 		sb.WriteString("const (\n")
@@ -159,8 +129,8 @@ func (g *GoStructGenerator) generateMechanismFiles(outputDir string) error {
 			if field.Type.Kind == types.FieldKindXMap || field.Type.Kind == types.FieldKindMap {
 				// Map 字段需要特殊处理
 				sb.WriteString(fmt.Sprintf("\tif m.%s != nil {\n", field.Name))
-				keyType := ToGoBaseTypeFromFieldType(field.Type.KeyType)
-				valueType := ToGoBaseTypeFromFieldType(field.Type.ValueType)
+				keyType := field.Type.KeyKind().String()
+				valueType := field.Type.ValueKind().String()
 				sb.WriteString(fmt.Sprintf("\t\tpb.%s = make(map[%s]%s, len(m.%s))\n", field.Name, keyType, valueType, field.Name))
 				sb.WriteString(fmt.Sprintf("\t\tmaps.Copy(pb.%s, m.%s)\n", field.Name, field.Name))
 				sb.WriteString("\t}\n")
@@ -189,15 +159,15 @@ func (g *GoStructGenerator) generateMechanismFiles(outputDir string) error {
 			if field.Type.Kind == types.FieldKindXMap || field.Type.Kind == types.FieldKindMap {
 				// Map 字段需要特殊处理
 				sb.WriteString(fmt.Sprintf("\tif pb.%s != nil {\n", field.Name))
-				keyType := ToGoBaseTypeFromFieldType(field.Type.KeyType)
-				valueType := ToGoBaseTypeFromFieldType(field.Type.ValueType)
+				keyType := field.Type.KeyKind().String()
+				valueType := field.Type.ValueKind().String()
 				sb.WriteString(fmt.Sprintf("\t\tm.%s = make(map[%s]%s, len(pb.%s))\n", field.Name, keyType, valueType, field.Name))
 
 				// 检查 Value 类型是否是 MME Object 类型
 				if g.isMMEObjectType(field.Type.ValueType) {
 					// MME Object 类型，需要调用 FromProto
 					sb.WriteString(fmt.Sprintf("\t\tfor k, v := range pb.%s {\n", field.Name))
-					valueTypeName := ToGoBaseTypeFromFieldType(field.Type.ValueType)
+					valueTypeName := field.Type.ValueKind().String()
 					sb.WriteString("\t\t\tif v != nil {\n")
 					sb.WriteString(fmt.Sprintf("\t\t\t\tobj := New%s()\n", valueTypeName))
 					sb.WriteString("\t\t\t\tobj.FromProto(v)\n")
@@ -227,7 +197,7 @@ func (g *GoStructGenerator) generateMechanismFiles(outputDir string) error {
 						valueTypeName = valueTypeName[idx+1:]
 					}
 				} else {
-					valueTypeName = strings.TrimPrefix(ToGoBaseTypeFromFieldType(&field.Type), "*")
+					valueTypeName = strings.TrimPrefix(field.Type.GetKind().String(), "*")
 				}
 				sb.WriteString(fmt.Sprintf("\t\t\tm.%s = New%s()\n", field.Name, valueTypeName))
 				sb.WriteString("\t\t}\n")
@@ -256,19 +226,8 @@ func (g *GoStructGenerator) generateModuleFiles(outputDir string) error {
 	for _, module := range g.ctx.Modules {
 		sb := strings.Builder{}
 
-		// 文件头部
-		sb.WriteString(fmt.Sprintf("package %s\n\n", packageName))
-		sb.WriteString("import (\n")
-		sb.WriteString("\t\"gitee.com/orbit-w/orbit/app/proto/mme\"\n")
-		sb.WriteString("\tdirtyflag \"gitee.com/orbit-w/orbit/lib/base/dirty_flag\"\n")
-		sb.WriteString("\tfieldmeta \"gitee.com/orbit-w/orbit/lib/base/field_meta\"\n")
-		sb.WriteString("\t\"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder\"\n")
-		sb.WriteString("\tmmemodel \"gitee.com/orbit-w/orbit/lib/module/mme_model\"\n")
-		sb.WriteString("\t\"google.golang.org/protobuf/proto\"\n")
-		if module.HasMapField() {
-			sb.WriteString("\t\"maps\"\n")
-		}
-		sb.WriteString(")\n\n")
+		imports := g.GenerateImport(module, packageName)
+		sb.WriteString(imports)
 
 		// 生成 FieldIndex 常量
 		sb.WriteString("const (\n")
@@ -302,7 +261,7 @@ func (g *GoStructGenerator) generateModuleFiles(outputDir string) error {
 		for _, field := range module.Fields {
 			// Mechanism 类型需要创建新对象
 			if g.isMMEObjectType(&field.Type) {
-				typeName := strings.TrimPrefix(ToGoBaseTypeFromFieldType(&field.Type), "*")
+				typeName := field.GetTypeName()
 				sb.WriteString(fmt.Sprintf("\t\t%s: New%s(),\n", field.Name, typeName))
 			}
 		}
@@ -317,7 +276,7 @@ func (g *GoStructGenerator) generateModuleFiles(outputDir string) error {
 		sb.WriteString("\t*co = *m\n")
 		for _, field := range module.Fields {
 			sb.WriteString(fmt.Sprintf("\tif m.%s != nil {\n", field.Name))
-			typeName := strings.TrimPrefix(ToGoBaseTypeFromFieldType(&field.Type), "*")
+			typeName := field.GetTypeName()
 			sb.WriteString(fmt.Sprintf("\t\tco.%s = &%s{}\n", field.Name, typeName))
 			sb.WriteString(fmt.Sprintf("\t\tm.%s.DeepCopy(co.%s)\n", field.Name, field.Name))
 			sb.WriteString("\t}\n")
@@ -346,7 +305,7 @@ func (g *GoStructGenerator) generateModuleFiles(outputDir string) error {
 		for _, field := range module.Fields {
 			sb.WriteString(fmt.Sprintf("\tif pb.%s != nil {\n", field.Name))
 			sb.WriteString(fmt.Sprintf("\t\tif m.%s == nil {\n", field.Name))
-			typeName := strings.TrimPrefix(ToGoBaseTypeFromFieldType(&field.Type), "*")
+			typeName := field.GetTypeName()
 			sb.WriteString(fmt.Sprintf("\t\t\tm.%s = New%s()\n", field.Name, typeName))
 			sb.WriteString("\t\t}\n")
 			sb.WriteString(fmt.Sprintf("\t\tm.%s.FromProto(pb.%s)\n", field.Name, field.Name))
@@ -372,11 +331,8 @@ func (g *GoStructGenerator) generateManagerFiles(outputDir string) error {
 	for _, manager := range g.ctx.Managers {
 		sb := strings.Builder{}
 
-		// 文件头部
-		sb.WriteString(fmt.Sprintf("package %s\n\n", packageName))
-		sb.WriteString("import (\n")
-		sb.WriteString("\t\"gitee.com/orbit-w/orbit/app/proto/mme\"\n")
-		sb.WriteString(")\n\n")
+		imports := g.GenerateImport(manager, packageName)
+		sb.WriteString(imports)
 
 		// 生成 FieldIndex 常量
 		sb.WriteString("const (\n")
@@ -424,12 +380,12 @@ func (g *GoStructGenerator) generateManagerFiles(outputDir string) error {
 		for _, field := range manager.Fields {
 			if field.Type.Kind == types.FieldKindXMap || field.Type.Kind == types.FieldKindMap {
 				sb.WriteString(fmt.Sprintf("\tif m.%s != nil {\n", field.Name))
-				keyType := ToGoBaseTypeFromFieldType(field.Type.KeyType)
-				valueType := strings.TrimPrefix(ToGoBaseTypeFromFieldType(field.Type.ValueType), "*")
-				sb.WriteString(fmt.Sprintf("\t\tco.%s = make(map[%s]*%s, len(m.%s))\n", field.Name, keyType, valueType, field.Name))
+				keyType := field.Type.KeyKind().String()
+				valueName := field.GetValueName()
+				sb.WriteString(fmt.Sprintf("\t\tco.%s = make(map[%s]*%s, len(m.%s))\n", field.Name, keyType, valueName, field.Name))
 				sb.WriteString(fmt.Sprintf("\t\tfor k, v := range m.%s {\n", field.Name))
 				sb.WriteString("\t\t\tif v != nil {\n")
-				sb.WriteString(fmt.Sprintf("\t\t\t\tco.%s[k] = &%s{}\n", field.Name, valueType))
+				sb.WriteString(fmt.Sprintf("\t\t\t\tco.%s[k] = &%s{}\n", field.Name, valueName))
 				sb.WriteString(fmt.Sprintf("\t\t\t\tv.DeepCopy(co.%s[k])\n", field.Name))
 				sb.WriteString("\t\t\t}\n")
 				sb.WriteString("\t\t}\n")
@@ -447,14 +403,10 @@ func (g *GoStructGenerator) generateManagerFiles(outputDir string) error {
 		for _, field := range manager.Fields {
 			if field.Type.Kind == types.FieldKindXMap || field.Type.Kind == types.FieldKindMap {
 				sb.WriteString(fmt.Sprintf("\tif m.%s != nil {\n", field.Name))
-				keyType := ToGoBaseTypeFromFieldType(field.Type.KeyType)
-				valueType := ToGoBaseTypeFromFieldType(field.Type.ValueType)
+				keyType := field.Type.KeyKind().String()
+				valueName := field.GetValueName()
 				// 去掉指针符号，获取proto类型
-				protoValueType := valueType
-				if strings.HasPrefix(valueType, "*") {
-					protoValueType = valueType[1:]
-				}
-				sb.WriteString(fmt.Sprintf("\t\tpb.%s = make(map[%s]*mme.%s, len(m.%s))\n", field.Name, keyType, protoValueType, field.Name))
+				sb.WriteString(fmt.Sprintf("\t\tpb.%s = make(map[%s]*mme.%s, len(m.%s))\n", field.Name, keyType, valueName, field.Name))
 				sb.WriteString(fmt.Sprintf("\t\tfor k, v := range m.%s {\n", field.Name))
 				sb.WriteString("\t\t\tif v != nil {\n")
 				sb.WriteString(fmt.Sprintf("\t\t\t\tpb.%s[k] = v.ToProto()\n", field.Name))
@@ -474,12 +426,12 @@ func (g *GoStructGenerator) generateManagerFiles(outputDir string) error {
 		for _, field := range manager.Fields {
 			if field.Type.Kind == types.FieldKindXMap || field.Type.Kind == types.FieldKindMap {
 				sb.WriteString(fmt.Sprintf("\tif pb.%s != nil {\n", field.Name))
-				keyType := ToGoBaseTypeFromFieldType(field.Type.KeyType)
-				valueType := strings.TrimPrefix(ToGoBaseTypeFromFieldType(field.Type.ValueType), "*")
-				sb.WriteString(fmt.Sprintf("\t\tm.%s = make(map[%s]*%s, len(pb.%s))\n", field.Name, keyType, valueType, field.Name))
+				keyType := field.Type.KeyKind().String()
+				valueName := field.GetValueName()
+				sb.WriteString(fmt.Sprintf("\t\tm.%s = make(map[%s]*%s, len(pb.%s))\n", field.Name, keyType, valueName, field.Name))
 				sb.WriteString(fmt.Sprintf("\t\tfor k, v := range pb.%s {\n", field.Name))
 				sb.WriteString("\t\t\tif v != nil {\n")
-				sb.WriteString(fmt.Sprintf("\t\t\t\tobj := New%s()\n", valueType))
+				sb.WriteString(fmt.Sprintf("\t\t\t\tobj := New%s()\n", valueName))
 				sb.WriteString("\t\t\t\tobj.FromProto(v)\n")
 				sb.WriteString(fmt.Sprintf("\t\t\t\tm.%s[k] = obj\n", field.Name))
 				sb.WriteString("\t\t\t}\n")
@@ -507,11 +459,8 @@ func (g *GoStructGenerator) generateEntityFiles(outputDir string) error {
 	for _, entity := range g.ctx.Entities {
 		sb := strings.Builder{}
 
-		// 文件头部
-		sb.WriteString(fmt.Sprintf("package %s\n\n", packageName))
-		sb.WriteString("import (\n")
-		sb.WriteString("\t\"gitee.com/orbit-w/orbit/app/proto/mme\"\n")
-		sb.WriteString(")\n\n")
+		imports := g.GenerateImport(entity, packageName)
+		sb.WriteString(imports)
 
 		// 生成 FieldIndex 常量（Entity的Id字段默认是0）
 		sb.WriteString("const (\n")

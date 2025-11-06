@@ -20,6 +20,26 @@ type FieldType struct {
 	ValueType *FieldType // map/xmap 的 value 类型，或 repeated 的元素类型
 }
 
+func (ft FieldType) GetKind() FieldKind {
+	return ft.Kind
+}
+
+func (ft FieldType) KeyKind() FieldKind {
+	return ft.KeyType.Kind
+}
+
+func (ft FieldType) ValueKind() FieldKind {
+	return ft.ValueType.Kind
+}
+
+func (ft FieldType) ValueName() string {
+	return ft.ValueType.Name
+}
+
+func (ft FieldType) ValueTypeName() string {
+	return ft.ValueType.TypeName
+}
+
 func (ft FieldType) IsMapField() bool {
 	return ft.Kind == FieldKindMap
 }
@@ -101,6 +121,31 @@ const (
 	FieldKindXMap      FieldKind = 19 // xmap
 	FieldKindRepeated  FieldKind = 20 // repeated
 )
+
+func (k FieldKind) IsBaseType() bool {
+	return k == FieldKindInt32 ||
+		k == FieldKindInt64 ||
+		k == FieldKindUInt32 ||
+		k == FieldKindUInt64 ||
+		k == FieldKindFloat ||
+		k == FieldKindDouble ||
+		k == FieldKindBool ||
+		k == FieldKindString ||
+		k == FieldKindBytes ||
+		k == FieldKindEnum
+}
+
+func (k FieldKind) IsMMEObject() bool {
+	return k == FieldKindMMEObject
+}
+
+func (k FieldKind) IsMessage() bool {
+	return k == FieldKindMessage
+}
+
+func (k FieldKind) IsMap() bool {
+	return k == FieldKindMap
+}
 
 // String 返回字段类型的字符串表示
 func (k FieldKind) String() string {

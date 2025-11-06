@@ -64,8 +64,13 @@ func (m *Mechanism) HasMapField() bool {
 	return hasMapField(m.Fields)
 }
 
-func (m *Mechanism) HasXMapField() (bool, *types.Field) {
-	return hasXMapField(m.Fields)
+func (m *Mechanism) HasXMapField() bool {
+	hasXMap, _ := hasXMapField(m.Fields)
+	return hasXMap
+}
+
+func (m *Mechanism) GetFields() []*types.Field {
+	return m.Fields
 }
 
 // Module 模块定义
@@ -91,10 +96,20 @@ func (m *Module) HasXMapField() bool {
 	return hasXMap
 }
 
+func (m *Module) GetFields() []*types.Field {
+	return m.Fields
+}
+
 // Manager 管理器定义
 type Manager struct {
 	Name   string
 	Fields []*types.Field // 使用 types.Field 替代 ManagerField
+}
+
+func NewManager() *Manager {
+	return &Manager{
+		Fields: make([]*types.Field, 0),
+	}
 }
 
 func (m *Manager) HasMapField() bool {
@@ -106,10 +121,33 @@ func (m *Manager) HasXMapField() bool {
 	return hasXMap
 }
 
+func (m *Manager) GetFields() []*types.Field {
+	return m.Fields
+}
+
 // Entity 实体定义
 type Entity struct {
 	Name   string
 	Fields []*types.Field // 使用 types.Field 替代 EntityField
+}
+
+func NewEntity() *Entity {
+	return &Entity{
+		Fields: make([]*types.Field, 0),
+	}
+}
+
+func (e *Entity) HasMapField() bool {
+	return hasMapField(e.Fields)
+}
+
+func (e *Entity) HasXMapField() bool {
+	hasXMap, _ := hasXMapField(e.Fields)
+	return hasXMap
+}
+
+func (e *Entity) GetFields() []*types.Field {
+	return e.Fields
 }
 
 // HeadFileConfig 头文件配置
@@ -160,8 +198,8 @@ type NetWallFile struct {
 // BlueprintContext 解析后的蓝图数据
 type BlueprintContext struct {
 	HeadFile      *HeadFileConfig
-	Entities      []Entity
-	Managers      []Manager
+	Entities      []*Entity
+	Managers      []*Manager
 	Modules       []*Module
 	Mechanisms    []*Mechanism
 	NetWalls      []NetWallFile
@@ -170,8 +208,8 @@ type BlueprintContext struct {
 
 func NewBlueprintContext() *BlueprintContext {
 	return &BlueprintContext{
-		Entities:      make([]Entity, 0),
-		Managers:      make([]Manager, 0),
+		Entities:      make([]*Entity, 0),
+		Managers:      make([]*Manager, 0),
 		Modules:       make([]*Module, 0),
 		Mechanisms:    make([]*Mechanism, 0),
 		NetWalls:      make([]NetWallFile, 0),
@@ -179,12 +217,12 @@ func NewBlueprintContext() *BlueprintContext {
 	}
 }
 
-func (ctx *BlueprintContext) AddEntity(entity Entity) {
+func (ctx *BlueprintContext) AddEntity(entity *Entity) {
 	ctx.Entities = append(ctx.Entities, entity)
 	ctx.ObjectTypeMap[entity.Name] = ObjectTypeEntity
 }
 
-func (ctx *BlueprintContext) AddManager(manager Manager) {
+func (ctx *BlueprintContext) AddManager(manager *Manager) {
 	ctx.Managers = append(ctx.Managers, manager)
 	ctx.ObjectTypeMap[manager.Name] = ObjectTypeManager
 }

@@ -205,7 +205,7 @@ func ToGoType(ft *types.FieldType, packageName string) string {
 			return "*" + ft.TypeName
 		}
 		// 基础类型
-		return ToGoBaseTypeFromFieldType(ft)
+		return ft.GetKind().String()
 	}
 }
 
@@ -294,36 +294,6 @@ func GetEntityFileName(name string) string {
 	return snake + "_entity.go"
 }
 
-// ToGoBaseTypeFromFieldType 从 FieldType 获取 Go 基础类型字符串（不带包名）
-func ToGoBaseTypeFromFieldType(ft *types.FieldType) string {
-	if ft == nil {
-		return "unknown"
-	}
-
-	if ft.TypeName != "" {
-		// 如果是消息类型，提取类型名称
-		return ft.TypeName
-	}
-
-	// 基础类型
-	switch ft.Kind {
-	case types.FieldKindInt32:
-		return "int32"
-	case types.FieldKindInt64:
-		return "int64"
-	case types.FieldKindString:
-		return "string"
-	case types.FieldKindBool:
-		return "bool"
-	case types.FieldKindFloat:
-		return "float32"
-	case types.FieldKindDouble:
-		return "float64"
-	default:
-		return ft.Kind.String()
-	}
-}
-
 // containsSpecialChars 检查字符串是否包含特殊字符
 func containsSpecialChars(s string, specialChars []string) bool {
 	for _, char := range specialChars {
@@ -332,4 +302,71 @@ func containsSpecialChars(s string, specialChars []string) bool {
 		}
 	}
 	return false
+}
+
+// BuildMongoUpdateCodeGenerator BuildMongoUpdate 代码生成器
+type BuildMongoUpdateCodeGenerator struct {
+	ObjectName  string     // 对象名称，如 "LevelUpMechanism"
+	WrapperName string     // 包装器名称，如 "LevelUpMechanismWrapper"
+	Receiver    string     // 接收器名称，如 "w" 或 "m"
+	ObjectType  ObjectType // 对象类型：Mechanism/Module/Manager
+}
+
+// GenerateBuildMongoUpdateMethod 生成 BuildMongoUpdate 方法的完整代码
+func (g *BuildMongoUpdateCodeGenerator) GenerateBuildMongoUpdateMethod(fields []*types.Field) string {
+	var sb strings.Builder
+
+	// 方法注释
+	sb.WriteString("// BuildMongoUpdate 构建MongoDB更新操作\n")
+	if g.ObjectType == ObjectTypeManager {
+		sb.WriteString("// 注意：Manager 层级通常不直接构建 MongoDB 更新，而是由 Entity 层处理\n")
+	}
+
+	// 方法签名
+	sb.WriteString(fmt.Sprintf("func (%s *%s) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder, path *mgo_builder.NestedPath) {\n",
+		g.Receiver, g.WrapperName))
+	sb.WriteString(fmt.Sprintf("\tif %s == nil {\n", g.Receiver))
+	sb.WriteString("\t\treturn\n")
+	sb.WriteString("\t}\n\n")
+
+	for i := range fields {
+		field := fields[i]
+		dirtyBitName := fmt.Sprintf("%sDirty%sBit", g.ObjectName, field.Name)
+		fieldNameSnake := CamelToSnake(field.Name)
+		sb.WriteString(fmt.Sprintf("\tif %s.IsDirty(%s) {\n", g.Receiver, dirtyBitName))
+		switch field.Type.Kind {
+		case types.FieldKindMap:
+			sb.WriteString(fmt.Sprintf("\t\tbuilder.SetNestedPath(path, \"%s\", %s.Get%s())\n",
+				fieldNameSnake, g.Receiver, field.Name))
+		case types.FieldKindXMap:
+			valueType := field.GetValueType()
+			if valueType == nil {
+				panic(fmt.Sprintf("field %s value type is nil", field.Name))
+			}
+			switch {
+			case valueType.GetKind().IsBaseType():
+				// 值类型 XMap，使用 accessor.Clone()
+				accessorName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Accessor"
+				sb.WriteString(fmt.Sprintf("\t\tbuilder.SetNestedPath(path, \"%s\", %s.%s.Clone())\n",
+					fieldNameSnake, g.Receiver, accessorName))
+			case valueType.GetKind().IsMessage():
+				panic(fmt.Sprintf("field %s value type is message type, not supported", field.Name))
+			case valueType.GetKind().IsMMEObject():
+				// MME Object 类型 XMap，使用 DeepCopy()
+				valueName := field.GetValueName()
+				linkFieldName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Link"
+				sb.WriteString("\t\t//map 结构无法做增量更新，所以需要全量拷贝\n")
+				sb.WriteString(fmt.Sprintf("\t\tcopy := make(map[%s]*%s, %s.%s.Len())\n",
+					field.Type.KeyKind().String(), valueName, g.Receiver, linkFieldName))
+				sb.WriteString(fmt.Sprintf("\t\t%s.%s.DeepCopy(&copy)\n", g.Receiver, linkFieldName))
+				sb.WriteString(fmt.Sprintf("\t\tbuilder.SetNestedPath(path, \"%s\", copy)\n", fieldNameSnake))
+			default:
+				panic(fmt.Sprintf("field %s value type is not supported", field.Name))
+			}
+		}
+		sb.WriteString("\t}\n")
+	}
+
+	sb.WriteString("}\n\n")
+	return sb.String()
 }

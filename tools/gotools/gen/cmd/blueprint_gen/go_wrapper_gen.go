@@ -65,8 +65,8 @@ func (g *GoWrapperGenerator) generateMechanismWrappers(outputDir string) error {
 					// TODO: 生成 XMapWrapper 字段
 				} else {
 					// 值类型，使用 MapAccessor
-					keyType := ToGoBaseTypeFromFieldType(field.Type.KeyType)
-					valueType := ToGoBaseTypeFromFieldType(field.Type.ValueType)
+					keyType := field.Type.KeyKind().String()
+					valueType := field.Type.ValueKind().String()
 					accessorFieldName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Accessor"
 					sb.WriteString("\t// Value 为值类型，使用 xmap.MapAccessor 进行包装\n")
 					sb.WriteString(fmt.Sprintf("\t%s *xmap.MapAccessor[%s, %s]\n",
@@ -133,8 +133,8 @@ func (g *GoWrapperGenerator) generateMechanismWrappers(outputDir string) error {
 				if field.Type.IsXMapValueMMEObject() {
 					panic(fmt.Sprintf("mechanism %s 的xmap字段 %s 的Value类型是 MMEObject 类型，不支持用xmap编排MME Object 类型", mech.Name, field.Name))
 				} else {
-					keyType := ToGoBaseTypeFromFieldType(field.Type.KeyType)
-					valueType := ToGoBaseTypeFromFieldType(field.Type.ValueType)
+					keyType := field.Type.KeyKind().String()
+					valueType := field.Type.ValueKind().String()
 					sb.WriteString(fmt.Sprintf("// 包装器-获取%s访问器\n", field.Name))
 					sb.WriteString(fmt.Sprintf("func (w *%s) Get%sAccessor() *xmap.MapAccessor[%s, %s] {\n",
 						wrapperName, methodName, keyType, valueType))
@@ -191,41 +191,13 @@ func (g *GoWrapperGenerator) generateMechanismWrappers(outputDir string) error {
 		sb.WriteString("}\n\n")
 
 		// 生成 BuildMongoUpdate 方法
-		sb.WriteString(fmt.Sprintf("func (w *%s) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder, path *mgo_builder.NestedPath) {\n", wrapperName))
-		sb.WriteString("\tif w == nil {\n")
-		sb.WriteString("\t\treturn\n")
-		sb.WriteString("\t}\n\n")
-
-		for _, field := range mech.Fields {
-			dirtyBitName := fmt.Sprintf("%sDirty%sBit", mech.Name, field.Name)
-			fieldNameSnake := CamelToSnake(field.Name)
-
-			if field.Type.IsXMapField() {
-				sb.WriteString(fmt.Sprintf("\tif w.IsDirty(%s) {\n", dirtyBitName))
-				if !field.Type.IsXMapValueMMEObject() {
-					accessorName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Accessor"
-					sb.WriteString(fmt.Sprintf("\t\tbuilder.SetNestedPath(path, \"%s\", w.%s.Clone())\n",
-						fieldNameSnake, accessorName))
-				} else {
-					sb.WriteString(fmt.Sprintf("\t\t// TODO: Handle MME Object map field %s\n", field.Name))
-				}
-				sb.WriteString("\t}\n")
-			} else if field.Type.Kind == types.FieldKindMap {
-				// 普通map字段，直接使用Get方法
-				sb.WriteString(fmt.Sprintf("\tif w.IsDirty(%s) {\n", dirtyBitName))
-				methodName := strings.ToUpper(field.Name[0:1]) + field.Name[1:]
-				sb.WriteString(fmt.Sprintf("\t\tbuilder.SetNestedPath(path, \"%s\", w.Get%s())\n",
-					fieldNameSnake, methodName))
-				sb.WriteString("\t}\n")
-			} else {
-				sb.WriteString(fmt.Sprintf("\tif w.IsDirty(%s) {\n", dirtyBitName))
-				methodName := strings.ToUpper(field.Name[0:1]) + field.Name[1:]
-				sb.WriteString(fmt.Sprintf("\t\tbuilder.SetNestedPath(path, \"%s\", w.Get%s())\n",
-					fieldNameSnake, methodName))
-				sb.WriteString("\t}\n")
-			}
+		generator := &BuildMongoUpdateCodeGenerator{
+			ObjectName:  mech.Name,
+			WrapperName: wrapperName,
+			Receiver:    "w",
+			ObjectType:  ObjectTypeMechanism,
 		}
-		sb.WriteString("}\n\n")
+		sb.WriteString(generator.GenerateBuildMongoUpdateMethod(mech.Fields))
 
 		// 生成 ToIncrementalProtoWithContext 方法
 		sb.WriteString("// ToIncrementalProtoWithContext 根据脏标记位构建增量数据的 protoMessage\n")
@@ -268,8 +240,8 @@ func (g *GoWrapperGenerator) generateMechanismWrappers(outputDir string) error {
 					dirtyBitName, fieldIndexName))
 				methodName := strings.ToUpper(field.Name[0:1]) + field.Name[1:]
 				// 普通map直接返回map的副本
-				keyType := ToGoBaseTypeFromFieldType(field.Type.KeyType)
-				valueType := ToGoBaseTypeFromFieldType(field.Type.ValueType)
+				keyType := field.Type.KeyKind().String()
+				valueType := field.Type.ValueKind().String()
 				sb.WriteString(fmt.Sprintf("\t\tm := w.Get%s()\n", methodName))
 				sb.WriteString("\t\tif m != nil {\n")
 				sb.WriteString(fmt.Sprintf("\t\t\tincremental.%s = make(map[%s]%s, len(m))\n",
@@ -329,8 +301,8 @@ func (g *GoWrapperGenerator) generateMechanismWrappers(outputDir string) error {
 					// 值类型 xmap，使用 accessor 的 Reset 方法
 					accessorName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Accessor"
 					sb.WriteString("\t\t// 清空现有的 map\n")
-					keyType := ToGoBaseTypeFromFieldType(field.Type.KeyType)
-					valueType := ToGoBaseTypeFromFieldType(field.Type.ValueType)
+					keyType := field.Type.KeyKind().String()
+					valueType := field.Type.ValueKind().String()
 					sb.WriteString(fmt.Sprintf("\t\ttemp := make(map[%s]%s, len(pb.%s))\n",
 						keyType, valueType, field.Name))
 					sb.WriteString(fmt.Sprintf("\t\tmaps.Copy(temp, pb.%s)\n", field.Name))
@@ -346,8 +318,8 @@ func (g *GoWrapperGenerator) generateMechanismWrappers(outputDir string) error {
 				methodName := strings.ToUpper(field.Name[0:1]) + field.Name[1:]
 				sb.WriteString(fmt.Sprintf("\t// 加载 %s map\n", field.Name))
 				sb.WriteString(fmt.Sprintf("\tif pb.%s != nil {\n", field.Name))
-				keyType := ToGoBaseTypeFromFieldType(field.Type.KeyType)
-				valueType := ToGoBaseTypeFromFieldType(field.Type.ValueType)
+				keyType := field.Type.KeyKind().String()
+				valueType := field.Type.ValueKind().String()
 				sb.WriteString(fmt.Sprintf("\t\ttemp := make(map[%s]%s, len(pb.%s))\n",
 					keyType, valueType, field.Name))
 				sb.WriteString(fmt.Sprintf("\t\tmaps.Copy(temp, pb.%s)\n", field.Name))
@@ -395,8 +367,8 @@ func (g *GoWrapperGenerator) generateMechanismWrappers(outputDir string) error {
 					sb.WriteString(fmt.Sprintf("\tw.%s.Copy(copy.%s)\n", accessorName, field.Name))
 				} else {
 					// MME Object 类型 xmap，需要深拷贝每个元素
-					keyType := ToGoBaseTypeFromFieldType(field.Type.KeyType)
-					valueType := strings.TrimPrefix(ToGoBaseTypeFromFieldType(field.Type.ValueType), "*")
+					keyType := field.Type.KeyKind().String()
+					valueType := strings.TrimPrefix(field.Type.ValueKind().String(), "*")
 					sb.WriteString("\t// Value 为引用类型，需要深拷贝\n")
 					sb.WriteString(fmt.Sprintf("\tif copy.%s == nil {\n", field.Name))
 					sb.WriteString(fmt.Sprintf("\t\tcopy.%s = make(map[%s]*%s)\n", field.Name, keyType, valueType))
@@ -415,8 +387,8 @@ func (g *GoWrapperGenerator) generateMechanismWrappers(outputDir string) error {
 					sb.WriteString("\t// Value 为值类型，浅拷贝即可\n")
 					sb.WriteString(fmt.Sprintf("\tif w.data.%s != nil {\n", field.Name))
 					sb.WriteString(fmt.Sprintf("\t\tif copy.%s == nil {\n", field.Name))
-					keyType := ToGoBaseTypeFromFieldType(field.Type.KeyType)
-					valueType := ToGoBaseTypeFromFieldType(field.Type.ValueType)
+					keyType := field.Type.KeyKind().String()
+					valueType := field.Type.ValueKind().String()
 					sb.WriteString(fmt.Sprintf("\t\t\tcopy.%s = make(map[%s]%s, len(w.data.%s))\n",
 						field.Name, keyType, valueType, field.Name))
 					sb.WriteString("\t\t}\n")
@@ -424,8 +396,8 @@ func (g *GoWrapperGenerator) generateMechanismWrappers(outputDir string) error {
 					sb.WriteString("\t}\n")
 				} else {
 					// MME Object 类型 map，需要深拷贝每个元素
-					keyType := ToGoBaseTypeFromFieldType(field.Type.KeyType)
-					valueType := strings.TrimPrefix(ToGoBaseTypeFromFieldType(field.Type.ValueType), "*")
+					keyType := field.Type.KeyKind().String()
+					valueType := strings.TrimPrefix(field.Type.ValueKind().String(), "*")
 					sb.WriteString("\t// Value 为引用类型，需要深拷贝\n")
 					sb.WriteString(fmt.Sprintf("\tif copy.%s == nil {\n", field.Name))
 					sb.WriteString(fmt.Sprintf("\t\tcopy.%s = make(map[%s]*%s)\n", field.Name, keyType, valueType))
@@ -522,7 +494,7 @@ func ToGoTypeFromTypesFieldType(ft *types.FieldType, packageName string) string 
 	case types.FieldKindInt32, types.FieldKindInt64, types.FieldKindUInt32, types.FieldKindUInt64,
 		types.FieldKindFloat, types.FieldKindDouble, types.FieldKindBool, types.FieldKindString, types.FieldKindBytes:
 		// 基础类型直接返回值类型，不带指针和包名
-		return ToGoBaseTypeFromFieldType(ft)
+		return ft.GetKind().String()
 	case types.FieldKindMMEObject:
 		// MME Object 类型，添加包名前缀和指针
 		typeName := getTypeNameFromFieldType(ft)
@@ -668,7 +640,7 @@ func (g *GoWrapperGenerator) generateModuleWrappers(outputDir string) error {
 		// 生成嵌套的 Mechanism Wrapper 字段
 		for _, field := range module.Fields {
 			if field.Type.IsMMEObjectType() {
-				typeName := strings.TrimPrefix(ToGoBaseTypeFromFieldType(&field.Type), "*")
+				typeName := field.GetTypeName()
 				wrapperTypeName := typeName + "Wrapper"
 				sb.WriteString(fmt.Sprintf("\t%s *%s\n", field.Name+"Wrapper", wrapperTypeName))
 			}
@@ -690,7 +662,7 @@ func (g *GoWrapperGenerator) generateModuleWrappers(outputDir string) error {
 		// 初始化嵌套的 Mechanism Wrapper
 		for _, field := range module.Fields {
 			if field.Type.IsMMEObjectType() {
-				typeName := strings.TrimPrefix(ToGoBaseTypeFromFieldType(&field.Type), "*")
+				typeName := field.GetTypeName()
 				wrapperFieldName := field.Name + "Wrapper"
 				dirtyBitName := fmt.Sprintf("%sDirty%sBit", module.Name, field.Name)
 				sb.WriteString(fmt.Sprintf("\t// 初始化嵌套的 %s Wrapper\n", typeName))
@@ -744,7 +716,7 @@ func (g *GoWrapperGenerator) generateModuleWrappers(outputDir string) error {
 		// 生成 Getter 方法（获取嵌套的 Mechanism Wrapper）
 		for _, field := range module.Fields {
 			if field.Type.IsMMEObjectType() {
-				typeName := strings.TrimPrefix(ToGoBaseTypeFromFieldType(&field.Type), "*")
+				typeName := field.GetTypeName()
 				wrapperFieldName := field.Name + "Wrapper"
 				methodName := strings.ToUpper(field.Name[0:1]) + field.Name[1:]
 				sb.WriteString(fmt.Sprintf("func (w *%s) Get%s() *%sWrapper {\n",
@@ -770,25 +742,13 @@ func (g *GoWrapperGenerator) generateModuleWrappers(outputDir string) error {
 		sb.WriteString("}\n\n")
 
 		// 生成 BuildMongoUpdate 方法
-		sb.WriteString("// BuildMongoUpdate 构建MongoDB更新操作\n")
-		sb.WriteString(fmt.Sprintf("func (w *%s) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder, path *mgo_builder.NestedPath) {\n", wrapperName))
-		sb.WriteString("\tif w == nil {\n")
-		sb.WriteString("\t\treturn\n")
-		sb.WriteString("\t}\n\n")
-		sb.WriteString("\t// 构建嵌套字段路径\n")
-		for _, field := range module.Fields {
-			if field.Type.IsMMEObjectType() {
-				wrapperFieldName := field.Name + "Wrapper"
-				dirtyBitName := fmt.Sprintf("%sDirty%sBit", module.Name, field.Name)
-				fieldNameSnake := CamelToSnake(field.Name)
-				sb.WriteString(fmt.Sprintf("\tif w.%s != nil && w.IsDirty(%s) {\n",
-					wrapperFieldName, dirtyBitName))
-				sb.WriteString(fmt.Sprintf("\t\tw.%s.BuildMongoUpdate(builder, path.Field(\"%s\"))\n",
-					wrapperFieldName, fieldNameSnake))
-				sb.WriteString("\t}\n")
-			}
+		generator := &BuildMongoUpdateCodeGenerator{
+			ObjectName:  module.Name,
+			WrapperName: wrapperName,
+			Receiver:    "w",
+			ObjectType:  ObjectTypeModule,
 		}
-		sb.WriteString("}\n\n")
+		sb.WriteString(generator.GenerateBuildMongoUpdateMethod(module.Fields))
 
 		// 生成 DeepCopy 方法
 		sb.WriteString("// 包装器-深拷贝\n")
@@ -810,7 +770,7 @@ func (g *GoWrapperGenerator) generateModuleWrappers(outputDir string) error {
 		sb.WriteString("\t// 拷贝嵌套的 Mechanism 对象\n")
 		for _, field := range module.Fields {
 			if field.Type.IsMMEObjectType() {
-				typeName := strings.TrimPrefix(ToGoBaseTypeFromFieldType(&field.Type), "*")
+				typeName := field.GetTypeName()
 				wrapperFieldName := field.Name + "Wrapper"
 				sb.WriteString(fmt.Sprintf("\tif w.data.%s != nil {\n", field.Name))
 				sb.WriteString(fmt.Sprintf("\t\tif copy.%s == nil {\n", field.Name))
@@ -839,7 +799,7 @@ func (g *GoWrapperGenerator) generateModuleWrappers(outputDir string) error {
 		sb.WriteString("\t}\n\n")
 		for _, field := range module.Fields {
 			if field.Type.IsMMEObjectType() {
-				typeName := strings.TrimPrefix(ToGoBaseTypeFromFieldType(&field.Type), "*")
+				typeName := field.GetTypeName()
 				wrapperFieldName := field.Name + "Wrapper"
 				sb.WriteString(fmt.Sprintf("\tif pb.%s != nil {\n", field.Name))
 				sb.WriteString(fmt.Sprintf("\t\tif w.data.%s == nil {\n", field.Name))
@@ -870,7 +830,7 @@ func (g *GoWrapperGenerator) generateModuleWrappers(outputDir string) error {
 			if field.Type.IsMMEObjectType() {
 				wrapperFieldName := field.Name + "Wrapper"
 				// 获取 proto 类型名称
-				typeName := strings.TrimPrefix(ToGoBaseTypeFromFieldType(&field.Type), "*")
+				typeName := field.GetTypeName()
 				protoTypeName := fmt.Sprintf("*mme.%s", typeName)
 				sb.WriteString(fmt.Sprintf("\tif mmemodel.FieldCanBeIncrementalSynced(w, %s, %s, ctx) {\n",
 					dirtyBitName, fieldIndexName))
@@ -933,8 +893,6 @@ func (g *GoWrapperGenerator) generateModuleWrappers(outputDir string) error {
 
 // generateManagerWrappers 生成 Manager Wrapper
 func (g *GoWrapperGenerator) generateManagerWrappers(outputDir string) error {
-	packageName := "mme"
-
 	for _, manager := range g.data.Managers {
 		sb := strings.Builder{}
 
@@ -959,8 +917,8 @@ func (g *GoWrapperGenerator) generateManagerWrappers(outputDir string) error {
 					}
 				}
 
-				keyType := ToGoBaseTypeFromFieldType(field.Type.KeyType)
-				valueType := strings.TrimPrefix(ToGoBaseTypeFromFieldType(field.Type.ValueType), "*")
+				keyType := field.Type.KeyKind().String()
+				valueType := field.GetValueName()
 				wrapperTypeName := valueType + "Wrapper"
 				linkFieldName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Link"
 				sb.WriteString("\t//Value为MME Object，使用xmap.MapAccessor进行包装\n")
@@ -985,10 +943,10 @@ func (g *GoWrapperGenerator) generateManagerWrappers(outputDir string) error {
 		// 初始化 XMapWrapper
 		for _, field := range manager.Fields {
 			if field.Type.IsXMapField() || field.Type.IsMapField() {
-				valueType := strings.TrimPrefix(ToGoBaseTypeFromFieldType(field.Type.ValueType), "*")
+				valueName := field.GetValueName()
 				linkFieldName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Link"
 				dirtyBitName := fmt.Sprintf("%sDirty%sBit", manager.Name, field.Name)
-				newWrapperFuncName := fmt.Sprintf("New%sWrapper", valueType)
+				newWrapperFuncName := fmt.Sprintf("New%sWrapper", valueName)
 				sb.WriteString(fmt.Sprintf("\tm.%s = xmapwrapper.NewXMapWrapperWithParent(\n",
 					linkFieldName))
 				sb.WriteString(fmt.Sprintf("\t\t&data.%s,\n", field.Name))
@@ -1017,10 +975,10 @@ func (g *GoWrapperGenerator) generateManagerWrappers(outputDir string) error {
 		for _, field := range manager.Fields {
 			if field.Type.IsXMapField() || field.Type.IsMapField() {
 				linkFieldName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Link"
-				keyType := ToGoBaseTypeFromFieldType(field.Type.KeyType)
-				valueType := strings.TrimPrefix(ToGoBaseTypeFromFieldType(field.Type.ValueType), "*")
-				wrapperTypeName := valueType + "Wrapper"
-				sb.WriteString(fmt.Sprintf("\t// 初始化所有 %s 的字段上下文\n", valueType))
+				keyType := field.Type.KeyKind().String()
+				valueName := field.GetValueName()
+				wrapperTypeName := valueName + "Wrapper"
+				sb.WriteString(fmt.Sprintf("\t// 初始化所有 %s 的字段上下文\n", valueName))
 				sb.WriteString(fmt.Sprintf("\tm.%s.Range(func(key %s, wrapper *%s) bool {\n",
 					linkFieldName, keyType, wrapperTypeName))
 				sb.WriteString("\t\twrapper.InitFieldContext()\n")
@@ -1045,30 +1003,30 @@ func (g *GoWrapperGenerator) generateManagerWrappers(outputDir string) error {
 		// 生成 map 字段的工具方法（Set, Delete, Range）
 		for _, field := range manager.Fields {
 			if field.Type.IsXMapField() || field.Type.IsMapField() {
-				keyType := ToGoBaseTypeFromFieldType(field.Type.KeyType)
-				valueType := strings.TrimPrefix(ToGoBaseTypeFromFieldType(field.Type.ValueType), "*")
-				wrapperTypeName := valueType + "Wrapper"
+				keyType := field.Type.KeyKind().String()
+				valueName := field.GetValueName()
+				wrapperTypeName := valueName + "Wrapper"
 				linkFieldName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Link"
 				methodPrefix := strings.ToUpper(field.Name[0:1]) + field.Name[1:]
 
 				// Set 方法
-				sb.WriteString(fmt.Sprintf("// Set%s 设置/添加%s模块\n", methodPrefix, valueType))
-				sb.WriteString(fmt.Sprintf("func (m *%s) %s_Set(id %s, %sPb *%s) *%s {\n",
-					wrapperName, field.Name, keyType, strings.ToLower(valueType[0:1])+valueType[1:], valueType, wrapperTypeName))
-				sb.WriteString(fmt.Sprintf("\treturn m.%s.Set(id, %sPb)\n", linkFieldName, strings.ToLower(valueType[0:1])+valueType[1:]+"Pb"))
+				sb.WriteString(fmt.Sprintf("// Set%s 设置/添加%s模块\n", methodPrefix, valueName))
+				sb.WriteString(fmt.Sprintf("func (m *%s) %s_Set(id %s, value *%s) *%s {\n",
+					wrapperName, field.Name, keyType, valueName, wrapperTypeName))
+				sb.WriteString(fmt.Sprintf("\treturn m.%s.Set(id, value)\n", linkFieldName))
 				sb.WriteString("}\n\n")
 
 				// Delete 方法
-				sb.WriteString(fmt.Sprintf("// Delete%s 删除%s模块\n", methodPrefix, valueType))
+				sb.WriteString(fmt.Sprintf("// Delete%s 删除%s模块\n", methodPrefix, valueName))
 				sb.WriteString(fmt.Sprintf("func (m *%s) %s_Delete(id %s) bool {\n",
 					wrapperName, field.Name, keyType))
 				sb.WriteString(fmt.Sprintf("\treturn m.%s.Delete(id)\n", linkFieldName))
 				sb.WriteString("}\n\n")
 
 				// Range 方法
-				sb.WriteString(fmt.Sprintf("// Range%s 遍历所有%s\n", methodPrefix, valueType))
+				sb.WriteString(fmt.Sprintf("// Range%s 遍历所有%s\n", methodPrefix, valueName))
 				sb.WriteString(fmt.Sprintf("func (m *%s) %s_Range(f func(id %s, %s *%s) bool) {\n",
-					wrapperName, field.Name, keyType, strings.ToLower(valueType[0:1])+valueType[1:], wrapperTypeName))
+					wrapperName, field.Name, keyType, strings.ToLower(valueName[0:1])+valueName[1:], wrapperTypeName))
 				sb.WriteString(fmt.Sprintf("\tm.%s.Range(f)\n", linkFieldName))
 				sb.WriteString("}\n\n")
 			}
@@ -1081,8 +1039,9 @@ func (g *GoWrapperGenerator) generateManagerWrappers(outputDir string) error {
 		for _, field := range manager.Fields {
 			if field.Type.IsXMapField() || field.Type.IsMapField() {
 				linkFieldName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Link"
-				sb.WriteString(fmt.Sprintf("\tm.%s.RangeIncrementalSyncObject(func(key interface{}, object xmapwrapper.IncrementalSyncObject) (stop bool) {\n",
-					linkFieldName))
+				keyKind := field.Type.KeyKind()
+				sb.WriteString(fmt.Sprintf("\tm.%s.RangeIncrementalSyncObject(func(key %s, object xmapwrapper.IncrementalSyncObject) (stop bool) {\n",
+					linkFieldName, keyKind.String()))
 				sb.WriteString("\t\tobject.ClearAllDirty()\n")
 				sb.WriteString("\t\treturn false\n")
 				sb.WriteString("\t})\n")
@@ -1109,28 +1068,13 @@ func (g *GoWrapperGenerator) generateManagerWrappers(outputDir string) error {
 		sb.WriteString("}\n\n")
 
 		// 生成 BuildMongoUpdate 方法
-		sb.WriteString("// BuildMongoUpdate 构建MongoDB更新操作\n")
-		sb.WriteString("// 注意：Manager 层级通常不直接构建 MongoDB 更新，而是由 Entity 层处理\n")
-		sb.WriteString(fmt.Sprintf("func (m *%s) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder, path *mgo_builder.NestedPath) {\n", wrapperName))
-		sb.WriteString("\tif m == nil {\n")
-		sb.WriteString("\t\treturn\n")
-		sb.WriteString("\t}\n\n")
-		for _, field := range manager.Fields {
-			if field.Type.IsXMapField() || field.Type.IsMapField() {
-				dirtyBitName := fmt.Sprintf("%sDirty%sBit", manager.Name, field.Name)
-				linkFieldName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Link"
-				fieldNameSnake := CamelToSnake(field.Name)
-				valueType := strings.TrimPrefix(ToGoBaseTypeFromFieldType(field.Type.ValueType), "*")
-				sb.WriteString(fmt.Sprintf("\tif m.IsDirty(%s) {\n", dirtyBitName))
-				sb.WriteString("\t\t//map 结构无法做增量更新，所以需要全量拷贝\n")
-				sb.WriteString(fmt.Sprintf("\t\tcopy := make(map[%s]*%s, m.%s.Len())\n",
-					ToGoBaseTypeFromFieldType(field.Type.KeyType), valueType, linkFieldName))
-				sb.WriteString(fmt.Sprintf("\t\tm.%s.DeepCopy(&copy)\n", linkFieldName))
-				sb.WriteString(fmt.Sprintf("\t\tbuilder.SetNestedPath(path, \"%s\", copy)\n", fieldNameSnake))
-				sb.WriteString("\t}\n")
-			}
+		generator := &BuildMongoUpdateCodeGenerator{
+			ObjectName:  manager.Name,
+			WrapperName: wrapperName,
+			Receiver:    "m",
+			ObjectType:  ObjectTypeManager,
 		}
-		sb.WriteString("}\n\n")
+		sb.WriteString(generator.GenerateBuildMongoUpdateMethod(manager.Fields))
 
 		// 生成 DeepCopy 方法
 		sb.WriteString("// 包装器-深拷贝\n")
@@ -1152,14 +1096,14 @@ func (g *GoWrapperGenerator) generateManagerWrappers(outputDir string) error {
 		for _, field := range manager.Fields {
 			if field.Type.IsXMapField() || field.Type.IsMapField() {
 				linkFieldName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Link"
-				keyType := ToGoBaseTypeFromFieldType(field.Type.KeyType)
-				valueType := strings.TrimPrefix(ToGoBaseTypeFromFieldType(field.Type.ValueType), "*")
+				keyType := field.Type.KeyKind().String()
+				valueName := field.GetValueName()
 				sb.WriteString("\t// 初始化目标 map\n")
 				sb.WriteString(fmt.Sprintf("\tif copy.%s == nil {\n", field.Name))
 				sb.WriteString(fmt.Sprintf("\t\tcopy.%s = make(map[%s]*%s, len(m.data.%s))\n",
-					field.Name, keyType, valueType, field.Name))
+					field.Name, keyType, valueName, field.Name))
 				sb.WriteString("\t}\n\n")
-				sb.WriteString(fmt.Sprintf("\t// 拷贝所有 %s\n", valueType))
+				sb.WriteString(fmt.Sprintf("\t// 拷贝所有 %s\n", valueName))
 				sb.WriteString(fmt.Sprintf("\tm.%s.DeepCopy(&copy.%s)\n", linkFieldName, field.Name))
 			}
 		}
@@ -1183,10 +1127,10 @@ func (g *GoWrapperGenerator) generateManagerWrappers(outputDir string) error {
 		for _, field := range manager.Fields {
 			if field.Type.IsXMapField() || field.Type.IsMapField() {
 				linkFieldName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Link"
-				valueType := strings.TrimPrefix(ToGoBaseTypeFromFieldType(field.Type.ValueType), "*")
+				valueName := field.GetValueName()
 				sb.WriteString(fmt.Sprintf("\tfor key := range pb.%s {\n", field.Name))
 				sb.WriteString(fmt.Sprintf("\t\tpbValue := pb.%s[key]\n", field.Name))
-				sb.WriteString(fmt.Sprintf("\t\tv := New%s()\n", valueType))
+				sb.WriteString(fmt.Sprintf("\t\tv := New%s()\n", valueName))
 				sb.WriteString(fmt.Sprintf("\t\twrapper := m.%s.SetWithoutTrack(key, v)\n", linkFieldName))
 				sb.WriteString("\t\twrapper.FromProto(pbValue)\n")
 				sb.WriteString("\t}\n")
@@ -1211,9 +1155,9 @@ func (g *GoWrapperGenerator) generateManagerWrappers(outputDir string) error {
 				fieldIndexName := fmt.Sprintf("%sFieldIndex%s", manager.Name, field.Name)
 				dirtyBitName := fmt.Sprintf("%sDirty%sBit", manager.Name, field.Name)
 				linkFieldName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Link"
-				keyType := ToGoBaseTypeFromFieldType(field.Type.KeyType)
-				valueType := strings.TrimPrefix(ToGoBaseTypeFromFieldType(field.Type.ValueType), "*")
-				protoValueType := fmt.Sprintf("*mme.%s", valueType)
+				keyType := field.Type.KeyKind().String()
+				valueName := field.GetValueName()
+				protoValueType := fmt.Sprintf("*mme.%s", valueName)
 				sb.WriteString(fmt.Sprintf("\tif mmemodel.FieldCanBeIncrementalSynced(m, %s, %s, ctx) {\n",
 					dirtyBitName, fieldIndexName))
 				sb.WriteString(fmt.Sprintf("\t\tincremental.%s_XXXChangeList = make([]*mme.%s_%s_XXXMapChangeRecord, 0)\n",
@@ -1223,9 +1167,9 @@ func (g *GoWrapperGenerator) generateManagerWrappers(outputDir string) error {
 				sb.WriteString("\t\t\tswitch operation.Type {\n")
 				sb.WriteString("\t\t\tcase xmap.SetOperation:\n")
 				sb.WriteString(fmt.Sprintf("\t\t\t\t%s, _ := m.%s.Get(key)\n",
-					strings.ToLower(valueType[0:1])+valueType[1:], linkFieldName))
+					strings.ToLower(valueName[0:1])+valueName[1:], linkFieldName))
 				sb.WriteString(fmt.Sprintf("\t\t\t\tpb := %s.ToIncrementalProtoWithContext(ctx)\n",
-					strings.ToLower(valueType[0:1])+valueType[1:]))
+					strings.ToLower(valueName[0:1])+valueName[1:]))
 				sb.WriteString(fmt.Sprintf("\t\t\t\tv, ok := pb.(%s)\n", protoValueType))
 				sb.WriteString("\t\t\t\tif ok {\n")
 				sb.WriteString(fmt.Sprintf("\t\t\t\t\tincremental.%s_XXXChangeList = append(incremental.%s_XXXChangeList, &mme.%s_%s_XXXMapChangeRecord{\n",
@@ -1233,9 +1177,6 @@ func (g *GoWrapperGenerator) generateManagerWrappers(outputDir string) error {
 				sb.WriteString("\t\t\t\t\t\tKey:   key,\n")
 				sb.WriteString("\t\t\t\t\t\tValue: v,\n")
 				sb.WriteString("\t\t\t\t\t})\n")
-				sb.WriteString("\t\t\t\t} else {\n")
-				sb.WriteString(fmt.Sprintf("\t\t\t\t\tmlog.Error(\"%s.ToIncrementalProto\", zap.Any(\"key\", key), zap.Any(\"operation\", operation))\n",
-					manager.Name))
 				sb.WriteString("\t\t\t\t}\n")
 				sb.WriteString("\t\t\t\treturn true\n")
 				sb.WriteString("\t\t\tcase xmap.DeleteOperation:\n")
@@ -1263,8 +1204,6 @@ func (g *GoWrapperGenerator) generateManagerWrappers(outputDir string) error {
 		if FileExists(filePath) {
 			if data, err := ReadFileContent(filePath); err == nil {
 				existingContent = data
-				// 检查并确保必要的导入存在
-				existingContent = ensureManagerImports(existingContent)
 			}
 		}
 
@@ -1274,21 +1213,6 @@ func (g *GoWrapperGenerator) generateManagerWrappers(outputDir string) error {
 			// 确保现有内容以换行结尾
 			existingContent = strings.TrimRight(existingContent, " \n\r\t")
 			newContent = existingContent + "\n\n" + sb.String()
-		} else {
-			// 如果文件不存在，需要添加 package 声明和导入
-			imports := "import (\n"
-			imports += "\t\"gitee.com/orbit-w/meteor/bases/container/xmap\"\n"
-			imports += "\t\"gitee.com/orbit-w/meteor/modules/mlog\"\n"
-			imports += "\t\"gitee.com/orbit-w/orbit/app/proto/mme\"\n"
-			imports += "\tdirtyflag \"gitee.com/orbit-w/orbit/lib/base/dirty_flag\"\n"
-			imports += "\tfieldmeta \"gitee.com/orbit-w/orbit/lib/base/field_meta\"\n"
-			imports += "\t\"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder\"\n"
-			imports += "\tmmemodel \"gitee.com/orbit-w/orbit/lib/module/mme_model\"\n"
-			imports += "\txmapwrapper \"gitee.com/orbit-w/orbit/lib/module/xmapwrapper\"\n"
-			imports += "\t\"go.uber.org/zap\"\n"
-			imports += "\t\"google.golang.org/protobuf/proto\"\n"
-			imports += ")\n\n"
-			newContent = fmt.Sprintf("package %s\n\n%s", packageName, imports) + sb.String()
 		}
 		if err := WriteFile(filePath, newContent); err != nil {
 			return err
@@ -1296,117 +1220,4 @@ func (g *GoWrapperGenerator) generateManagerWrappers(outputDir string) error {
 	}
 
 	return nil
-}
-
-// ensureManagerImports 确保Manager文件包含必要的导入
-func ensureManagerImports(content string) string {
-	// 检查是否已经包含必要的导入
-	hasXMap := strings.Contains(content, "gitee.com/orbit-w/meteor/bases/container/xmap")
-	hasMlog := strings.Contains(content, "gitee.com/orbit-w/meteor/modules/mlog")
-	hasDirtyFlag := strings.Contains(content, "dirtyflag")
-	hasFieldMeta := strings.Contains(content, "fieldmeta")
-	hasMgoBuilder := strings.Contains(content, "mgo_builder")
-	hasMmeModel := strings.Contains(content, "mmemodel")
-	hasXMapWrapper := strings.Contains(content, "xmapwrapper")
-	hasZap := strings.Contains(content, "go.uber.org/zap")
-	hasProto := strings.Contains(content, "google.golang.org/protobuf/proto")
-
-	// 如果所有导入都已存在，直接返回
-	if hasXMap && hasMlog && hasDirtyFlag && hasFieldMeta && hasMgoBuilder && hasMmeModel && hasXMapWrapper && hasZap && hasProto {
-		return content
-	}
-
-	// 查找 import 块的位置
-	importStart := strings.Index(content, "import (")
-	if importStart == -1 {
-		// 如果没有 import 块，在 package 声明后添加
-		packageEnd := strings.Index(content, "\n\n")
-		if packageEnd == -1 {
-			packageEnd = len(content)
-		}
-		imports := "\nimport (\n"
-		imports += "\t\"gitee.com/orbit-w/meteor/bases/container/xmap\"\n"
-		imports += "\t\"gitee.com/orbit-w/meteor/modules/mlog\"\n"
-		imports += "\t\"gitee.com/orbit-w/orbit/app/proto/mme\"\n"
-		if !hasDirtyFlag {
-			imports += "\tdirtyflag \"gitee.com/orbit-w/orbit/lib/base/dirty_flag\"\n"
-		}
-		if !hasFieldMeta {
-			imports += "\tfieldmeta \"gitee.com/orbit-w/orbit/lib/base/field_meta\"\n"
-		}
-		if !hasMgoBuilder {
-			imports += "\t\"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder\"\n"
-		}
-		if !hasMmeModel {
-			imports += "\tmmemodel \"gitee.com/orbit-w/orbit/lib/module/mme_model\"\n"
-		}
-		if !hasXMapWrapper {
-			imports += "\txmapwrapper \"gitee.com/orbit-w/orbit/lib/module/xmapwrapper\"\n"
-		}
-		if !hasZap {
-			imports += "\t\"go.uber.org/zap\"\n"
-		}
-		if !hasProto {
-			imports += "\t\"google.golang.org/protobuf/proto\"\n"
-		}
-		imports += ")\n"
-		return content[:packageEnd+2] + imports + content[packageEnd+2:]
-	}
-
-	// 找到 import 块的结束位置
-	importEnd := strings.Index(content[importStart:], ")\n")
-	if importEnd == -1 {
-		importEnd = strings.Index(content[importStart:], ")\r\n")
-	}
-	if importEnd == -1 {
-		return content
-	}
-	importEnd += importStart + 2
-
-	// 在 import 块中添加缺失的导入
-	importBlock := content[importStart:importEnd]
-	lines := strings.Split(importBlock, "\n")
-
-	// 检查每一行，添加缺失的导入
-	missingImports := []string{}
-	if !hasXMap {
-		missingImports = append(missingImports, "\t\"gitee.com/orbit-w/meteor/bases/container/xmap\"")
-	}
-	if !hasMlog {
-		missingImports = append(missingImports, "\t\"gitee.com/orbit-w/meteor/modules/mlog\"")
-	}
-	if !hasDirtyFlag {
-		missingImports = append(missingImports, "\tdirtyflag \"gitee.com/orbit-w/orbit/lib/base/dirty_flag\"")
-	}
-	if !hasFieldMeta {
-		missingImports = append(missingImports, "\tfieldmeta \"gitee.com/orbit-w/orbit/lib/base/field_meta\"")
-	}
-	if !hasMgoBuilder {
-		missingImports = append(missingImports, "\t\"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder\"")
-	}
-	if !hasMmeModel {
-		missingImports = append(missingImports, "\tmmemodel \"gitee.com/orbit-w/orbit/lib/module/mme_model\"")
-	}
-	if !hasXMapWrapper {
-		missingImports = append(missingImports, "\txmapwrapper \"gitee.com/orbit-w/orbit/lib/module/xmapwrapper\"")
-	}
-	if !hasZap {
-		missingImports = append(missingImports, "\t\"go.uber.org/zap\"")
-	}
-	if !hasProto {
-		missingImports = append(missingImports, "\t\"google.golang.org/protobuf/proto\"")
-	}
-
-	if len(missingImports) == 0 {
-		return content
-	}
-
-	// 在 import 块的倒数第二行（在 ")" 之前）插入缺失的导入
-	newImportBlock := strings.Join(lines[:len(lines)-1], "\n")
-	for _, imp := range missingImports {
-		newImportBlock += "\n" + imp
-	}
-	newImportBlock += "\n" + lines[len(lines)-1]
-
-	return content[:importStart] + newImportBlock + content[importEnd:]
 }

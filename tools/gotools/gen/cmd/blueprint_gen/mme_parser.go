@@ -71,8 +71,9 @@ func (p *Parser) ParseEntities() error {
 // parseEntityFromMap 从 map 数据中解析单个 Entity
 // entityName: 实体名称
 // entityData: 实体数据，通常是包含字段定义的 map
-func (p *Parser) parseEntityFromMap(entityName string, entityData any) Entity {
-	entity := Entity{Name: entityName}
+func (p *Parser) parseEntityFromMap(entityName string, entityData any) *Entity {
+	entity := NewEntity()
+	entity.Name = entityName
 
 	fieldsMap, ok := entityData.(map[string]any)
 	if !ok {
@@ -160,8 +161,9 @@ func (p *Parser) parseManagers(items []any) {
 // managerData: Manager 数据，可能是 nil 或包含字段定义的 map
 // managerMap: 完整的 managerMap，用于从平铺结构中提取字段
 // 返回: 解析后的 Manager
-func (p *Parser) parseManagerFromMap(managerName string, managerData any, managerMap map[string]any) Manager {
-	manager := Manager{Name: managerName}
+func (p *Parser) parseManagerFromMap(managerName string, managerData any, managerMap map[string]any) *Manager {
+	manager := NewManager()
+	manager.Name = managerName
 
 	// 判断字段定义的位置
 	var fieldsMap map[string]any

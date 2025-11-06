@@ -33,11 +33,6 @@ func (tc *TypeConverter) ToGoType(ft *types.FieldType) string {
 	return ToGoTypeFromTypesFieldType(ft, tc.packageName)
 }
 
-// ToGoBaseType 将 FieldType 转换为 Go 基础类型（不带包名）
-func (tc *TypeConverter) ToGoBaseType(ft *types.FieldType) string {
-	return ToGoBaseTypeFromFieldType(ft)
-}
-
 // IsOptionalInProto 判断字段在 Proto 中是否需要 optional 标记
 func (tc *TypeConverter) IsOptionalInProto(ft *types.FieldType) bool {
 	if ft == nil {
@@ -203,4 +198,3 @@ func (tc *TypeConverter) FormatProtoMessage(name string, fields []*types.Field) 
 
 	return builder.String()
 }
-
