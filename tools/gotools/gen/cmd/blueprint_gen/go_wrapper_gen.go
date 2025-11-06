@@ -199,69 +199,13 @@ func (g *GoWrapperGenerator) generateMechanismWrappers(outputDir string) error {
 		}
 		sb.WriteString(generator.GenerateBuildMongoUpdateMethod(mech.Fields))
 
-		// 生成 ToIncrementalProtoWithContext 方法
-		sb.WriteString("// ToIncrementalProtoWithContext 根据脏标记位构建增量数据的 protoMessage\n")
-		sb.WriteString("// 只返回标记为脏的字段数据，用于增量同步\n")
-		sb.WriteString(fmt.Sprintf("func (w *%s) ToIncrementalProtoWithContext(ctx mmemodel.SyncContext) proto.Message {\n", wrapperName))
-		sb.WriteString("\tif w == nil {\n")
-		sb.WriteString("\t\treturn nil\n")
-		sb.WriteString("\t}\n\n")
-		sb.WriteString("\t// 如果没有脏标记，返回 nil\n")
-		sb.WriteString("\tif !w.HasAnyDirty() {\n")
-		sb.WriteString("\t\treturn nil\n")
-		sb.WriteString("\t}\n\n")
-		sb.WriteString(fmt.Sprintf("\tincremental := &mme.%s{}\n\n", mech.Name))
-
-		for _, field := range mech.Fields {
-			fieldIndexName := fmt.Sprintf("%sFieldIndex%s", mech.Name, field.Name)
-			dirtyBitName := fmt.Sprintf("%sDirty%sBit", mech.Name, field.Name)
-
-			if field.Type.IsXMapField() {
-				// XMap 类型使用增量同步逻辑
-				// 所有 xmap 字段都使用 mmemodel.FieldCanBeIncrementalSynced 快捷方法进行脏标记判断
-				sb.WriteString(fmt.Sprintf("\tif mmemodel.FieldCanBeIncrementalSynced(w, %s, %s, ctx) {\n",
-					dirtyBitName, fieldIndexName))
-
-				accessorName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Accessor"
-
-				if !g.isReferenceType(field.Type.ValueType) {
-					// 值类型，直接调用 Clone
-					sb.WriteString(fmt.Sprintf("\t\tincremental.%s = w.%s.Clone()\n",
-						field.Name, accessorName))
-				} else {
-					// 引用类型，留 TODO
-					sb.WriteString(fmt.Sprintf("\t\t// TODO: Handle reference type map field %s (full sync)\n", field.Name))
-				}
-				sb.WriteString("\t}\n")
-			} else if field.Type.IsMapField() {
-				// 普通 Map 类型直接全量同步，不使用增量同步逻辑
-				// 所有 map 字段都使用 mmemodel.FieldCanBeIncrementalSynced 快捷方法进行脏标记判断
-				sb.WriteString(fmt.Sprintf("\tif mmemodel.FieldCanBeIncrementalSynced(w, %s, %s, ctx) {\n",
-					dirtyBitName, fieldIndexName))
-				methodName := strings.ToUpper(field.Name[0:1]) + field.Name[1:]
-				// 普通map直接返回map的副本
-				keyType := field.Type.KeyKind().String()
-				valueType := field.Type.ValueKind().String()
-				sb.WriteString(fmt.Sprintf("\t\tm := w.Get%s()\n", methodName))
-				sb.WriteString("\t\tif m != nil {\n")
-				sb.WriteString(fmt.Sprintf("\t\t\tincremental.%s = make(map[%s]%s, len(m))\n",
-					field.Name, keyType, valueType))
-				sb.WriteString(fmt.Sprintf("\t\t\tmaps.Copy(incremental.%s, m)\n", field.Name))
-				sb.WriteString("\t\t}\n")
-				sb.WriteString("\t}\n")
-			} else {
-				// 所有字段都使用 mmemodel.FieldCanBeIncrementalSynced 快捷方法进行脏标记判断
-				sb.WriteString(fmt.Sprintf("\tif mmemodel.FieldCanBeIncrementalSynced(w, %s, %s, ctx) {\n",
-					dirtyBitName, fieldIndexName))
-				methodName := strings.ToUpper(field.Name[0:1]) + field.Name[1:]
-				sb.WriteString(fmt.Sprintf("\t\tv := w.Get%s()\n", methodName))
-				sb.WriteString(fmt.Sprintf("\t\tincremental.%s = &v\n", field.Name))
-				sb.WriteString("\t}\n")
-			}
+		generatorToIncrementalProto := &ToIncrementalProtoCodeGenerator{
+			ObjectName:  mech.Name,
+			WrapperName: wrapperName,
+			Receiver:    "w",
+			ObjectType:  ObjectTypeMechanism,
 		}
-
-		sb.WriteString("\treturn incremental\n")
-		sb.WriteString("}\n\n")
+		sb.WriteString(generatorToIncrementalProto.GenerateToIncrementalProtoMethod(mech.Fields))
 
 		// 生成 ToProto 方法
 		sb.WriteString("// ToProto 将 Mechanism 数据转换为完整的 protobuf 结构体\n")
@@ -531,96 +475,6 @@ func ReadFileContent(filePath string) (string, error) {
 	return string(data), nil
 }
 
-// ensureModuleImports 确保Module文件包含必要的导入
-// 如果导入不存在，则添加到import块中
-func ensureModuleImports(content string) string {
-	// 检查是否已经包含必要的导入
-	hasDirtyFlag := strings.Contains(content, "dirtyflag")
-	hasFieldMeta := strings.Contains(content, "fieldmeta")
-	hasMgoBuilder := strings.Contains(content, "mgo_builder")
-	hasMmeModel := strings.Contains(content, "mmemodel")
-	hasProto := strings.Contains(content, "google.golang.org/protobuf/proto")
-
-	// 如果所有导入都已存在，直接返回
-	if hasDirtyFlag && hasFieldMeta && hasMgoBuilder && hasMmeModel && hasProto {
-		return content
-	}
-
-	// 查找 import 块的位置
-	importStart := strings.Index(content, "import (")
-	if importStart == -1 {
-		// 如果没有 import 块，在 package 声明后添加
-		packageEnd := strings.Index(content, "\n\n")
-		if packageEnd == -1 {
-			packageEnd = len(content)
-		}
-		imports := "\nimport (\n"
-		imports += "\t\"gitee.com/orbit-w/orbit/app/proto/mme\"\n"
-		if !hasDirtyFlag {
-			imports += "\tdirtyflag \"gitee.com/orbit-w/orbit/lib/base/dirty_flag\"\n"
-		}
-		if !hasFieldMeta {
-			imports += "\tfieldmeta \"gitee.com/orbit-w/orbit/lib/base/field_meta\"\n"
-		}
-		if !hasMgoBuilder {
-			imports += "\t\"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder\"\n"
-		}
-		if !hasMmeModel {
-			imports += "\tmmemodel \"gitee.com/orbit-w/orbit/lib/module/mme_model\"\n"
-		}
-		if !hasProto {
-			imports += "\t\"google.golang.org/protobuf/proto\"\n"
-		}
-		imports += ")\n"
-		return content[:packageEnd+2] + imports + content[packageEnd+2:]
-	}
-
-	// 找到 import 块的结束位置
-	importEnd := strings.Index(content[importStart:], ")\n")
-	if importEnd == -1 {
-		importEnd = strings.Index(content[importStart:], ")\r\n")
-	}
-	if importEnd == -1 {
-		return content
-	}
-	importEnd += importStart + 2
-
-	// 在 import 块中添加缺失的导入
-	importBlock := content[importStart:importEnd]
-	lines := strings.Split(importBlock, "\n")
-
-	// 检查每一行，添加缺失的导入
-	missingImports := []string{}
-	if !hasDirtyFlag {
-		missingImports = append(missingImports, "\tdirtyflag \"gitee.com/orbit-w/orbit/lib/base/dirty_flag\"")
-	}
-	if !hasFieldMeta {
-		missingImports = append(missingImports, "\tfieldmeta \"gitee.com/orbit-w/orbit/lib/base/field_meta\"")
-	}
-	if !hasMgoBuilder {
-		missingImports = append(missingImports, "\t\"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder\"")
-	}
-	if !hasMmeModel {
-		missingImports = append(missingImports, "\tmmemodel \"gitee.com/orbit-w/orbit/lib/module/mme_model\"")
-	}
-	if !hasProto {
-		missingImports = append(missingImports, "\t\"google.golang.org/protobuf/proto\"")
-	}
-
-	if len(missingImports) == 0 {
-		return content
-	}
-
-	// 在 import 块的倒数第二行（在 ")" 之前）插入缺失的导入
-	newImportBlock := strings.Join(lines[:len(lines)-1], "\n")
-	for _, imp := range missingImports {
-		newImportBlock += "\n" + imp
-	}
-	newImportBlock += "\n" + lines[len(lines)-1]
-
-	return content[:importStart] + newImportBlock + content[importEnd:]
-}
-
 // generateModuleWrappers 生成 Module Wrapper
 func (g *GoWrapperGenerator) generateModuleWrappers(outputDir string) error {
 	packageName := "mme"
@@ -812,44 +666,13 @@ func (g *GoWrapperGenerator) generateModuleWrappers(outputDir string) error {
 		sb.WriteString("}\n\n")
 
 		// 生成 ToIncrementalProtoWithContext 方法
-		sb.WriteString("// ToIncrementalProtoWithContext 根据脏标记位构建增量数据的 protoMessage\n")
-		sb.WriteString("// 只返回标记为脏的字段数据，用于增量同步\n")
-		sb.WriteString(fmt.Sprintf("func (w *%s) ToIncrementalProtoWithContext(ctx mmemodel.SyncContext) proto.Message {\n", wrapperName))
-		sb.WriteString("\tif w == nil {\n")
-		sb.WriteString("\t\treturn nil\n")
-		sb.WriteString("\t}\n\n")
-		sb.WriteString("\t// 如果没有脏标记，返回 nil\n")
-		sb.WriteString("\tif !w.HasAnyDirty() {\n")
-		sb.WriteString("\t\treturn nil\n")
-		sb.WriteString("\t}\n\n")
-		sb.WriteString(fmt.Sprintf("\tincremental := &mme.%s{}\n\n", module.Name))
-
-		for _, field := range module.Fields {
-			fieldIndexName := fmt.Sprintf("%sFieldIndex%s", module.Name, field.Name)
-			dirtyBitName := fmt.Sprintf("%sDirty%sBit", module.Name, field.Name)
-			if field.Type.IsMMEObjectType() {
-				wrapperFieldName := field.Name + "Wrapper"
-				// 获取 proto 类型名称
-				typeName := field.GetTypeName()
-				protoTypeName := fmt.Sprintf("*mme.%s", typeName)
-				sb.WriteString(fmt.Sprintf("\tif mmemodel.FieldCanBeIncrementalSynced(w, %s, %s, ctx) {\n",
-					dirtyBitName, fieldIndexName))
-				sb.WriteString(fmt.Sprintf("\t\tif w.%s != nil {\n", wrapperFieldName))
-				sb.WriteString(fmt.Sprintf("\t\t\tpb := w.%s.ToIncrementalProtoWithContext(ctx)\n",
-					wrapperFieldName))
-				sb.WriteString("\t\t\tif pb != nil {\n")
-				sb.WriteString(fmt.Sprintf("\t\t\t\tv, ok := pb.(%s)\n", protoTypeName))
-				sb.WriteString("\t\t\t\tif ok {\n")
-				sb.WriteString(fmt.Sprintf("\t\t\t\t\tincremental.%s = v\n", field.Name))
-				sb.WriteString("\t\t\t\t}\n")
-				sb.WriteString("\t\t\t}\n")
-				sb.WriteString("\t\t}\n")
-				sb.WriteString("\t}\n")
-			}
+		generatorToIncrementalProto := &ToIncrementalProtoCodeGenerator{
+			ObjectName:  module.Name,
+			WrapperName: wrapperName,
+			Receiver:    "w",
+			ObjectType:  ObjectTypeModule,
 		}
-
-		sb.WriteString("\treturn incremental\n")
-		sb.WriteString("}\n\n")
+		sb.WriteString(generatorToIncrementalProto.GenerateToIncrementalProtoMethod(module.Fields))
 
 		// 写入文件（追加到模块文件）
 		fileName := GetModuleFileName(module.Name)
@@ -860,8 +683,6 @@ func (g *GoWrapperGenerator) generateModuleWrappers(outputDir string) error {
 		if FileExists(filePath) {
 			if data, err := ReadFileContent(filePath); err == nil {
 				existingContent = data
-				// 检查并确保必要的导入存在
-				existingContent = ensureModuleImports(existingContent)
 			}
 		}
 
@@ -1139,61 +960,13 @@ func (g *GoWrapperGenerator) generateManagerWrappers(outputDir string) error {
 		sb.WriteString("}\n\n")
 
 		// 生成 ToIncrementalProto 方法
-		sb.WriteString("// ToIncrementalProto 根据脏标记位构建增量数据的 protoMessage\n")
-		sb.WriteString("// 只返回标记为脏的字段数据，用于增量同步\n")
-		sb.WriteString(fmt.Sprintf("func (m *%s) ToIncrementalProto(ctx mmemodel.SyncContext) proto.Message {\n", wrapperName))
-		sb.WriteString("\tif m == nil {\n")
-		sb.WriteString("\t\treturn nil\n")
-		sb.WriteString("\t}\n\n")
-		sb.WriteString("\t// 如果没有脏标记，返回 nil\n")
-		sb.WriteString("\tif !m.HasAnyDirty() {\n")
-		sb.WriteString("\t\treturn nil\n")
-		sb.WriteString("\t}\n\n")
-		sb.WriteString(fmt.Sprintf("\tincremental := &mme.%s{}\n", manager.Name))
-		for _, field := range manager.Fields {
-			if field.Type.IsXMapField() || field.Type.IsMapField() {
-				fieldIndexName := fmt.Sprintf("%sFieldIndex%s", manager.Name, field.Name)
-				dirtyBitName := fmt.Sprintf("%sDirty%sBit", manager.Name, field.Name)
-				linkFieldName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Link"
-				keyType := field.Type.KeyKind().String()
-				valueName := field.GetValueName()
-				protoValueType := fmt.Sprintf("*mme.%s", valueName)
-				sb.WriteString(fmt.Sprintf("\tif mmemodel.FieldCanBeIncrementalSynced(m, %s, %s, ctx) {\n",
-					dirtyBitName, fieldIndexName))
-				sb.WriteString(fmt.Sprintf("\t\tincremental.%s_XXXChangeList = make([]*mme.%s_%s_XXXMapChangeRecord, 0)\n",
-					field.Name, manager.Name, field.Name))
-				sb.WriteString(fmt.Sprintf("\t\tm.%s.RangeOperations(func(key %s, operation xmap.MapOperation[%s]) bool {\n",
-					linkFieldName, keyType, keyType))
-				sb.WriteString("\t\t\tswitch operation.Type {\n")
-				sb.WriteString("\t\t\tcase xmap.SetOperation:\n")
-				sb.WriteString(fmt.Sprintf("\t\t\t\t%s, _ := m.%s.Get(key)\n",
-					strings.ToLower(valueName[0:1])+valueName[1:], linkFieldName))
-				sb.WriteString(fmt.Sprintf("\t\t\t\tpb := %s.ToIncrementalProtoWithContext(ctx)\n",
-					strings.ToLower(valueName[0:1])+valueName[1:]))
-				sb.WriteString(fmt.Sprintf("\t\t\t\tv, ok := pb.(%s)\n", protoValueType))
-				sb.WriteString("\t\t\t\tif ok {\n")
-				sb.WriteString(fmt.Sprintf("\t\t\t\t\tincremental.%s_XXXChangeList = append(incremental.%s_XXXChangeList, &mme.%s_%s_XXXMapChangeRecord{\n",
-					field.Name, field.Name, manager.Name, field.Name))
-				sb.WriteString("\t\t\t\t\t\tKey:   key,\n")
-				sb.WriteString("\t\t\t\t\t\tValue: v,\n")
-				sb.WriteString("\t\t\t\t\t})\n")
-				sb.WriteString("\t\t\t\t}\n")
-				sb.WriteString("\t\t\t\treturn true\n")
-				sb.WriteString("\t\t\tcase xmap.DeleteOperation:\n")
-				sb.WriteString(fmt.Sprintf("\t\t\t\tincremental.%s_XXXChangeList = append(incremental.%s_XXXChangeList, &mme.%s_%s_XXXMapChangeRecord{\n",
-					field.Name, field.Name, manager.Name, field.Name))
-				sb.WriteString("\t\t\t\t\tKey:      key,\n")
-				sb.WriteString("\t\t\t\t\tIsDelete: true,\n")
-				sb.WriteString("\t\t\t\t})\n")
-				sb.WriteString("\t\t\t\treturn true\n")
-				sb.WriteString("\t\t\t}\n")
-				sb.WriteString("\t\t\treturn true\n")
-				sb.WriteString("\t\t})\n\n")
-				sb.WriteString("\t}\n")
-			}
+		generatorToIncrementalProto := &ToIncrementalProtoCodeGenerator{
+			ObjectName:  manager.Name,
+			WrapperName: wrapperName,
+			Receiver:    "m",
+			ObjectType:  ObjectTypeManager,
 		}
-		sb.WriteString("\treturn incremental\n")
-		sb.WriteString("}\n\n")
+		sb.WriteString(generatorToIncrementalProto.GenerateToIncrementalProtoMethod(manager.Fields))
 
 		// 写入文件（追加到 Manager 文件）
 		fileName := GetManagerFileName(manager.Name)

@@ -209,35 +209,6 @@ func ToGoType(ft *types.FieldType, packageName string) string {
 	}
 }
 
-// toGoBaseType 转换基础类型
-func toGoBaseType(typeStr string, packageName string) string {
-	switch typeStr {
-	case "int32":
-		return "int32"
-	case "int64":
-		return "int64"
-	case "string":
-		return "string"
-	case "bool":
-		return "bool"
-	case "float":
-		return "float32"
-	case "double":
-		return "float64"
-	default:
-		// 消息类型
-		if strings.Contains(typeStr, ".") {
-			// 外部包类型，如 Core.MMELocation
-			return typeStr
-		}
-		// MME 类型，添加包名前缀
-		if packageName != "" {
-			return fmt.Sprintf("*%s.%s", packageName, typeStr)
-		}
-		return "*" + typeStr
-	}
-}
-
 // CamelToSnake 驼峰转蛇形
 func CamelToSnake(s string) string {
 	var result strings.Builder
@@ -367,6 +338,176 @@ func (g *BuildMongoUpdateCodeGenerator) GenerateBuildMongoUpdateMethod(fields []
 		sb.WriteString("\t}\n")
 	}
 
+	sb.WriteString("}\n\n")
+	return sb.String()
+}
+
+// ToIncrementalProtoCodeGenerator ToIncrementalProto 代码生成器
+type ToIncrementalProtoCodeGenerator struct {
+	ObjectName  string     // 对象名称，如 "LevelUpMechanism"
+	WrapperName string     // 包装器名称，如 "LevelUpMechanismWrapper"
+	Receiver    string     // 接收器名称，如 "w" 或 "m"
+	ObjectType  ObjectType // 对象类型：Mechanism/Module/Manager
+}
+
+// GenerateToIncrementalProtoMethod 生成 ToIncrementalProto 方法的完整代码
+func (g *ToIncrementalProtoCodeGenerator) GenerateToIncrementalProtoMethod(fields []*types.Field) string {
+	var sb strings.Builder
+
+	// 根据对象类型确定方法名
+	methodName := "ToIncrementalProto"
+	if g.ObjectType == ObjectTypeMechanism || g.ObjectType == ObjectTypeModule {
+		methodName = "ToIncrementalProtoWithContext"
+	}
+
+	// 方法注释
+	sb.WriteString(fmt.Sprintf("// %s 根据脏标记位构建增量数据的 protoMessage\n", methodName))
+	sb.WriteString("// 只返回标记为脏的字段数据，用于增量同步\n")
+
+	// 方法签名
+	sb.WriteString(fmt.Sprintf("func (%s *%s) %s(ctx mmemodel.SyncContext) proto.Message {\n",
+		g.Receiver, g.WrapperName, methodName))
+	sb.WriteString(fmt.Sprintf("\tif %s == nil {\n", g.Receiver))
+	sb.WriteString("\t\treturn nil\n")
+	sb.WriteString("\t}\n\n")
+	sb.WriteString("\t// 如果没有脏标记，返回 nil\n")
+	sb.WriteString(fmt.Sprintf("\tif !%s.HasAnyDirty() {\n", g.Receiver))
+	sb.WriteString("\t\treturn nil\n")
+	sb.WriteString("\t}\n\n")
+	sb.WriteString(fmt.Sprintf("\tincremental := &mme.%s{}\n\n", g.ObjectName))
+
+	for i := range fields {
+		field := fields[i]
+		fieldIndexName := fmt.Sprintf("%sFieldIndex%s", g.ObjectName, field.Name)
+		dirtyBitName := fmt.Sprintf("%sDirty%sBit", g.ObjectName, field.Name)
+
+		switch field.Type.Kind {
+		case types.FieldKindXMap:
+			// XMap 类型字段处理
+			valueType := field.GetValueType()
+			if valueType == nil {
+				panic(fmt.Sprintf("field %s value type is nil", field.Name))
+			}
+
+			switch {
+			case valueType.GetKind().IsMMEObject():
+				// MME Object 类型 XMap（仅 Manager 支持）
+				if g.ObjectType != ObjectTypeManager {
+					panic(fmt.Sprintf("field %s is XMap with MME Object value type, only supported in Manager", field.Name))
+				}
+
+				linkFieldName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Link"
+				keyType := field.Type.KeyKind().String()
+				valueName := field.GetValueName()
+				protoValueType := fmt.Sprintf("*mme.%s", valueName)
+
+				sb.WriteString(fmt.Sprintf("\tif mmemodel.FieldCanBeIncrementalSynced(%s, %s, %s, ctx) {\n",
+					g.Receiver, dirtyBitName, fieldIndexName))
+				sb.WriteString(fmt.Sprintf("\t\tincremental.%s_XXXChangeList = make([]*mme.%s_%s_XXXMapChangeRecord, 0)\n",
+					field.Name, g.ObjectName, field.Name))
+				sb.WriteString(fmt.Sprintf("\t\t%s.%s.RangeOperations(func(key %s, operation xmap.MapOperation[%s]) bool {\n",
+					g.Receiver, linkFieldName, keyType, keyType))
+				sb.WriteString("\t\t\tswitch operation.Type {\n")
+				sb.WriteString("\t\t\tcase xmap.SetOperation:\n")
+				sb.WriteString(fmt.Sprintf("\t\t\t\t%s, _ := %s.%s.Get(key)\n",
+					strings.ToLower(valueName[0:1])+valueName[1:], g.Receiver, linkFieldName))
+				sb.WriteString(fmt.Sprintf("\t\t\t\tpb := %s.ToIncrementalProtoWithContext(ctx)\n",
+					strings.ToLower(valueName[0:1])+valueName[1:]))
+				sb.WriteString(fmt.Sprintf("\t\t\t\tv, ok := pb.(%s)\n", protoValueType))
+				sb.WriteString("\t\t\t\tif ok {\n")
+				sb.WriteString(fmt.Sprintf("\t\t\t\t\tincremental.%s_XXXChangeList = append(incremental.%s_XXXChangeList, &mme.%s_%s_XXXMapChangeRecord{\n",
+					field.Name, field.Name, g.ObjectName, field.Name))
+				sb.WriteString("\t\t\t\t\t\tKey:   key,\n")
+				sb.WriteString("\t\t\t\t\t\tValue: v,\n")
+				sb.WriteString("\t\t\t\t\t})\n")
+				sb.WriteString("\t\t\t\t}\n")
+				sb.WriteString("\t\t\t\treturn true\n")
+				sb.WriteString("\t\t\tcase xmap.DeleteOperation:\n")
+				sb.WriteString(fmt.Sprintf("\t\t\t\tincremental.%s_XXXChangeList = append(incremental.%s_XXXChangeList, &mme.%s_%s_XXXMapChangeRecord{\n",
+					field.Name, field.Name, g.ObjectName, field.Name))
+				sb.WriteString("\t\t\t\t\tKey:      key,\n")
+				sb.WriteString("\t\t\t\t\tIsDelete: true,\n")
+				sb.WriteString("\t\t\t\t})\n")
+				sb.WriteString("\t\t\t\treturn true\n")
+				sb.WriteString("\t\t\t}\n")
+				sb.WriteString("\t\t\treturn true\n")
+				sb.WriteString("\t\t})\n\n")
+				sb.WriteString("\t}\n")
+			case valueType.GetKind().IsBaseType():
+				// 基础类型值 XMap，使用 Clone()
+				accessorName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Accessor"
+				sb.WriteString(fmt.Sprintf("\tif mmemodel.FieldCanBeIncrementalSynced(%s, %s, %s, ctx) {\n",
+					g.Receiver, dirtyBitName, fieldIndexName))
+				sb.WriteString(fmt.Sprintf("\t\tincremental.%s = %s.%s.Clone()\n",
+					field.Name, g.Receiver, accessorName))
+				sb.WriteString("\t}\n")
+			default:
+				panic(fmt.Sprintf("field %s value type is not supported for XMap", field.Name))
+			}
+		case types.FieldKindMap:
+			// Map 类型字段处理
+			valueType := field.GetValueType()
+			if valueType == nil {
+				panic(fmt.Sprintf("field %s value type is nil", field.Name))
+			}
+			switch {
+			case valueType.GetKind().IsMMEObject():
+				panic(fmt.Sprintf("field %s value type is MMEObject, not supported for Map", field.Name))
+			case valueType.GetKind().IsBaseType():
+				// 普通 Map 类型字段处理
+				methodName := strings.ToUpper(field.Name[0:1]) + field.Name[1:]
+				keyType := field.Type.KeyKind().String()
+				valueType := field.Type.ValueKind().String()
+
+				sb.WriteString(fmt.Sprintf("\tif mmemodel.FieldCanBeIncrementalSynced(%s, %s, %s, ctx) {\n",
+					g.Receiver, dirtyBitName, fieldIndexName))
+				sb.WriteString(fmt.Sprintf("\t\tm := %s.Get%s()\n", g.Receiver, methodName))
+				sb.WriteString("\t\tif m != nil {\n")
+				sb.WriteString(fmt.Sprintf("\t\t\tincremental.%s = make(map[%s]%s, len(m))\n",
+					field.Name, keyType, valueType))
+				sb.WriteString(fmt.Sprintf("\t\t\tmaps.Copy(incremental.%s, m)\n", field.Name))
+				sb.WriteString("\t\t}\n")
+				sb.WriteString("\t}\n")
+			default:
+				panic(fmt.Sprintf("field %s value type is not supported for Map", field.Name))
+			}
+		case types.FieldKindMMEObject:
+			// MME Object 类型字段处理
+			wrapperFieldName := field.Name + "Wrapper"
+			typeName := field.GetTypeName()
+			protoTypeName := fmt.Sprintf("*mme.%s", typeName)
+
+			sb.WriteString(fmt.Sprintf("\tif mmemodel.FieldCanBeIncrementalSynced(%s, %s, %s, ctx) {\n",
+				g.Receiver, dirtyBitName, fieldIndexName))
+			sb.WriteString(fmt.Sprintf("\t\tif %s.%s != nil {\n", g.Receiver, wrapperFieldName))
+			sb.WriteString(fmt.Sprintf("\t\t\tpb := %s.%s.ToIncrementalProtoWithContext(ctx)\n",
+				g.Receiver, wrapperFieldName))
+			sb.WriteString("\t\t\tif pb != nil {\n")
+			sb.WriteString(fmt.Sprintf("\t\t\t\tv, ok := pb.(%s)\n", protoTypeName))
+			sb.WriteString("\t\t\t\tif ok {\n")
+			sb.WriteString(fmt.Sprintf("\t\t\t\t\tincremental.%s = v\n", field.Name))
+			sb.WriteString("\t\t\t\t}\n")
+			sb.WriteString("\t\t\t}\n")
+			sb.WriteString("\t\t}\n")
+			sb.WriteString("\t}\n")
+		case types.FieldKindMessage:
+			panic(fmt.Sprintf("field %s value type is message type, not supported", field.Name))
+		default:
+			// 基础类型字段处理
+			if field.Type.GetKind().IsBaseType() {
+				methodName := strings.ToUpper(field.Name[0:1]) + field.Name[1:]
+				sb.WriteString(fmt.Sprintf("\tif mmemodel.FieldCanBeIncrementalSynced(%s, %s, %s, ctx) {\n",
+					g.Receiver, dirtyBitName, fieldIndexName))
+				sb.WriteString(fmt.Sprintf("\t\tv := %s.Get%s()\n", g.Receiver, methodName))
+				sb.WriteString(fmt.Sprintf("\t\tincremental.%s = &v\n", field.Name))
+				sb.WriteString("\t}\n")
+			} else {
+				panic(fmt.Sprintf("field %s value type is not supported", field.Name))
+			}
+		}
+	}
+
+	sb.WriteString("\treturn incremental\n")
 	sb.WriteString("}\n\n")
 	return sb.String()
 }
