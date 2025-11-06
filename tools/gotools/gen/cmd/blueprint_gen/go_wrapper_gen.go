@@ -281,81 +281,14 @@ func (g *GoWrapperGenerator) generateMechanismWrappers(outputDir string) error {
 
 		sb.WriteString("}\n\n")
 
-		// 生成 DeepCopy 方法
-		sb.WriteString("// 包装器-深拷贝\n")
-		sb.WriteString(fmt.Sprintf("func (w *%s) DeepCopy() *%s {\n", wrapperName, mech.Name))
-		sb.WriteString("\tif w == nil {\n")
-		sb.WriteString("\t\treturn nil\n")
-		sb.WriteString("\t}\n")
-		sb.WriteString(fmt.Sprintf("\tcopy := &%s{}\n", mech.Name))
-		sb.WriteString("\tw.DeepCopyTo(copy)\n")
-		sb.WriteString("\treturn copy\n")
-		sb.WriteString("}\n\n")
-
-		// 生成 DeepCopyTo 方法
-		sb.WriteString("// 包装器-深拷贝\n")
-		sb.WriteString(fmt.Sprintf("func (w *%s) DeepCopyTo(copy *%s) {\n", wrapperName, mech.Name))
-		sb.WriteString("\tif w == nil || w.data == nil || copy == nil {\n")
-		sb.WriteString("\t\treturn\n")
-		sb.WriteString("\t}\n\n")
-		sb.WriteString("\t// 拷贝基础类型字段\n")
-		sb.WriteString("\t*copy = *w.data\n\n")
-
-		// 处理 map/xmap 字段
-		for _, field := range mech.Fields {
-			if field.Type.IsXMapField() {
-				accessorName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Accessor"
-				if !field.Type.IsXMapValueMMEObject() {
-					// 值类型 xmap，使用 accessor.Copy() 方法
-					sb.WriteString("\t// Value 为值类型，浅拷贝即可\n")
-					sb.WriteString(fmt.Sprintf("\tw.%s.Copy(copy.%s)\n", accessorName, field.Name))
-				} else {
-					// MME Object 类型 xmap，需要深拷贝每个元素
-					keyType := field.Type.KeyKind().String()
-					valueType := strings.TrimPrefix(field.Type.ValueKind().String(), "*")
-					sb.WriteString("\t// Value 为引用类型，需要深拷贝\n")
-					sb.WriteString(fmt.Sprintf("\tif copy.%s == nil {\n", field.Name))
-					sb.WriteString(fmt.Sprintf("\t\tcopy.%s = make(map[%s]*%s)\n", field.Name, keyType, valueType))
-					sb.WriteString("\t}\n")
-					sb.WriteString(fmt.Sprintf("\tfor k, v := range w.data.%s {\n", field.Name))
-					sb.WriteString("\t\tif v != nil {\n")
-					sb.WriteString(fmt.Sprintf("\t\t\tcopy.%s[k] = &%s{}\n", field.Name, valueType))
-					sb.WriteString(fmt.Sprintf("\t\t\tv.DeepCopy(copy.%s[k])\n", field.Name))
-					sb.WriteString("\t\t}\n")
-					sb.WriteString("\t}\n")
-				}
-			} else if field.Type.IsMapField() {
-				// 普通 map 字段，直接使用 maps.Copy
-				if !field.Type.IsMapValueMMEObject() {
-					// 值类型 map，使用 maps.Copy
-					sb.WriteString("\t// Value 为值类型，浅拷贝即可\n")
-					sb.WriteString(fmt.Sprintf("\tif w.data.%s != nil {\n", field.Name))
-					sb.WriteString(fmt.Sprintf("\t\tif copy.%s == nil {\n", field.Name))
-					keyType := field.Type.KeyKind().String()
-					valueType := field.Type.ValueKind().String()
-					sb.WriteString(fmt.Sprintf("\t\t\tcopy.%s = make(map[%s]%s, len(w.data.%s))\n",
-						field.Name, keyType, valueType, field.Name))
-					sb.WriteString("\t\t}\n")
-					sb.WriteString(fmt.Sprintf("\t\tmaps.Copy(copy.%s, w.data.%s)\n", field.Name, field.Name))
-					sb.WriteString("\t}\n")
-				} else {
-					// MME Object 类型 map，需要深拷贝每个元素
-					keyType := field.Type.KeyKind().String()
-					valueType := strings.TrimPrefix(field.Type.ValueKind().String(), "*")
-					sb.WriteString("\t// Value 为引用类型，需要深拷贝\n")
-					sb.WriteString(fmt.Sprintf("\tif copy.%s == nil {\n", field.Name))
-					sb.WriteString(fmt.Sprintf("\t\tcopy.%s = make(map[%s]*%s)\n", field.Name, keyType, valueType))
-					sb.WriteString("\t}\n")
-					sb.WriteString(fmt.Sprintf("\tfor k, v := range w.data.%s {\n", field.Name))
-					sb.WriteString("\t\tif v != nil {\n")
-					sb.WriteString(fmt.Sprintf("\t\t\tcopy.%s[k] = &%s{}\n", field.Name, valueType))
-					sb.WriteString(fmt.Sprintf("\t\t\tv.DeepCopy(copy.%s[k])\n", field.Name))
-					sb.WriteString("\t\t}\n")
-					sb.WriteString("\t}\n")
-				}
-			}
+		wrapperMethodCodeGenerator := &WrapperMethodCodeGenerator{
+			ObjectName:  mech.Name,
+			WrapperName: wrapperName,
+			Receiver:    "w",
+			ProtoPkg:    "mme",
 		}
-		sb.WriteString("}\n\n")
+		sb.WriteString(wrapperMethodCodeGenerator.GenerateDeepCopyMethod())
+		sb.WriteString(wrapperMethodCodeGenerator.GenerateDeepCopyToMethod(mech.Fields))
 
 		// 写入文件（追加到机制文件）
 		fileName := GetMechanismFileName(mech.Name)
@@ -604,37 +537,14 @@ func (g *GoWrapperGenerator) generateModuleWrappers(outputDir string) error {
 		}
 		sb.WriteString(generator.GenerateBuildMongoUpdateMethod(module.Fields))
 
-		// 生成 DeepCopy 方法
-		sb.WriteString("// 包装器-深拷贝\n")
-		sb.WriteString(fmt.Sprintf("func (w *%s) DeepCopy() *%s {\n", wrapperName, module.Name))
-		sb.WriteString("\tif w == nil {\n")
-		sb.WriteString("\t\treturn nil\n")
-		sb.WriteString("\t}\n")
-		sb.WriteString(fmt.Sprintf("\tcopy := &%s{}\n", module.Name))
-		sb.WriteString("\tw.DeepCopyTo(copy)\n")
-		sb.WriteString("\treturn copy\n")
-		sb.WriteString("}\n\n")
-
-		// 生成 DeepCopyTo 方法
-		sb.WriteString("// 包装器-深拷贝\n")
-		sb.WriteString(fmt.Sprintf("func (w *%s) DeepCopyTo(copy *%s) {\n", wrapperName, module.Name))
-		sb.WriteString("\tif w == nil || w.data == nil || copy == nil {\n")
-		sb.WriteString("\t\treturn\n")
-		sb.WriteString("\t}\n\n")
-		sb.WriteString("\t// 拷贝嵌套的 Mechanism 对象\n")
-		for _, field := range module.Fields {
-			if field.Type.IsMMEObjectType() {
-				typeName := field.GetTypeName()
-				wrapperFieldName := field.Name + "Wrapper"
-				sb.WriteString(fmt.Sprintf("\tif w.data.%s != nil {\n", field.Name))
-				sb.WriteString(fmt.Sprintf("\t\tif copy.%s == nil {\n", field.Name))
-				sb.WriteString(fmt.Sprintf("\t\t\tcopy.%s = &%s{}\n", field.Name, typeName))
-				sb.WriteString("\t\t}\n")
-				sb.WriteString(fmt.Sprintf("\t\tw.%s.DeepCopyTo(copy.%s)\n", wrapperFieldName, field.Name))
-				sb.WriteString("\t}\n")
-			}
+		wrapperMethodCodeGenerator := &WrapperMethodCodeGenerator{
+			ObjectName:  module.Name,
+			WrapperName: wrapperName,
+			Receiver:    "w",
+			ProtoPkg:    "mme",
 		}
-		sb.WriteString("}\n\n")
+		sb.WriteString(wrapperMethodCodeGenerator.GenerateDeepCopyMethod())
+		sb.WriteString(wrapperMethodCodeGenerator.GenerateDeepCopyToMethod(module.Fields))
 
 		// 生成 ToProto 方法
 		sb.WriteString("// ToProto 将 Module 数据转换为完整的 protobuf 结构体\n")
@@ -897,38 +807,14 @@ func (g *GoWrapperGenerator) generateManagerWrappers(outputDir string) error {
 		}
 		sb.WriteString(generator.GenerateBuildMongoUpdateMethod(manager.Fields))
 
-		// 生成 DeepCopy 方法
-		sb.WriteString("// 包装器-深拷贝\n")
-		sb.WriteString(fmt.Sprintf("func (m *%s) DeepCopy() *%s {\n", wrapperName, manager.Name))
-		sb.WriteString("\tif m == nil {\n")
-		sb.WriteString("\t\treturn nil\n")
-		sb.WriteString("\t}\n")
-		sb.WriteString(fmt.Sprintf("\tcopy := &%s{}\n", manager.Name))
-		sb.WriteString("\tm.DeepCopyTo(copy)\n")
-		sb.WriteString("\treturn copy\n")
-		sb.WriteString("}\n\n")
-
-		// 生成 DeepCopyTo 方法
-		sb.WriteString("// 包装器-深拷贝\n")
-		sb.WriteString(fmt.Sprintf("func (m *%s) DeepCopyTo(copy *%s) {\n", wrapperName, manager.Name))
-		sb.WriteString("\tif m == nil || m.data == nil || copy == nil {\n")
-		sb.WriteString("\t\treturn\n")
-		sb.WriteString("\t}\n\n")
-		for _, field := range manager.Fields {
-			if field.Type.IsXMapField() || field.Type.IsMapField() {
-				linkFieldName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Link"
-				keyType := field.Type.KeyKind().String()
-				valueName := field.GetValueName()
-				sb.WriteString("\t// 初始化目标 map\n")
-				sb.WriteString(fmt.Sprintf("\tif copy.%s == nil {\n", field.Name))
-				sb.WriteString(fmt.Sprintf("\t\tcopy.%s = make(map[%s]*%s, len(m.data.%s))\n",
-					field.Name, keyType, valueName, field.Name))
-				sb.WriteString("\t}\n\n")
-				sb.WriteString(fmt.Sprintf("\t// 拷贝所有 %s\n", valueName))
-				sb.WriteString(fmt.Sprintf("\tm.%s.DeepCopy(&copy.%s)\n", linkFieldName, field.Name))
-			}
+		wrapperMethodCodeGenerator := &WrapperMethodCodeGenerator{
+			ObjectName:  manager.Name,
+			WrapperName: wrapperName,
+			Receiver:    "m",
+			ProtoPkg:    "mme",
 		}
-		sb.WriteString("}\n\n")
+		sb.WriteString(wrapperMethodCodeGenerator.GenerateDeepCopyMethod())
+		sb.WriteString(wrapperMethodCodeGenerator.GenerateDeepCopyToMethod(manager.Fields))
 
 		// 生成 ToProto 方法
 		sb.WriteString(fmt.Sprintf("// ToProto 将 %s 数据转换为完整的 protobuf 结构体\n", manager.Name))

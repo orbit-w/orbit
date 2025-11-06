@@ -511,3 +511,207 @@ func (g *ToIncrementalProtoCodeGenerator) GenerateToIncrementalProtoMethod(field
 	sb.WriteString("}\n\n")
 	return sb.String()
 }
+
+// WrapperMethodCodeGenerator Wrapper 方法代码生成器
+type WrapperMethodCodeGenerator struct {
+	ObjectName  string // 对象名称，如 "HeroModule"
+	WrapperName string // 包装器名称，如 "HeroModuleWrapper"
+	Receiver    string // 接收器名称，如 "w" 或 "m"
+	ProtoPkg    string // Proto 包名，如 "mme"
+}
+
+// GenerateDeepCopyMethod 生成 DeepCopy 方法
+func (g *WrapperMethodCodeGenerator) GenerateDeepCopyMethod() string {
+	var sb strings.Builder
+	sb.WriteString("// 包装器-深拷贝\n")
+	sb.WriteString(fmt.Sprintf("func (%s *%s) DeepCopy() *%s {\n", g.Receiver, g.WrapperName, g.ObjectName))
+	sb.WriteString(fmt.Sprintf("\tif %s == nil {\n", g.Receiver))
+	sb.WriteString("\t\treturn nil\n")
+	sb.WriteString("\t}\n")
+	sb.WriteString(fmt.Sprintf("\tcopy := &%s{}\n", g.ObjectName))
+	sb.WriteString(fmt.Sprintf("\t%s.DeepCopyTo(copy)\n", g.Receiver))
+	sb.WriteString("\treturn copy\n")
+	sb.WriteString("}\n\n")
+	return sb.String()
+}
+
+// GenerateDeepCopyToMethod 生成 DeepCopyTo 方法
+func (g *WrapperMethodCodeGenerator) GenerateDeepCopyToMethod(fields []*types.Field) string {
+	var sb strings.Builder
+	sb.WriteString("// 包装器-深拷贝\n")
+	sb.WriteString(fmt.Sprintf("func (%s *%s) DeepCopyTo(copy *%s) {\n", g.Receiver, g.WrapperName, g.ObjectName))
+	sb.WriteString(fmt.Sprintf("\tif %s == nil || %s.data == nil || copy == nil {\n", g.Receiver, g.Receiver))
+	sb.WriteString("\t\treturn\n")
+	sb.WriteString("\t}\n\n")
+
+	// 检查是否有基础类型字段，如果有则先拷贝整个 data（一次性拷贝所有基础类型字段）
+	hasBaseTypeFields := false
+	for _, field := range fields {
+		if field.Type.GetKind().IsBaseType() {
+			hasBaseTypeFields = true
+			break
+		}
+	}
+	if hasBaseTypeFields {
+		sb.WriteString("\t// 拷贝基础类型字段\n")
+		sb.WriteString(fmt.Sprintf("\t*copy = *%s.data\n\n", g.Receiver))
+	}
+
+	// 根据字段类型处理每个字段
+	for _, field := range fields {
+		switch {
+		case field.Type.GetKind().IsBaseType():
+			// 基础类型字段已经在上面通过 *copy = *w.data 拷贝了，跳过
+			continue
+		case field.Type.IsMMEObjectType():
+			// MMEObject 类型字段：递归调用 DeepCopyTo
+			typeName := field.GetTypeName()
+			wrapperFieldName := field.Name + "Wrapper"
+			sb.WriteString(fmt.Sprintf("\tif %s.data.%s != nil {\n", g.Receiver, field.Name))
+			sb.WriteString(fmt.Sprintf("\t\tif copy.%s == nil {\n", field.Name))
+			sb.WriteString(fmt.Sprintf("\t\t\tcopy.%s = &%s{}\n", field.Name, typeName))
+			sb.WriteString("\t\t}\n")
+			sb.WriteString(fmt.Sprintf("\t\t%s.%s.DeepCopyTo(copy.%s)\n", g.Receiver, wrapperFieldName, field.Name))
+			sb.WriteString("\t}\n")
+		case field.Type.IsMapField():
+			valueType := field.GetValueType()
+			switch {
+			case valueType.IsMMEObjectType():
+				panic(fmt.Sprintf("field %s value type is MMEObject, not supported for Map", field.Name))
+			case valueType.IsFieldBaseType():
+				// Map 类型字段：使用 maps.Copy()
+				keyType := field.Type.KeyKind().String()
+				valueName := field.GetValueName()
+				sb.WriteString("\t// 初始化目标 map\n")
+				sb.WriteString(fmt.Sprintf("\tif copy.%s == nil {\n", field.Name))
+				sb.WriteString(fmt.Sprintf("\t\tcopy.%s = make(map[%s]%s, len(%s.data.%s))\n",
+					field.Name, keyType, valueName, g.Receiver, field.Name))
+				sb.WriteString("\t}\n")
+				sb.WriteString(fmt.Sprintf("\t// 拷贝所有 %s\n", valueName))
+				sb.WriteString(fmt.Sprintf("\tif %s.data.%s != nil {\n", g.Receiver, field.Name))
+				sb.WriteString(fmt.Sprintf("\t\tmaps.Copy(copy.%s, %s.data.%s)\n", field.Name, g.Receiver, field.Name))
+				sb.WriteString("\t}\n")
+			default:
+				panic(fmt.Sprintf("field %s value type is not supported for Map", field.Name))
+			}
+		case field.Type.IsXMapField():
+			// XMap 类型字段：根据 ValueType 决定使用 Accessor.Copy() 还是 Link.DeepCopy()
+			valueType := field.GetValueType()
+			switch {
+			case valueType.IsMMEObjectType():
+				// ValueType 是 MMEObject，使用 Link.DeepCopy()
+				linkFieldName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Link"
+				keyType := field.Type.KeyKind().String()
+				valueName := field.GetValueName()
+				sb.WriteString("\t// 初始化目标 map\n")
+				sb.WriteString(fmt.Sprintf("\tif copy.%s == nil {\n", field.Name))
+				sb.WriteString(fmt.Sprintf("\t\tcopy.%s = make(map[%s]*%s, len(%s.data.%s))\n",
+					field.Name, keyType, valueName, g.Receiver, field.Name))
+				sb.WriteString("\t}\n")
+				sb.WriteString(fmt.Sprintf("\t// 拷贝所有 %s\n", valueName))
+				sb.WriteString(fmt.Sprintf("\t%s.%s.DeepCopy(&copy.%s)\n", g.Receiver, linkFieldName, field.Name))
+
+			case valueType.IsFieldBaseType():
+				// ValueType 是基础类型，使用 Accessor.Copy()
+				accessorName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Accessor"
+				sb.WriteString(fmt.Sprintf("\t// 拷贝 %sAccessor\n", field.Name))
+				sb.WriteString(fmt.Sprintf("\tif %s.%s != nil {\n", g.Receiver, accessorName))
+				sb.WriteString(fmt.Sprintf("\t\tif copy.%s == nil {\n", field.Name))
+				sb.WriteString(fmt.Sprintf("\t\t\tcopy.%s = make(map[%s]%s, %s.%s.Len())\n",
+					field.Name, field.Type.KeyKind().String(), field.Type.ValueKind().String(), g.Receiver, accessorName))
+				sb.WriteString("\t\t}\n")
+				sb.WriteString(fmt.Sprintf("\t%s.%s.Copy(copy.%s)\n", g.Receiver, accessorName, field.Name))
+				sb.WriteString("\t}\n")
+
+			default:
+				panic(fmt.Sprintf("field %s value type is not supported for XMap", field.Name))
+			}
+
+		}
+	}
+
+	sb.WriteString("}\n\n")
+	return sb.String()
+}
+
+// GenerateToProtoMethod 生成 ToProto 方法
+func (g *WrapperMethodCodeGenerator) GenerateToProtoMethod() string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("// ToProto 将 %s 数据转换为完整的 protobuf 结构体\n", g.ObjectName))
+	sb.WriteString(fmt.Sprintf("func (%s *%s) ToProto() *%s.%s {\n", g.Receiver, g.WrapperName, g.ProtoPkg, g.ObjectName))
+	sb.WriteString(fmt.Sprintf("\tif %s == nil || %s.data == nil {\n", g.Receiver, g.Receiver))
+	sb.WriteString("\t\treturn nil\n")
+	sb.WriteString("\t}\n\n")
+	sb.WriteString(fmt.Sprintf("\treturn %s.data.ToProto()\n", g.Receiver))
+	sb.WriteString("}\n\n")
+	return sb.String()
+}
+
+// GenerateFromProtoMethod 生成 FromProto 方法
+func (g *WrapperMethodCodeGenerator) GenerateFromProtoMethod(fields []*types.Field) string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("// FromProto 从 protobuf 结构体加载数据到 %s\n", g.ObjectName))
+	sb.WriteString(fmt.Sprintf("func (%s *%s) FromProto(pb *%s.%s) {\n", g.Receiver, g.WrapperName, g.ProtoPkg, g.ObjectName))
+	sb.WriteString(fmt.Sprintf("\tif %s == nil || %s.data == nil || pb == nil {\n", g.Receiver, g.Receiver))
+	sb.WriteString("\t\treturn\n")
+	sb.WriteString("\t}\n\n")
+
+	// 根据字段类型处理每个字段
+	for _, field := range fields {
+		if field.Type.GetKind().IsBaseType() {
+			// 基础类型字段
+			methodName := strings.ToUpper(field.Name[0:1]) + field.Name[1:]
+			sb.WriteString(fmt.Sprintf("\tif pb.%s != nil {\n", field.Name))
+			sb.WriteString(fmt.Sprintf("\t\t%s.Set%s(*pb.%s)\n", g.Receiver, methodName, field.Name))
+			sb.WriteString("\t}\n")
+		} else if field.Type.IsMMEObjectType() {
+			// MMEObject 类型字段：递归调用 FromProto
+			typeName := field.GetTypeName()
+			wrapperFieldName := field.Name + "Wrapper"
+			sb.WriteString(fmt.Sprintf("\tif pb.%s != nil {\n", field.Name))
+			sb.WriteString(fmt.Sprintf("\t\tif %s.data.%s == nil {\n", g.Receiver, field.Name))
+			sb.WriteString(fmt.Sprintf("\t\t\t%s.data.%s = New%s()\n", g.Receiver, field.Name, typeName))
+			sb.WriteString("\t\t}\n")
+			sb.WriteString(fmt.Sprintf("\t\t%s.%s.FromProto(pb.%s)\n", g.Receiver, wrapperFieldName, field.Name))
+			sb.WriteString("\t}\n")
+		} else if field.Type.IsXMapField() {
+			// XMap 类型字段：根据 ValueType 决定处理方式
+			valueType := field.GetValueType()
+			if valueType != nil && valueType.IsMMEObjectType() {
+				// ValueType 是 MMEObject，使用 Link.SetWithoutTrack() 和 FromProto()
+				linkFieldName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Link"
+				valueName := field.GetValueName()
+				sb.WriteString(fmt.Sprintf("\tfor key := range pb.%s {\n", field.Name))
+				sb.WriteString(fmt.Sprintf("\t\tpbValue := pb.%s[key]\n", field.Name))
+				sb.WriteString(fmt.Sprintf("\t\tv := New%s()\n", valueName))
+				sb.WriteString(fmt.Sprintf("\t\twrapper := %s.%s.SetWithoutTrack(key, v)\n", g.Receiver, linkFieldName))
+				sb.WriteString("\t\twrapper.FromProto(pbValue)\n")
+				sb.WriteString("\t}\n")
+			} else {
+				// ValueType 是基础类型，使用 Accessor.Reset()
+				accessorName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Accessor"
+				sb.WriteString(fmt.Sprintf("\tif pb.%s != nil {\n", field.Name))
+				sb.WriteString("\t\t// 清空现有的数据\n")
+				sb.WriteString(fmt.Sprintf("\t\ttemp := make(map[%s]%s, len(pb.%s))\n",
+					field.Type.KeyKind().String(), field.Type.ValueKind().String(), field.Name))
+				sb.WriteString(fmt.Sprintf("\t\tmaps.Copy(temp, pb.%s)\n", field.Name))
+				sb.WriteString("\t\t// 设置新的数据，并清空所有变化操作记录\n")
+				sb.WriteString(fmt.Sprintf("\t\t%s.%s.Reset(&temp)\n", g.Receiver, accessorName))
+				sb.WriteString("\t}\n")
+			}
+		} else if field.Type.IsMapField() {
+			// Map 类型字段：使用 Link.SetWithoutTrack() 和 FromProto()
+			linkFieldName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Link"
+			valueName := field.GetValueName()
+			sb.WriteString(fmt.Sprintf("\tfor key := range pb.%s {\n", field.Name))
+			sb.WriteString(fmt.Sprintf("\t\tpbValue := pb.%s[key]\n", field.Name))
+			sb.WriteString(fmt.Sprintf("\t\tv := New%s()\n", valueName))
+			sb.WriteString(fmt.Sprintf("\t\twrapper := %s.%s.SetWithoutTrack(key, v)\n", g.Receiver, linkFieldName))
+			sb.WriteString("\t\twrapper.FromProto(pbValue)\n")
+			sb.WriteString("\t}\n")
+		}
+	}
+
+	sb.WriteString("}\n\n")
+	return sb.String()
+}
