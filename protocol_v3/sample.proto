@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+import "core.proto";
+
+package Sample;
+
+message Request {
+
+    message SearchNewsPaper {
+        // 位置
+        string Title = 1;
+        // 要第几页
+        int32 PageNumber = 2;
+        message Rsp {
+            string Result = 1;
+        }
+    }
+
+
+}
+

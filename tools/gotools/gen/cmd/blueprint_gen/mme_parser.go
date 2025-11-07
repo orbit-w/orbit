@@ -287,22 +287,7 @@ func (p *Parser) parseMechanismItem(mechItem map[string]any) *Mechanism {
 				maps.Copy(mechanism.Settings, settings)
 			}
 		case MechanismKeyWordRequests:
-			requests := mechData.([]any)
-			for _, reqItem := range requests {
-				req, err := p.ParseRequestOrNotify(reqItem, true)
-				if err == nil && req.Name != "" {
-					mechanism.Requests = append(mechanism.Requests, req)
-				}
-			}
 		case MechanismKeyWordNotifies:
-			//解析通知列表
-			notifies := mechData.([]any)
-			for _, notifyItem := range notifies {
-				notify, err := p.ParseNotifyOnly(notifyItem)
-				if err == nil && notify.Name != "" {
-					mechanism.Notifies = append(mechanism.Notifies, notify)
-				}
-			}
 		default:
 			// 解析结构体名称和Fields
 			mechanism.Name = mechKey

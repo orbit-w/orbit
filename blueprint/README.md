@@ -550,37 +550,59 @@ DataStruct:
 
 ### 3. 文件结构规范（NetWall）
 
+每个 NetWall YAML 文件包含以下部分：
+- `NetWall`：定义网络消息墙的名称、请求和通知
+  - `Name`：NetWall 名称，用于生成 proto 文件的 package 名称和文件名
+  - `Requests`：请求消息列表，每个请求可以包含字段和可选的 `Rsp` 响应
+  - `Notifies`：通知消息列表，每个通知包含字段
+- `DataStructs`：数据结构定义，可以在当前 NetWall 或其他 NetWall 中使用
+
+**生成规则**：
+- 每个 NetWall YAML 文件生成一个独立的 proto 文件
+- **YAML 文件名**：使用小写驼峰命名方式（如 `core.yaml`、`mme.yaml`、`sample.yaml`）
+- **生成的 Proto 文件名**：`{NetWall.Name}.proto`（首字母大写，如 `core.proto`、`mme.proto`、`sample.proto`）
+- **package 名称**：`package {NetWall.Name};`（首字母大写，如 `package Core;`、`package MME;`、`package Sample;`）
+- 如果引用了其他 NetWall 的数据结构（如 `Core.MMELocation`），会自动添加 `import` 语句
+
+示例（core.yaml）：
 ```yaml
-# 网络消息墙
+#核心网络消息墙
 ---
 NetWall:
   Name: Core
   Requests:
     - SearchBook:
+        #位置
         string Query: 1
-        int32  PageNumber: 2
+        #要第几页
+        int32 PageNumber: 2
       Rsp:
         Book Result: 1
-    - HeartBeat
+    - HeartBeat:
+    
   Notifies:
     - BeAttacked:
         int32 CurHp: 1
 ---
-# 数据结构
+#数据结构,Core中定义的数据结构可以在其他墙中使用例如Core.OK
 DataStructs:
   - Book:
       string Content: 1
+  ##通用成功
   - OK
+  ##通用失败
   - Error:
       string Reason: 1
+  ##MME位置
   - MMELocation:
       int64 EntityId: 1
       int32 ModuleId: 2
       int32 MechanismIndex: 3
 ```
 
-MME 网络墙（对外暴露的 MME 接口）：
+MME 网络墙（对外暴露的 MME 接口，引用 Core 的数据结构）：
 ```yaml
+#MME网络消息墙
 ---
 NetWall:
   Name: MME
@@ -590,6 +612,7 @@ NetWall:
         Core.MMELocation Loc: 1000
       Rsp:
         string Result: 1
+
   Notifies:
     - ExpChange:
         int32 Exp: 1
@@ -685,60 +708,125 @@ Mechanisms:
 | `blueprint/mme/modules.yaml` | `protocol/modules.proto` | 模块组合结构 |
 | `blueprint/mme/manager.yaml` | `protocol/managers.proto` | 管理器结构（map 到 Module） |
 | `blueprint/mme/entities.yaml` | `protocol/entities.proto` | 实体结构（引用 Manager） |
-| `blueprint/netwall/Core.yaml` | `protocol/request.proto`, `protocol/notify.proto`, `protocol/structs.proto` | 核心网络墙 |
-| `blueprint/netwall/mme.yaml` | `protocol/request.proto`, `protocol/notify.proto` | MME 网络墙 |
-| `blueprint/netwall/Sample.yaml` | `protocol/request.proto`, `protocol/notify.proto` | 示例网络墙 |
+| `blueprint/netwall/core.yaml` | `protocol/core.proto` | 核心网络墙（包含 Request、Notify 和 DataStructs） |
+| `blueprint/netwall/mme.yaml` | `protocol/mme.proto` | MME 网络墙（包含 Request 和 Notify） |
+| `blueprint/netwall/sample.yaml` | `protocol/sample.proto` | 示例网络墙（包含 Request 和 Notify） |
 
 ### 2. 包名与 go_package
 
-- 所有 Proto 统一使用 `package MME;`
-- 统一 `option go_package = "./mme";`（使用相对路径，实际生成路径为 `app/proto/mme`）
+- **MME 相关 Proto**：统一使用 `package MME;`，统一 `option go_package = "./mme";`（使用相对路径，实际生成路径为 `app/proto/mme`）
+- **NetWall Proto**：每个 NetWall 生成独立的 proto 文件，package 名称使用 NetWall 的 `Name` 字段（首字母大写），如 `package Core;`、`package MME;`、`package Sample;`
+- 所有 NetWall proto 文件统一使用 `option go_package = "./mme";`
 
-### 3. 网络墙消息转换
+### 3. NetWall 文件生成规则
+
+每个 NetWall YAML 文件生成一个独立的 proto 文件，文件命名规则：
+- **YAML 文件名**：使用小写驼峰命名方式，如 `core.yaml`、`mme.yaml`、`sample.yaml`
+- **生成的 Proto 文件名**：使用 NetWall 的 `Name` 字段（首字母大写），如 `core.yaml` → `core.proto`，`mme.yaml` → `mme.proto`，`sample.yaml` → `sample.proto`
+- **文件内容**：包含该 NetWall 的所有 `Requests`、`Notifies` 和 `DataStructs`
+
+### 4. 网络墙消息转换
 
 - NetWall 的 `Requests` 全部生成在 `message Request` 内部；`Notifies` 生成在 `message Notify` 内部。
 - 简单请求允许无参数；有 `Rsp` 的请求在该请求的内部定义 `message Rsp`。
+- `DataStructs` 生成在同一个 proto 文件中，作为独立的 `message` 定义。
 
-示例（来自 `Core.yaml`）：
+示例（来自 `core.yaml`）：
 ```protobuf
+syntax = "proto3";
+
+package Core;
+
 message Request {
-  message SearchBook {
-    string Query = 1;
-    int32  PageNumber = 2;
-    message Rsp { Book Result = 1; }
-  }
-  message HeartBeat {}
+    message SearchBook {
+        // 位置
+        string Query = 1;
+        // 要第几页
+        int32 PageNumber = 2;
+        message Rsp {
+            Book Result = 1;
+        }
+    }
+
+    message HeartBeat {
+    }
+}
+
+message Notify {
+    message BeAttacked {
+        int32 CurHp = 1;
+    }
+}
+
+message Book {
+    string Content = 1;
+}
+
+message OK {
+}
+
+message Error {
+    string Reason = 1;
+}
+
+message MMELocation {
+    optional int64 EntityId = 1;
+    optional int32 ManagerId = 2;
+    optional int64 Key = 3;
+    optional int32 ModuleId = 4;
+    optional int32 MechanismIndex = 5;
 }
 ```
 
-### 4. MME 请求/通知转换与 Loc 规则
+### 5. NetWall 之间的引用规则
+
+- 如果 NetWall 中引用了其他 NetWall 的数据结构（如 `Core.MMELocation`），需要在 proto 文件头部添加 `import` 语句
+- 引用格式：`{NetWallName}.{DataType}`，如 `Core.MMELocation`
+- 生成器会自动检测跨 NetWall 的引用，并添加相应的 `import` 语句
+
+示例（来自 `mme.yaml`）：
+```protobuf
+syntax = "proto3";
+
+import "core.proto";
+
+package MME;
+
+message Request {
+    message AskLevelUp {
+        int32 UpNum = 1;
+        Core.MMELocation Loc = 1000;
+        message Rsp {
+            string Result = 1;
+        }
+    }
+}
+
+message Notify {
+    message ExpChange {
+        int32 Exp = 1;
+        Core.MMELocation Loc = 1000;
+    }
+}
+```
+
+### 6. MME 请求/通知转换与 Loc 规则
 
 - 从 Mechanism 的 `Requests/Notifies` 派生出的对外接口，最终体现在 `netwall/mme.yaml` 中。
 - 为保持一致性，网络层接口中的 `Core.MMELocation Loc` 使用保留编号 `1000`；若 YAML 已显式编写 Loc（如本仓库的 `netwall/mme.yaml`），应保证其为 `1000`。若未显式声明，生成器会自动注入。
 - **保留编号范围**：
-  - `1000`：Request请求中，保留用于 `Loc` 字段
-
-示例（来自当前 YAML 的 MME 网络墙）：
-```protobuf
-message Request {
-  message AskLevelUp {
-    int32 UpNum = 1;
-    Core.MMELocation Loc = 1000;
-    message Rsp { string Result = 1; }
-  }
-}
-message Notify  { message ExpChange { int32 Exp = 1; Core.MMELocation Loc = 1000; } }
-```
+  - `1000`：Request 和 Notify 中，保留用于 `Loc` 字段
 
 ### 7. 导入语句
 
-- `request.proto`、`notify.proto` 需要导入 `structs.proto` 与 `common.proto`
-- `structs.proto` 需要导入 `actor.proto`（如使用 PID 类型）
+- **NetWall proto 文件**：如果引用了其他 NetWall 的数据结构，需要导入对应的 proto 文件（如 `import "core.proto";`）
+- **MME proto 文件**：根据依赖关系自动导入，如 `import "common.proto";`、`import "mechanisms.proto";` 等
 - `common.proto` 无需导入其他文件
 
 ### 8. 注释保留
 
 - YAML 中 `#` 注释转换为 Proto 中 `//` 注释，并尽量保留层级。
+- 字段注释会保留在对应字段的上方。
 
 ### 9. 字段访问权限（access）的实际应用：
 - 1. access=all: 客户端和服务端都可以读写。
@@ -766,27 +854,98 @@ message Notify  { message ExpChange { int32 Exp = 1; Core.MMELocation Loc = 1000
 
 ## 示例对照（节选）
 
-- 来自 `blueprint/netwall/Core.yaml` 的请求：
+- 来自 `blueprint/netwall/core.yaml` 的完整文件（YAML 文件名使用小写驼峰）：
 ```yaml
+#核心网络消息墙
+---
 NetWall:
   Name: Core
   Requests:
     - SearchBook:
+        #位置
         string Query: 1
-        int32  PageNumber: 2
+        #要第几页
+        int32 PageNumber: 2
       Rsp:
         Book Result: 1
-    - HeartBeat
+    - HeartBeat:
+    
+  Notifies:
+    - BeAttacked:
+        int32 CurHp: 1
+---
+#数据结构,Core中定义的数据结构可以在其他墙中使用例如Core.OK
+DataStructs:
+  - Book:
+      string Content: 1
+  ##通用成功
+  - OK
+  ##通用失败
+  - Error:
+      string Reason: 1
+  ##MME位置
+  - MMELocation:
+      int64 EntityId: 1
+      int32 ModuleId: 2
+      int32 MechanismIndex: 3
 ```
-对应 Proto：
+对应生成的 `core.proto`（文件名首字母大写，package 名称首字母大写）：
 ```protobuf
+syntax = "proto3";
+
+package Core;
+
 message Request {
-  message SearchBook {
-    string Query = 1;
-    int32  PageNumber = 2;
-    message Rsp { Book Result = 1; }
-  }
-  message HeartBeat {}
+
+    message SearchBook {
+        // 位置
+        string Query = 1;
+        // 要第几页
+        int32 PageNumber = 2;
+        message Rsp {
+            Book Result = 1;
+        }
+    }
+
+
+    message HeartBeat {
+    }
+
+
+}
+
+message Notify {
+
+    message BeAttacked {
+        int32 CurHp = 1;
+    }
+
+
+}
+
+message Book {
+    string Content = 1;
+}
+
+
+// #通用成功
+message OK {
+}
+
+
+// #通用失败
+message Error {
+    string Reason = 1;
+}
+
+
+// #MME位置
+message MMELocation {
+    optional int64 EntityId = 1;
+    optional int32 ManagerId = 2;
+    optional int64 Key = 3;
+    optional int32 ModuleId = 4;
+    optional int32 MechanismIndex = 5;
 }
 ```
 
@@ -808,6 +967,8 @@ Mechanisms:
 ```
 对应对外网络墙（`blueprint/netwall/mme.yaml`）以及生成的消息，包含保留位 `Loc=1000`：
 ```yaml
+#MME网络消息墙
+---
 NetWall:
   Name: MME
   Requests:
@@ -816,14 +977,42 @@ NetWall:
         Core.MMELocation Loc: 1000
       Rsp:
         string Result: 1
+
   Notifies:
     - ExpChange:
         int32 Exp: 1
         Core.MMELocation Loc: 1000
 ```
+对应生成的 `mme.proto`（文件名首字母大写，package 名称首字母大写）：
 ```protobuf
-message Request { message AskLevelUp { int32 UpNum = 1; Core.MMELocation Loc = 1000; message Rsp { string Result = 1; } } }
-message Notify  { message ExpChange { int32 Exp = 1; Core.MMELocation Loc = 1000; } }
+syntax = "proto3";
+
+import "Core.proto";
+
+package MME;
+
+message Request {
+
+    message AskLevelUp {
+        int32 UpNum = 1;
+        Core.MMELocation Loc = 1000;
+        message Rsp {
+            string Result = 1;
+        }
+    }
+
+
+}
+
+message Notify {
+
+    message ExpChange {
+        int32 Exp = 1;
+        Core.MMELocation Loc = 1000;
+    }
+
+
+}
 ```
 
 以上内容已与当前 `mme` 目录下的 YAML 定义对齐，并引入 Manager 层级，确保从 YAML 到 Proto 的生成规则清晰一致。

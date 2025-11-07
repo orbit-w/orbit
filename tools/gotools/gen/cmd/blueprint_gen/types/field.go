@@ -16,7 +16,7 @@ type Field struct {
 	Metadata *FieldMetadata
 }
 
-// GetTypeName 获取字段类型名称，如 map, xmap, repeated, HeroManager等基础类型或MMEObject类型
+// GetTypeName 获取字段类型名称，如 map, xmap, repeated等基础类型或HeroManager等MMEObject类型
 // 优先使用 Type.Name，如果为空则从 Type.TypeName 中提取（去掉包名前缀）
 func (f *Field) GetTypeName() string {
 	if f.Type.Name != "" {
@@ -34,10 +34,12 @@ func (f *Field) GetTypeName() string {
 	return ""
 }
 
+// GetValueName 获取map/xmap/repeated的值类型名称，如 HeroManager等MMEObject类型
 func (f *Field) GetValueName() string {
 	return f.Type.ValueName()
 }
 
+// GetValueType 获取map/xmap/repeated的值类型
 func (f *Field) GetValueType() *FieldType {
 	return f.Type.ValueType
 }

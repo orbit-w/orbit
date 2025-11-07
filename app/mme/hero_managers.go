@@ -2,14 +2,12 @@ package mme
 
 import (
 	"gitee.com/orbit-w/meteor/bases/container/xmap"
-	"gitee.com/orbit-w/meteor/modules/mlog"
 	"gitee.com/orbit-w/orbit/app/proto/mme"
 	dirtyflag "gitee.com/orbit-w/orbit/lib/base/dirty_flag"
 	fieldmeta "gitee.com/orbit-w/orbit/lib/base/field_meta"
 	"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder"
 	mmemodel "gitee.com/orbit-w/orbit/lib/module/mme_model"
 	xmapwrapper "gitee.com/orbit-w/orbit/lib/module/xmapwrapper"
-	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -23,7 +21,7 @@ const (
 )
 
 type HeroManager struct {
-	HeroMap map[int64]*HeroModule `bson:"hero_map"`
+	HeroMap map[int64]*HeroModule
 }
 
 func NewHeroManager() *HeroManager {
@@ -32,7 +30,6 @@ func NewHeroManager() *HeroManager {
 	}
 }
 
-// 数据-深拷贝
 func (m *HeroManager) DeepCopy(co *HeroManager) {
 	if m == nil || co == nil {
 		return
@@ -42,13 +39,14 @@ func (m *HeroManager) DeepCopy(co *HeroManager) {
 	if m.HeroMap != nil {
 		co.HeroMap = make(map[int64]*HeroModule, len(m.HeroMap))
 		for k, v := range m.HeroMap {
-			co.HeroMap[k] = &HeroModule{}
-			v.DeepCopy(co.HeroMap[k])
+			if v != nil {
+				co.HeroMap[k] = &HeroModule{}
+				v.DeepCopy(co.HeroMap[k])
+			}
 		}
 	}
 }
 
-// 数据-转换为protobuf
 func (m *HeroManager) ToProto() *mme.HeroManager {
 	if m == nil {
 		return nil
@@ -58,10 +56,29 @@ func (m *HeroManager) ToProto() *mme.HeroManager {
 	if m.HeroMap != nil {
 		pb.HeroMap = make(map[int64]*mme.HeroModule, len(m.HeroMap))
 		for k, v := range m.HeroMap {
-			pb.HeroMap[k] = v.ToProto()
+			if v != nil {
+				pb.HeroMap[k] = v.ToProto()
+			}
 		}
 	}
 	return pb
+}
+
+func (m *HeroManager) FromProto(pb *mme.HeroManager) {
+	if m == nil || pb == nil {
+		return
+	}
+
+	if pb.HeroMap != nil {
+		m.HeroMap = make(map[int64]*HeroModule, len(pb.HeroMap))
+		for k, v := range pb.HeroMap {
+			if v != nil {
+				obj := NewHeroModule()
+				obj.FromProto(v)
+				m.HeroMap[k] = obj
+			}
+		}
+	}
 }
 
 type HeroManagerWrapper struct {
@@ -77,20 +94,20 @@ func NewHeroManagerWrapper(data *HeroManager) *HeroManagerWrapper {
 	if data == nil {
 		panic("data is nil")
 	}
-
-	hm := &HeroManagerWrapper{
+	m := &HeroManagerWrapper{
 		data:       data,
 		IDirtyFlag: dirtyflag.NewDirtyFlag(),
 		fieldMetas: fieldmeta.NewFieldMetas(),
 	}
-	hm.heroMapLink = xmapwrapper.NewXMapWrapperWithParent(
+
+	m.heroMapLink = xmapwrapper.NewXMapWrapperWithParent(
 		&data.HeroMap,
-		hm.GetDirtyTracker(),
+		m.GetDirtyTracker(),
 		HeroManagerDirtyHeroMapBit,
 		NewHeroModuleWrapper,
 	)
 
-	return hm
+	return m
 }
 
 func (m *HeroManagerWrapper) InitFieldContext() {
@@ -108,22 +125,27 @@ func (m *HeroManagerWrapper) Name() string {
 	return "HeroManager"
 }
 
-// SetHero 设置/添加英雄模块
-func (m *HeroManagerWrapper) HeroMap_Set(id int64, heroModulePb *HeroModule) *HeroModuleWrapper {
-	return m.heroMapLink.Set(id, heroModulePb)
+// MatchesAll 判断字段是否匹配所有类型标记
+func (m *HeroManagerWrapper) MatchesAll(fieldID uint8, fieldTypes ...fieldmeta.FieldType) bool {
+	return m.fieldMetas.MatchesAll(fieldID, fieldTypes...)
 }
 
-// DeleteHero 删除英雄模块
+// SetHeroMap 设置/添加HeroModule模块
+func (m *HeroManagerWrapper) HeroMap_Set(id int64, value *HeroModule) *HeroModuleWrapper {
+	return m.heroMapLink.Set(id, value)
+}
+
+// DeleteHeroMap 删除HeroModule模块
 func (m *HeroManagerWrapper) HeroMap_Delete(id int64) bool {
 	return m.heroMapLink.Delete(id)
 }
 
-// RangeHeroes 遍历所有英雄
-func (m *HeroManagerWrapper) HeroMap_Range(f func(id int64, hero *HeroModuleWrapper) bool) {
+// RangeHeroMap 遍历所有HeroModule
+func (m *HeroManagerWrapper) HeroMap_Range(f func(id int64, heroModule *HeroModuleWrapper) bool) {
 	m.heroMapLink.Range(f)
 }
 
-func (m *HeroManagerWrapper) ClearAllDirty() {
+func (m *HeroManagerWrapper) ClearAllDirtyFlags() {
 	m.IDirtyFlag.ClearAllDirty()
 
 	// 清空xmaplink中所有object的脏标记
@@ -162,36 +184,6 @@ func (m *HeroManagerWrapper) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBu
 	}
 }
 
-// 包装器-深拷贝
-func (m *HeroManagerWrapper) DeepCopy() *HeroManager {
-	if m == nil {
-		return nil
-	}
-	copy := &HeroManager{}
-	m.DeepCopyTo(copy)
-	return copy
-}
-
-// 包装器-深拷贝
-func (m *HeroManagerWrapper) DeepCopyTo(copy *HeroManager) {
-	if m == nil || m.data == nil || copy == nil {
-		return
-	}
-
-	// 初始化目标 map
-	if copy.HeroMap == nil {
-		copy.HeroMap = make(map[int64]*HeroModule, len(m.data.HeroMap))
-	}
-
-	// 拷贝所有 HeroModule
-	m.heroMapLink.DeepCopy(&copy.HeroMap)
-}
-
-// MatchesAll 判断字段是否匹配所有类型标记
-func (m *HeroManagerWrapper) MatchesAll(fieldID uint8, fieldTypes ...fieldmeta.FieldType) bool {
-	return m.fieldMetas.MatchesAll(fieldID, fieldTypes...)
-}
-
 // ToProto 将 HeroManager 数据转换为完整的 protobuf 结构体
 func (m *HeroManagerWrapper) ToProto() *mme.HeroManager {
 	if m == nil || m.data == nil {
@@ -215,9 +207,33 @@ func (m *HeroManagerWrapper) FromProto(pb *mme.HeroManager) {
 	}
 }
 
-// ToIncrementalProto 根据脏标记位构建增量数据的 protoMessage
+// 包装器-深拷贝
+func (m *HeroManagerWrapper) DeepCopy() *HeroManager {
+	if m == nil {
+		return nil
+	}
+	copy := &HeroManager{}
+	m.DeepCopyTo(copy)
+	return copy
+}
+
+// 包装器-深拷贝
+func (m *HeroManagerWrapper) DeepCopyTo(copy *HeroManager) {
+	if m == nil || m.data == nil || copy == nil {
+		return
+	}
+
+	// 初始化目标 map
+	if copy.HeroMap == nil {
+		copy.HeroMap = make(map[int64]*HeroModule, len(m.data.HeroMap))
+	}
+	// 拷贝所有 HeroModule
+	m.heroMapLink.DeepCopy(&copy.HeroMap)
+}
+
+// ToIncrementalProtoWithContext 根据脏标记位构建增量数据的 protoMessage
 // 只返回标记为脏的字段数据，用于增量同步
-func (m *HeroManagerWrapper) ToIncrementalProto(ctx mmemodel.SyncContext) proto.Message {
+func (m *HeroManagerWrapper) ToIncrementalProtoWithContext(ctx mmemodel.SyncContext) proto.Message {
 	if m == nil {
 		return nil
 	}
@@ -228,21 +244,20 @@ func (m *HeroManagerWrapper) ToIncrementalProto(ctx mmemodel.SyncContext) proto.
 	}
 
 	incremental := &mme.HeroManager{}
+
 	if mmemodel.FieldCanBeIncrementalSynced(m, HeroManagerDirtyHeroMapBit, HeroManagerFieldIndexHeroMap, ctx) {
 		incremental.HeroMap_XXXChangeList = make([]*mme.HeroManager_HeroMap_XXXMapChangeRecord, 0)
 		m.heroMapLink.RangeOperations(func(key int64, operation xmap.MapOperation[int64]) bool {
 			switch operation.Type {
 			case xmap.SetOperation:
-				hero, _ := m.heroMapLink.Get(key)
-				pb := hero.ToIncrementalProtoWithContext(ctx)
+				heroModule, _ := m.heroMapLink.Get(key)
+				pb := heroModule.ToIncrementalProtoWithContext(ctx)
 				v, ok := pb.(*mme.HeroModule)
 				if ok {
 					incremental.HeroMap_XXXChangeList = append(incremental.HeroMap_XXXChangeList, &mme.HeroManager_HeroMap_XXXMapChangeRecord{
 						Key:   key,
 						Value: v,
 					})
-				} else {
-					mlog.Error("HeroManager.ToIncrementalProto", zap.Any("key", key), zap.Any("operation", operation))
 				}
 				return true
 			case xmap.DeleteOperation:

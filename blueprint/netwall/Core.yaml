@@ -10,8 +10,7 @@ NetWall:
         int32 PageNumber: 2
       Rsp:
         Book Result: 1
-    - HeartBeat
-    - RequestB:
+    - HeartBeat:
     
   Notifies:
     - BeAttacked:
@@ -22,7 +21,7 @@ DataStructs:
   - Book:
       string Content: 1
   ##通用成功
-  - OK
+  - OK:
   ##通用失败
   - Error:
       string Reason: 1

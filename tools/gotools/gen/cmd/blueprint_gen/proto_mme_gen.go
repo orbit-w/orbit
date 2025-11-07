@@ -62,7 +62,20 @@ func (g *ProtoGenerator) generateMechanismsProto(outputDir string) error {
 
 		// 生成数据字段（按编号排序）
 		for _, field := range fields {
-			sb.WriteString(g.generateFieldProto(field, field.Number))
+			// 获取字段类型
+			protoType := g.typeConverter.ToProtoType(&field.Type)
+			isOptional := g.typeConverter.IsOptionalInProto(&field.Type)
+
+			// 确保字段名不包含冒号
+			fieldName := strings.TrimSuffix(field.Name, ":")
+			fieldName = strings.TrimSpace(fieldName)
+
+			// 生成字段定义（使用4个空格缩进，与 managers.proto 格式一致）
+			if isOptional {
+				sb.WriteString(fmt.Sprintf("    optional %s %s = %d;\n", protoType, fieldName, field.Number))
+			} else {
+				sb.WriteString(fmt.Sprintf("    %s %s = %d;\n", protoType, fieldName, field.Number))
+			}
 		}
 
 		// 生成 xmap 的增量同步字段（在 message 内部）
@@ -71,22 +84,23 @@ func (g *ProtoGenerator) generateMechanismsProto(outputDir string) error {
 				// 生成 ChangeRecord message（嵌套在父 message 内）
 				// 注意：recordName 应该是 "Skills_XXXMapChangeRecord" 而不是 "HeroMechanism_Skills_XXXMapChangeRecord"
 				recordName := fmt.Sprintf("%s_XXXMapChangeRecord", field.Name)
-				sb.WriteString(fmt.Sprintf("\n  message %s {\n", recordName))
-				if field.Type.KeyType != nil {
-					keyType := ToProtoTypeFromTypesFieldType(field.Type.KeyType)
-					sb.WriteString(fmt.Sprintf("    %s Key = 1;\n", keyType))
-				}
-				if field.Type.ValueType != nil {
-					valueType := ToProtoTypeFromTypesFieldType(field.Type.ValueType)
-					sb.WriteString(fmt.Sprintf("    %s Value = 2;\n", valueType))
-				}
-				sb.WriteString("    bool IsDelete = 3;\n")
-				sb.WriteString("  }\n")
 
-				// 生成 ChangeList 字段
+				// 获取 key 类型
+				keyType := "unknown"
+				if field.Type.KeyType != nil {
+					keyType = ToProtoTypeFromTypesFieldType(field.Type.KeyType)
+				}
+
+				// 获取 value 类型
+				valueType := "unknown"
+				if field.Type.ValueType != nil {
+					valueType = ToProtoTypeFromTypesFieldType(field.Type.ValueType)
+				}
+
+				// 生成 ChangeList 字段和 message 定义（在同一行）
 				changeListFieldNumber := 1000 + int32(field.Number)
-				sb.WriteString(fmt.Sprintf("  repeated %s %s_XXXChangeList = %d; // %s变化\n",
-					recordName, field.Name, changeListFieldNumber, field.Name))
+				sb.WriteString(fmt.Sprintf("    repeated %s %s_XXXChangeList = %d;  message %s { %s Key = 1; %s Value = 2; bool IsDelete = 3; }\n",
+					recordName, field.Name, changeListFieldNumber, recordName, keyType, valueType))
 			}
 		}
 

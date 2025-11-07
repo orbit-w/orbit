@@ -1,9 +1,5 @@
 syntax = "proto3";
 
-package MME;
+package Common;
 option go_package = "./mme";
-
-// Fish
-message Fish {
-}
 

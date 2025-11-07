@@ -35,7 +35,11 @@ func (g *GoWrapperGenerator) Generate(outputDir string) error {
 		return fmt.Errorf("failed to generate manager wrappers: %w", err)
 	}
 
-	// TODO: 生成 Entity Wrapper
+	// 生成 Entity Wrapper
+	if err := g.generateEntityWrappers(outputDir); err != nil {
+		return fmt.Errorf("failed to generate entity wrappers: %w", err)
+	}
+
 	return nil
 }
 
@@ -207,86 +211,15 @@ func (g *GoWrapperGenerator) generateMechanismWrappers(outputDir string) error {
 		}
 		sb.WriteString(generatorToIncrementalProto.GenerateToIncrementalProtoMethod(mech.Fields))
 
-		// 生成 ToProto 方法
-		sb.WriteString("// ToProto 将 Mechanism 数据转换为完整的 protobuf 结构体\n")
-		sb.WriteString(fmt.Sprintf("func (w *%s) ToProto() *mme.%s {\n", wrapperName, mech.Name))
-		sb.WriteString("\tif w == nil || w.data == nil {\n")
-		sb.WriteString("\t\treturn nil\n")
-		sb.WriteString("\t}\n\n")
-		sb.WriteString("\treturn w.data.ToProto()\n")
-		sb.WriteString("}\n\n")
-
-		// 生成 FromProto 方法
-		sb.WriteString("// FromProto 从 protobuf 结构体加载数据到 Mechanism\n")
-		sb.WriteString(fmt.Sprintf("func (w *%s) FromProto(pb *mme.%s) {\n", wrapperName, mech.Name))
-		sb.WriteString("\tif w == nil || w.data == nil || pb == nil {\n")
-		sb.WriteString("\t\treturn\n")
-		sb.WriteString("\t}\n\n")
-
-		// 按字段编号排序，保证与 YAML 中定义的顺序一致
-		sortedFields := make([]*types.Field, len(mech.Fields))
-		copy(sortedFields, mech.Fields)
-		// 冒泡排序按 Number 字段排序
-		for i := 0; i < len(sortedFields)-1; i++ {
-			for j := i + 1; j < len(sortedFields); j++ {
-				if sortedFields[i].Number > sortedFields[j].Number {
-					sortedFields[i], sortedFields[j] = sortedFields[j], sortedFields[i]
-				}
-			}
-		}
-
-		for _, field := range sortedFields {
-			if field.Type.IsXMapField() {
-				// XMap 字段需要特殊处理（使用accessor）
-				sb.WriteString(fmt.Sprintf("\t// 加载 %s xmap\n", field.Name))
-				sb.WriteString(fmt.Sprintf("\tif pb.%s != nil {\n", field.Name))
-
-				if !field.Type.IsXMapValueMMEObject() {
-					// 值类型 xmap，使用 accessor 的 Reset 方法
-					accessorName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Accessor"
-					sb.WriteString("\t\t// 清空现有的 map\n")
-					keyType := field.Type.KeyKind().String()
-					valueType := field.Type.ValueKind().String()
-					sb.WriteString(fmt.Sprintf("\t\ttemp := make(map[%s]%s, len(pb.%s))\n",
-						keyType, valueType, field.Name))
-					sb.WriteString(fmt.Sprintf("\t\tmaps.Copy(temp, pb.%s)\n", field.Name))
-					sb.WriteString("\t\t// 设置新的 map 数据，并清空所有变化操作记录\n")
-					sb.WriteString(fmt.Sprintf("\t\tw.%s.Reset(&temp)\n", accessorName))
-				} else {
-					// MME Object 类型 xmap，需要递归处理
-					sb.WriteString(fmt.Sprintf("\t\t// TODO: Handle MME Object map field %s\n", field.Name))
-				}
-				sb.WriteString("\t}\n")
-			} else if field.Type.Kind == types.FieldKindMap {
-				// 普通 Map 字段，直接使用 Setter 方法
-				methodName := strings.ToUpper(field.Name[0:1]) + field.Name[1:]
-				sb.WriteString(fmt.Sprintf("\t// 加载 %s map\n", field.Name))
-				sb.WriteString(fmt.Sprintf("\tif pb.%s != nil {\n", field.Name))
-				keyType := field.Type.KeyKind().String()
-				valueType := field.Type.ValueKind().String()
-				sb.WriteString(fmt.Sprintf("\t\ttemp := make(map[%s]%s, len(pb.%s))\n",
-					keyType, valueType, field.Name))
-				sb.WriteString(fmt.Sprintf("\t\tmaps.Copy(temp, pb.%s)\n", field.Name))
-				sb.WriteString(fmt.Sprintf("\t\tw.Set%s(temp)\n", methodName))
-				sb.WriteString("\t}\n")
-			} else {
-				// 普通字段，使用 Setter 方法
-				methodName := strings.ToUpper(field.Name[0:1]) + field.Name[1:]
-				sb.WriteString(fmt.Sprintf("\t// 加载基础类型字段 %s\n", field.Name))
-				sb.WriteString(fmt.Sprintf("\tif pb.%s != nil {\n", field.Name))
-				sb.WriteString(fmt.Sprintf("\t\tw.Set%s(*pb.%s)\n", methodName, field.Name))
-				sb.WriteString("\t}\n")
-			}
-		}
-
-		sb.WriteString("}\n\n")
-
 		wrapperMethodCodeGenerator := &WrapperMethodCodeGenerator{
 			ObjectName:  mech.Name,
 			WrapperName: wrapperName,
 			Receiver:    "w",
 			ProtoPkg:    "mme",
 		}
+
+		sb.WriteString(wrapperMethodCodeGenerator.GenerateToProtoMethod())
+		sb.WriteString(wrapperMethodCodeGenerator.GenerateFromProtoMethod(mech.Fields))
 		sb.WriteString(wrapperMethodCodeGenerator.GenerateDeepCopyMethod())
 		sb.WriteString(wrapperMethodCodeGenerator.GenerateDeepCopyToMethod(mech.Fields))
 
@@ -320,82 +253,52 @@ func (g *GoWrapperGenerator) generateMechanismWrappers(outputDir string) error {
 	return nil
 }
 
-// isReferenceType 判断是否是引用类型（MME Object 或 Message 类型）
-func (g *GoWrapperGenerator) isReferenceType(fieldType *types.FieldType) bool {
-	if fieldType == nil {
-		return false
-	}
-
-	// 如果是 Map/XMap，检查 ValueType
-	if fieldType.Kind == types.FieldKindMap || fieldType.Kind == types.FieldKindXMap {
-		if fieldType.ValueType != nil {
-			return g.isReferenceType(fieldType.ValueType)
-		}
-		return false
-	}
-
-	// Message 类型和 MME Object 类型都是引用类型
-	return fieldType.Kind == types.FieldKindMessage || fieldType.Kind == types.FieldKindMMEObject || fieldType.IsMMEObjectType()
-}
-
-// getTypeNameFromFieldType 从 FieldType 获取类型名称字符串
-func getTypeNameFromFieldType(ft *types.FieldType) string {
-	if ft == nil {
-		return "unknown"
-	}
-	if ft.TypeName != "" {
-		return ft.TypeName
-	}
-	return ft.Kind.String()
-}
+const (
+	unknownType = "unknown"
+)
 
 // ToGoTypeFromTypesFieldType 将新的 types.FieldType 转换为 Go 类型
 func ToGoTypeFromTypesFieldType(ft *types.FieldType, packageName string) string {
 	if ft == nil {
-		return "unknown"
+		return unknownType
 	}
 
 	switch ft.Kind {
 	case types.FieldKindRepeated:
-		if ft.ValueType != nil {
-			return "[]" + ToGoTypeFromTypesFieldType(ft.ValueType, packageName)
+		if ft.ValueType == nil {
+			return "[]" + unknownType
 		}
-		return "[]unknown"
+		return "[]" + ToGoTypeFromTypesFieldType(ft.ValueType, packageName)
+
 	case types.FieldKindMap, types.FieldKindXMap:
-		if ft.KeyType != nil && ft.ValueType != nil {
-			keyType := ToGoTypeFromTypesFieldType(ft.KeyType, packageName)
-			valueType := ToGoTypeFromTypesFieldType(ft.ValueType, packageName)
-			return fmt.Sprintf("map[%s]%s", keyType, valueType)
+		if ft.KeyType == nil || ft.ValueType == nil {
+			return fmt.Sprintf("map[%s]%s", unknownType, unknownType)
 		}
-		return "map[unknown]unknown"
+		keyType := ToGoTypeFromTypesFieldType(ft.KeyType, packageName)
+		valueType := ToGoTypeFromTypesFieldType(ft.ValueType, packageName)
+		return fmt.Sprintf("map[%s]%s", keyType, valueType)
+
 	case types.FieldKindInt32, types.FieldKindInt64, types.FieldKindUInt32, types.FieldKindUInt64,
 		types.FieldKindFloat, types.FieldKindDouble, types.FieldKindBool, types.FieldKindString, types.FieldKindBytes:
 		// 基础类型直接返回值类型，不带指针和包名
 		return ft.GetKind().String()
+
 	case types.FieldKindMMEObject:
-		// MME Object 类型，添加包名前缀和指针
-		typeName := getTypeNameFromFieldType(ft)
-		// 去掉包名前缀，只取类型名
-		if idx := strings.LastIndex(typeName, "."); idx >= 0 {
-			typeName = typeName[idx+1:]
-		}
+		// MME Object 类型，添加指针前缀
+		typeName := ft.Name
 		return "*" + typeName
+
 	case types.FieldKindMessage:
-		// 消息类型
-		typeName := getTypeNameFromFieldType(ft)
-		if strings.Contains(typeName, ".") {
-			// 外部包类型，直接返回
-			return typeName
-		}
-		// 本地消息类型，可能是其他包的类型，保持原样
-		return typeName
+		// 消息类型，外部包类型直接返回，本地类型保持原样
+		return ft.GetTypeName()
+
 	default:
 		// 其他类型（如 Enum），尝试获取类型名
-		typeName := getTypeNameFromFieldType(ft)
-		if typeName != "" && typeName != "unknown" {
+		typeName := ft.GetTypeName()
+		if typeName != "" && typeName != unknownType {
 			return typeName
 		}
-		return "unknown"
+		return unknownType
 	}
 }
 
@@ -543,37 +446,10 @@ func (g *GoWrapperGenerator) generateModuleWrappers(outputDir string) error {
 			Receiver:    "w",
 			ProtoPkg:    "mme",
 		}
+		sb.WriteString(wrapperMethodCodeGenerator.GenerateToProtoMethod())
+		sb.WriteString(wrapperMethodCodeGenerator.GenerateFromProtoMethod(module.Fields))
 		sb.WriteString(wrapperMethodCodeGenerator.GenerateDeepCopyMethod())
 		sb.WriteString(wrapperMethodCodeGenerator.GenerateDeepCopyToMethod(module.Fields))
-
-		// 生成 ToProto 方法
-		sb.WriteString("// ToProto 将 Module 数据转换为完整的 protobuf 结构体\n")
-		sb.WriteString(fmt.Sprintf("func (w *%s) ToProto() *mme.%s {\n", wrapperName, module.Name))
-		sb.WriteString("\tif w == nil || w.data == nil {\n")
-		sb.WriteString("\t\treturn nil\n")
-		sb.WriteString("\t}\n\n")
-		sb.WriteString("\treturn w.data.ToProto()\n")
-		sb.WriteString("}\n\n")
-
-		// 生成 FromProto 方法
-		sb.WriteString("// FromProto 从 protobuf 结构体加载数据到 Module\n")
-		sb.WriteString(fmt.Sprintf("func (w *%s) FromProto(pb *mme.%s) {\n", wrapperName, module.Name))
-		sb.WriteString("\tif w == nil || w.data == nil || pb == nil {\n")
-		sb.WriteString("\t\treturn\n")
-		sb.WriteString("\t}\n\n")
-		for _, field := range module.Fields {
-			if field.Type.IsMMEObjectType() {
-				typeName := field.GetTypeName()
-				wrapperFieldName := field.Name + "Wrapper"
-				sb.WriteString(fmt.Sprintf("\tif pb.%s != nil {\n", field.Name))
-				sb.WriteString(fmt.Sprintf("\t\tif w.data.%s == nil {\n", field.Name))
-				sb.WriteString(fmt.Sprintf("\t\t\tw.data.%s = New%s()\n", field.Name, typeName))
-				sb.WriteString("\t\t}\n")
-				sb.WriteString(fmt.Sprintf("\t\tw.%s.FromProto(pb.%s)\n", wrapperFieldName, field.Name))
-				sb.WriteString("\t}\n")
-			}
-		}
-		sb.WriteString("}\n\n")
 
 		// 生成 ToIncrementalProtoWithContext 方法
 		generatorToIncrementalProto := &ToIncrementalProtoCodeGenerator{
@@ -764,7 +640,7 @@ func (g *GoWrapperGenerator) generateManagerWrappers(outputDir string) error {
 		}
 
 		// 生成 ClearAllDirty 方法
-		sb.WriteString(fmt.Sprintf("func (m *%s) ClearAllDirty() {\n", wrapperName))
+		sb.WriteString(fmt.Sprintf("func (m *%s) ClearAllDirtyFlags() {\n", wrapperName))
 		sb.WriteString("\tm.IDirtyFlag.ClearAllDirty()\n\n")
 		sb.WriteString("\t// 清空xmaplink中所有object的脏标记\n")
 		for _, field := range manager.Fields {
@@ -813,37 +689,10 @@ func (g *GoWrapperGenerator) generateManagerWrappers(outputDir string) error {
 			Receiver:    "m",
 			ProtoPkg:    "mme",
 		}
+		sb.WriteString(wrapperMethodCodeGenerator.GenerateToProtoMethod())
+		sb.WriteString(wrapperMethodCodeGenerator.GenerateFromProtoMethod(manager.Fields))
 		sb.WriteString(wrapperMethodCodeGenerator.GenerateDeepCopyMethod())
 		sb.WriteString(wrapperMethodCodeGenerator.GenerateDeepCopyToMethod(manager.Fields))
-
-		// 生成 ToProto 方法
-		sb.WriteString(fmt.Sprintf("// ToProto 将 %s 数据转换为完整的 protobuf 结构体\n", manager.Name))
-		sb.WriteString(fmt.Sprintf("func (m *%s) ToProto() *mme.%s {\n", wrapperName, manager.Name))
-		sb.WriteString("\tif m == nil || m.data == nil {\n")
-		sb.WriteString("\t\treturn nil\n")
-		sb.WriteString("\t}\n\n")
-		sb.WriteString("\treturn m.data.ToProto()\n")
-		sb.WriteString("}\n\n")
-
-		// 生成 FromProto 方法
-		sb.WriteString(fmt.Sprintf("// FromProto 从 protobuf 结构体加载数据到 %s\n", manager.Name))
-		sb.WriteString(fmt.Sprintf("func (m *%s) FromProto(pb *mme.%s) {\n", wrapperName, manager.Name))
-		sb.WriteString("\tif m == nil || m.data == nil || pb == nil {\n")
-		sb.WriteString("\t\treturn\n")
-		sb.WriteString("\t}\n\n")
-		for _, field := range manager.Fields {
-			if field.Type.IsXMapField() || field.Type.IsMapField() {
-				linkFieldName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Link"
-				valueName := field.GetValueName()
-				sb.WriteString(fmt.Sprintf("\tfor key := range pb.%s {\n", field.Name))
-				sb.WriteString(fmt.Sprintf("\t\tpbValue := pb.%s[key]\n", field.Name))
-				sb.WriteString(fmt.Sprintf("\t\tv := New%s()\n", valueName))
-				sb.WriteString(fmt.Sprintf("\t\twrapper := m.%s.SetWithoutTrack(key, v)\n", linkFieldName))
-				sb.WriteString("\t\twrapper.FromProto(pbValue)\n")
-				sb.WriteString("\t}\n")
-			}
-		}
-		sb.WriteString("}\n\n")
 
 		// 生成 ToIncrementalProto 方法
 		generatorToIncrementalProto := &ToIncrementalProtoCodeGenerator{
@@ -873,6 +722,197 @@ func (g *GoWrapperGenerator) generateManagerWrappers(outputDir string) error {
 			existingContent = strings.TrimRight(existingContent, " \n\r\t")
 			newContent = existingContent + "\n\n" + sb.String()
 		}
+		if err := WriteFile(filePath, newContent); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// generateEntityWrappers 生成 Entity Wrapper
+func (g *GoWrapperGenerator) generateEntityWrappers(outputDir string) error {
+	for _, entity := range g.data.Entities {
+		sb := strings.Builder{}
+
+		// Wrapper 代码（不包含 package 和 import，因为这些会从已有文件中获取）
+
+		// 生成 Wrapper 结构体
+		wrapperName := entity.Name + "Wrapper"
+		sb.WriteString(fmt.Sprintf("type %s struct {\n", wrapperName))
+		sb.WriteString(fmt.Sprintf("\tdata *%s\n", entity.Name))
+		sb.WriteString("\tdirtyflag.IDirtyFlag\n")
+		sb.WriteString("\tfieldMetas *fieldmeta.FieldMetas\n\n")
+
+		// 生成嵌套的 Manager Wrapper 字段
+		for _, field := range entity.Fields {
+			if field.Type.IsMMEObjectType() {
+				typeName := field.GetTypeName()
+				wrapperTypeName := typeName + "Wrapper"
+				sb.WriteString(fmt.Sprintf("\t%s *%s\n", field.Name+"Wrapper", wrapperTypeName))
+			}
+		}
+
+		sb.WriteString("}\n\n")
+
+		// 生成 New 构造函数
+		sb.WriteString(fmt.Sprintf("func New%s(data *%s) *%s {\n", wrapperName, entity.Name, wrapperName))
+		sb.WriteString("\tif data == nil {\n")
+		sb.WriteString("\t\tpanic(\"data is nil\")\n")
+		sb.WriteString("\t}\n")
+		sb.WriteString(fmt.Sprintf("\te := &%s{\n", wrapperName))
+		sb.WriteString("\t\tdata:       data,\n")
+		sb.WriteString("\t\tIDirtyFlag: dirtyflag.NewDirtyFlag(),\n")
+		sb.WriteString("\t\tfieldMetas: fieldmeta.NewFieldMetas(),\n")
+		sb.WriteString("\t}\n\n")
+
+		// 初始化嵌套的 Manager Wrapper
+		for _, field := range entity.Fields {
+			if field.Type.IsMMEObjectType() {
+				typeName := field.GetTypeName()
+				wrapperFieldName := field.Name + "Wrapper"
+				dirtyBitName := fmt.Sprintf("%sDirty%sBit", entity.Name, field.Name)
+				sb.WriteString(fmt.Sprintf("\t// 初始化嵌套的 %s Wrapper\n", typeName))
+				sb.WriteString(fmt.Sprintf("\tif data.%s == nil {\n", field.Name))
+				sb.WriteString(fmt.Sprintf("\t\tdata.%s = New%s()\n", field.Name, typeName))
+				sb.WriteString("\t}\n")
+				sb.WriteString(fmt.Sprintf("\te.%s = New%sWrapper(data.%s)\n",
+					wrapperFieldName, typeName, field.Name))
+				sb.WriteString(fmt.Sprintf("\te.%s.Link(e.GetDirtyTracker(), %s)\n",
+					wrapperFieldName, dirtyBitName))
+				sb.WriteString("\n")
+			}
+		}
+
+		sb.WriteString("\treturn e\n")
+		sb.WriteString("}\n\n")
+
+		// 生成 InitFieldContext 方法
+		sb.WriteString(fmt.Sprintf("func (e *%s) InitFieldContext() {\n", wrapperName))
+		// XXXId 字段的字段上下文
+		fieldIndexName := fmt.Sprintf("%sFieldIndexXXXId", entity.Name)
+		sb.WriteString(fmt.Sprintf("\te.fieldMetas.SetFieldType(%s, fieldmeta.FieldTypeSync)\n",
+			fieldIndexName))
+		for _, field := range entity.Fields {
+			fieldIndexName := fmt.Sprintf("%sFieldIndex%s", entity.Name, field.Name)
+			// 根据 access 选项设置字段类型
+			if field.Options.Access == "all" || field.Options.Access == "s" || field.Options.Access == "" {
+				sb.WriteString(fmt.Sprintf("\te.fieldMetas.SetFieldType(%s, fieldmeta.FieldTypeSync)\n",
+					fieldIndexName))
+			}
+		}
+		sb.WriteString("\n")
+		// 初始化嵌套 Manager 的字段上下文
+		for _, field := range entity.Fields {
+			if field.Type.IsMMEObjectType() {
+				wrapperFieldName := field.Name + "Wrapper"
+				sb.WriteString(fmt.Sprintf("\tif e.%s != nil {\n", wrapperFieldName))
+				sb.WriteString(fmt.Sprintf("\t\te.%s.InitFieldContext()\n", wrapperFieldName))
+				sb.WriteString("\t}\n")
+			}
+		}
+		sb.WriteString("}\n\n")
+
+		// 生成 Name 方法
+		sb.WriteString(fmt.Sprintf("func (e *%s) Name() string {\n", wrapperName))
+		sb.WriteString(fmt.Sprintf("\treturn \"%s\"\n", entity.Name))
+		sb.WriteString("}\n\n")
+
+		// 生成 MatchesAll 方法（实现 IFieldMetaContext 接口）
+		sb.WriteString("// MatchesAll 判断字段是否匹配所有类型标记\n")
+		sb.WriteString(fmt.Sprintf("func (e *%s) MatchesAll(fieldID uint8, fieldTypes ...fieldmeta.FieldType) bool {\n", wrapperName))
+		sb.WriteString("\treturn e.fieldMetas.MatchesAll(fieldID, fieldTypes...)\n")
+		sb.WriteString("}\n\n")
+
+		// 生成 XXXId 的 Getter 和 Setter 方法
+		sb.WriteString("// 包装器-获取XXXId\n")
+		sb.WriteString(fmt.Sprintf("func (e *%s) GetXXXId() int64 {\n", wrapperName))
+		sb.WriteString("\treturn e.data.XXXId\n")
+		sb.WriteString("}\n\n")
+		dirtyBitName := fmt.Sprintf("%sDirtyXXXIdBit", entity.Name)
+		sb.WriteString("// 包装器-设置XXXId\n")
+		sb.WriteString(fmt.Sprintf("func (e *%s) SetXXXId(v int64) {\n", wrapperName))
+		sb.WriteString("\te.data.XXXId = v\n")
+		sb.WriteString(fmt.Sprintf("\te.MarkDirty(%s)\n", dirtyBitName))
+		sb.WriteString("}\n\n")
+
+		// 生成 Getter 方法（获取嵌套的 Manager Wrapper）
+		for _, field := range entity.Fields {
+			if field.Type.IsMMEObjectType() {
+				typeName := field.GetTypeName()
+				wrapperFieldName := field.Name + "Wrapper"
+				methodName := strings.ToUpper(field.Name[0:1]) + field.Name[1:]
+				sb.WriteString(fmt.Sprintf("func (e *%s) Get%s() *%sWrapper {\n",
+					wrapperName, methodName, typeName))
+				sb.WriteString(fmt.Sprintf("\treturn e.%s\n", wrapperFieldName))
+				sb.WriteString("}\n\n")
+			}
+		}
+
+		// 生成 ClearAllDirtyFlags 方法
+		sb.WriteString("// ClearAllDirtyFlags 清除所有脏标记位\n")
+		sb.WriteString(fmt.Sprintf("func (e *%s) ClearAllDirtyFlags() {\n", wrapperName))
+		sb.WriteString("\te.ClearAllDirty()\n\n")
+		sb.WriteString("\t// 清除嵌套 Manager 的脏标记\n")
+		for _, field := range entity.Fields {
+			if field.Type.IsMMEObjectType() {
+				wrapperFieldName := field.Name + "Wrapper"
+				sb.WriteString(fmt.Sprintf("\tif e.%s != nil {\n", wrapperFieldName))
+				sb.WriteString(fmt.Sprintf("\t\te.%s.ClearAllDirtyFlags()\n", wrapperFieldName))
+				sb.WriteString("\t}\n")
+			}
+		}
+		sb.WriteString("}\n\n")
+
+		// 生成 BuildMongoUpdate 方法
+		generator := &BuildMongoUpdateCodeGenerator{
+			ObjectName:  entity.Name,
+			WrapperName: wrapperName,
+			Receiver:    "e",
+			ObjectType:  ObjectTypeEntity,
+		}
+		sb.WriteString(generator.GenerateBuildMongoUpdateMethod(entity.Fields))
+
+		wrapperMethodCodeGenerator := &WrapperMethodCodeGenerator{
+			ObjectName:  entity.Name,
+			WrapperName: wrapperName,
+			Receiver:    "e",
+			ProtoPkg:    "mme",
+		}
+		sb.WriteString(wrapperMethodCodeGenerator.GenerateToProtoMethod())
+		sb.WriteString(wrapperMethodCodeGenerator.GenerateFromProtoMethod(entity.Fields))
+		sb.WriteString(wrapperMethodCodeGenerator.GenerateDeepCopyMethod())
+		sb.WriteString(wrapperMethodCodeGenerator.GenerateDeepCopyToMethod(entity.Fields))
+
+		// 生成 ToIncrementalProtoWithContext 方法
+		generatorToIncrementalProto := &ToIncrementalProtoCodeGenerator{
+			ObjectName:  entity.Name,
+			WrapperName: wrapperName,
+			Receiver:    "e",
+			ObjectType:  ObjectTypeEntity,
+		}
+		sb.WriteString(generatorToIncrementalProto.GenerateToIncrementalProtoMethod(entity.Fields))
+
+		// 写入文件（追加到 Entity 文件）
+		fileName := GetEntityFileName(entity.Name)
+		filePath := fmt.Sprintf("%s/%s", outputDir, fileName)
+
+		// 读取现有文件内容（如果存在）
+		existingContent := ""
+		if FileExists(filePath) {
+			if data, err := ReadFileContent(filePath); err == nil {
+				existingContent = data
+			}
+		}
+
+		// 追加新内容（如果文件已存在，在末尾添加换行）
+		var newContent string
+		if existingContent != "" {
+			// 确保现有内容以换行结尾
+			existingContent = strings.TrimRight(existingContent, " \n\r\t")
+			newContent = existingContent + "\n\n" + sb.String()
+		}
+
 		if err := WriteFile(filePath, newContent); err != nil {
 			return err
 		}

@@ -20,36 +20,51 @@ type FieldType struct {
 	ValueType *FieldType // map/xmap 的 value 类型，或 repeated 的元素类型
 }
 
+// GetKind 获取字段类型种类
 func (ft FieldType) GetKind() FieldKind {
 	return ft.Kind
 }
 
+// KeyKind 获取map/xmap的key类型种类
 func (ft FieldType) KeyKind() FieldKind {
 	return ft.KeyType.Kind
 }
 
+// ValueKind 获取map/xmap/repeated的值类型种类
 func (ft FieldType) ValueKind() FieldKind {
 	return ft.ValueType.Kind
 }
 
+// ValueName 获取map/xmap/repeated的值类型名称，如 HeroManager等MMEObject类型
 func (ft FieldType) ValueName() string {
 	return ft.ValueType.Name
 }
 
+// ValueTypeName 获取map/xmap/repeated的值类型完整名称，如 mme.HeroManager等MMEObject类型
 func (ft FieldType) ValueTypeName() string {
 	return ft.ValueType.TypeName
 }
 
+// IsMapField 判断字段类型是否是map类型
 func (ft FieldType) IsMapField() bool {
 	return ft.Kind == FieldKindMap
 }
 
+// IsXMapField 判断字段类型是否是xmap类型
 func (ft FieldType) IsXMapField() bool {
 	return ft.Kind == FieldKindXMap
 }
 
+// IsMMEObjectType 判断字段类型是否是MMEObject类型
 func (ft FieldType) IsMMEObjectType() bool {
 	return ft.Kind == FieldKindMMEObject
+}
+
+func (ft FieldType) GetTypeName() string {
+	if ft.TypeName != "" {
+		return ft.TypeName
+	}
+	return ft.Kind.String()
 }
 
 // isXMapValueMMEObject 判断xmap的Value类型是否是MMEObject
@@ -101,27 +116,6 @@ func (ft FieldType) IsFieldBaseType() bool {
 // FieldKind 字段类型种类（参考 descriptorpb 的设计）
 type FieldKind int32
 
-const (
-	FieldKindUnknown   FieldKind = 0
-	FieldKindDouble    FieldKind = 1  // double
-	FieldKindFloat     FieldKind = 2  // float
-	FieldKindInt64     FieldKind = 3  // int64
-	FieldKindUInt64    FieldKind = 4  // uint64
-	FieldKindInt32     FieldKind = 5  // int32
-	FieldKindFixed64   FieldKind = 6  // fixed64
-	FieldKindFixed32   FieldKind = 7  // fixed32
-	FieldKindBool      FieldKind = 8  // bool
-	FieldKindString    FieldKind = 9  // string
-	FieldKindMessage   FieldKind = 11 // message
-	FieldKindBytes     FieldKind = 12 // bytes
-	FieldKindUInt32    FieldKind = 13 // uint32
-	FieldKindEnum      FieldKind = 14 // enum
-	FieldKindMMEObject FieldKind = 16 // MME对象类型
-	FieldKindMap       FieldKind = 18 // map
-	FieldKindXMap      FieldKind = 19 // xmap
-	FieldKindRepeated  FieldKind = 20 // repeated
-)
-
 func (k FieldKind) IsBaseType() bool {
 	return k == FieldKindInt32 ||
 		k == FieldKindInt64 ||
@@ -149,44 +143,12 @@ func (k FieldKind) IsMap() bool {
 
 // String 返回字段类型的字符串表示
 func (k FieldKind) String() string {
-	switch k {
-	case FieldKindDouble:
-		return "double"
-	case FieldKindFloat:
-		return "float"
-	case FieldKindInt64:
-		return "int64"
-	case FieldKindUInt64:
-		return "uint64"
-	case FieldKindInt32:
-		return "int32"
-	case FieldKindFixed64:
-		return "fixed64"
-	case FieldKindFixed32:
-		return "fixed32"
-	case FieldKindBool:
-		return "bool"
-	case FieldKindString:
-		return "string"
-	case FieldKindMessage:
-		return "message"
-	case FieldKindBytes:
-		return "bytes"
-	case FieldKindUInt32:
-		return "uint32"
-	case FieldKindEnum:
-		return "enum"
-	case FieldKindMMEObject:
-		return "MMEObject"
-	case FieldKindMap:
-		return "map"
-	case FieldKindXMap:
-		return "xmap"
-	case FieldKindRepeated:
-		return "repeated"
-	default:
-		return "unknown"
+	str, ok := FieldKindStringMap[k]
+	if !ok {
+		return FieldKindUnknownString
 	}
+	return str
+
 }
 
 // FieldLabel 字段标签类型（参考 descriptorpb 的设计）
@@ -212,44 +174,11 @@ func (l FieldLabel) String() string {
 
 // FieldKindFromString 从字符串类型名称获取 FieldKind（深度类型推断）
 func FieldKindFromString(typeName string) FieldKind {
-	switch typeName {
-	case "double":
-		return FieldKindDouble
-	case "float":
-		return FieldKindFloat
-	case "int64":
-		return FieldKindInt64
-	case "uint64":
-		return FieldKindUInt64
-	case "int32":
-		return FieldKindInt32
-	case "fixed64":
-		return FieldKindFixed64
-	case "fixed32":
-		return FieldKindFixed32
-	case "bool":
-		return FieldKindBool
-	case "string":
-		return FieldKindString
-	case "bytes":
-		return FieldKindBytes
-	case "uint32":
-		return FieldKindUInt32
-	case "enum":
-		return FieldKindEnum
-	case "MMEObject":
-		return FieldKindMMEObject
-	case "map":
-		return FieldKindMap
-	case "xmap":
-		return FieldKindXMap
-	case "repeated":
-		return FieldKindRepeated
-	case "message":
-		return FieldKindMessage
-	default:
+	kind, ok := FieldKindStringToKindMap[strings.TrimSpace(typeName)]
+	if !ok {
 		return FieldKindUnknown
 	}
+	return kind
 }
 
 // ParseTypeString 递归解析类型字符串，支持嵌套的 map/xmap/repeated 类型
@@ -284,7 +213,7 @@ func ParseTypeString(typeStr string) (*FieldType, error) {
 	}
 
 	// 基础类型或消息类型
-	return parseBaseOrMessageType(typeStr, ft), nil
+	return parseBaseOrStructType(typeStr, ft), nil
 }
 
 // parseRepeatedType 解析 repeated 类型
@@ -321,8 +250,8 @@ func extractTypeName(fullTypeName string) string {
 	return fullTypeName
 }
 
-// parseBaseOrMessageType 解析基础类型或消息类型
-func parseBaseOrMessageType(typeStr string, ft *FieldType) *FieldType {
+// parseBaseOrStructType 解析基础类型或消息类型
+func parseBaseOrStructType(typeStr string, ft *FieldType) *FieldType {
 	ft.Label = FieldLabelOptional
 
 	// 首先尝试识别基础类型
@@ -349,7 +278,7 @@ func parseBaseOrMessageType(typeStr string, ft *FieldType) *FieldType {
 	}
 
 	// 无法识别为基础类型或 MME Object，作为普通消息类型处理
-	// 包含点号的通常是完整消息类型名称（如 "mme.HeroManager"）
+	// 包含点号的通常是完整消息类型名称（如 "mme.CommonMessage"）
 	// 不包含点号的可能是自定义类型名称
 	ft.Kind = FieldKindMessage
 	ft.TypeName = typeStr

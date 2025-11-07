@@ -3,152 +3,244 @@ package blueprint_gen
 import (
 	"fmt"
 	"strings"
+
+	blueprint_types "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types"
 )
 
 // generateNetWallProto 生成 NetWall Proto 文件
 func (g *ProtoGenerator) generateNetWallProto(outputDir string) error {
-	// 收集所有 NetWall 的 Request 和 Notify
-	allRequests := make(map[string][]NetWallMessage)
-	allNotifies := make(map[string][]NetWallMessage)
-	allDataStructs := make(map[string]DataStruct) // name -> DataStruct
-
-	// 收集 DataStructs（去重）
 	for _, netwallFile := range g.data.NetWalls {
-		for _, ds := range netwallFile.DataStructs {
-			allDataStructs[ds.Name] = ds
-		}
-
-		netwall := netwallFile.NetWall
-
-		// 收集 Requests
-		for _, req := range netwall.Requests {
-			allRequests[netwall.Name] = append(allRequests[netwall.Name], req)
-		}
-
-		// 收集 Notifies
-		for _, notify := range netwall.Notifies {
-			allNotifies[netwall.Name] = append(allNotifies[netwall.Name], notify)
+		err := g.generateNetWallProtoFile(outputDir, netwallFile)
+		if err != nil {
+			return err
 		}
 	}
-
-	// 生成 structs.proto
-	if err := g.generateStructsProto(outputDir, allDataStructs); err != nil {
-		return fmt.Errorf("failed to generate structs.proto: %w", err)
-	}
-
-	// 生成 request.proto
-	if err := g.generateRequestProto(outputDir, allRequests); err != nil {
-		return fmt.Errorf("failed to generate request.proto: %w", err)
-	}
-
-	// 生成 notify.proto
-	if err := g.generateNotifyProto(outputDir, allNotifies); err != nil {
-		return fmt.Errorf("failed to generate notify.proto: %w", err)
-	}
-
 	return nil
 }
 
-// generateStructsProto 生成 structs.proto
-func (g *ProtoGenerator) generateStructsProto(outputDir string, dataStructs map[string]DataStruct) error {
+func (g *ProtoGenerator) generateNetWallProtoFile(outputDir string, netwallFile *NetWallFile) error {
 	sb := strings.Builder{}
 
-	// 文件头部
-	imports := []string{}
-	if g.data.HeadFile != nil && len(g.data.HeadFile.CommonDataStructs) > 0 {
-		imports = append(imports, "protocol/common.proto")
+	// 检测跨 NetWall 的引用
+	imports := g.collectNetWallImports(netwallFile)
+
+	// 生成文件头部
+	packageName := netwallFile.PackageName
+	if packageName == "" {
+		return fmt.Errorf("NetWall package name is empty")
 	}
-	sb.WriteString(g.generateProtoHeader("Core", imports))
+	sb.WriteString(g.generateProtoHeader(packageName, imports))
 
-	// 生成所有数据结构
-	for _, ds := range dataStructs {
-		sb.WriteString(fmt.Sprintf("// %s\n", ds.Name))
-		sb.WriteString(fmt.Sprintf("message %s {\n", ds.Name))
-
-		for _, field := range ds.Fields {
-			sb.WriteString(g.generateFieldProtoFromOldField(field, field.Number))
+	// 生成 Request message
+	if len(netwallFile.Requests) > 0 {
+		sb.WriteString("message Request {\n\n")
+		for _, req := range netwallFile.Requests {
+			sb.WriteString(g.generateNetMessageProto(req, "    "))
 		}
-
 		sb.WriteString("}\n\n")
 	}
 
-	content := sb.String()
-	return WriteFile(outputDir+"/structs.proto", content)
-}
-
-// generateRequestProto 生成 request.proto
-func (g *ProtoGenerator) generateRequestProto(outputDir string, allRequests map[string][]NetWallMessage) error {
-	sb := strings.Builder{}
-
-	// 文件头部
-	imports := []string{"protocol/structs.proto"}
-	if g.data.HeadFile != nil && len(g.data.HeadFile.CommonDataStructs) > 0 {
-		imports = append(imports, "protocol/common.proto")
+	// 生成 Notify message
+	if len(netwallFile.Notifies) > 0 {
+		sb.WriteString("message Notify {\n\n")
+		for _, notify := range netwallFile.Notifies {
+			sb.WriteString(g.generateNetMessageProto(notify, "    "))
+		}
+		sb.WriteString("}\n\n")
 	}
-	sb.WriteString(g.generateProtoHeader("Core", imports))
 
-	sb.WriteString("message Request {\n")
-
-	// 生成所有 NetWall 的 Request
-	for _, requests := range allRequests {
-		for _, req := range requests {
-			sb.WriteString(fmt.Sprintf("  message %s {\n", req.Name))
-
-			// 生成字段
-			for _, field := range req.Fields {
-				protoType := ToProtoType(&field.Type)
-				sb.WriteString(fmt.Sprintf("    %s %s = %d;\n", protoType, field.Name, field.Number))
-			}
-
-			// 生成 Rsp
-			if req.Rsp != nil {
-				sb.WriteString("    message Rsp {\n")
-				for _, field := range req.Rsp.Fields {
-					sb.WriteString(g.generateFieldProtoFromOldField(field, field.Number))
+	// 生成 DataStructs
+	for _, ds := range netwallFile.DataStructs {
+		// 添加注释
+		if ds.Comment != "" {
+			sb.WriteString(fmt.Sprintf("// %s\n", ds.Comment))
+		}
+		sb.WriteString(fmt.Sprintf("message %s {\n", ds.Name))
+		if len(ds.Fields) > 0 {
+			// 按编号排序字段
+			fields := make([]*blueprint_types.Field, len(ds.Fields))
+			copy(fields, ds.Fields)
+			for i := 0; i < len(fields)-1; i++ {
+				for j := i + 1; j < len(fields); j++ {
+					if fields[i].Number > fields[j].Number {
+						fields[i], fields[j] = fields[j], fields[i]
+					}
 				}
-				sb.WriteString("    }\n")
 			}
 
-			sb.WriteString("  }\n\n")
+			for _, field := range fields {
+				// 添加注释
+				if field.Comment != "" {
+					sb.WriteString(fmt.Sprintf("    // %s\n", field.Comment))
+				}
+
+				// 生成字段类型
+				protoType := g.typeConverter.ToProtoType(&field.Type)
+				isOptional := g.typeConverter.IsOptionalInProto(&field.Type)
+
+				// 确保字段名不包含冒号
+				fieldName := strings.TrimSuffix(field.Name, ":")
+				fieldName = strings.TrimSpace(fieldName)
+
+				// 构建字段定义（使用 4 个空格缩进）
+				if isOptional {
+					sb.WriteString(fmt.Sprintf("    optional %s %s = %d;\n", protoType, fieldName, field.Number))
+				} else {
+					sb.WriteString(fmt.Sprintf("    %s %s = %d;\n", protoType, fieldName, field.Number))
+				}
+			}
 		}
+		sb.WriteString("}\n\n")
 	}
 
-	sb.WriteString("}\n")
-
+	// 生成文件名（首字母小写）
+	fileName := strings.ToLower(packageName) + ".proto"
 	content := sb.String()
-	return WriteFile(outputDir+"/request.proto", content)
+	return WriteFile(outputDir+"/"+fileName, content)
 }
 
-// generateNotifyProto 生成 notify.proto
-func (g *ProtoGenerator) generateNotifyProto(outputDir string, allNotifies map[string][]NetWallMessage) error {
-	sb := strings.Builder{}
-
-	// 文件头部
-	imports := []string{"protocol/structs.proto"}
-	if g.data.HeadFile != nil && len(g.data.HeadFile.CommonDataStructs) > 0 {
-		imports = append(imports, "protocol/common.proto")
-	}
-	sb.WriteString(g.generateProtoHeader("Core", imports))
-
-	sb.WriteString("message Notify {\n")
-
-	// 生成所有 NetWall 的 Notify
-	for _, notifies := range allNotifies {
-		for _, notify := range notifies {
-			sb.WriteString(fmt.Sprintf("  message %s {\n", notify.Name))
-
-			// 生成字段
-			for _, field := range notify.Fields {
-				protoType := ToProtoType(&field.Type)
-				sb.WriteString(fmt.Sprintf("    %s %s = %d;\n", protoType, field.Name, field.Number))
-			}
-
-			sb.WriteString("  }\n\n")
+// collectNetWallImports 收集跨 NetWall 的引用
+func (g *ProtoGenerator) collectNetWallImports(wallFile *NetWallFile) []string {
+	imports := make(map[string]bool)
+	nameSpaces := make(map[string]string)
+	allMessages := make([]*NetMessage, 0)
+	for _, netwallFile := range g.data.NetWalls {
+		// 引用其他NetWall的数据结构
+		for _, ds := range netwallFile.DataStructs {
+			nameSpaces[ds.Name] = netwallFile.PackageName
 		}
 	}
 
-	sb.WriteString("}\n")
+	for _, msg := range wallFile.Requests {
+		allMessages = append(allMessages, msg)
+	}
 
-	content := sb.String()
-	return WriteFile(outputDir+"/notify.proto", content)
+	for _, msg := range wallFile.Notifies {
+		allMessages = append(allMessages, msg)
+	}
+
+	for _, ds := range wallFile.DataStructs {
+		allMessages = append(allMessages, ds)
+	}
+
+	// 遍历所有消息的字段，检测跨 NetWall 引用
+	for _, msg := range allMessages {
+		for _, field := range msg.Fields {
+			name := field.Type.Name
+			if name == "" {
+				panic(fmt.Sprintf("NetWall %s 的消息 %s 的字段 %s 没有名称", msg.PackageName, msg.Name, field.Name))
+			}
+
+			packageName, ok := nameSpaces[name]
+			if ok && packageName != msg.PackageName {
+				fileName := strings.ToLower(packageName)
+				imports[fileName] = true
+			}
+		}
+	}
+
+	// 转换为切片并排序
+	result := make([]string, 0, len(imports))
+	for imp := range imports {
+		result = append(result, imp)
+	}
+	// 简单排序（按字母顺序）
+	for i := 0; i < len(result)-1; i++ {
+		for j := i + 1; j < len(result); j++ {
+			if result[i] > result[j] {
+				result[i], result[j] = result[j], result[i]
+			}
+		}
+	}
+
+	return result
+}
+
+// generateNetMessageProto 生成 NetMessage 的 Proto 定义
+func (g *ProtoGenerator) generateNetMessageProto(msg *NetMessage, indent string) string {
+	sb := strings.Builder{}
+
+	// 添加注释
+	if msg.Comment != "" {
+		sb.WriteString(fmt.Sprintf("%s// %s\n", indent, msg.Comment))
+	}
+
+	// 生成 message 定义
+	sb.WriteString(fmt.Sprintf("%smessage %s {\n", indent, msg.Name))
+
+	// 按编号排序字段
+	fields := make([]*blueprint_types.Field, len(msg.Fields))
+	copy(fields, msg.Fields)
+	for i := 0; i < len(fields)-1; i++ {
+		for j := i + 1; j < len(fields); j++ {
+			if fields[i].Number > fields[j].Number {
+				fields[i], fields[j] = fields[j], fields[i]
+			}
+		}
+	}
+
+	// 生成字段定义
+	for _, field := range fields {
+		// 添加注释
+		if field.Comment != "" {
+			sb.WriteString(fmt.Sprintf("%s    // %s\n", indent, field.Comment))
+		}
+
+		// 生成字段类型
+		protoType := g.typeConverter.ToProtoType(&field.Type)
+		isOptional := g.typeConverter.IsOptionalInProto(&field.Type)
+
+		// 确保字段名不包含冒号
+		fieldName := strings.TrimSuffix(field.Name, ":")
+		fieldName = strings.TrimSpace(fieldName)
+
+		// 构建字段定义（使用 4 个空格缩进）
+		if isOptional {
+			sb.WriteString(fmt.Sprintf("%s    optional %s %s = %d;\n", indent, protoType, fieldName, field.Number))
+		} else {
+			sb.WriteString(fmt.Sprintf("%s    %s %s = %d;\n", indent, protoType, fieldName, field.Number))
+		}
+	}
+
+	// 生成 Rsp（如果有）
+	if msg.Rsp != nil {
+		sb.WriteString(fmt.Sprintf("%s    message Rsp {\n", indent))
+		// 按编号排序 Rsp 字段
+		rspFields := make([]*blueprint_types.Field, len(msg.Rsp.Fields))
+		copy(rspFields, msg.Rsp.Fields)
+		for i := 0; i < len(rspFields)-1; i++ {
+			for j := i + 1; j < len(rspFields); j++ {
+				if rspFields[i].Number > rspFields[j].Number {
+					rspFields[i], rspFields[j] = rspFields[j], rspFields[i]
+				}
+			}
+		}
+
+		for _, field := range rspFields {
+			// 添加注释
+			if field.Comment != "" {
+				sb.WriteString(fmt.Sprintf("%s        // %s\n", indent, field.Comment))
+			}
+
+			// 生成字段类型
+			protoType := g.typeConverter.ToProtoType(&field.Type)
+			isOptional := g.typeConverter.IsOptionalInProto(&field.Type)
+
+			// 确保字段名不包含冒号
+			fieldName := strings.TrimSuffix(field.Name, ":")
+			fieldName = strings.TrimSpace(fieldName)
+
+			// 构建字段定义（使用 8 个空格缩进，因为 Rsp 在 Request 内部）
+			if isOptional {
+				sb.WriteString(fmt.Sprintf("%s        optional %s %s = %d;\n", indent, protoType, fieldName, field.Number))
+			} else {
+				sb.WriteString(fmt.Sprintf("%s        %s %s = %d;\n", indent, protoType, fieldName, field.Number))
+			}
+		}
+		sb.WriteString(fmt.Sprintf("%s    }\n", indent))
+	}
+
+	sb.WriteString(fmt.Sprintf("%s}\n\n", indent))
+
+	return sb.String()
 }

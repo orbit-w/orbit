@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package Core;
+option go_package = "./mme";
+
+message Request {
+
+    message SearchBook {
+        optional string Query = 1;
+        optional int32 PageNumber = 2;
+        message Rsp {
+            optional Book Result = 1;
+        }
+    }
+
+    message HeartBeat {
+    }
+
+}
+
+message Notify {
+
+    message BeAttacked {
+        optional int32 CurHp = 1;
+    }
+
+}
+
+message Book {
+    optional string Content = 1;
+}
+
+message OK {
+}
+
+message Error {
+    optional string Reason = 1;
+}
+
+message MMELocation {
+    optional int64 EntityId = 1;
+    optional int32 ModuleId = 2;
+    optional int32 MechanismIndex = 3;
+}
+

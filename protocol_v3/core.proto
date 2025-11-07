@@ -1,0 +1,104 @@
+syntax = "proto3";
+
+package Core;
+
+message Request {
+
+    message SearchBook {
+        // 位置
+        string Query = 1;
+        // 要第几页
+        int32 PageNumber = 2;
+        message Rsp {
+            Book Result = 1;
+        }
+    }
+
+
+    message HeartBeat {
+    }
+
+
+    message SaveChangeToServer {
+        repeated EntityTrans EntityChanges = 1;
+    }
+
+
+    message AskMechanismData {
+        MMELocation Loc = 1;
+        message Rsp {
+            bytes Data = 1;
+        }
+    }
+
+
+    message AskModuleData {
+        MMELocation Loc = 1;
+        message Rsp {
+            bytes Data = 1;
+        }
+    }
+
+
+    message AskManagerData {
+        MMELocation Loc = 1;
+        message Rsp {
+            bytes Data = 1;
+        }
+    }
+
+
+}
+
+message Notify {
+
+    message BeAttacked {
+        int32 CurHp = 1;
+    }
+
+
+    message DataChanged {
+        repeated EntityTrans EntityChanges = 1;
+    }
+
+
+    message LoginData {
+        repeated EntityTrans Entities = 1;
+    }
+
+
+}
+
+message Book {
+    string Content = 1;
+}
+
+
+// #通用成功
+message OK {
+}
+
+
+// #通用失败
+message Error {
+    string Reason = 1;
+}
+
+
+// #MME位置
+message MMELocation {
+    optional int64 EntityId = 1;
+    optional int32 ManagerId = 2;
+    optional int64 Key = 3;
+    optional int32 ModuleId = 4;
+    optional int32 MechanismIndex = 5;
+}
+
+
+message EntityTrans {
+    int64 EntityId = 1;
+    int32 Hash = 2;
+    bytes Data = 3;
+}
+
+

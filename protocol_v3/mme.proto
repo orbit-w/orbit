@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+import "Core.proto";
+
+package MME;
+
+message Request {
+
+    message AskLevelUp {
+        int32 UpNum = 1;
+        Core.MMELocation Loc = 1000;
+        message Rsp {
+            string Result = 1;
+        }
+    }
+
+
+}
+
+message Notify {
+
+    message ExpChange {
+        int32 Exp = 1;
+        Core.MMELocation Loc = 1000;
+    }
+
+
+}
+

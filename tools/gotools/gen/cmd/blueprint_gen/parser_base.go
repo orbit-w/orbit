@@ -2,9 +2,12 @@ package blueprint_gen
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
+	"gitee.com/orbit-w/meteor/bases/misc/utils"
 	types "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types"
 	"gopkg.in/yaml.v3"
 )
@@ -28,29 +31,45 @@ func (p *BaseParser) GetContext() *BlueprintContext {
 	return p.ctx
 }
 
-// ReadYAMLFile 读取并解析 YAML 文件
-func (p *BaseParser) ReadYAMLFile(filePath string) (map[string]interface{}, error) {
+// ReadYAMLFile 读取并解析 YAML 文件（支持多文档，用 --- 分隔）
+func (p *BaseParser) ReadYAMLFile(filePath string) (map[string]any, error) {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file %s: %w", filePath, err)
 	}
 
-	var yamlData map[string]interface{}
-	if err := yaml.Unmarshal(data, &yamlData); err != nil {
-		return nil, fmt.Errorf("failed to parse YAML file %s: %w", filePath, err)
+	// 使用 Decoder 支持多文档 YAML
+	decoder := yaml.NewDecoder(strings.NewReader(string(data)))
+	result := make(map[string]any)
+
+	// 解析所有文档并合并
+	for {
+		var doc map[string]any
+		if err := decoder.Decode(&doc); err != nil {
+			// EOF 表示所有文档解析完成
+			if err == io.EOF {
+				break
+			}
+			return nil, fmt.Errorf("failed to parse YAML file %s: %w", filePath, err)
+		}
+
+		// 合并文档内容
+		for k, v := range doc {
+			result[k] = v
+		}
 	}
 
-	return yamlData, nil
+	return result, nil
 }
 
 // ReadYAMLFileList 读取并解析 YAML 列表文件
-func (p *BaseParser) ReadYAMLFileList(filePath string) ([]interface{}, error) {
+func (p *BaseParser) ReadYAMLFileList(filePath string) ([]any, error) {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file %s: %w", filePath, err)
 	}
 
-	var yamlData []interface{}
+	var yamlData []any
 	if err := yaml.Unmarshal(data, &yamlData); err != nil {
 		return nil, fmt.Errorf("failed to parse YAML file %s: %w", filePath, err)
 	}
@@ -69,16 +88,20 @@ func (p *BaseParser) ParseFieldDefinitionToTypesField(fieldDef string) (*types.F
 }
 
 // ParseMessageFields 解析消息字段（通用逻辑），统一使用 *types.Field
-func (p *BaseParser) ParseMessageFields(fieldsMap map[string]interface{}) ([]*types.Field, error) {
+func (p *BaseParser) ParseMessageFields(fieldsMap map[string]any) ([]*types.Field, error) {
 	result := make([]*types.Field, 0)
 
-	for fieldName, fieldDef := range fieldsMap {
-		if fieldStr, ok := fieldDef.(string); ok {
-			field, err := ParseFieldDefinition(fieldName + " " + fieldStr)
-			if err != nil {
-				continue // 跳过解析失败的字段
-			}
+	for fieldKey, fieldDef := range fieldsMap {
+		var field *types.Field
+		var err error
+
+		fieldStr := utils.ToString(fieldDef)
+		// int32 FieldName: 1
+		// fieldKey 包含类型和字段名，如 "string Query"
+		field, err = ParseFieldDefinition(fieldKey + ": " + fieldStr)
+		if err == nil && field != nil {
 			result = append(result, field)
+			continue
 		}
 	}
 
@@ -87,69 +110,6 @@ func (p *BaseParser) ParseMessageFields(fieldsMap map[string]interface{}) ([]*ty
 
 // ParseMessageFieldsToTypes 解析消息字段为 types.Field 列表（通用逻辑）
 // 现在直接使用 ParseMessageFields，因为已经统一使用 *types.Field
-func (p *BaseParser) ParseMessageFieldsToTypes(fieldsMap map[string]interface{}) ([]*types.Field, error) {
+func (p *BaseParser) ParseMessageFieldsToTypes(fieldsMap map[string]any) ([]*types.Field, error) {
 	return p.ParseMessageFields(fieldsMap)
-}
-
-// ParseRequestOrNotify 解析请求或通知（通用逻辑）
-func (p *BaseParser) ParseRequestOrNotify(item interface{}, parseResponse bool) (Request, error) {
-	req := Request{}
-
-	if reqMap, ok := item.(map[string]interface{}); ok {
-		for name, data := range reqMap {
-			req.Name = name
-
-			if dataMap, ok := data.(map[string]interface{}); ok {
-				// 解析字段
-				fields := make([]*types.Field, 0)
-				for fieldName, fieldDef := range dataMap {
-					if fieldName == "Rsp" && parseResponse {
-						// 解析响应
-						if rspData, ok := fieldDef.(map[string]interface{}); ok {
-							rsp := Response{}
-							rspFields, err := p.ParseMessageFields(rspData)
-							if err == nil {
-								rsp.Fields = rspFields
-							}
-							req.Rsp = &rsp
-						}
-					} else {
-						// 解析请求字段
-						if fieldStr, ok := fieldDef.(string); ok {
-							field, err := ParseFieldDefinition(fieldName + " " + fieldStr)
-							if err == nil {
-								fields = append(fields, field)
-							}
-						}
-					}
-				}
-				req.Fields = fields
-			}
-		}
-	} else if reqName, ok := item.(string); ok {
-		// 简单请求，无参数
-		req.Name = reqName
-	}
-
-	return req, nil
-}
-
-// ParseNotifyOnly 解析通知（不含响应）
-func (p *BaseParser) ParseNotifyOnly(item interface{}) (Notify, error) {
-	notify := Notify{}
-
-	if notifyMap, ok := item.(map[string]interface{}); ok {
-		for name, data := range notifyMap {
-			notify.Name = name
-
-			if dataMap, ok := data.(map[string]interface{}); ok {
-				fields, err := p.ParseMessageFields(dataMap)
-				if err == nil {
-					notify.Fields = fields
-				}
-			}
-		}
-	}
-
-	return notify, nil
 }

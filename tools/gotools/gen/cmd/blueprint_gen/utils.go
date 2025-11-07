@@ -307,8 +307,21 @@ func (g *BuildMongoUpdateCodeGenerator) GenerateBuildMongoUpdateMethod(fields []
 		sb.WriteString(fmt.Sprintf("\tif %s.IsDirty(%s) {\n", g.Receiver, dirtyBitName))
 		switch field.Type.Kind {
 		case types.FieldKindMap:
-			sb.WriteString(fmt.Sprintf("\t\tbuilder.SetNestedPath(path, \"%s\", %s.Get%s())\n",
-				fieldNameSnake, g.Receiver, field.Name))
+			switch {
+			case field.Type.ValueKind().IsBaseType():
+				keyType := field.Type.KeyKind().String()
+				valueType := field.Type.ValueKind().String()
+				sb.WriteString(fmt.Sprintf("\t\tcopy := make(map[%s]%s, len(%s.data.%s))\n",
+					keyType, valueType, g.Receiver, field.Name))
+				sb.WriteString(fmt.Sprintf("\t\tmaps.Copy(copy, %s.data.%s)\n",
+					g.Receiver, field.Name))
+				sb.WriteString(fmt.Sprintf("\t\tbuilder.SetNestedPath(path, \"%s\", copy)\n",
+					fieldNameSnake))
+			case field.Type.ValueKind().IsMMEObject():
+				panic(fmt.Sprintf("field %s value type is MMEObject, not supported for Map", field.Name))
+			default:
+				panic(fmt.Sprintf("field %s value type is not supported for Map", field.Name))
+			}
 		case types.FieldKindXMap:
 			valueType := field.GetValueType()
 			if valueType == nil {
@@ -334,6 +347,30 @@ func (g *BuildMongoUpdateCodeGenerator) GenerateBuildMongoUpdateMethod(fields []
 			default:
 				panic(fmt.Sprintf("field %s value type is not supported", field.Name))
 			}
+		default:
+			switch {
+			case field.Type.GetKind().IsBaseType():
+				// 基础类型字段处理
+				methodName := strings.ToUpper(field.Name[0:1]) + field.Name[1:]
+				// 特殊处理：Id 字段使用 "_id" 作为 MongoDB 字段名
+				if field.Name == "Id" {
+					sb.WriteString(fmt.Sprintf("\t\tbuilder.SetNestedPath(path, \"_id\", %s.Get%s())\n",
+						g.Receiver, methodName))
+				} else {
+					sb.WriteString(fmt.Sprintf("\t\tbuilder.SetNestedPath(path, \"%s\", %s.Get%s())\n",
+						fieldNameSnake, g.Receiver, methodName))
+				}
+			case field.Type.GetKind().IsMMEObject():
+				// MMEObject 类型字段处理：调用嵌套 wrapper 的 BuildMongoUpdate 方法
+				wrapperFieldName := field.Name + "Wrapper"
+				sb.WriteString(fmt.Sprintf("\t\tif %s.%s != nil {\n",
+					g.Receiver, wrapperFieldName))
+				sb.WriteString(fmt.Sprintf("\t\t\t%s.%s.BuildMongoUpdate(builder, path.Field(\"%s\"))\n",
+					g.Receiver, wrapperFieldName, fieldNameSnake))
+				sb.WriteString("\t\t}\n")
+			default:
+				panic(fmt.Sprintf("field %s value type is not supported", field.Name))
+			}
 		}
 		sb.WriteString("\t}\n")
 	}
@@ -355,11 +392,7 @@ func (g *ToIncrementalProtoCodeGenerator) GenerateToIncrementalProtoMethod(field
 	var sb strings.Builder
 
 	// 根据对象类型确定方法名
-	methodName := "ToIncrementalProto"
-	if g.ObjectType == ObjectTypeMechanism || g.ObjectType == ObjectTypeModule {
-		methodName = "ToIncrementalProtoWithContext"
-	}
-
+	methodName := "ToIncrementalProtoWithContext"
 	// 方法注释
 	sb.WriteString(fmt.Sprintf("// %s 根据脏标记位构建增量数据的 protoMessage\n", methodName))
 	sb.WriteString("// 只返回标记为脏的字段数据，用于增量同步\n")
@@ -700,15 +733,19 @@ func (g *WrapperMethodCodeGenerator) GenerateFromProtoMethod(fields []*types.Fie
 				sb.WriteString("\t}\n")
 			}
 		} else if field.Type.IsMapField() {
-			// Map 类型字段：使用 Link.SetWithoutTrack() 和 FromProto()
-			linkFieldName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Link"
-			valueName := field.GetValueName()
-			sb.WriteString(fmt.Sprintf("\tfor key := range pb.%s {\n", field.Name))
-			sb.WriteString(fmt.Sprintf("\t\tpbValue := pb.%s[key]\n", field.Name))
-			sb.WriteString(fmt.Sprintf("\t\tv := New%s()\n", valueName))
-			sb.WriteString(fmt.Sprintf("\t\twrapper := %s.%s.SetWithoutTrack(key, v)\n", g.Receiver, linkFieldName))
-			sb.WriteString("\t\twrapper.FromProto(pbValue)\n")
-			sb.WriteString("\t}\n")
+			// Map 类型字段：根据 ValueType 决定处理方式
+			valueType := field.GetValueType()
+			switch {
+			case valueType.IsMMEObjectType():
+				panic(fmt.Sprintf("field %s value type is MMEObject, not supported for Map", field.Name))
+			case valueType.IsFieldBaseType():
+				// ValueType 是基础类型，使用 maps.Copy()
+				sb.WriteString(fmt.Sprintf("\tif pb.%s != nil {\n", field.Name))
+				sb.WriteString(fmt.Sprintf("\t\tmaps.Copy(%s.data.%s, pb.%s)\n", g.Receiver, field.Name, field.Name))
+				sb.WriteString("\t}\n")
+			default:
+				panic(fmt.Sprintf("field %s value type is not supported for Map", field.Name))
+			}
 		}
 	}
 

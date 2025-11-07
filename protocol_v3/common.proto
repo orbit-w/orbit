@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package MME;
+
+message Fish {
+    optional int32 FishId = 1;
+    // 鱼身
+    map<int32, int32> BodyMap = 2;
+    repeated BodyMap_XXXMapChangeRecord BodyMap_XXXChangeList = 1002;  message BodyMap_XXXMapChangeRecord { int32 key = 1; int32 value = 2; bool isDelete = 3; }
+
+}
+
+
