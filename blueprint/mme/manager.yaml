@@ -1,9 +1,0 @@
-#管理器定义蓝图
----
-#------管理器蓝图 
-# 管理器是，游戏组织编排多个Module模块的容器
-# 管理器可以包含多个Module模块，每个Module模块可以包含多个Mechanism机制
-Managers:
-  - HeroManager:
-      xmap<int64, HeroModule> HeroMap: 1
----

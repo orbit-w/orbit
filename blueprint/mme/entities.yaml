@@ -1,9 +1,0 @@
-#实体定义蓝图
----
-#------Entity蓝图
-# 实体是游戏中的一个独立对象单元，自由组合一组Manager管理器
-#Player实例
-Entity:
-  - PlayerEntity:
-      #英雄模块
-      HeroManager HeroManager: 1 [blueprint:"access=all"]

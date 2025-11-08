@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.10
 // 	protoc        v6.33.0
-// source: protocol/mechanisms.proto
+// source: mechanisms.proto
 
 package mme
 
@@ -32,7 +32,7 @@ type LevelUpMechanism struct {
 
 func (x *LevelUpMechanism) Reset() {
 	*x = LevelUpMechanism{}
-	mi := &file_protocol_mechanisms_proto_msgTypes[0]
+	mi := &file_mechanisms_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -44,7 +44,7 @@ func (x *LevelUpMechanism) String() string {
 func (*LevelUpMechanism) ProtoMessage() {}
 
 func (x *LevelUpMechanism) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_mechanisms_proto_msgTypes[0]
+	mi := &file_mechanisms_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -57,7 +57,7 @@ func (x *LevelUpMechanism) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LevelUpMechanism.ProtoReflect.Descriptor instead.
 func (*LevelUpMechanism) Descriptor() ([]byte, []int) {
-	return file_protocol_mechanisms_proto_rawDescGZIP(), []int{0}
+	return file_mechanisms_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *LevelUpMechanism) GetCurLevel() int32 {
@@ -88,14 +88,14 @@ type HeroMechanism struct {
 	CreateTime           *int64                                     `protobuf:"varint,3,opt,name=CreateTime,proto3,oneof" json:"CreateTime,omitempty"`
 	UseTimes             *int32                                     `protobuf:"varint,4,opt,name=UseTimes,proto3,oneof" json:"UseTimes,omitempty"`
 	Skills               map[int32]int32                            `protobuf:"bytes,5,rep,name=Skills,proto3" json:"Skills,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
-	Skills_XXXChangeList []*HeroMechanism_Skills_XXXMapChangeRecord `protobuf:"bytes,1005,rep,name=Skills_XXXChangeList,json=SkillsXXXChangeList,proto3" json:"Skills_XXXChangeList,omitempty"` // Skills变化
+	Skills_XXXChangeList []*HeroMechanism_Skills_XXXMapChangeRecord `protobuf:"bytes,1005,rep,name=Skills_XXXChangeList,json=SkillsXXXChangeList,proto3" json:"Skills_XXXChangeList,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
 
 func (x *HeroMechanism) Reset() {
 	*x = HeroMechanism{}
-	mi := &file_protocol_mechanisms_proto_msgTypes[1]
+	mi := &file_mechanisms_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -107,7 +107,7 @@ func (x *HeroMechanism) String() string {
 func (*HeroMechanism) ProtoMessage() {}
 
 func (x *HeroMechanism) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_mechanisms_proto_msgTypes[1]
+	mi := &file_mechanisms_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -120,7 +120,7 @@ func (x *HeroMechanism) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HeroMechanism.ProtoReflect.Descriptor instead.
 func (*HeroMechanism) Descriptor() ([]byte, []int) {
-	return file_protocol_mechanisms_proto_rawDescGZIP(), []int{1}
+	return file_mechanisms_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *HeroMechanism) GetId() int64 {
@@ -174,7 +174,7 @@ type ManualUnlockMechanism struct {
 
 func (x *ManualUnlockMechanism) Reset() {
 	*x = ManualUnlockMechanism{}
-	mi := &file_protocol_mechanisms_proto_msgTypes[2]
+	mi := &file_mechanisms_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -186,7 +186,7 @@ func (x *ManualUnlockMechanism) String() string {
 func (*ManualUnlockMechanism) ProtoMessage() {}
 
 func (x *ManualUnlockMechanism) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_mechanisms_proto_msgTypes[2]
+	mi := &file_mechanisms_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -199,7 +199,7 @@ func (x *ManualUnlockMechanism) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ManualUnlockMechanism.ProtoReflect.Descriptor instead.
 func (*ManualUnlockMechanism) Descriptor() ([]byte, []int) {
-	return file_protocol_mechanisms_proto_rawDescGZIP(), []int{2}
+	return file_mechanisms_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *ManualUnlockMechanism) GetUnlockMap() map[int32]bool {
@@ -219,7 +219,7 @@ type WearMechanism struct {
 
 func (x *WearMechanism) Reset() {
 	*x = WearMechanism{}
-	mi := &file_protocol_mechanisms_proto_msgTypes[3]
+	mi := &file_mechanisms_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -231,7 +231,7 @@ func (x *WearMechanism) String() string {
 func (*WearMechanism) ProtoMessage() {}
 
 func (x *WearMechanism) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_mechanisms_proto_msgTypes[3]
+	mi := &file_mechanisms_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -244,7 +244,7 @@ func (x *WearMechanism) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WearMechanism.ProtoReflect.Descriptor instead.
 func (*WearMechanism) Descriptor() ([]byte, []int) {
-	return file_protocol_mechanisms_proto_rawDescGZIP(), []int{3}
+	return file_mechanisms_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *WearMechanism) GetWearMap() map[int32]int32 {
@@ -272,7 +272,7 @@ type HeroMechanism_Skills_XXXMapChangeRecord struct {
 
 func (x *HeroMechanism_Skills_XXXMapChangeRecord) Reset() {
 	*x = HeroMechanism_Skills_XXXMapChangeRecord{}
-	mi := &file_protocol_mechanisms_proto_msgTypes[5]
+	mi := &file_mechanisms_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -284,7 +284,7 @@ func (x *HeroMechanism_Skills_XXXMapChangeRecord) String() string {
 func (*HeroMechanism_Skills_XXXMapChangeRecord) ProtoMessage() {}
 
 func (x *HeroMechanism_Skills_XXXMapChangeRecord) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_mechanisms_proto_msgTypes[5]
+	mi := &file_mechanisms_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -297,7 +297,7 @@ func (x *HeroMechanism_Skills_XXXMapChangeRecord) ProtoReflect() protoreflect.Me
 
 // Deprecated: Use HeroMechanism_Skills_XXXMapChangeRecord.ProtoReflect.Descriptor instead.
 func (*HeroMechanism_Skills_XXXMapChangeRecord) Descriptor() ([]byte, []int) {
-	return file_protocol_mechanisms_proto_rawDescGZIP(), []int{1, 1}
+	return file_mechanisms_proto_rawDescGZIP(), []int{1, 1}
 }
 
 func (x *HeroMechanism_Skills_XXXMapChangeRecord) GetKey() int32 {
@@ -321,11 +321,11 @@ func (x *HeroMechanism_Skills_XXXMapChangeRecord) GetIsDelete() bool {
 	return false
 }
 
-var File_protocol_mechanisms_proto protoreflect.FileDescriptor
+var File_mechanisms_proto protoreflect.FileDescriptor
 
-const file_protocol_mechanisms_proto_rawDesc = "" +
+const file_mechanisms_proto_rawDesc = "" +
 	"\n" +
-	"\x19protocol/mechanisms.proto\x12\x03MME\x1a\x15protocol/common.proto\"\x90\x01\n" +
+	"\x10mechanisms.proto\x12\x03MME\"\x90\x01\n" +
 	"\x10LevelUpMechanism\x12\x1f\n" +
 	"\bCurLevel\x18\x01 \x01(\x05H\x00R\bCurLevel\x88\x01\x01\x12\x1b\n" +
 	"\x06CurExp\x18\x02 \x01(\x05H\x01R\x06CurExp\x88\x01\x01\x12\x1b\n" +
@@ -364,22 +364,22 @@ const file_protocol_mechanisms_proto_rawDesc = "" +
 	"\fWearMapEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\x05R\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01B\t\n" +
-	"\a_ConfIdB\aZ\x05./mmeb\x06proto3"
+	"\a_ConfIdB'Z%gitee.com/orbit-w/orbit/app/proto/mmeb\x06proto3"
 
 var (
-	file_protocol_mechanisms_proto_rawDescOnce sync.Once
-	file_protocol_mechanisms_proto_rawDescData []byte
+	file_mechanisms_proto_rawDescOnce sync.Once
+	file_mechanisms_proto_rawDescData []byte
 )
 
-func file_protocol_mechanisms_proto_rawDescGZIP() []byte {
-	file_protocol_mechanisms_proto_rawDescOnce.Do(func() {
-		file_protocol_mechanisms_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_protocol_mechanisms_proto_rawDesc), len(file_protocol_mechanisms_proto_rawDesc)))
+func file_mechanisms_proto_rawDescGZIP() []byte {
+	file_mechanisms_proto_rawDescOnce.Do(func() {
+		file_mechanisms_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_mechanisms_proto_rawDesc), len(file_mechanisms_proto_rawDesc)))
 	})
-	return file_protocol_mechanisms_proto_rawDescData
+	return file_mechanisms_proto_rawDescData
 }
 
-var file_protocol_mechanisms_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
-var file_protocol_mechanisms_proto_goTypes = []any{
+var file_mechanisms_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_mechanisms_proto_goTypes = []any{
 	(*LevelUpMechanism)(nil),      // 0: MME.LevelUpMechanism
 	(*HeroMechanism)(nil),         // 1: MME.HeroMechanism
 	(*ManualUnlockMechanism)(nil), // 2: MME.ManualUnlockMechanism
@@ -389,7 +389,7 @@ var file_protocol_mechanisms_proto_goTypes = []any{
 	nil, // 6: MME.ManualUnlockMechanism.UnlockMapEntry
 	nil, // 7: MME.WearMechanism.WearMapEntry
 }
-var file_protocol_mechanisms_proto_depIdxs = []int32{
+var file_mechanisms_proto_depIdxs = []int32{
 	4, // 0: MME.HeroMechanism.Skills:type_name -> MME.HeroMechanism.SkillsEntry
 	5, // 1: MME.HeroMechanism.Skills_XXXChangeList:type_name -> MME.HeroMechanism.Skills_XXXMapChangeRecord
 	6, // 2: MME.ManualUnlockMechanism.UnlockMap:type_name -> MME.ManualUnlockMechanism.UnlockMapEntry
@@ -401,30 +401,29 @@ var file_protocol_mechanisms_proto_depIdxs = []int32{
 	0, // [0:4] is the sub-list for field type_name
 }
 
-func init() { file_protocol_mechanisms_proto_init() }
-func file_protocol_mechanisms_proto_init() {
-	if File_protocol_mechanisms_proto != nil {
+func init() { file_mechanisms_proto_init() }
+func file_mechanisms_proto_init() {
+	if File_mechanisms_proto != nil {
 		return
 	}
-	file_protocol_common_proto_init()
-	file_protocol_mechanisms_proto_msgTypes[0].OneofWrappers = []any{}
-	file_protocol_mechanisms_proto_msgTypes[1].OneofWrappers = []any{}
-	file_protocol_mechanisms_proto_msgTypes[3].OneofWrappers = []any{}
+	file_mechanisms_proto_msgTypes[0].OneofWrappers = []any{}
+	file_mechanisms_proto_msgTypes[1].OneofWrappers = []any{}
+	file_mechanisms_proto_msgTypes[3].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_protocol_mechanisms_proto_rawDesc), len(file_protocol_mechanisms_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_mechanisms_proto_rawDesc), len(file_mechanisms_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
-		GoTypes:           file_protocol_mechanisms_proto_goTypes,
-		DependencyIndexes: file_protocol_mechanisms_proto_depIdxs,
-		MessageInfos:      file_protocol_mechanisms_proto_msgTypes,
+		GoTypes:           file_mechanisms_proto_goTypes,
+		DependencyIndexes: file_mechanisms_proto_depIdxs,
+		MessageInfos:      file_mechanisms_proto_msgTypes,
 	}.Build()
-	File_protocol_mechanisms_proto = out.File
-	file_protocol_mechanisms_proto_goTypes = nil
-	file_protocol_mechanisms_proto_depIdxs = nil
+	File_mechanisms_proto = out.File
+	file_mechanisms_proto_goTypes = nil
+	file_mechanisms_proto_depIdxs = nil
 }

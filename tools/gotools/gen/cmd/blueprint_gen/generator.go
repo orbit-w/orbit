@@ -53,7 +53,7 @@ func (g *TemplateGenerator) AddTemplate(name, tmpl string) error {
 }
 
 // RenderTemplate 渲染模板
-func (g *TemplateGenerator) RenderTemplate(name string, data interface{}) (string, error) {
+func (g *TemplateGenerator) RenderTemplate(name string, data any) (string, error) {
 	t, ok := g.templates[name]
 	if !ok {
 		return "", fmt.Errorf("template %s not found", name)
@@ -93,7 +93,7 @@ func (b *CodeBuilder) SetIndentStr(str string) {
 }
 
 // WriteLine 写入一行代码
-func (b *CodeBuilder) WriteLine(format string, args ...interface{}) {
+func (b *CodeBuilder) WriteLine(format string, args ...any) {
 	for i := 0; i < b.indent; i++ {
 		b.sb.WriteString(b.indentStr)
 	}
@@ -106,7 +106,7 @@ func (b *CodeBuilder) WriteLine(format string, args ...interface{}) {
 }
 
 // Write 写入代码（不换行）
-func (b *CodeBuilder) Write(format string, args ...interface{}) {
+func (b *CodeBuilder) Write(format string, args ...any) {
 	if len(args) > 0 {
 		b.sb.WriteString(fmt.Sprintf(format, args...))
 	} else {

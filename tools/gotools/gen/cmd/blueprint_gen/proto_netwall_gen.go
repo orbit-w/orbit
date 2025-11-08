@@ -102,26 +102,12 @@ func (g *ProtoGenerator) generateNetWallProtoFile(outputDir string, netwallFile 
 // collectNetWallImports 收集跨 NetWall 的引用
 func (g *ProtoGenerator) collectNetWallImports(wallFile *NetWallFile) []string {
 	imports := make(map[string]bool)
-	nameSpaces := make(map[string]string)
 	allMessages := make([]*NetMessage, 0)
-	for _, netwallFile := range g.data.NetWalls {
-		// 引用其他NetWall的数据结构
-		for _, ds := range netwallFile.DataStructs {
-			nameSpaces[ds.Name] = netwallFile.PackageName
-		}
-	}
+	nameSpaces := g.data.GetNameSpace()
 
-	for _, msg := range wallFile.Requests {
-		allMessages = append(allMessages, msg)
-	}
-
-	for _, msg := range wallFile.Notifies {
-		allMessages = append(allMessages, msg)
-	}
-
-	for _, ds := range wallFile.DataStructs {
-		allMessages = append(allMessages, ds)
-	}
+	allMessages = append(allMessages, wallFile.Requests...)
+	allMessages = append(allMessages, wallFile.Notifies...)
+	allMessages = append(allMessages, wallFile.DataStructs...)
 
 	// 遍历所有消息的字段，检测跨 NetWall 引用
 	for _, msg := range allMessages {
@@ -134,7 +120,8 @@ func (g *ProtoGenerator) collectNetWallImports(wallFile *NetWallFile) []string {
 			packageName, ok := nameSpaces[name]
 			if ok && packageName != msg.PackageName {
 				fileName := strings.ToLower(packageName)
-				imports[fileName] = true
+				path := fileName + ".proto"
+				imports[path] = true
 			}
 		}
 	}
@@ -189,6 +176,14 @@ func (g *ProtoGenerator) generateNetMessageProto(msg *NetMessage, indent string)
 		// 生成字段类型
 		protoType := g.typeConverter.ToProtoType(&field.Type)
 		isOptional := g.typeConverter.IsOptionalInProto(&field.Type)
+
+		// 如果是Message类型，则需要添加包名
+		if field.Type.IsMessage() {
+			protoPackageName, ok := g.data.NameSpaces[field.Type.Name]
+			if ok && protoPackageName != msg.PackageName {
+				protoType = fmt.Sprintf("%s.%s", protoPackageName, field.Type.Name)
+			}
+		}
 
 		// 确保字段名不包含冒号
 		fieldName := strings.TrimSuffix(field.Name, ":")

@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.10
 // 	protoc        v6.33.0
-// source: protocol/managers.proto
+// source: managers.proto
 
 package mme
 
@@ -31,7 +31,7 @@ type HeroManager struct {
 
 func (x *HeroManager) Reset() {
 	*x = HeroManager{}
-	mi := &file_protocol_managers_proto_msgTypes[0]
+	mi := &file_managers_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -43,7 +43,7 @@ func (x *HeroManager) String() string {
 func (*HeroManager) ProtoMessage() {}
 
 func (x *HeroManager) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_managers_proto_msgTypes[0]
+	mi := &file_managers_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -56,7 +56,7 @@ func (x *HeroManager) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HeroManager.ProtoReflect.Descriptor instead.
 func (*HeroManager) Descriptor() ([]byte, []int) {
-	return file_protocol_managers_proto_rawDescGZIP(), []int{0}
+	return file_managers_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *HeroManager) GetHeroMap() map[int64]*HeroModule {
@@ -84,7 +84,7 @@ type HeroManager_HeroMap_XXXMapChangeRecord struct {
 
 func (x *HeroManager_HeroMap_XXXMapChangeRecord) Reset() {
 	*x = HeroManager_HeroMap_XXXMapChangeRecord{}
-	mi := &file_protocol_managers_proto_msgTypes[2]
+	mi := &file_managers_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -96,7 +96,7 @@ func (x *HeroManager_HeroMap_XXXMapChangeRecord) String() string {
 func (*HeroManager_HeroMap_XXXMapChangeRecord) ProtoMessage() {}
 
 func (x *HeroManager_HeroMap_XXXMapChangeRecord) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_managers_proto_msgTypes[2]
+	mi := &file_managers_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -109,7 +109,7 @@ func (x *HeroManager_HeroMap_XXXMapChangeRecord) ProtoReflect() protoreflect.Mes
 
 // Deprecated: Use HeroManager_HeroMap_XXXMapChangeRecord.ProtoReflect.Descriptor instead.
 func (*HeroManager_HeroMap_XXXMapChangeRecord) Descriptor() ([]byte, []int) {
-	return file_protocol_managers_proto_rawDescGZIP(), []int{0, 1}
+	return file_managers_proto_rawDescGZIP(), []int{0, 1}
 }
 
 func (x *HeroManager_HeroMap_XXXMapChangeRecord) GetKey() int64 {
@@ -133,11 +133,11 @@ func (x *HeroManager_HeroMap_XXXMapChangeRecord) GetIsDelete() bool {
 	return false
 }
 
-var File_protocol_managers_proto protoreflect.FileDescriptor
+var File_managers_proto protoreflect.FileDescriptor
 
-const file_protocol_managers_proto_rawDesc = "" +
+const file_managers_proto_rawDesc = "" +
 	"\n" +
-	"\x17protocol/managers.proto\x12\x03MME\x1a\x16protocol/modules.proto\"\xe9\x02\n" +
+	"\x0emanagers.proto\x12\x03MME\x1a\rmodules.proto\"\xe9\x02\n" +
 	"\vHeroManager\x127\n" +
 	"\aHeroMap\x18\x01 \x03(\v2\x1d.MME.HeroManager.HeroMapEntryR\aHeroMap\x12a\n" +
 	"\x15HeroMap_XXXChangeList\x18\xe9\a \x03(\v2+.MME.HeroManager.HeroMap_XXXMapChangeRecordR\x14HeroMapXXXChangeList\x1aK\n" +
@@ -147,28 +147,28 @@ const file_protocol_managers_proto_rawDesc = "" +
 	"\x1aHeroMap_XXXMapChangeRecord\x12\x10\n" +
 	"\x03Key\x18\x01 \x01(\x03R\x03Key\x12%\n" +
 	"\x05Value\x18\x02 \x01(\v2\x0f.MME.HeroModuleR\x05Value\x12\x1a\n" +
-	"\bIsDelete\x18\x03 \x01(\bR\bIsDeleteB\aZ\x05./mmeb\x06proto3"
+	"\bIsDelete\x18\x03 \x01(\bR\bIsDeleteB'Z%gitee.com/orbit-w/orbit/app/proto/mmeb\x06proto3"
 
 var (
-	file_protocol_managers_proto_rawDescOnce sync.Once
-	file_protocol_managers_proto_rawDescData []byte
+	file_managers_proto_rawDescOnce sync.Once
+	file_managers_proto_rawDescData []byte
 )
 
-func file_protocol_managers_proto_rawDescGZIP() []byte {
-	file_protocol_managers_proto_rawDescOnce.Do(func() {
-		file_protocol_managers_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_protocol_managers_proto_rawDesc), len(file_protocol_managers_proto_rawDesc)))
+func file_managers_proto_rawDescGZIP() []byte {
+	file_managers_proto_rawDescOnce.Do(func() {
+		file_managers_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_managers_proto_rawDesc), len(file_managers_proto_rawDesc)))
 	})
-	return file_protocol_managers_proto_rawDescData
+	return file_managers_proto_rawDescData
 }
 
-var file_protocol_managers_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
-var file_protocol_managers_proto_goTypes = []any{
+var file_managers_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_managers_proto_goTypes = []any{
 	(*HeroManager)(nil), // 0: MME.HeroManager
 	nil,                 // 1: MME.HeroManager.HeroMapEntry
 	(*HeroManager_HeroMap_XXXMapChangeRecord)(nil), // 2: MME.HeroManager.HeroMap_XXXMapChangeRecord
 	(*HeroModule)(nil), // 3: MME.HeroModule
 }
-var file_protocol_managers_proto_depIdxs = []int32{
+var file_managers_proto_depIdxs = []int32{
 	1, // 0: MME.HeroManager.HeroMap:type_name -> MME.HeroManager.HeroMapEntry
 	2, // 1: MME.HeroManager.HeroMap_XXXChangeList:type_name -> MME.HeroManager.HeroMap_XXXMapChangeRecord
 	3, // 2: MME.HeroManager.HeroMapEntry.value:type_name -> MME.HeroModule
@@ -180,27 +180,27 @@ var file_protocol_managers_proto_depIdxs = []int32{
 	0, // [0:4] is the sub-list for field type_name
 }
 
-func init() { file_protocol_managers_proto_init() }
-func file_protocol_managers_proto_init() {
-	if File_protocol_managers_proto != nil {
+func init() { file_managers_proto_init() }
+func file_managers_proto_init() {
+	if File_managers_proto != nil {
 		return
 	}
-	file_protocol_modules_proto_init()
+	file_modules_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_protocol_managers_proto_rawDesc), len(file_protocol_managers_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_managers_proto_rawDesc), len(file_managers_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
-		GoTypes:           file_protocol_managers_proto_goTypes,
-		DependencyIndexes: file_protocol_managers_proto_depIdxs,
-		MessageInfos:      file_protocol_managers_proto_msgTypes,
+		GoTypes:           file_managers_proto_goTypes,
+		DependencyIndexes: file_managers_proto_depIdxs,
+		MessageInfos:      file_managers_proto_msgTypes,
 	}.Build()
-	File_protocol_managers_proto = out.File
-	file_protocol_managers_proto_goTypes = nil
-	file_protocol_managers_proto_depIdxs = nil
+	File_managers_proto = out.File
+	file_managers_proto_goTypes = nil
+	file_managers_proto_depIdxs = nil
 }

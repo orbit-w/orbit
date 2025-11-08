@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.10
 // 	protoc        v6.33.0
-// source: protocol/modules.proto
+// source: modules.proto
 
 package mme
 
@@ -33,7 +33,7 @@ type HeroModule struct {
 
 func (x *HeroModule) Reset() {
 	*x = HeroModule{}
-	mi := &file_protocol_modules_proto_msgTypes[0]
+	mi := &file_modules_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -45,7 +45,7 @@ func (x *HeroModule) String() string {
 func (*HeroModule) ProtoMessage() {}
 
 func (x *HeroModule) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_modules_proto_msgTypes[0]
+	mi := &file_modules_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -58,7 +58,7 @@ func (x *HeroModule) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HeroModule.ProtoReflect.Descriptor instead.
 func (*HeroModule) Descriptor() ([]byte, []int) {
-	return file_protocol_modules_proto_rawDescGZIP(), []int{0}
+	return file_modules_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *HeroModule) GetBase() *HeroMechanism {
@@ -89,39 +89,39 @@ func (x *HeroModule) GetSkinWear() *WearMechanism {
 	return nil
 }
 
-var File_protocol_modules_proto protoreflect.FileDescriptor
+var File_modules_proto protoreflect.FileDescriptor
 
-const file_protocol_modules_proto_rawDesc = "" +
+const file_modules_proto_rawDesc = "" +
 	"\n" +
-	"\x16protocol/modules.proto\x12\x03MME\x1a\x19protocol/mechanisms.proto\"\xd5\x01\n" +
+	"\rmodules.proto\x12\x03MME\x1a\x10mechanisms.proto\"\xd5\x01\n" +
 	"\n" +
 	"HeroModule\x12&\n" +
 	"\x04Base\x18\x01 \x01(\v2\x12.MME.HeroMechanismR\x04Base\x12/\n" +
 	"\aLevelUp\x18\x02 \x01(\v2\x15.MME.LevelUpMechanismR\aLevelUp\x12>\n" +
 	"\fTalentUnlock\x18\x03 \x01(\v2\x1a.MME.ManualUnlockMechanismR\fTalentUnlock\x12.\n" +
-	"\bSkinWear\x18\x04 \x01(\v2\x12.MME.WearMechanismR\bSkinWearB\aZ\x05./mmeb\x06proto3"
+	"\bSkinWear\x18\x04 \x01(\v2\x12.MME.WearMechanismR\bSkinWearB'Z%gitee.com/orbit-w/orbit/app/proto/mmeb\x06proto3"
 
 var (
-	file_protocol_modules_proto_rawDescOnce sync.Once
-	file_protocol_modules_proto_rawDescData []byte
+	file_modules_proto_rawDescOnce sync.Once
+	file_modules_proto_rawDescData []byte
 )
 
-func file_protocol_modules_proto_rawDescGZIP() []byte {
-	file_protocol_modules_proto_rawDescOnce.Do(func() {
-		file_protocol_modules_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_protocol_modules_proto_rawDesc), len(file_protocol_modules_proto_rawDesc)))
+func file_modules_proto_rawDescGZIP() []byte {
+	file_modules_proto_rawDescOnce.Do(func() {
+		file_modules_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_modules_proto_rawDesc), len(file_modules_proto_rawDesc)))
 	})
-	return file_protocol_modules_proto_rawDescData
+	return file_modules_proto_rawDescData
 }
 
-var file_protocol_modules_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
-var file_protocol_modules_proto_goTypes = []any{
+var file_modules_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_modules_proto_goTypes = []any{
 	(*HeroModule)(nil),            // 0: MME.HeroModule
 	(*HeroMechanism)(nil),         // 1: MME.HeroMechanism
 	(*LevelUpMechanism)(nil),      // 2: MME.LevelUpMechanism
 	(*ManualUnlockMechanism)(nil), // 3: MME.ManualUnlockMechanism
 	(*WearMechanism)(nil),         // 4: MME.WearMechanism
 }
-var file_protocol_modules_proto_depIdxs = []int32{
+var file_modules_proto_depIdxs = []int32{
 	1, // 0: MME.HeroModule.Base:type_name -> MME.HeroMechanism
 	2, // 1: MME.HeroModule.LevelUp:type_name -> MME.LevelUpMechanism
 	3, // 2: MME.HeroModule.TalentUnlock:type_name -> MME.ManualUnlockMechanism
@@ -133,27 +133,27 @@ var file_protocol_modules_proto_depIdxs = []int32{
 	0, // [0:4] is the sub-list for field type_name
 }
 
-func init() { file_protocol_modules_proto_init() }
-func file_protocol_modules_proto_init() {
-	if File_protocol_modules_proto != nil {
+func init() { file_modules_proto_init() }
+func file_modules_proto_init() {
+	if File_modules_proto != nil {
 		return
 	}
-	file_protocol_mechanisms_proto_init()
+	file_mechanisms_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_protocol_modules_proto_rawDesc), len(file_protocol_modules_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_modules_proto_rawDesc), len(file_modules_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   1,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
-		GoTypes:           file_protocol_modules_proto_goTypes,
-		DependencyIndexes: file_protocol_modules_proto_depIdxs,
-		MessageInfos:      file_protocol_modules_proto_msgTypes,
+		GoTypes:           file_modules_proto_goTypes,
+		DependencyIndexes: file_modules_proto_depIdxs,
+		MessageInfos:      file_modules_proto_msgTypes,
 	}.Build()
-	File_protocol_modules_proto = out.File
-	file_protocol_modules_proto_goTypes = nil
-	file_protocol_modules_proto_depIdxs = nil
+	File_modules_proto = out.File
+	file_modules_proto_goTypes = nil
+	file_modules_proto_depIdxs = nil
 }

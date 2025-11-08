@@ -191,6 +191,7 @@ type BlueprintContext struct {
 	Mechanisms    []*Mechanism
 	NetWalls      []*NetWallFile
 	ObjectTypeMap map[string]ObjectType
+	NameSpaces    map[string]string // 包名空间,建立对象类型与包名空间的映射
 }
 
 func NewBlueprintContext() *BlueprintContext {
@@ -201,6 +202,7 @@ func NewBlueprintContext() *BlueprintContext {
 		Mechanisms:    make([]*Mechanism, 0),
 		NetWalls:      make([]*NetWallFile, 0),
 		ObjectTypeMap: make(map[string]ObjectType),
+		NameSpaces:    make(map[string]string),
 	}
 }
 
@@ -247,6 +249,18 @@ func (ctx *BlueprintContext) CheckEntityFields() {
 			}
 		}
 	}
+}
+
+func (ctx *BlueprintContext) GetNameSpace() map[string]string {
+	if len(ctx.NameSpaces) == 0 {
+		for _, netwallFile := range ctx.NetWalls {
+			// 引用其他NetWall的数据结构
+			for _, ds := range netwallFile.DataStructs {
+				ctx.NameSpaces[ds.Name] = netwallFile.PackageName
+			}
+		}
+	}
+	return ctx.NameSpaces
 }
 
 // SetHeadFile 设置头文件配置

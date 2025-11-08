@@ -63,8 +63,9 @@ func (g *ProtoGenerator) generateProtoHeader(packageName string, imports []strin
 
 	builder.WriteLine("syntax = \"proto3\";")
 	builder.WriteEmptyLine()
+	goPackageName := strings.ToLower(packageName)
 	builder.WriteLine("package %s;", packageName)
-	builder.WriteLine("option go_package = \"./mme\";")
+	builder.WriteLine("option go_package = \"gitee.com/orbit-w/orbit/app/proto/%s\";", goPackageName)
 	builder.WriteEmptyLine()
 
 	if len(imports) > 0 {

@@ -39,7 +39,7 @@ func (g *ProtoGenerator) generateMechanismsProto(outputDir string) error {
 	// 文件头部
 	imports := []string{}
 	if g.data.HeadFile != nil && len(g.data.HeadFile.CommonDataStructs) > 0 {
-		imports = append(imports, "protocol/common.proto")
+		imports = append(imports, "common.proto")
 	}
 	sb.WriteString(g.generateProtoHeader("MME", imports))
 
@@ -116,7 +116,7 @@ func (g *ProtoGenerator) generateModulesProto(outputDir string) error {
 	sb := strings.Builder{}
 
 	// 文件头部
-	imports := []string{"protocol/mechanisms.proto"}
+	imports := []string{"mechanisms.proto"}
 	sb.WriteString(g.generateProtoHeader("MME", imports))
 
 	// 生成所有 Module
@@ -155,8 +155,8 @@ func (g *ProtoGenerator) generateManagersProto(outputDir string) error {
 
 	// 文件头部（注意 import 在 package 之前）
 	sb.WriteString("syntax = \"proto3\";\n\n")
-	sb.WriteString("import \"protocol/modules.proto\";\n\n")
-	sb.WriteString("option go_package = \"./mme\";\n\n")
+	sb.WriteString("import \"modules.proto\";\n\n")
+	sb.WriteString("option go_package = \"gitee.com/orbit-w/orbit/app/proto/mme\";\n\n")
 	sb.WriteString("package MME;\n\n")
 
 	// 生成所有 Manager
@@ -218,8 +218,8 @@ func (g *ProtoGenerator) generateEntitiesProto(outputDir string) error {
 	// 文件头部（注意 import 在 package 之后）
 	sb.WriteString("syntax = \"proto3\";\n\n")
 	sb.WriteString("package MME;\n")
-	sb.WriteString("option go_package = \"./mme\";\n\n")
-	sb.WriteString("import \"protocol/managers.proto\";\n\n")
+	sb.WriteString("option go_package = \"gitee.com/orbit-w/orbit/app/proto/mme\";\n\n")
+	sb.WriteString("import \"managers.proto\";\n\n")
 
 	// 生成所有 Entity
 	for _, entity := range g.data.Entities {
@@ -227,7 +227,7 @@ func (g *ProtoGenerator) generateEntitiesProto(outputDir string) error {
 
 		// 生成 Manager 字段
 		for _, field := range entity.Fields {
-			fieldType := fmt.Sprintf("MME.%s", field.Type.TypeName)
+			fieldType := field.Type.TypeName
 			// 确保编号不为 0
 			fieldNum := field.Number
 			if fieldNum == 0 {

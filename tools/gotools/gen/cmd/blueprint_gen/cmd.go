@@ -115,8 +115,8 @@ func runBlueprintGen(cmd *cobra.Command, args []string) {
 
 // InitCmd 初始化命令
 func InitCmd(father *cobra.Command) {
-	blueprintGenCmd.Flags().String("blueprint-dir", "blueprint", "Directory containing blueprint YAML files")
-	blueprintGenCmd.Flags().String("proto-output", "protocol", "Output directory for proto files")
+	blueprintGenCmd.Flags().String("blueprint-dir", "../protocol/blueprint", "Directory containing blueprint YAML files")
+	blueprintGenCmd.Flags().String("proto-output", "../protocol/protocol", "Output directory for proto files")
 	blueprintGenCmd.Flags().String("go-output", "app/mme", "Output directory for Go files")
 	blueprintGenCmd.Flags().Bool("debug", false, "Enable debug mode")
 

@@ -60,6 +60,11 @@ func (ft FieldType) IsMMEObjectType() bool {
 	return ft.Kind == FieldKindMMEObject
 }
 
+// IsMessage 判断字段类型是否是Message类型
+func (ft FieldType) IsMessage() bool {
+	return ft.Kind == FieldKindMessage
+}
+
 func (ft FieldType) GetTypeName() string {
 	if ft.TypeName != "" {
 		return ft.TypeName

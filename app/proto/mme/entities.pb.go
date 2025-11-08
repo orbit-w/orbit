@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.10
 // 	protoc        v6.33.0
-// source: protocol/entities.proto
+// source: entities.proto
 
 package mme
 
@@ -31,7 +31,7 @@ type PlayerEntity struct {
 
 func (x *PlayerEntity) Reset() {
 	*x = PlayerEntity{}
-	mi := &file_protocol_entities_proto_msgTypes[0]
+	mi := &file_entities_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -43,7 +43,7 @@ func (x *PlayerEntity) String() string {
 func (*PlayerEntity) ProtoMessage() {}
 
 func (x *PlayerEntity) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_entities_proto_msgTypes[0]
+	mi := &file_entities_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -56,7 +56,7 @@ func (x *PlayerEntity) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PlayerEntity.ProtoReflect.Descriptor instead.
 func (*PlayerEntity) Descriptor() ([]byte, []int) {
-	return file_protocol_entities_proto_rawDescGZIP(), []int{0}
+	return file_entities_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *PlayerEntity) GetHeroManager() *HeroManager {
@@ -73,33 +73,33 @@ func (x *PlayerEntity) GetXXXId() int64 {
 	return 0
 }
 
-var File_protocol_entities_proto protoreflect.FileDescriptor
+var File_entities_proto protoreflect.FileDescriptor
 
-const file_protocol_entities_proto_rawDesc = "" +
+const file_entities_proto_rawDesc = "" +
 	"\n" +
-	"\x17protocol/entities.proto\x12\x03MME\x1a\x17protocol/managers.proto\"Y\n" +
+	"\x0eentities.proto\x12\x03MME\x1a\x0emanagers.proto\"Y\n" +
 	"\fPlayerEntity\x122\n" +
 	"\vHeroManager\x18\x01 \x01(\v2\x10.MME.HeroManagerR\vHeroManager\x12\x15\n" +
-	"\x05XXXId\x18\x90N \x01(\x03R\x05XXXIdB\aZ\x05./mmeb\x06proto3"
+	"\x05XXXId\x18\x90N \x01(\x03R\x05XXXIdB'Z%gitee.com/orbit-w/orbit/app/proto/mmeb\x06proto3"
 
 var (
-	file_protocol_entities_proto_rawDescOnce sync.Once
-	file_protocol_entities_proto_rawDescData []byte
+	file_entities_proto_rawDescOnce sync.Once
+	file_entities_proto_rawDescData []byte
 )
 
-func file_protocol_entities_proto_rawDescGZIP() []byte {
-	file_protocol_entities_proto_rawDescOnce.Do(func() {
-		file_protocol_entities_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_protocol_entities_proto_rawDesc), len(file_protocol_entities_proto_rawDesc)))
+func file_entities_proto_rawDescGZIP() []byte {
+	file_entities_proto_rawDescOnce.Do(func() {
+		file_entities_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_entities_proto_rawDesc), len(file_entities_proto_rawDesc)))
 	})
-	return file_protocol_entities_proto_rawDescData
+	return file_entities_proto_rawDescData
 }
 
-var file_protocol_entities_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
-var file_protocol_entities_proto_goTypes = []any{
+var file_entities_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_entities_proto_goTypes = []any{
 	(*PlayerEntity)(nil), // 0: MME.PlayerEntity
 	(*HeroManager)(nil),  // 1: MME.HeroManager
 }
-var file_protocol_entities_proto_depIdxs = []int32{
+var file_entities_proto_depIdxs = []int32{
 	1, // 0: MME.PlayerEntity.HeroManager:type_name -> MME.HeroManager
 	1, // [1:1] is the sub-list for method output_type
 	1, // [1:1] is the sub-list for method input_type
@@ -108,27 +108,27 @@ var file_protocol_entities_proto_depIdxs = []int32{
 	0, // [0:1] is the sub-list for field type_name
 }
 
-func init() { file_protocol_entities_proto_init() }
-func file_protocol_entities_proto_init() {
-	if File_protocol_entities_proto != nil {
+func init() { file_entities_proto_init() }
+func file_entities_proto_init() {
+	if File_entities_proto != nil {
 		return
 	}
-	file_protocol_managers_proto_init()
+	file_managers_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_protocol_entities_proto_rawDesc), len(file_protocol_entities_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_entities_proto_rawDesc), len(file_entities_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   1,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
-		GoTypes:           file_protocol_entities_proto_goTypes,
-		DependencyIndexes: file_protocol_entities_proto_depIdxs,
-		MessageInfos:      file_protocol_entities_proto_msgTypes,
+		GoTypes:           file_entities_proto_goTypes,
+		DependencyIndexes: file_entities_proto_depIdxs,
+		MessageInfos:      file_entities_proto_msgTypes,
 	}.Build()
-	File_protocol_entities_proto = out.File
-	file_protocol_entities_proto_goTypes = nil
-	file_protocol_entities_proto_depIdxs = nil
+	File_entities_proto = out.File
+	file_entities_proto_goTypes = nil
+	file_entities_proto_depIdxs = nil
 }
