@@ -69,7 +69,7 @@ func (g *ProtoGenerator) generateProtoHeader(packageName string, imports []strin
 	builder.WriteEmptyLine()
 
 	if len(imports) > 0 {
-		builder.WriteEmptyLine()
+		imports = UniqueProtoImports(imports)
 		for _, imp := range imports {
 			builder.WriteLine("import \"%s\";", imp)
 		}

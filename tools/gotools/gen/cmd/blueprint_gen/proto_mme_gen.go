@@ -32,6 +32,70 @@ func (g *ProtoGenerator) generateCommonProto(outputDir string) error {
 	return WriteFile(outputDir+"/common.proto", content)
 }
 
+// MMEObjectAutoProtoImport 自动生成 MMEObject 的 Proto 导入
+// 根据 MMEObject 的类型和名称，生成对应的 Proto 导入
+// 返回 Proto 导入列表
+func (g *ProtoGenerator) MMEObjectAutoProtoImport(mmeObjects []MMEObjectBase) []string {
+	imports := []string{}
+	for _, mmeObject := range mmeObjects {
+		for _, f := range mmeObject.GetFields() {
+			switch {
+			case f.Type.IsMessage():
+				imports = append(imports, g.genMessageProtoImport(f.GetType()))
+			case f.Type.IsMMEObjectType():
+				objName := f.Type.GetName()
+				fmt.Println("objName", objName)
+				if objName != "" {
+					imports = append(imports, g.genMMEObjectProtoImport(objName))
+				}
+			case f.Type.IsXMapField() || f.Type.IsMapField():
+				switch {
+				case f.Type.ValueType.IsMMEObjectType():
+					valueName := f.Type.ValueType.GetName()
+					imports = append(imports, g.genMMEObjectProtoImport(valueName))
+				case f.Type.ValueType.IsFieldBaseType():
+					continue
+				case f.Type.ValueType.IsMessage():
+					imports = append(imports, g.genMessageProtoImport(f.GetValueType()))
+				default:
+					panic(fmt.Sprintf("unknown field type: %s", f.Type.ValueType.GetName()))
+				}
+			}
+		}
+	}
+
+	// 排重&&排序imports
+	return UniqueProtoImports(imports)
+}
+
+func (g *ProtoGenerator) genMessageProtoImport(field *blueprint_types.FieldType) string {
+	nameSpaces := g.data.GetNameSpace()
+	namespace, ok := nameSpaces[field.TypeName]
+	if !ok {
+		return ""
+	}
+	return GenerateProtoImport(namespace)
+}
+
+func (g *ProtoGenerator) genMMEObjectProtoImport(name string) string {
+	objType, ok := g.data.GetObjectType(name)
+	if !ok {
+		return ""
+	}
+	switch objType {
+	case ObjectTypeEntity:
+		return GenerateProtoImport("entities")
+	case ObjectTypeManager:
+		return GenerateProtoImport("managers")
+	case ObjectTypeModule:
+		return GenerateProtoImport("modules")
+	case ObjectTypeMechanism:
+		return GenerateProtoImport("mechanisms")
+	default:
+		panic(fmt.Sprintf("unknown object type: %s", objType))
+	}
+}
+
 // generateMechanismsProto 生成 mechanisms.proto
 func (g *ProtoGenerator) generateMechanismsProto(outputDir string) error {
 	sb := strings.Builder{}
@@ -116,7 +180,11 @@ func (g *ProtoGenerator) generateModulesProto(outputDir string) error {
 	sb := strings.Builder{}
 
 	// 文件头部
-	imports := []string{"mechanisms.proto"}
+	objects := []MMEObjectBase{}
+	for _, module := range g.data.Modules {
+		objects = append(objects, module.MMEObject)
+	}
+	imports := g.MMEObjectAutoProtoImport(objects)
 	sb.WriteString(g.generateProtoHeader("MME", imports))
 
 	// 生成所有 Module
@@ -153,11 +221,12 @@ func (g *ProtoGenerator) generateModulesProto(outputDir string) error {
 func (g *ProtoGenerator) generateManagersProto(outputDir string) error {
 	sb := strings.Builder{}
 
-	// 文件头部（注意 import 在 package 之前）
-	sb.WriteString("syntax = \"proto3\";\n\n")
-	sb.WriteString("import \"modules.proto\";\n\n")
-	sb.WriteString("option go_package = \"gitee.com/orbit-w/orbit/app/proto/mme\";\n\n")
-	sb.WriteString("package MME;\n\n")
+	objects := []MMEObjectBase{}
+	for _, manager := range g.data.Managers {
+		objects = append(objects, manager.MMEObject)
+	}
+	imports := g.MMEObjectAutoProtoImport(objects)
+	sb.WriteString(g.generateProtoHeader("MME", imports))
 
 	// 生成所有 Manager
 	for _, manager := range g.data.Managers {
@@ -215,11 +284,12 @@ func (g *ProtoGenerator) generateManagersProto(outputDir string) error {
 func (g *ProtoGenerator) generateEntitiesProto(outputDir string) error {
 	sb := strings.Builder{}
 
-	// 文件头部（注意 import 在 package 之后）
-	sb.WriteString("syntax = \"proto3\";\n\n")
-	sb.WriteString("package MME;\n")
-	sb.WriteString("option go_package = \"gitee.com/orbit-w/orbit/app/proto/mme\";\n\n")
-	sb.WriteString("import \"managers.proto\";\n\n")
+	objects := []MMEObjectBase{}
+	for _, entity := range g.data.Entities {
+		objects = append(objects, entity.MMEObject)
+	}
+	imports := g.MMEObjectAutoProtoImport(objects)
+	sb.WriteString(g.generateProtoHeader("MME", imports))
 
 	// 生成所有 Entity
 	for _, entity := range g.data.Entities {

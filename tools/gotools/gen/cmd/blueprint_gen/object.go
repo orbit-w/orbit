@@ -6,11 +6,13 @@ import (
 
 type MMEObjectBase interface {
 	GetFields() []*types.Field
+	GetName() string
 	HasMapField() bool
 	HasXMapField() bool
 }
 
 type MMEObject struct {
+	Name     string
 	Fields   []*types.Field
 	Settings map[string]any
 }
@@ -20,6 +22,10 @@ func NewMMEObject() *MMEObject {
 		Fields:   make([]*types.Field, 0),
 		Settings: make(map[string]any),
 	}
+}
+
+func (m *MMEObject) GetName() string {
+	return m.Name
 }
 
 func (m *MMEObject) GetFields() []*types.Field {

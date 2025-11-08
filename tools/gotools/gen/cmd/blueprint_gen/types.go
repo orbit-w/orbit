@@ -24,7 +24,6 @@ type FieldOption struct {
 // Mechanism 机制定义
 type Mechanism struct {
 	*MMEObject
-	Name     string
 	Requests []*NetMessage
 	Notifies []*NetMessage
 }
@@ -40,7 +39,6 @@ func NewMechanism() *Mechanism {
 // Module 模块定义
 type Module struct {
 	*MMEObject
-	Name string
 }
 
 func NewModule() *Module {
@@ -52,7 +50,6 @@ func NewModule() *Module {
 // Manager 管理器定义
 type Manager struct {
 	*MMEObject
-	Name string
 }
 
 func NewManager() *Manager {
@@ -64,13 +61,16 @@ func NewManager() *Manager {
 // Entity 实体定义
 type Entity struct {
 	*MMEObject
-	Name string
 }
 
 func NewEntity() *Entity {
 	return &Entity{
 		MMEObject: NewMMEObject(),
 	}
+}
+
+func (e *Entity) GetName() string {
+	return e.Name
 }
 
 // HeadFileConfig 头文件配置
@@ -249,6 +249,11 @@ func (ctx *BlueprintContext) CheckEntityFields() {
 			}
 		}
 	}
+}
+
+func (ctx *BlueprintContext) GetObjectType(name string) (ObjectType, bool) {
+	objType, ok := ctx.ObjectTypeMap[name]
+	return objType, ok
 }
 
 func (ctx *BlueprintContext) GetNameSpace() map[string]string {

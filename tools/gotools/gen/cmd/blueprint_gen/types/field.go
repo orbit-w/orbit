@@ -44,6 +44,10 @@ func (f *Field) GetValueType() *FieldType {
 	return f.Type.ValueType
 }
 
+func (f *Field) GetType() *FieldType {
+	return &f.Type
+}
+
 func (f *Field) IsMapField() bool {
 	return f.Type.IsMapField()
 }

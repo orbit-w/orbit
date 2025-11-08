@@ -20,6 +20,10 @@ type FieldType struct {
 	ValueType *FieldType // map/xmap 的 value 类型，或 repeated 的元素类型
 }
 
+func (ft FieldType) GetName() string {
+	return ft.Name
+}
+
 // GetKind 获取字段类型种类
 func (ft FieldType) GetKind() FieldKind {
 	return ft.Kind
@@ -33,6 +37,10 @@ func (ft FieldType) KeyKind() FieldKind {
 // ValueKind 获取map/xmap/repeated的值类型种类
 func (ft FieldType) ValueKind() FieldKind {
 	return ft.ValueType.Kind
+}
+
+func (ft FieldType) GetValueType() *FieldType {
+	return ft.ValueType
 }
 
 // ValueName 获取map/xmap/repeated的值类型名称，如 HeroManager等MMEObject类型
