@@ -10,6 +10,8 @@ const (
 )
 
 type ServiceZone struct {
-	ID   string
-	Type ZoneType
+	ID        string
+	Type      ZoneType
+	EntityMap map[int64]int32
+	Entities  []IEntity
 }

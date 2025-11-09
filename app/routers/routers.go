@@ -8,7 +8,7 @@ import (
 	"gitee.com/orbit-w/orbit/app/controller"
 	"gitee.com/orbit-w/orbit/app/core/dispatch"
 	"gitee.com/orbit-w/orbit/app/proto/pb"
-	"github.com/gogo/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 )
 
 func init() {
