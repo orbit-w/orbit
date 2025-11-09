@@ -515,37 +515,10 @@ func (g *GoStructGenerator) generateEntityFiles(outputDir string) error {
 		sb.WriteString("}\n\n")
 
 		// 生成 ToProto 方法
-		sb.WriteString(fmt.Sprintf("func (e *%s) ToProto() *mme.%s {\n", entity.Name, entity.Name))
-		sb.WriteString("\tif e == nil {\n")
-		sb.WriteString("\t\treturn nil\n")
-		sb.WriteString("\t}\n\n")
-		sb.WriteString(fmt.Sprintf("\tpb := &mme.%s{}\n\n", entity.Name))
-		sb.WriteString("\tid := e.XXXId\n")
-		sb.WriteString("\tpb.XXXId = id\n\n")
-		for _, field := range entity.Fields {
-			sb.WriteString(fmt.Sprintf("\tif e.%s != nil {\n", field.Name))
-			sb.WriteString(fmt.Sprintf("\t\tpb.%s = e.%s.ToProto()\n", field.Name, field.Name))
-			sb.WriteString("\t}\n")
-		}
-		sb.WriteString("\treturn pb\n")
-		sb.WriteString("}\n\n")
+		sb.WriteString(g.genEntityToProtoMethod(entity))
 
 		// 生成 FromProto 方法
-		sb.WriteString(fmt.Sprintf("func (e *%s) FromProto(pb *mme.%s) {\n", entity.Name, entity.Name))
-		sb.WriteString("\tif e == nil || pb == nil {\n")
-		sb.WriteString("\t\treturn\n")
-		sb.WriteString("\t}\n\n")
-		sb.WriteString("\te.XXXId = pb.XXXId\n\n")
-		for _, field := range entity.Fields {
-			typeName := field.Type.TypeName
-			sb.WriteString(fmt.Sprintf("\tif pb.%s != nil {\n", field.Name))
-			sb.WriteString(fmt.Sprintf("\t\tif e.%s == nil {\n", field.Name))
-			sb.WriteString(fmt.Sprintf("\t\t\te.%s = New%s()\n", field.Name, typeName))
-			sb.WriteString("\t\t}\n")
-			sb.WriteString(fmt.Sprintf("\t\te.%s.FromProto(pb.%s)\n", field.Name, field.Name))
-			sb.WriteString("\t}\n")
-		}
-		sb.WriteString("}\n\n")
+		sb.WriteString(g.genEntityFromProtoMethod(entity))
 
 		// 写入文件
 		fileName := GetEntityFileName(entity.Name)
@@ -556,6 +529,53 @@ func (g *GoStructGenerator) generateEntityFiles(outputDir string) error {
 	}
 
 	return nil
+}
+
+// genEntityFromProtoMethod 生成 Entity 的 FromProto 方法
+func (g *GoStructGenerator) genEntityFromProtoMethod(entity *Entity) string {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("func (e *%s) FromProto(msg proto.Message) {\n", entity.Name))
+	sb.WriteString("\tif e == nil || msg == nil {\n")
+	sb.WriteString("\t\treturn\n")
+	sb.WriteString("\t}\n\n")
+	sb.WriteString(fmt.Sprintf("\tpb, ok := msg.(*mme.%s)\n", entity.Name))
+	sb.WriteString("\tif !ok {\n")
+	sb.WriteString("\t\treturn\n")
+	sb.WriteString("\t}\n\n")
+
+	sb.WriteString("\te.XXXId = pb.XXXId\n\n")
+	for _, field := range entity.Fields {
+		typeName := field.Type.TypeName
+		sb.WriteString(fmt.Sprintf("\tif pb.%s != nil {\n", field.Name))
+		sb.WriteString(fmt.Sprintf("\t\tif e.%s == nil {\n", field.Name))
+		sb.WriteString(fmt.Sprintf("\t\t\te.%s = New%s()\n", field.Name, typeName))
+		sb.WriteString("\t\t}\n")
+		sb.WriteString(fmt.Sprintf("\t\te.%s.FromProto(pb.%s)\n", field.Name, field.Name))
+		sb.WriteString("\t}\n")
+	}
+	sb.WriteString("}\n\n")
+	return sb.String()
+}
+
+// genEntityToProtoMethod 生成 Entity 的 ToProto 方法
+func (g *GoStructGenerator) genEntityToProtoMethod(entity *Entity) string {
+	var sb strings.Builder
+	// 生成 ToProto 方法
+	sb.WriteString(fmt.Sprintf("func (e *%s) ToProto() proto.Message {\n", entity.Name))
+	sb.WriteString("\tif e == nil {\n")
+	sb.WriteString("\t\treturn nil\n")
+	sb.WriteString("\t}\n\n")
+	sb.WriteString(fmt.Sprintf("\tpb := &mme.%s{}\n\n", entity.Name))
+	sb.WriteString("\tid := e.XXXId\n")
+	sb.WriteString("\tpb.XXXId = id\n\n")
+	for _, field := range entity.Fields {
+		sb.WriteString(fmt.Sprintf("\tif e.%s != nil {\n", field.Name))
+		sb.WriteString(fmt.Sprintf("\t\tpb.%s = e.%s.ToProto()\n", field.Name, field.Name))
+		sb.WriteString("\t}\n")
+	}
+	sb.WriteString("\treturn pb\n")
+	sb.WriteString("}\n\n")
+	return sb.String()
 }
 
 // isMMEObjectType 判断是否是 MME Object 类型（Linkable）
