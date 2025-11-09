@@ -8,10 +8,16 @@ import (
 
 type IEntity interface {
 	Name() string
+	// 初始化字段上下文
 	InitFieldContext()
+	// 清除所有脏标记
 	ClearAllDirtyFlags()
+	// 构建 MongoDB 更新操作
 	BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder, path *mgo_builder.NestedPath)
+	// 将 Entity 数据转换为完整的 protobuf 结构体
 	ToProto() proto.Message
+	// 从 protobuf 结构体加载数据到 Entity
 	FromProto(msg proto.Message)
+	// 根据脏标记位构建增量数据的 protoMessage，用于增量同步
 	ToIncrementalProtoWithContext(ctx mmemodel.SyncContext) proto.Message
 }
