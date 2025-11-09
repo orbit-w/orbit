@@ -216,6 +216,7 @@ func (g *GoWrapperGenerator) generateMechanismWrappers(outputDir string) error {
 			WrapperName: wrapperName,
 			Receiver:    "w",
 			ProtoPkg:    "mme",
+			ObjectType:  ObjectTypeMechanism,
 		}
 
 		sb.WriteString(wrapperMethodCodeGenerator.GenerateToProtoMethod())
@@ -445,6 +446,7 @@ func (g *GoWrapperGenerator) generateModuleWrappers(outputDir string) error {
 			WrapperName: wrapperName,
 			Receiver:    "w",
 			ProtoPkg:    "mme",
+			ObjectType:  ObjectTypeModule,
 		}
 		sb.WriteString(wrapperMethodCodeGenerator.GenerateToProtoMethod())
 		sb.WriteString(wrapperMethodCodeGenerator.GenerateFromProtoMethod(module.Fields))
@@ -688,6 +690,7 @@ func (g *GoWrapperGenerator) generateManagerWrappers(outputDir string) error {
 			WrapperName: wrapperName,
 			Receiver:    "m",
 			ProtoPkg:    "mme",
+			ObjectType:  ObjectTypeManager,
 		}
 		sb.WriteString(wrapperMethodCodeGenerator.GenerateToProtoMethod())
 		sb.WriteString(wrapperMethodCodeGenerator.GenerateFromProtoMethod(manager.Fields))
@@ -878,6 +881,7 @@ func (g *GoWrapperGenerator) generateEntityWrappers(outputDir string) error {
 			WrapperName: wrapperName,
 			Receiver:    "e",
 			ProtoPkg:    "mme",
+			ObjectType:  ObjectTypeEntity,
 		}
 		sb.WriteString(wrapperMethodCodeGenerator.GenerateToProtoMethod())
 		sb.WriteString(wrapperMethodCodeGenerator.GenerateFromProtoMethod(entity.Fields))
