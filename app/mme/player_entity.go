@@ -41,7 +41,7 @@ func (e *PlayerEntity) DeepCopy(co *PlayerEntity) {
 	e.HeroManager.DeepCopy(co.HeroManager)
 }
 
-func (e *PlayerEntity) ToProto() *mme.PlayerEntity {
+func (e *PlayerEntity) ToProto() proto.Message {
 	if e == nil {
 		return nil
 	}
@@ -57,8 +57,13 @@ func (e *PlayerEntity) ToProto() *mme.PlayerEntity {
 	return pb
 }
 
-func (e *PlayerEntity) FromProto(pb *mme.PlayerEntity) {
-	if e == nil || pb == nil {
+func (e *PlayerEntity) FromProto(msg proto.Message) {
+	if e == nil || msg == nil {
+		return
+	}
+
+	pb, ok := msg.(*mme.PlayerEntity)
+	if !ok {
 		return
 	}
 
@@ -157,7 +162,7 @@ func (e *PlayerEntityWrapper) BuildMongoUpdate(builder *mgo_builder.MongoUpdateB
 }
 
 // ToProto 将 PlayerEntity 数据转换为完整的 protobuf 结构体
-func (e *PlayerEntityWrapper) ToProto() *mme.PlayerEntity {
+func (e *PlayerEntityWrapper) ToProto() proto.Message {
 	if e == nil || e.data == nil {
 		return nil
 	}
@@ -166,8 +171,13 @@ func (e *PlayerEntityWrapper) ToProto() *mme.PlayerEntity {
 }
 
 // FromProto 从 protobuf 结构体加载数据到 PlayerEntity
-func (e *PlayerEntityWrapper) FromProto(pb *mme.PlayerEntity) {
-	if e == nil || e.data == nil || pb == nil {
+func (e *PlayerEntityWrapper) FromProto(msg proto.Message) {
+	if e == nil || e.data == nil || msg == nil {
+		return
+	}
+
+	pb, ok := msg.(*mme.PlayerEntity)
+	if !ok {
 		return
 	}
 

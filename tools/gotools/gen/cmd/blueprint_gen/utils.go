@@ -547,10 +547,11 @@ func (g *ToIncrementalProtoCodeGenerator) GenerateToIncrementalProtoMethod(field
 
 // WrapperMethodCodeGenerator Wrapper 方法代码生成器
 type WrapperMethodCodeGenerator struct {
-	ObjectName  string // 对象名称，如 "HeroModule"
-	WrapperName string // 包装器名称，如 "HeroModuleWrapper"
-	Receiver    string // 接收器名称，如 "w" 或 "m"
-	ProtoPkg    string // Proto 包名，如 "mme"
+	ObjectName  string     // 对象名称，如 "HeroModule"
+	WrapperName string     // 包装器名称，如 "HeroModuleWrapper"
+	Receiver    string     // 接收器名称，如 "w" 或 "m"
+	ProtoPkg    string     // Proto 包名，如 "mme"
+	ObjectType  ObjectType // 对象类型：Mechanism/Module/Manager/Entity
 }
 
 // GenerateDeepCopyMethod 生成 DeepCopy 方法
@@ -671,7 +672,11 @@ func (g *WrapperMethodCodeGenerator) GenerateDeepCopyToMethod(fields []*types.Fi
 func (g *WrapperMethodCodeGenerator) GenerateToProtoMethod() string {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("// ToProto 将 %s 数据转换为完整的 protobuf 结构体\n", g.ObjectName))
-	sb.WriteString(fmt.Sprintf("func (%s *%s) ToProto() *%s.%s {\n", g.Receiver, g.WrapperName, g.ProtoPkg, g.ObjectName))
+	if g.ObjectType == ObjectTypeEntity {
+		sb.WriteString(fmt.Sprintf("func (%s *%s) ToProto() proto.Message {\n", g.Receiver, g.WrapperName))
+	} else {
+		sb.WriteString(fmt.Sprintf("func (%s *%s) ToProto() *%s.%s {\n", g.Receiver, g.WrapperName, g.ProtoPkg, g.ObjectName))
+	}
 	sb.WriteString(fmt.Sprintf("\tif %s == nil || %s.data == nil {\n", g.Receiver, g.Receiver))
 	sb.WriteString("\t\treturn nil\n")
 	sb.WriteString("\t}\n\n")
@@ -684,11 +689,21 @@ func (g *WrapperMethodCodeGenerator) GenerateToProtoMethod() string {
 func (g *WrapperMethodCodeGenerator) GenerateFromProtoMethod(fields []*types.Field) string {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("// FromProto 从 protobuf 结构体加载数据到 %s\n", g.ObjectName))
-	sb.WriteString(fmt.Sprintf("func (%s *%s) FromProto(pb *%s.%s) {\n", g.Receiver, g.WrapperName, g.ProtoPkg, g.ObjectName))
-	sb.WriteString(fmt.Sprintf("\tif %s == nil || %s.data == nil || pb == nil {\n", g.Receiver, g.Receiver))
-	sb.WriteString("\t\treturn\n")
-	sb.WriteString("\t}\n\n")
-
+	if g.ObjectType == ObjectTypeEntity {
+		sb.WriteString(fmt.Sprintf("func (%s *%s) FromProto(msg proto.Message) {\n", g.Receiver, g.WrapperName))
+		sb.WriteString(fmt.Sprintf("\tif %s == nil || %s.data == nil || msg == nil {\n", g.Receiver, g.Receiver))
+		sb.WriteString("\t\treturn\n")
+		sb.WriteString("\t}\n\n")
+		sb.WriteString(fmt.Sprintf("\tpb, ok := msg.(*%s.%s)\n", g.ProtoPkg, g.ObjectName))
+		sb.WriteString("\tif !ok {\n")
+		sb.WriteString("\t\treturn\n")
+		sb.WriteString("\t}\n\n")
+	} else {
+		sb.WriteString(fmt.Sprintf("func (%s *%s) FromProto(pb *%s.%s) {\n", g.Receiver, g.WrapperName, g.ProtoPkg, g.ObjectName))
+		sb.WriteString(fmt.Sprintf("\tif %s == nil || %s.data == nil || pb == nil {\n", g.Receiver, g.Receiver))
+		sb.WriteString("\t\treturn\n")
+		sb.WriteString("\t}\n\n")
+	}
 	// 根据字段类型处理每个字段
 	for _, field := range fields {
 		if field.Type.GetKind().IsBaseType() {
