@@ -3,7 +3,7 @@ package dispatch
 import (
 	"fmt"
 
-	"github.com/gogo/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 )
 
 type Router struct {

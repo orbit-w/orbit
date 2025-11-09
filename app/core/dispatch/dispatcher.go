@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"gitee.com/orbit-w/orbit/app/proto/pb"
-	"github.com/gogo/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 )
 
 var (
