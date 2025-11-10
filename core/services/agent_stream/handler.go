@@ -1,6 +1,6 @@
 package agent_stream
 
-import "gitee.com/orbit-w/orbit/app/core/network"
+import "gitee.com/orbit-w/orbit/core/network"
 
 var (
 	requestHandler func(session *network.Session, data []byte, seq, pid uint32) error

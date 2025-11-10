@@ -9,8 +9,8 @@ import (
 	"github.com/orbit-w/mux-go"
 
 	gnetwork "gitee.com/orbit-w/meteor/modules/net/network"
-	"gitee.com/orbit-w/orbit/app/core/network"
 	"gitee.com/orbit-w/orbit/app/modules/config"
+	"gitee.com/orbit-w/orbit/core/network"
 	"gitee.com/orbit-w/orbit/lib/module/logger"
 	"github.com/orbit-w/mux-go/metadata"
 	"go.uber.org/zap"
