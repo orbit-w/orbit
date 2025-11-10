@@ -2,17 +2,18 @@ package blueprint_gen
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	blueprint_types "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types"
 )
 
-// generateCommonProto 生成 common.proto
-func (g *ProtoGenerator) generateCommonProto(outputDir string) error {
+// generateHeadfileProto 生成 common.proto
+func (g *ProtoGenerator) generateHeadfileProto(outputDir string) error {
 	sb := strings.Builder{}
 
-	// 文件头部
-	sb.WriteString(g.generateProtoHeader("MME", nil))
+	// 文件头部 - headfile.proto 使用 Common package
+	sb.WriteString(g.generateProtoHeader("Common", nil))
 
 	// 生成通用数据结构
 	if g.data.HeadFile != nil {
@@ -28,8 +29,43 @@ func (g *ProtoGenerator) generateCommonProto(outputDir string) error {
 		}
 	}
 
+	// 生成 Entity enum
+	// 注意：即使没有通用数据结构，也要生成 Entity enum
+	if len(g.data.Entities) > 0 {
+		sb.WriteString("// EntityType 实体类型枚举\n")
+		sb.WriteString("enum EntityType {\n")
+		sb.WriteString("    ENTITY_TYPE_UNSPECIFIED = 0;\n")
+
+		for i, entity := range g.data.Entities {
+			enumValueName := g.entityNameToEnumValue(entity.Name)
+			sb.WriteString(fmt.Sprintf("    %s = %d;\n", enumValueName, i+1))
+		}
+
+		sb.WriteString("}\n\n")
+	} else {
+		// 如果没有 Entity，至少生成空的 enum 定义（可选）
+		// 这里不生成，因为用户要求针对每种 Entity 对象生成 enum
+	}
+
 	content := sb.String()
 	return WriteFile(outputDir+"/common.proto", content)
+}
+
+// entityNameToEnumValue 将 Entity 名称转换为 enum 值名称
+// 例如: PlayerEntity -> ENTITY_TYPE_PLAYER_ENTITY
+func (g *ProtoGenerator) entityNameToEnumValue(entityName string) string {
+	// 使用完整的 Entity 名称
+	name := entityName
+
+	// 在驼峰命名的大写字母前插入下划线
+	re := regexp.MustCompile(`([a-z])([A-Z])`)
+	name = re.ReplaceAllString(name, `${1}_${2}`)
+
+	// 全部转换为大写
+	name = strings.ToUpper(name)
+
+	// 添加前缀
+	return "ENTITY_TYPE_" + name
 }
 
 // MMEObjectAutoProtoImport 自动生成 MMEObject 的 Proto 导入

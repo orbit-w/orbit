@@ -23,9 +23,9 @@ func NewProtoGenerator(data *BlueprintContext) *ProtoGenerator {
 
 // Generate 生成所有 Proto 文件
 func (g *ProtoGenerator) Generate(outputDir string) error {
-	// 生成 common.proto
-	if err := g.generateCommonProto(outputDir); err != nil {
-		return fmt.Errorf("failed to generate common.proto: %w", err)
+	// 生成 headfile.proto
+	if err := g.generateHeadfileProto(outputDir); err != nil {
+		return fmt.Errorf("failed to generate headfile.proto: %w", err)
 	}
 
 	// 生成 mechanisms.proto
