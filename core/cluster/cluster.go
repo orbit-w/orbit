@@ -53,7 +53,7 @@ func (n *Node) IncrEntityCount() {
 }
 
 func (n *Node) DecrEntityCount() {
-	n.EntityCount.Add(1)
+	n.EntityCount.Add(-1)
 }
 
 func (n *Node) GetEntityCount() int64 {
