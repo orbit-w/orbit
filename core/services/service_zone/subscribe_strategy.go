@@ -1,5 +1,9 @@
 package servicezone
 
+import (
+	"gitee.com/orbit-w/orbit/app/proto/core"
+)
+
 // ISubscribeStrategy 订阅策略接口
 // 用于定义不同的 Entity 订阅策略
 type ISubscribeStrategy interface {
@@ -10,6 +14,9 @@ type ISubscribeStrategy interface {
 
 	// GetStrategyName 返回策略名称，用于日志和调试
 	GetStrategyName() string
+
+	// GetStrategyType 返回策略类型，对应 pb 中的 SubscribeStrategyType 枚举
+	GetStrategyType() core.SubscribeStrategyType
 }
 
 // AllEntitiesStrategy 全量订阅策略
@@ -28,23 +35,27 @@ func (s *AllEntitiesStrategy) GetStrategyName() string {
 	return "AllEntities"
 }
 
-// ByTypeStrategy 按类型订阅策略
+func (s *AllEntitiesStrategy) GetStrategyType() core.SubscribeStrategyType {
+	return core.SubscribeStrategyType_All
+}
+
+// OnlyStrategy 按类型订阅策略（对应 pb 中的 Only）
 // 只订阅指定类型的 Entities
-type ByTypeStrategy struct {
+type OnlyStrategy struct {
 	AllowedTypes map[string]bool // 允许的 Entity 类型名称集合
 }
 
-func NewByTypeStrategy(allowedTypes []string) *ByTypeStrategy {
+func NewOnlyStrategy(allowedTypes []string) *OnlyStrategy {
 	typeMap := make(map[string]bool)
 	for _, t := range allowedTypes {
 		typeMap[t] = true
 	}
-	return &ByTypeStrategy{
+	return &OnlyStrategy{
 		AllowedTypes: typeMap,
 	}
 }
 
-func (s *ByTypeStrategy) ShouldSubscribe(entity IEntity) bool {
+func (s *OnlyStrategy) ShouldSubscribe(entity IEntity) bool {
 	if entity == nil {
 		return false
 	}
@@ -52,8 +63,22 @@ func (s *ByTypeStrategy) ShouldSubscribe(entity IEntity) bool {
 	return s.AllowedTypes[entityType]
 }
 
-func (s *ByTypeStrategy) GetStrategyName() string {
-	return "ByType"
+func (s *OnlyStrategy) GetStrategyName() string {
+	return "Only"
+}
+
+func (s *OnlyStrategy) GetStrategyType() core.SubscribeStrategyType {
+	return core.SubscribeStrategyType_Only
+}
+
+// ByTypeStrategy 按类型订阅策略（已废弃，使用 OnlyStrategy）
+// Deprecated: 使用 OnlyStrategy 代替
+type ByTypeStrategy = OnlyStrategy
+
+// NewByTypeStrategy 创建按类型订阅策略（已废弃，使用 NewOnlyStrategy）
+// Deprecated: 使用 NewOnlyStrategy 代替
+func NewByTypeStrategy(allowedTypes []string) *ByTypeStrategy {
+	return NewOnlyStrategy(allowedTypes)
 }
 
 // ByIdsStrategy 按 ID 列表订阅策略
@@ -88,6 +113,10 @@ func (s *ByIdsStrategy) GetStrategyName() string {
 	return "ByIds"
 }
 
+func (s *ByIdsStrategy) GetStrategyType() core.SubscribeStrategyType {
+	return core.SubscribeStrategyType_ById
+}
+
 // ByDistanceStrategy 按距离订阅策略
 // 只订阅距离指定位置一定范围内的 Entities
 // 注意：需要 Entity 支持位置信息，这里提供基础框架
@@ -118,6 +147,10 @@ func (s *ByDistanceStrategy) ShouldSubscribe(entity IEntity) bool {
 
 func (s *ByDistanceStrategy) GetStrategyName() string {
 	return "ByDistance"
+}
+
+func (s *ByDistanceStrategy) GetStrategyType() core.SubscribeStrategyType {
+	return core.SubscribeStrategyType_ByDistance
 }
 
 // CompositeStrategy 组合策略
@@ -167,4 +200,37 @@ func (s *CompositeStrategy) ShouldSubscribe(entity IEntity) bool {
 
 func (s *CompositeStrategy) GetStrategyName() string {
 	return "Composite"
+}
+
+func (s *CompositeStrategy) GetStrategyType() core.SubscribeStrategyType {
+	return core.SubscribeStrategyType_Composite
+}
+
+// NewStrategyFromType 根据 pb 枚举类型创建策略实例
+// 注意：某些策略类型（如 Only、ById、ByDistance、Composite）需要额外的参数，
+// 这些参数需要通过具体的构造函数提供，此函数仅用于创建基础策略
+func NewStrategyFromType(strategyType core.SubscribeStrategyType) ISubscribeStrategy {
+	switch strategyType {
+	case core.SubscribeStrategyType_All:
+		return NewAllEntitiesStrategy()
+	case core.SubscribeStrategyType_Only:
+		// Only 策略需要指定类型列表，这里返回空列表的策略
+		// 实际使用时应该调用 NewOnlyStrategy(allowedTypes)
+		return NewOnlyStrategy(nil)
+	case core.SubscribeStrategyType_ById:
+		// ById 策略需要指定 ID 列表，这里返回空列表的策略
+		// 实际使用时应该调用 NewByIdsStrategy(allowedIds)
+		return NewByIdsStrategy(nil)
+	case core.SubscribeStrategyType_ByDistance:
+		// ByDistance 策略需要指定位置和距离，这里返回默认值
+		// 实际使用时应该调用 NewByDistanceStrategy(centerX, centerY, maxDistance)
+		return NewByDistanceStrategy(0, 0, 0)
+	case core.SubscribeStrategyType_Composite:
+		// Composite 策略需要指定子策略列表，这里返回空列表的策略
+		// 实际使用时应该调用 NewCompositeStrategy(strategies, logic)
+		return NewCompositeStrategy(nil, CompositeLogicAND)
+	default:
+		// 未知类型，返回全量订阅策略作为默认值
+		return NewAllEntitiesStrategy()
+	}
 }

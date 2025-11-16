@@ -1,5 +1,9 @@
 package servicezone
 
+import (
+	"gitee.com/orbit-w/orbit/app/proto/core"
+)
+
 type ZoneType int32
 
 const (
@@ -16,13 +20,6 @@ type ServiceZone struct {
 	Entities  []IEntity
 	// 订阅管理
 	subscribers map[string]*Subscriber // 订阅者集合，key 为订阅者 ID
-}
-
-// Subscriber 订阅者信息
-type Subscriber struct {
-	ID       string             // 订阅者唯一标识
-	Strategy ISubscribeStrategy // 订阅策略
-	Entities map[int64]IEntity  // 已订阅的 Entities，key 为 Entity ID
 }
 
 // NewServiceZone 创建新的服务区
@@ -44,25 +41,20 @@ func (zone *ServiceZone) Subscribe(subscriberId string, strategy ISubscribeStrat
 	// 创建或获取订阅者
 	subscriber, exists := zone.subscribers[subscriberId]
 	if !exists {
-		subscriber = &Subscriber{
-			ID:       subscriberId,
-			Strategy: strategy,
-			Entities: make(map[int64]IEntity),
-		}
+		subscriber = NewSubscriber(subscriberId, strategy)
 		zone.subscribers[subscriberId] = subscriber
 	} else {
 		// 更新策略
 		subscriber.Strategy = strategy
 		// 清空之前的订阅结果
-		subscriber.Entities = make(map[int64]IEntity)
+		subscriber.ClearSubscribedEntities()
 	}
 
 	// 根据策略筛选 Entities
 	subscribedEntities := make([]IEntity, 0)
 	for _, entity := range zone.Entities {
 		if strategy.ShouldSubscribe(entity) {
-			entityId := entity.GetXXXId()
-			subscriber.Entities[entityId] = entity
+			subscriber.SubscribeEntity(entity)
 			subscribedEntities = append(subscribedEntities, entity)
 		}
 	}
@@ -90,6 +82,11 @@ func (zone *ServiceZone) SubscribeAll(subscriberId string) []IEntity {
 
 // Unsubscribe 取消订阅
 func (zone *ServiceZone) Unsubscribe(subscriberId string) {
+	subscriber, exists := zone.subscribers[subscriberId]
+	if !exists {
+		return
+	}
+	subscriber.ClearSubscribedEntities()
 	delete(zone.subscribers, subscriberId)
 }
 
@@ -101,10 +98,63 @@ func (zone *ServiceZone) GetSubscribedEntities(subscriberId string) []IEntity {
 	}
 
 	entities := make([]IEntity, 0, len(subscriber.Entities))
-	for _, entity := range subscriber.Entities {
-		entities = append(entities, entity)
-	}
+	subscriber.RangeSubscribedEntities(func(entityId int64) {
+		entities = append(entities, zone.Entities[entityId])
+	})
 	return entities
+}
+
+// GetSubscriberStrategyType 获取订阅者的策略类型（用于网络协议序列化）
+func (zone *ServiceZone) GetSubscriberStrategyType(subscriberId string) (core.SubscribeStrategyType, bool) {
+	subscriber, exists := zone.subscribers[subscriberId]
+	if !exists {
+		return core.SubscribeStrategyType_All, false
+	}
+	return subscriber.Strategy.GetStrategyType(), true
+}
+
+// SubscribeByStrategyType 根据 pb 枚举类型和参数创建策略并订阅
+// 这是一个便捷方法，用于从网络协议中接收到的枚举类型创建订阅
+func (zone *ServiceZone) SubscribeByStrategyType(
+	subscriberId string,
+	strategyType core.SubscribeStrategyType,
+	params any,
+) []IEntity {
+	var strategy ISubscribeStrategy
+
+	switch strategyType {
+	case core.SubscribeStrategyType_All:
+		strategy = NewAllEntitiesStrategy()
+	case core.SubscribeStrategyType_Only:
+		if entityTypes, ok := params.([]string); ok {
+			strategy = NewOnlyStrategy(entityTypes)
+		} else {
+			strategy = NewOnlyStrategy(nil)
+		}
+	case core.SubscribeStrategyType_ById:
+		if entityIds, ok := params.([]int64); ok {
+			strategy = NewByIdsStrategy(entityIds)
+		} else {
+			strategy = NewByIdsStrategy(nil)
+		}
+	case core.SubscribeStrategyType_Composite:
+		if compositeParams, ok := params.(struct {
+			Strategies []ISubscribeStrategy
+			Logic      CompositeLogic
+		}); ok {
+			strategy = NewCompositeStrategy(compositeParams.Strategies, compositeParams.Logic)
+		} else {
+			strategy = NewCompositeStrategy(nil, CompositeLogicAND)
+		}
+	case core.SubscribeStrategyType_ByDistance:
+		// TODO: 实现按距离订阅策略
+		panic("ByDistance strategy is not supported")
+	default:
+		// 未知类型，使用全量订阅作为默认值
+		strategy = NewAllEntitiesStrategy()
+	}
+
+	return zone.Subscribe(subscriberId, strategy)
 }
 
 // UpdateSubscriptions 当 Entity 添加或更新时，更新所有订阅者
@@ -113,14 +163,13 @@ func (zone *ServiceZone) UpdateSubscriptions(entity IEntity) {
 	if entity == nil {
 		return
 	}
-	entityId := entity.GetXXXId()
 	for _, subscriber := range zone.subscribers {
 		if subscriber.Strategy.ShouldSubscribe(entity) {
 			// 添加到订阅列表
-			subscriber.Entities[entityId] = entity
+			subscriber.SubscribeEntity(entity)
 		} else {
 			// 如果不再符合订阅条件，从订阅列表中移除
-			delete(subscriber.Entities, entityId)
+			subscriber.UnsubscribeEntity(entity)
 		}
 	}
 }
@@ -128,6 +177,6 @@ func (zone *ServiceZone) UpdateSubscriptions(entity IEntity) {
 // RemoveFromSubscriptions 当 Entity 移除时，从所有订阅者中移除
 func (zone *ServiceZone) RemoveFromSubscriptions(entityId int64) {
 	for _, subscriber := range zone.subscribers {
-		delete(subscriber.Entities, entityId)
+		subscriber.UnsubscribeEntity(zone.Entities[entityId])
 	}
 }
