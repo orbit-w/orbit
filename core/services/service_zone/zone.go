@@ -4,6 +4,7 @@ import "gitee.com/orbit-w/orbit/app/proto/core"
 
 type IServiceZone interface {
 	AddEntity(entity IEntity)
+	SetEntity(entity IEntity)
 	RemoveEntity(targetId int64)
 	ISubscriber
 }
