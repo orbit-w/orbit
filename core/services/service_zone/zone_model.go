@@ -1,6 +1,7 @@
 package servicezone
 
 import (
+	"gitee.com/orbit-w/orbit/app/proto/common"
 	"gitee.com/orbit-w/orbit/app/proto/core"
 )
 
@@ -14,10 +15,10 @@ const (
 )
 
 type ServiceZone struct {
-	ID        string
-	Type      ZoneType
-	EntityMap map[int64]int32
-	Entities  map[int64]IEntity
+	ID            string
+	Type          ZoneType
+	EntityTypeMap map[int64]common.EntityType
+	Entities      map[int64]IEntity
 	// 订阅管理
 	subscribers map[string]*Subscriber // 订阅者集合，key 为订阅者 ID
 }
@@ -25,11 +26,11 @@ type ServiceZone struct {
 // NewServiceZone 创建新的服务区
 func NewServiceZone(id string, zoneType ZoneType) *ServiceZone {
 	return &ServiceZone{
-		ID:          id,
-		Type:        zoneType,
-		EntityMap:   make(map[int64]int32),
-		Entities:    make(map[int64]IEntity),
-		subscribers: make(map[string]*Subscriber),
+		ID:            id,
+		Type:          zoneType,
+		EntityTypeMap: make(map[int64]common.EntityType),
+		Entities:      make(map[int64]IEntity),
+		subscribers:   make(map[string]*Subscriber),
 	}
 }
 
@@ -74,24 +75,19 @@ func (zone *ServiceZone) getEntityById(targetId int64) IEntity {
 	return nil
 }
 
-func (zone *ServiceZone) entityExists(targetId int64) bool {
-	_, ok := zone.EntityMap[targetId]
-	return ok
-}
-
 func (zone *ServiceZone) addEntity(entity IEntity) {
 	id := entity.GetXXXId()
 	zone.Entities[id] = entity
 
-	zone.EntityMap[id] = int32(entity.GetEntityType())
+	zone.EntityTypeMap[id] = entity.GetEntityType()
 }
 
 func (zone *ServiceZone) removeEntity(targetId int64) {
-	_, ok := zone.EntityMap[targetId]
+	_, ok := zone.EntityTypeMap[targetId]
 	if !ok {
 		return
 	}
-	delete(zone.EntityMap, targetId)
+	delete(zone.EntityTypeMap, targetId)
 	delete(zone.Entities, targetId)
 }
 
@@ -235,14 +231,15 @@ func (zone *ServiceZone) UpdateSubscriptions(entity IEntity) {
 			subscriber.SubscribeEntity(entity)
 		} else {
 			// 如果不再符合订阅条件，从订阅列表中移除
-			subscriber.UnsubscribeEntity(entity)
+			subscriber.UnsubscribeEntity(entity.GetXXXId())
 		}
 	}
 }
 
 // RemoveFromSubscriptions 当 Entity 移除时，从所有订阅者中移除
 func (zone *ServiceZone) RemoveFromSubscriptions(entity IEntity) {
+	id := entity.GetXXXId()
 	for _, subscriber := range zone.subscribers {
-		subscriber.UnsubscribeEntity(entity)
+		subscriber.UnsubscribeEntity(id)
 	}
 }

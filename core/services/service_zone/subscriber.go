@@ -6,7 +6,7 @@ import "gitee.com/orbit-w/orbit/app/proto/common"
 type Subscriber struct {
 	UUID           string                                   // 订阅者唯一标识
 	Strategy       ISubscribeStrategy                       // 订阅策略
-	Entities       map[int64]struct{}                       // 已订阅的 Entities ID 列表, 用于快速遍历, 保证订阅顺序
+	Entities       map[int64]common.EntityType              // 已订阅的 Entities ID 列表, 用于快速遍历, 保证订阅顺序
 	EntitiesByType map[common.EntityType]map[int64]struct{} // 已订阅的 Entities 类型和 Entity 列表, Key 为 Entity 类型, Value 为 Entity 列表
 }
 
@@ -14,7 +14,7 @@ func NewSubscriber(uuid string, strategy ISubscribeStrategy) *Subscriber {
 	return &Subscriber{
 		UUID:           uuid,
 		Strategy:       strategy,
-		Entities:       make(map[int64]struct{}),
+		Entities:       make(map[int64]common.EntityType),
 		EntitiesByType: make(map[common.EntityType]map[int64]struct{}),
 	}
 }
@@ -42,35 +42,45 @@ func (s *Subscriber) HasSubscribedEntity(entityId int64) bool {
 }
 
 func (s *Subscriber) ClearSubscribedEntities() {
-	s.Entities = make(map[int64]struct{})
+	s.Entities = make(map[int64]common.EntityType)
 	s.EntitiesByType = make(map[common.EntityType]map[int64]struct{})
 }
 
 // 订阅 Entity
 func (s *Subscriber) SubscribeEntity(entity IEntity) {
-	if entity == nil || s.HasSubscribedEntity(entity.GetXXXId()) {
+	id := entity.GetXXXId()
+	if entity == nil {
 		return
 	}
-	s.Entities[entity.GetXXXId()] = struct{}{}
 	entityType := entity.GetEntityType()
+
+	remain, ok := s.Entities[id]
+	if ok {
+		if remain == entityType {
+			return
+		}
+		s.unsubscribeEntityById(id, remain, false)
+	}
+
+	s.Entities[id] = entityType
 	if _, ok := s.EntitiesByType[entityType]; !ok {
 		s.EntitiesByType[entityType] = make(map[int64]struct{})
 	}
-	s.EntitiesByType[entityType][entity.GetXXXId()] = struct{}{}
+	s.EntitiesByType[entityType][id] = struct{}{}
 }
 
-func (s *Subscriber) UnsubscribeEntity(entity IEntity) {
-	entityId := entity.GetXXXId()
-	if entity == nil || !s.HasSubscribedEntity(entityId) {
+func (s *Subscriber) UnsubscribeEntity(id int64) {
+	entityType, ok := s.Entities[id]
+	if !ok {
 		return
 	}
-	entityType := entity.GetEntityType()
-	entityIds, ok := s.EntitiesByType[entityType]
-	if ok {
-		delete(entityIds, entityId)
-		if len(entityIds) == 0 {
-			delete(s.EntitiesByType, entityType)
-		}
-	}
+	s.unsubscribeEntityById(id, entityType, true)
+}
+
+func (s *Subscriber) unsubscribeEntityById(entityId int64, entityType common.EntityType, clear bool) {
 	delete(s.Entities, entityId)
+	delete(s.EntitiesByType[entityType], entityId)
+	if clear && len(s.EntitiesByType[entityType]) == 0 {
+		delete(s.EntitiesByType, entityType)
+	}
 }
