@@ -10,6 +10,7 @@ import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
+	sync "sync"
 	unsafe "unsafe"
 )
 
@@ -20,13 +21,79 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// EntityType 实体类型枚举
+type EntityType int32
+
+const (
+	EntityType_Unspecified  EntityType = 0
+	EntityType_PlayerEntity EntityType = 1
+)
+
+// Enum value maps for EntityType.
+var (
+	EntityType_name = map[int32]string{
+		0: "Unspecified",
+		1: "PlayerEntity",
+	}
+	EntityType_value = map[string]int32{
+		"Unspecified":  0,
+		"PlayerEntity": 1,
+	}
+)
+
+func (x EntityType) Enum() *EntityType {
+	p := new(EntityType)
+	*p = x
+	return p
+}
+
+func (x EntityType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (EntityType) Descriptor() protoreflect.EnumDescriptor {
+	return file_common_proto_enumTypes[0].Descriptor()
+}
+
+func (EntityType) Type() protoreflect.EnumType {
+	return &file_common_proto_enumTypes[0]
+}
+
+func (x EntityType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use EntityType.Descriptor instead.
+func (EntityType) EnumDescriptor() ([]byte, []int) {
+	return file_common_proto_rawDescGZIP(), []int{0}
+}
+
 var File_common_proto protoreflect.FileDescriptor
 
 const file_common_proto_rawDesc = "" +
 	"\n" +
-	"\fcommon.proto\x12\x06CommonB*Z(gitee.com/orbit-w/orbit/app/proto/commonb\x06proto3"
+	"\fcommon.proto\x12\x06Common*/\n" +
+	"\n" +
+	"EntityType\x12\x0f\n" +
+	"\vUnspecified\x10\x00\x12\x10\n" +
+	"\fPlayerEntity\x10\x01B*Z(gitee.com/orbit-w/orbit/app/proto/commonb\x06proto3"
 
-var file_common_proto_goTypes = []any{}
+var (
+	file_common_proto_rawDescOnce sync.Once
+	file_common_proto_rawDescData []byte
+)
+
+func file_common_proto_rawDescGZIP() []byte {
+	file_common_proto_rawDescOnce.Do(func() {
+		file_common_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_common_proto_rawDesc), len(file_common_proto_rawDesc)))
+	})
+	return file_common_proto_rawDescData
+}
+
+var file_common_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_common_proto_goTypes = []any{
+	(EntityType)(0), // 0: Common.EntityType
+}
 var file_common_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
 	0, // [0:0] is the sub-list for method input_type
@@ -45,13 +112,14 @@ func file_common_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_common_proto_rawDesc), len(file_common_proto_rawDesc)),
-			NumEnums:      0,
+			NumEnums:      1,
 			NumMessages:   0,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_common_proto_goTypes,
 		DependencyIndexes: file_common_proto_depIdxs,
+		EnumInfos:         file_common_proto_enumTypes,
 	}.Build()
 	File_common_proto = out.File
 	file_common_proto_goTypes = nil

@@ -8,6 +8,8 @@ import (
 
 type IEntity interface {
 	Name() string
+	// 获取 Entity ID（XXXId）
+	GetXXXId() int64
 	// 初始化字段上下文
 	InitFieldContext()
 	// 清除所有脏标记

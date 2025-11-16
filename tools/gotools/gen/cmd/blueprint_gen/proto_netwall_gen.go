@@ -49,6 +49,24 @@ func (g *ProtoGenerator) generateNetWallProtoFile(outputDir string, netwallFile 
 		sb.WriteString("}\n\n")
 	}
 
+	// 生成 Enums
+	for _, enum := range netwallFile.Enums {
+		// 添加注释
+		if enum.Comment != "" {
+			sb.WriteString(fmt.Sprintf("// %s\n", enum.Comment))
+		}
+		sb.WriteString(fmt.Sprintf("enum %s {\n", enum.Name))
+		for _, value := range enum.Values {
+			// 添加注释
+			if value.Comment != "" {
+				sb.WriteString(fmt.Sprintf("    // %s\n", value.Comment))
+			}
+			// 生成枚举值定义
+			sb.WriteString(fmt.Sprintf("    %s = %d;\n", value.Name, value.Number))
+		}
+		sb.WriteString("}\n\n")
+	}
+
 	// 生成 DataStructs
 	for _, ds := range netwallFile.DataStructs {
 		// 添加注释

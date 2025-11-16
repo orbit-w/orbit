@@ -21,6 +21,118 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type ServiceZoneType int32
+
+const (
+	// 逻辑服管理区域类型
+	ServiceZoneType_Play ServiceZoneType = 0
+	// 联盟服管理区域类型
+	ServiceZoneType_Union ServiceZoneType = 1
+	// 跨服管理区域类型
+	ServiceZoneType_Cross ServiceZoneType = 2
+)
+
+// Enum value maps for ServiceZoneType.
+var (
+	ServiceZoneType_name = map[int32]string{
+		0: "Play",
+		1: "Union",
+		2: "Cross",
+	}
+	ServiceZoneType_value = map[string]int32{
+		"Play":  0,
+		"Union": 1,
+		"Cross": 2,
+	}
+)
+
+func (x ServiceZoneType) Enum() *ServiceZoneType {
+	p := new(ServiceZoneType)
+	*p = x
+	return p
+}
+
+func (x ServiceZoneType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ServiceZoneType) Descriptor() protoreflect.EnumDescriptor {
+	return file_core_proto_enumTypes[0].Descriptor()
+}
+
+func (ServiceZoneType) Type() protoreflect.EnumType {
+	return &file_core_proto_enumTypes[0]
+}
+
+func (x ServiceZoneType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ServiceZoneType.Descriptor instead.
+func (ServiceZoneType) EnumDescriptor() ([]byte, []int) {
+	return file_core_proto_rawDescGZIP(), []int{0}
+}
+
+type SubscribeStrategyType int32
+
+const (
+	// 订阅所有类型
+	SubscribeStrategyType_All SubscribeStrategyType = 0
+	// 只订阅指定类型
+	SubscribeStrategyType_Only SubscribeStrategyType = 1
+	// 按ID订阅
+	SubscribeStrategyType_ById SubscribeStrategyType = 2
+	// 按距离订阅
+	SubscribeStrategyType_ByDistance SubscribeStrategyType = 3
+	// 组合订阅
+	SubscribeStrategyType_Composite SubscribeStrategyType = 4
+)
+
+// Enum value maps for SubscribeStrategyType.
+var (
+	SubscribeStrategyType_name = map[int32]string{
+		0: "All",
+		1: "Only",
+		2: "ById",
+		3: "ByDistance",
+		4: "Composite",
+	}
+	SubscribeStrategyType_value = map[string]int32{
+		"All":        0,
+		"Only":       1,
+		"ById":       2,
+		"ByDistance": 3,
+		"Composite":  4,
+	}
+)
+
+func (x SubscribeStrategyType) Enum() *SubscribeStrategyType {
+	p := new(SubscribeStrategyType)
+	*p = x
+	return p
+}
+
+func (x SubscribeStrategyType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (SubscribeStrategyType) Descriptor() protoreflect.EnumDescriptor {
+	return file_core_proto_enumTypes[1].Descriptor()
+}
+
+func (SubscribeStrategyType) Type() protoreflect.EnumType {
+	return &file_core_proto_enumTypes[1]
+}
+
+func (x SubscribeStrategyType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use SubscribeStrategyType.Descriptor instead.
+func (SubscribeStrategyType) EnumDescriptor() ([]byte, []int) {
+	return file_core_proto_rawDescGZIP(), []int{1}
+}
+
 type Request struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -492,7 +604,18 @@ const file_core_proto_rawDesc = "" +
 	"\x0eMechanismIndex\x18\x03 \x01(\x05H\x02R\x0eMechanismIndex\x88\x01\x01B\v\n" +
 	"\t_EntityIdB\v\n" +
 	"\t_ModuleIdB\x11\n" +
-	"\x0f_MechanismIndexB(Z&gitee.com/orbit-w/orbit/app/proto/coreb\x06proto3"
+	"\x0f_MechanismIndex*1\n" +
+	"\x0fServiceZoneType\x12\b\n" +
+	"\x04Play\x10\x00\x12\t\n" +
+	"\x05Union\x10\x01\x12\t\n" +
+	"\x05Cross\x10\x02*S\n" +
+	"\x15SubscribeStrategyType\x12\a\n" +
+	"\x03All\x10\x00\x12\b\n" +
+	"\x04Only\x10\x01\x12\b\n" +
+	"\x04ById\x10\x02\x12\x0e\n" +
+	"\n" +
+	"ByDistance\x10\x03\x12\r\n" +
+	"\tComposite\x10\x04B(Z&gitee.com/orbit-w/orbit/app/proto/coreb\x06proto3"
 
 var (
 	file_core_proto_rawDescOnce sync.Once
@@ -506,21 +629,24 @@ func file_core_proto_rawDescGZIP() []byte {
 	return file_core_proto_rawDescData
 }
 
+var file_core_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
 var file_core_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_core_proto_goTypes = []any{
-	(*Request)(nil),                // 0: Core.Request
-	(*Notify)(nil),                 // 1: Core.Notify
-	(*Book)(nil),                   // 2: Core.Book
-	(*OK)(nil),                     // 3: Core.OK
-	(*Error)(nil),                  // 4: Core.Error
-	(*MMELocation)(nil),            // 5: Core.MMELocation
-	(*Request_SearchBook)(nil),     // 6: Core.Request.SearchBook
-	(*Request_HeartBeat)(nil),      // 7: Core.Request.HeartBeat
-	(*Request_SearchBook_Rsp)(nil), // 8: Core.Request.SearchBook.Rsp
-	(*Notify_BeAttacked)(nil),      // 9: Core.Notify.BeAttacked
+	(ServiceZoneType)(0),           // 0: Core.ServiceZoneType
+	(SubscribeStrategyType)(0),     // 1: Core.SubscribeStrategyType
+	(*Request)(nil),                // 2: Core.Request
+	(*Notify)(nil),                 // 3: Core.Notify
+	(*Book)(nil),                   // 4: Core.Book
+	(*OK)(nil),                     // 5: Core.OK
+	(*Error)(nil),                  // 6: Core.Error
+	(*MMELocation)(nil),            // 7: Core.MMELocation
+	(*Request_SearchBook)(nil),     // 8: Core.Request.SearchBook
+	(*Request_HeartBeat)(nil),      // 9: Core.Request.HeartBeat
+	(*Request_SearchBook_Rsp)(nil), // 10: Core.Request.SearchBook.Rsp
+	(*Notify_BeAttacked)(nil),      // 11: Core.Notify.BeAttacked
 }
 var file_core_proto_depIdxs = []int32{
-	2, // 0: Core.Request.SearchBook.Rsp.Result:type_name -> Core.Book
+	4, // 0: Core.Request.SearchBook.Rsp.Result:type_name -> Core.Book
 	1, // [1:1] is the sub-list for method output_type
 	1, // [1:1] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
@@ -544,13 +670,14 @@ func file_core_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_core_proto_rawDesc), len(file_core_proto_rawDesc)),
-			NumEnums:      0,
+			NumEnums:      2,
 			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_core_proto_goTypes,
 		DependencyIndexes: file_core_proto_depIdxs,
+		EnumInfos:         file_core_proto_enumTypes,
 		MessageInfos:      file_core_proto_msgTypes,
 	}.Build()
 	File_core_proto = out.File

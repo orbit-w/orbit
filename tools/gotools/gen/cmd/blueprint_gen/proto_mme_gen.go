@@ -2,7 +2,6 @@ package blueprint_gen
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 
 	blueprint_types "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types"
@@ -34,7 +33,7 @@ func (g *ProtoGenerator) generateHeadfileProto(outputDir string) error {
 	if len(g.data.Entities) > 0 {
 		sb.WriteString("// EntityType 实体类型枚举\n")
 		sb.WriteString("enum EntityType {\n")
-		sb.WriteString("    ENTITY_TYPE_UNSPECIFIED = 0;\n")
+		sb.WriteString("    Unspecified = 0;\n")
 
 		for i, entity := range g.data.Entities {
 			enumValueName := g.entityNameToEnumValue(entity.Name)
@@ -52,20 +51,10 @@ func (g *ProtoGenerator) generateHeadfileProto(outputDir string) error {
 }
 
 // entityNameToEnumValue 将 Entity 名称转换为 enum 值名称
-// 例如: PlayerEntity -> ENTITY_TYPE_PLAYER_ENTITY
+// 例如: PlayerEntity -> PlayerEntity (保持驼峰命名)
 func (g *ProtoGenerator) entityNameToEnumValue(entityName string) string {
-	// 使用完整的 Entity 名称
-	name := entityName
-
-	// 在驼峰命名的大写字母前插入下划线
-	re := regexp.MustCompile(`([a-z])([A-Z])`)
-	name = re.ReplaceAllString(name, `${1}_${2}`)
-
-	// 全部转换为大写
-	name = strings.ToUpper(name)
-
-	// 添加前缀
-	return "ENTITY_TYPE_" + name
+	// 直接返回 Entity 名称，保持驼峰命名
+	return entityName
 }
 
 // MMEObjectAutoProtoImport 自动生成 MMEObject 的 Proto 导入

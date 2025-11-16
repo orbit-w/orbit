@@ -126,6 +126,35 @@ func NewNetMessage(nt NetWallMessageType) *NetMessage {
 	}
 }
 
+const (
+	EnumValueOptionContent = "Content"
+)
+
+// EnumValue 枚举值定义
+type EnumValue struct {
+	Name    string            // 枚举值名称，如 ServiceZoneTypePlay
+	Number  int32             // 枚举值编号，如 0
+	Comment string            // 枚举值注释
+	Options map[string]string // 枚举值选项
+}
+
+// ParseComment 解析枚举值注释
+func (e *EnumValue) ParseComment() string {
+	opt, ok := e.Options[EnumValueOptionContent]
+	if !ok {
+		panic(fmt.Sprintf("EnumValue %s 的 %s 选项不存在", e.Name, EnumValueOptionContent))
+	}
+	e.Comment = opt
+	return opt
+}
+
+// Enum 枚举定义
+type Enum struct {
+	Name    string       // 枚举名称，如 ServiceZoneType
+	Values  []*EnumValue // 枚举值列表
+	Comment string       // 枚举注释
+}
+
 // NetWallFile NetWall 文件内容
 type NetWallFile struct {
 	Name        string
@@ -133,6 +162,7 @@ type NetWallFile struct {
 	Requests    []*NetMessage
 	Notifies    []*NetMessage
 	DataStructs []*NetMessage
+	Enums       []*Enum
 	NameSpace   map[string]bool
 }
 
@@ -141,6 +171,7 @@ func NewNetWallFile() *NetWallFile {
 		Requests:    make([]*NetMessage, 0),
 		Notifies:    make([]*NetMessage, 0),
 		DataStructs: make([]*NetMessage, 0),
+		Enums:       make([]*Enum, 0),
 		NameSpace:   make(map[string]bool),
 	}
 }
@@ -175,6 +206,14 @@ func (n *NetWallFile) AddDataStruct(dataStruct *NetMessage) {
 	}
 	n.DataStructs = append(n.DataStructs, dataStruct)
 	n.NameSpace[dataStruct.Name] = true
+}
+
+func (n *NetWallFile) AddEnum(enum *Enum) {
+	if n.HasNameSpace(enum.Name) {
+		panic(fmt.Sprintf("NetWallFile %s 的枚举 %s 已存在", n.Name, enum.Name))
+	}
+	n.Enums = append(n.Enums, enum)
+	n.NameSpace[enum.Name] = true
 }
 
 func (n *NetWallFile) HasNameSpace(name string) bool {
@@ -262,6 +301,10 @@ func (ctx *BlueprintContext) GetNameSpace() map[string]string {
 			// 引用其他NetWall的数据结构
 			for _, ds := range netwallFile.DataStructs {
 				ctx.NameSpaces[ds.Name] = netwallFile.PackageName
+			}
+			// 引用其他NetWall的枚举
+			for _, enum := range netwallFile.Enums {
+				ctx.NameSpaces[enum.Name] = netwallFile.PackageName
 			}
 		}
 	}
