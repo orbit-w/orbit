@@ -30,7 +30,7 @@ type Mechanism struct {
 
 func NewMechanism() *Mechanism {
 	return &Mechanism{
-		MMEObject: NewMMEObject(),
+		MMEObject: NewMMEObject(ObjectTypeMechanism),
 		Requests:  make([]*NetMessage, 0),
 		Notifies:  make([]*NetMessage, 0),
 	}
@@ -43,7 +43,7 @@ type Module struct {
 
 func NewModule() *Module {
 	return &Module{
-		MMEObject: NewMMEObject(),
+		MMEObject: NewMMEObject(ObjectTypeModule),
 	}
 }
 
@@ -54,7 +54,7 @@ type Manager struct {
 
 func NewManager() *Manager {
 	return &Manager{
-		MMEObject: NewMMEObject(),
+		MMEObject: NewMMEObject(ObjectTypeManager),
 	}
 }
 
@@ -65,7 +65,7 @@ type Entity struct {
 
 func NewEntity() *Entity {
 	return &Entity{
-		MMEObject: NewMMEObject(),
+		MMEObject: NewMMEObject(ObjectTypeEntity),
 	}
 }
 

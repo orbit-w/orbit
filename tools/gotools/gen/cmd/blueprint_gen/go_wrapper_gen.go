@@ -821,6 +821,12 @@ func (g *GoWrapperGenerator) generateEntityWrappers(outputDir string) error {
 		sb.WriteString(fmt.Sprintf("\treturn \"%s\"\n", entity.Name))
 		sb.WriteString("}\n\n")
 
+		// 生成 GetEntityType 方法
+		sb.WriteString("// GetEntityType 返回实体类型枚举\n")
+		sb.WriteString(fmt.Sprintf("func (e *%s) GetEntityType() common.EntityType {\n", wrapperName))
+		sb.WriteString(fmt.Sprintf("\treturn common.EntityType_%s\n", entity.Name))
+		sb.WriteString("}\n\n")
+
 		// 生成 MatchesAll 方法（实现 IFieldMetaContext 接口）
 		sb.WriteString("// MatchesAll 判断字段是否匹配所有类型标记\n")
 		sb.WriteString(fmt.Sprintf("func (e *%s) MatchesAll(fieldID uint8, fieldTypes ...fieldmeta.FieldType) bool {\n", wrapperName))

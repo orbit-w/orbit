@@ -9,19 +9,26 @@ type MMEObjectBase interface {
 	GetName() string
 	HasMapField() bool
 	HasXMapField() bool
+	GetObjectType() ObjectType
 }
 
 type MMEObject struct {
-	Name     string
-	Fields   []*types.Field
-	Settings map[string]any
+	Name       string
+	ObjectType ObjectType
+	Fields     []*types.Field
+	Settings   map[string]any
 }
 
-func NewMMEObject() *MMEObject {
+func NewMMEObject(objectType ObjectType) *MMEObject {
 	return &MMEObject{
-		Fields:   make([]*types.Field, 0),
-		Settings: make(map[string]any),
+		ObjectType: objectType,
+		Fields:     make([]*types.Field, 0),
+		Settings:   make(map[string]any),
 	}
+}
+
+func (m *MMEObject) GetObjectType() ObjectType {
+	return m.ObjectType
 }
 
 func (m *MMEObject) GetName() string {
