@@ -2,3 +2,23 @@
 stage = "dev"
 host = "127.0.0.1"
 port = "8080"
+
+[cluster.nacos]
+# Nacos 服务器地址列表
+server_hosts = ["127.0.0.1:8848"]
+# 命名空间ID（可选）
+namespace_id = ""
+# 服务组名
+group_name = "DEFAULT_GROUP"
+# 用户名（可选，如果 Nacos 开启了认证）
+username = ""
+# 密码（可选，如果 Nacos 开启了认证）
+password = ""
+# 日志目录
+log_dir = "/tmp/nacos/log"
+# 缓存目录
+cache_dir = "/tmp/nacos/cache"
+# 超时时间（毫秒）
+timeout_ms = 5000
+# 心跳间隔（秒）
+beat_interval = 5

@@ -15,3 +15,4 @@ type ServiceZone struct {
 	EntityMap map[int64]int32
 	Entities  []IEntity
 }
+
