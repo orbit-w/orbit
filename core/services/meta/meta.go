@@ -20,21 +20,21 @@ func NewMeta(name, pattern, serverId string, dispatcher *Dispatcher) *Meta {
 	}
 }
 
-type ActorMetaCache struct {
+type MetaCache struct {
 	cli   *redis.Client
 	cache cmap.ConcurrentMap
 	exec  *unipue_task_exec.UniqueTaskExecutor
 }
 
-func NewMetaCache(cli *redis.Client) *ActorMetaCache {
-	return &ActorMetaCache{
+func NewMetaCache(cli *redis.Client) *MetaCache {
+	return &MetaCache{
 		cli:   cli,
 		cache: cmap.New(),
 		exec:  unipue_task_exec.NewUniqueTaskExecutor(),
 	}
 }
 
-func (c *ActorMetaCache) Load(actorName string) (*Meta, error) {
+func (c *MetaCache) Load(actorName string) (*Meta, error) {
 	if v, exists := c.cache.Get(actorName); exists {
 		return v.(*Meta), nil
 	}
@@ -66,7 +66,7 @@ func (c *ActorMetaCache) Load(actorName string) (*Meta, error) {
 	}
 }
 
-func (c *ActorMetaCache) Store(actorName string, value *Meta) (*Meta, error) {
+func (c *MetaCache) Store(actorName string, value *Meta) (*Meta, error) {
 	content, err := proto.Marshal(value)
 	if err != nil {
 		return nil, err
@@ -77,22 +77,22 @@ func (c *ActorMetaCache) Store(actorName string, value *Meta) (*Meta, error) {
 	return value, nil
 }
 
-func (c *ActorMetaCache) Set(key string, value *Meta) {
+func (c *MetaCache) Set(key string, value *Meta) {
 	c.cache.Set(key, value)
 }
 
-func (c *ActorMetaCache) Get(key string) (*Meta, bool) {
+func (c *MetaCache) Get(key string) (*Meta, bool) {
 	if v, ok := c.cache.Get(key); ok {
 		return v.(*Meta), true
 	}
 	return nil, false
 }
 
-func (c *ActorMetaCache) Del(key string) {
+func (c *MetaCache) Del(key string) {
 	c.cli.Del(context.Background(), key)
 	c.cache.Remove(key)
 }
 
 func genRedisKey(actorName string) string {
-	return fmt.Sprintf("actor_meta:%s", actorName)
+	return fmt.Sprintf("meta:%s", actorName)
 }
