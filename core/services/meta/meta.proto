@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package meta;
+
+option go_package = ".;meta";
+
+message Meta {
+  string ActorName = 1;
+  string Pattern = 2;
+  string ServerId = 3; //初始逻辑服ID
+  Dispatcher Dispatcher = 4;
+}
+
+message Dispatcher {
+    DispatcherType Type = 1;
+    string ServerId = 2; //最新的逻辑服ID
+    string NodeId = 3; //最新的节点ID
+}
+
+enum DispatcherType {
+    DISPATCHER_TYPE_IN_WORLD = 0; // 世界分组
+    DISPATCHER_TYPE_IN_REGION = 1; // 区域分组
+    DISPATCHER_TYPE_RANDOM = 2; // 随机分组 
+}
