@@ -5,7 +5,7 @@ package meta;
 option go_package = ".;meta";
 
 message Meta {
-  string ActorName = 1;
+  int64 Id = 1;
   string Pattern = 2;
   string ServerId = 3; //初始逻辑服ID
   Dispatcher Dispatcher = 4;

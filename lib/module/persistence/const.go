@@ -5,4 +5,5 @@ import "time"
 const (
 	DefaultTimeout    = time.Second * 8
 	MongoWriteTimeout = time.Second * 10
+	MongoReadTimeout  = time.Second * 10
 )

@@ -13,6 +13,20 @@ const (
 	PersistencePattern = "persistence"
 )
 
+// LoadRequest 加载请求消息
+type LoadRequest struct {
+	// Database 数据库名称
+	Database string
+	// Collection 集合名称
+	Collection string
+	// DocID 文档ID
+	DocID any
+	// Timeout 超时时间（可选）
+	Timeout time.Duration
+	// Context 请求上下文（可选）
+	Context context.Context
+}
+
 // PersistenceRequest 持久化请求消息
 type PersistenceRequest struct {
 	// Database 数据库名称
@@ -29,6 +43,20 @@ type PersistenceRequest struct {
 	Timeout time.Duration
 	// Context 请求上下文（可选）
 	Context context.Context
+}
+
+// LoadResponse 加载响应消息
+type LoadResponse struct {
+	// Success 是否成功
+	Success bool
+	// Error 错误信息（如果失败）
+	Error error
+	// Collection 集合名称
+	Collection string
+	// DocumentID 文档ID
+	DocumentID any
+	// Data 加载的文档数据（如果成功）
+	Data bson.M
 }
 
 // PersistenceResponse 持久化响应消息

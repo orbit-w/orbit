@@ -54,6 +54,25 @@ func SingletonGracefulStop() error {
 	return globalPersistence.GracefulStop()
 }
 
+func Load[IDType any](database string, collection string, docID IDType) (*actor.Future, error) {
+	if globalPersistence == nil {
+		return nil, ErrDBNotInitialized
+	}
+
+	req := LoadRequest{
+		Database:   database,
+		Collection: collection,
+		DocID:      docID,
+	}
+
+	future, err := globalPersistence.Call(req, DefaultTimeout)
+	if err != nil {
+		mlog.Errorf("Load failed: %v", err)
+		return nil, err
+	}
+	return future, nil
+}
+
 func Persist[IDType any](database string, collection string, documentID IDType, doc bson.M) (*actor.Future, error) {
 	if globalPersistence == nil {
 		return nil, ErrDBNotInitialized

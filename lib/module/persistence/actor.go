@@ -2,6 +2,7 @@ package persistence
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	"gitee.com/orbit-w/meteor/bases/misc/utils"
@@ -62,10 +63,123 @@ func (p *PersistenceActor) Receive(ctx actor.Context) {
 		p.logger.Info("PersistenceActor stopped", zap.String("ActorID", ctx.Self().Id))
 	case PersistenceRequest:
 		p.handlePersistenceRequest(ctx, msg)
-
+	case LoadRequest:
+		p.handleLoadRequest(ctx, msg)
 	default:
 		p.logger.Error("PersistenceActor received unknown message", zap.Any("Message", msg))
 	}
+}
+
+// validateLoadRequest 验证加载请求参数
+func (p *PersistenceActor) validateLoadRequest(req LoadRequest) *LoadResponse {
+	if req.Collection == "" {
+		return &LoadResponse{
+			Success:    false,
+			Error:      ErrEmptyCollection,
+			Collection: "",
+			DocumentID: req.DocID,
+		}
+	}
+
+	if req.DocID == nil {
+		return &LoadResponse{
+			Success:    false,
+			Error:      ErrEmptyDocumentID,
+			Collection: req.Collection,
+			DocumentID: nil,
+		}
+	}
+
+	return nil
+}
+
+// handleLoadError 处理加载错误
+func (p *PersistenceActor) handleLoadError(err error, req LoadRequest) *LoadResponse {
+	// 区分文档不存在和其他错误
+	if errors.Is(err, mongo.ErrNoDocuments) {
+		p.logger.Debug("Document not found",
+			zap.Any("DocumentID", req.DocID),
+			zap.String("Collection", req.Collection),
+			zap.String("Database", req.Database))
+		return &LoadResponse{
+			Success:    false,
+			Error:      mongo.ErrNoDocuments,
+			Collection: req.Collection,
+			DocumentID: req.DocID,
+		}
+	}
+
+	// 其他错误
+	p.logger.Error("Failed to load data",
+		zap.Error(err),
+		zap.Any("DocumentID", req.DocID),
+		zap.String("Collection", req.Collection),
+		zap.String("Database", req.Database))
+	return &LoadResponse{
+		Success:    false,
+		Error:      err,
+		Collection: req.Collection,
+		DocumentID: req.DocID,
+	}
+}
+
+// respondLoadSuccess 响应加载成功
+func (p *PersistenceActor) respondLoadSuccess(ctx actor.Context, req LoadRequest, data bson.M) {
+	p.logger.Debug("Data loaded successfully",
+		zap.String("Collection", req.Collection),
+		zap.Any("DocumentID", req.DocID),
+		zap.String("Database", req.Database))
+
+	ctx.Respond(&LoadResponse{
+		Success:    true,
+		Collection: req.Collection,
+		DocumentID: req.DocID,
+		Data:       data,
+	})
+}
+
+// getLoadContext 获取加载操作的上下文
+func (p *PersistenceActor) getLoadContext(req LoadRequest) (context.Context, context.CancelFunc) {
+	if req.Context != nil {
+		return req.Context, nil
+	}
+
+	timeout := req.Timeout
+	if timeout == 0 {
+		timeout = MongoReadTimeout
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	return ctx, cancel
+}
+
+// handleLoadRequest 处理加载请求
+func (p *PersistenceActor) handleLoadRequest(ctx actor.Context, req LoadRequest) {
+	// 输入验证
+	if validationErr := p.validateLoadRequest(req); validationErr != nil {
+		ctx.Respond(validationErr)
+		return
+	}
+
+	// 获取上下文
+	loadCtx, cancel := p.getLoadContext(req)
+	if cancel != nil {
+		defer cancel()
+	}
+
+	// 构建查询条件并执行查询
+	filter := bson.M{"_id": req.DocID}
+	collection := p.GetCollection(req.Database, req.Collection)
+	singleResult := collection.FindOne(loadCtx, filter)
+
+	// 解码结果
+	result := bson.M{}
+	if err := singleResult.Decode(&result); err != nil {
+		ctx.Respond(p.handleLoadError(err, req))
+		return
+	}
+
+	// 响应成功
+	p.respondLoadSuccess(ctx, req, result)
 }
 
 // handlePersistenceRequest 处理单个持久化请求
