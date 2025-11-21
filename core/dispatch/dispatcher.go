@@ -23,6 +23,13 @@ func Init() {
 	})
 }
 
+func GetRouter() *Router {
+	routerOnce.Do(func() {
+		globalRouter = NewRouter()
+	})
+	return globalRouter
+}
+
 func Register(pid uint32, router func(data []byte) (proto.Message, string, error)) {
 	globalRouter.Register(pid, router)
 }

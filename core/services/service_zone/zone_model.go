@@ -3,6 +3,17 @@ package servicezone
 import (
 	"gitee.com/orbit-w/orbit/app/proto/common"
 	"gitee.com/orbit-w/orbit/app/proto/core"
+	"github.com/asynkron/protoactor-go/actor"
+)
+
+const (
+	// ZonePattern ServiceZone Actor 的 pattern
+	ZonePattern = "zone-pattern"
+)
+
+var (
+// zoneRegistry ServiceZone 注册表，用于 Actor Factory 根据 actorName 查找对应的 ServiceZone
+// 在 behavior.go 中定义，这里只是声明
 )
 
 type ZoneType int32
@@ -21,6 +32,9 @@ type ServiceZone struct {
 	Entities      map[int64]IEntity
 	// 订阅管理
 	subscribers map[string]*Subscriber // 订阅者集合，key 为订阅者 ID
+
+	actorPID    *actor.PID
+	actorSystem *actor.ActorSystem
 }
 
 // NewServiceZone 创建新的服务区
@@ -32,6 +46,51 @@ func NewServiceZone(id string, zoneType ZoneType) *ServiceZone {
 		Entities:      make(map[int64]IEntity),
 		subscribers:   make(map[string]*Subscriber),
 	}
+}
+
+// Start 启动 ServiceZone 的 Actor
+// 需要在 Actor 系统启动后调用
+func (zone *ServiceZone) Start(system *actor.ActorSystem) error {
+	zone.actorSystem = system
+	// 直接创建持久化Actor，使用supervision策略
+	// 这里不使用supervision系统，而是直接创建，但使用supervision策略来保证容错
+	decider := func(reason any) actor.Directive {
+		// 使用Resume策略，出错后继续运行
+		return actor.ResumeDirective
+	}
+	supervisor := actor.NewOneForOneStrategy(10, 1000, decider)
+
+	props := actor.PropsFromProducer(func() actor.Actor {
+		return NewZoneActorBehavior(zone)
+	}, actor.WithSupervisor(supervisor))
+
+	// 直接在Root下创建Actor
+	ctx := system.Root
+	pid, err := ctx.SpawnNamed(props, GenActorId(zone.ID))
+	if err != nil {
+		return err
+	}
+
+	zone.actorPID = pid
+	return nil
+}
+
+// Stop 停止 ServiceZone 的 Actor
+func (zone *ServiceZone) Stop() error {
+	if zone.actorPID != nil {
+		// 直接停止Actor
+		ctx := zone.actorSystem.Root
+		future := ctx.PoisonFuture(zone.actorPID)
+		zone.actorPID = nil
+		if err := future.Wait(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (zone *ServiceZone) GetActorPID() *actor.PID {
+	return zone.actorPID
 }
 
 // AddEntity 添加或更新 Entity（实现 IServiceZone 接口）

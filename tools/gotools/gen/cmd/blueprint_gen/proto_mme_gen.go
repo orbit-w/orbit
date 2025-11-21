@@ -46,6 +46,15 @@ func (g *ProtoGenerator) generateHeadfileProto(outputDir string) error {
 		// 这里不生成，因为用户要求针对每种 Entity 对象生成 enum
 	}
 
+	// 自动生成 EntityRef message
+	// 如果存在 EntityType 枚举（即存在 Entities），则生成 EntityRef
+	if len(g.data.Entities) > 0 {
+		sb.WriteString("message EntityRef {\n")
+		sb.WriteString("    int64 Id = 1;\n")
+		sb.WriteString("    EntityType Type = 2;\n")
+		sb.WriteString("}\n\n")
+	}
+
 	content := sb.String()
 	return WriteFile(outputDir+"/common.proto", content)
 }
