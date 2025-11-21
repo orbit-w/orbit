@@ -49,24 +49,6 @@ func (g *ProtoGenerator) generateNetWallProtoFile(outputDir string, netwallFile 
 		sb.WriteString("}\n\n")
 	}
 
-	// 生成 Enums
-	for _, enum := range netwallFile.Enums {
-		// 添加注释
-		if enum.Comment != "" {
-			sb.WriteString(fmt.Sprintf("// %s\n", enum.Comment))
-		}
-		sb.WriteString(fmt.Sprintf("enum %s {\n", enum.Name))
-		for _, value := range enum.Values {
-			// 添加注释
-			if value.Comment != "" {
-				sb.WriteString(fmt.Sprintf("    // %s\n", value.Comment))
-			}
-			// 生成枚举值定义
-			sb.WriteString(fmt.Sprintf("    %s = %d;\n", value.Name, value.Number))
-		}
-		sb.WriteString("}\n\n")
-	}
-
 	// 生成 DataStructs
 	for _, ds := range netwallFile.DataStructs {
 		// 添加注释
@@ -95,6 +77,23 @@ func (g *ProtoGenerator) generateNetWallProtoFile(outputDir string, netwallFile 
 				// 生成字段类型
 				protoType := g.typeConverter.ToProtoType(&field.Type)
 				isOptional := g.typeConverter.IsOptionalInProto(&field.Type)
+
+				// 如果是Message类型，则需要添加包名
+				if field.Type.IsMessage() {
+					protoPackageName, ok := g.data.NameSpaces[field.Type.Name]
+					if ok && protoPackageName != packageName {
+						protoType = fmt.Sprintf("%s.%s", protoPackageName, field.Type.Name)
+					}
+				}
+
+				// 如果是Enum类型，则需要添加包名（Enum包）
+				if field.Type.Kind == blueprint_types.FieldKindEnum {
+					nameSpaces := g.data.GetNameSpace()
+					protoPackageName, ok := nameSpaces[field.Type.Name]
+					if ok && protoPackageName != packageName {
+						protoType = fmt.Sprintf("%s.%s", protoPackageName, field.Type.Name)
+					}
+				}
 
 				// 确保字段名不包含冒号
 				fieldName := strings.TrimSuffix(field.Name, ":")
@@ -203,6 +202,15 @@ func (g *ProtoGenerator) generateNetMessageProto(msg *NetMessage, indent string)
 			}
 		}
 
+		// 如果是Enum类型，则需要添加包名（Enum包）
+		if field.Type.Kind == blueprint_types.FieldKindEnum {
+			nameSpaces := g.data.GetNameSpace()
+			protoPackageName, ok := nameSpaces[field.Type.Name]
+			if ok && protoPackageName != msg.PackageName {
+				protoType = fmt.Sprintf("%s.%s", protoPackageName, field.Type.Name)
+			}
+		}
+
 		// 确保字段名不包含冒号
 		fieldName := strings.TrimSuffix(field.Name, ":")
 		fieldName = strings.TrimSpace(fieldName)
@@ -239,6 +247,23 @@ func (g *ProtoGenerator) generateNetMessageProto(msg *NetMessage, indent string)
 			protoType := g.typeConverter.ToProtoType(&field.Type)
 			isOptional := g.typeConverter.IsOptionalInProto(&field.Type)
 
+			// 如果是Message类型，则需要添加包名
+			if field.Type.IsMessage() {
+				protoPackageName, ok := g.data.NameSpaces[field.Type.Name]
+				if ok && protoPackageName != msg.PackageName {
+					protoType = fmt.Sprintf("%s.%s", protoPackageName, field.Type.Name)
+				}
+			}
+
+			// 如果是Enum类型，则需要添加包名（Enum包）
+			if field.Type.Kind == blueprint_types.FieldKindEnum {
+				nameSpaces := g.data.GetNameSpace()
+				protoPackageName, ok := nameSpaces[field.Type.Name]
+				if ok && protoPackageName != msg.PackageName {
+					protoType = fmt.Sprintf("%s.%s", protoPackageName, field.Type.Name)
+				}
+			}
+
 			// 确保字段名不包含冒号
 			fieldName := strings.TrimSuffix(field.Name, ":")
 			fieldName = strings.TrimSpace(fieldName)
@@ -256,4 +281,50 @@ func (g *ProtoGenerator) generateNetMessageProto(msg *NetMessage, indent string)
 	sb.WriteString(fmt.Sprintf("%s}\n\n", indent))
 
 	return sb.String()
+}
+
+// generateEnumProtoFile 生成所有 NetWall 和 MME 文件中的 Enum 到一个 enum.proto 文件中
+func (g *ProtoGenerator) generateEnumProtoFile(outputDir string) error {
+	sb := strings.Builder{}
+
+	// 收集所有 Enum（包括 NetWall 和 MME 文件中的）
+	allEnums := make([]*Enum, 0)
+	enumMap := make(map[string]*Enum) // 用于去重，避免重复的 Enum
+
+	// 收集 MME 文件中的 Enum（如 entities.yaml 中的）
+	for _, enum := range g.data.Enums {
+		// 如果 Enum 名称已存在，跳过（避免重复）
+		if _, exists := enumMap[enum.Name]; !exists {
+			enumMap[enum.Name] = enum
+			allEnums = append(allEnums, enum)
+		}
+	}
+
+	// 收集所有 NetWall 中的 Enum
+	for _, netwallFile := range g.data.NetWalls {
+		for _, enum := range netwallFile.Enums {
+			// 如果 Enum 名称已存在，跳过（避免重复）
+			if _, exists := enumMap[enum.Name]; !exists {
+				enumMap[enum.Name] = enum
+				allEnums = append(allEnums, enum)
+			}
+		}
+	}
+
+	// 如果没有 Enum，不生成文件
+	if len(allEnums) == 0 {
+		return nil
+	}
+
+	// 生成文件头部，使用 Enum 作为 package 名称
+	sb.WriteString(g.generateProtoHeader("Enum", nil))
+
+	// 生成所有 Enum
+	for _, enum := range allEnums {
+		sb.WriteString(generateEnumProto(enum))
+	}
+
+	// 生成文件名
+	content := sb.String()
+	return WriteFile(outputDir+"/enum.proto", content)
 }

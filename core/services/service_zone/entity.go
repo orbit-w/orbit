@@ -1,7 +1,7 @@
 package servicezone
 
 import (
-	"gitee.com/orbit-w/orbit/app/proto/common"
+	"gitee.com/orbit-w/orbit/app/proto/enum"
 	"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder"
 	mmemodel "gitee.com/orbit-w/orbit/lib/module/mme_model"
 	"google.golang.org/protobuf/proto"
@@ -12,7 +12,7 @@ type IEntity interface {
 	// 获取 Entity ID（XXXId）
 	GetXXXId() int64
 	// 获取 Entity 类型
-	GetEntityType() common.EntityType
+	GetEntityType() enum.EntityType
 	// 初始化字段上下文
 	InitFieldContext()
 	// 清除所有脏标记

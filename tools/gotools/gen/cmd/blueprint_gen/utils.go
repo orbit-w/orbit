@@ -767,3 +767,30 @@ func (g *WrapperMethodCodeGenerator) GenerateFromProtoMethod(fields []*types.Fie
 	sb.WriteString("}\n\n")
 	return sb.String()
 }
+
+// generateEnumProto 生成 Enum 的 Proto 定义
+func generateEnumProto(enum *Enum) string {
+	sb := strings.Builder{}
+
+	// 添加注释
+	if enum.Comment != "" {
+		sb.WriteString(fmt.Sprintf("// %s\n", enum.Comment))
+	}
+
+	// 生成 enum 定义
+	sb.WriteString(fmt.Sprintf("enum %s {\n", enum.Name))
+
+	// 生成枚举值定义
+	for _, value := range enum.Values {
+		// 添加注释
+		if value.Comment != "" {
+			sb.WriteString(fmt.Sprintf("    // %s\n", value.Comment))
+		}
+		// 生成枚举值定义
+		sb.WriteString(fmt.Sprintf("    %s = %d;\n", value.Name, value.Number))
+	}
+
+	sb.WriteString("}\n\n")
+
+	return sb.String()
+}

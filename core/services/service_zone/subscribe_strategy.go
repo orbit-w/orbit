@@ -1,7 +1,7 @@
 package servicezone
 
 import (
-	"gitee.com/orbit-w/orbit/app/proto/core"
+	"gitee.com/orbit-w/orbit/app/proto/enum"
 )
 
 // ISubscribeStrategy 订阅策略接口
@@ -16,7 +16,7 @@ type ISubscribeStrategy interface {
 	GetStrategyName() string
 
 	// GetStrategyType 返回策略类型，对应 pb 中的 SubscribeStrategyType 枚举
-	GetStrategyType() core.SubscribeStrategyType
+	GetStrategyType() enum.SubscribeStrategyType
 }
 
 // AllEntitiesStrategy 全量订阅策略
@@ -35,8 +35,8 @@ func (s *AllEntitiesStrategy) GetStrategyName() string {
 	return "AllEntities"
 }
 
-func (s *AllEntitiesStrategy) GetStrategyType() core.SubscribeStrategyType {
-	return core.SubscribeStrategyType_All
+func (s *AllEntitiesStrategy) GetStrategyType() enum.SubscribeStrategyType {
+	return enum.SubscribeStrategyType_All
 }
 
 // OnlyStrategy 按类型订阅策略（对应 pb 中的 Only）
@@ -67,8 +67,8 @@ func (s *OnlyStrategy) GetStrategyName() string {
 	return "Only"
 }
 
-func (s *OnlyStrategy) GetStrategyType() core.SubscribeStrategyType {
-	return core.SubscribeStrategyType_Only
+func (s *OnlyStrategy) GetStrategyType() enum.SubscribeStrategyType {
+	return enum.SubscribeStrategyType_Only
 }
 
 // ByTypeStrategy 按类型订阅策略（已废弃，使用 OnlyStrategy）
@@ -113,8 +113,8 @@ func (s *ByIdsStrategy) GetStrategyName() string {
 	return "ByIds"
 }
 
-func (s *ByIdsStrategy) GetStrategyType() core.SubscribeStrategyType {
-	return core.SubscribeStrategyType_ById
+func (s *ByIdsStrategy) GetStrategyType() enum.SubscribeStrategyType {
+	return enum.SubscribeStrategyType_ById
 }
 
 // ByDistanceStrategy 按距离订阅策略
@@ -149,8 +149,8 @@ func (s *ByDistanceStrategy) GetStrategyName() string {
 	return "ByDistance"
 }
 
-func (s *ByDistanceStrategy) GetStrategyType() core.SubscribeStrategyType {
-	return core.SubscribeStrategyType_ByDistance
+func (s *ByDistanceStrategy) GetStrategyType() enum.SubscribeStrategyType {
+	return enum.SubscribeStrategyType_ByDistance
 }
 
 // CompositeStrategy 组合策略
@@ -202,30 +202,30 @@ func (s *CompositeStrategy) GetStrategyName() string {
 	return "Composite"
 }
 
-func (s *CompositeStrategy) GetStrategyType() core.SubscribeStrategyType {
-	return core.SubscribeStrategyType_Composite
+func (s *CompositeStrategy) GetStrategyType() enum.SubscribeStrategyType {
+	return enum.SubscribeStrategyType_Composite
 }
 
 // NewStrategyFromType 根据 pb 枚举类型创建策略实例
 // 注意：某些策略类型（如 Only、ById、ByDistance、Composite）需要额外的参数，
 // 这些参数需要通过具体的构造函数提供，此函数仅用于创建基础策略
-func NewStrategyFromType(strategyType core.SubscribeStrategyType) ISubscribeStrategy {
+func NewStrategyFromType(strategyType enum.SubscribeStrategyType) ISubscribeStrategy {
 	switch strategyType {
-	case core.SubscribeStrategyType_All:
+	case enum.SubscribeStrategyType_All:
 		return NewAllEntitiesStrategy()
-	case core.SubscribeStrategyType_Only:
+	case enum.SubscribeStrategyType_Only:
 		// Only 策略需要指定类型列表，这里返回空列表的策略
 		// 实际使用时应该调用 NewOnlyStrategy(allowedTypes)
 		return NewOnlyStrategy(nil)
-	case core.SubscribeStrategyType_ById:
+	case enum.SubscribeStrategyType_ById:
 		// ById 策略需要指定 ID 列表，这里返回空列表的策略
 		// 实际使用时应该调用 NewByIdsStrategy(allowedIds)
 		return NewByIdsStrategy(nil)
-	case core.SubscribeStrategyType_ByDistance:
+	case enum.SubscribeStrategyType_ByDistance:
 		// ByDistance 策略需要指定位置和距离，这里返回默认值
 		// 实际使用时应该调用 NewByDistanceStrategy(centerX, centerY, maxDistance)
 		return NewByDistanceStrategy(0, 0, 0)
-	case core.SubscribeStrategyType_Composite:
+	case enum.SubscribeStrategyType_Composite:
 		// Composite 策略需要指定子策略列表，这里返回空列表的策略
 		// 实际使用时应该调用 NewCompositeStrategy(strategies, logic)
 		return NewCompositeStrategy(nil, CompositeLogicAND)

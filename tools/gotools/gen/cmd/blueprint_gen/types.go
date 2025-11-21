@@ -229,8 +229,10 @@ type BlueprintContext struct {
 	Modules       []*Module
 	Mechanisms    []*Mechanism
 	NetWalls      []*NetWallFile
+	Enums         []*Enum
 	ObjectTypeMap map[string]ObjectType
 	NameSpaces    map[string]string // 包名空间,建立对象类型与包名空间的映射
+	NameSpaceMap  map[string]bool   // 命名空间检查，enum/struct/table不允许有重复的命名空间
 }
 
 func NewBlueprintContext() *BlueprintContext {
@@ -240,9 +242,23 @@ func NewBlueprintContext() *BlueprintContext {
 		Modules:       make([]*Module, 0),
 		Mechanisms:    make([]*Mechanism, 0),
 		NetWalls:      make([]*NetWallFile, 0),
+		Enums:         make([]*Enum, 0),
 		ObjectTypeMap: make(map[string]ObjectType),
 		NameSpaces:    make(map[string]string),
+		NameSpaceMap:  make(map[string]bool),
 	}
+}
+
+func (ctx *BlueprintContext) AddEnum(enum *Enum) {
+	if ctx.HasNameSpace(enum.Name) {
+		panic(fmt.Sprintf("BlueprintContext 的枚举 %s 已存在", enum.Name))
+	}
+	ctx.Enums = append(ctx.Enums, enum)
+	ctx.NameSpaceMap[enum.Name] = true
+}
+
+func (ctx *BlueprintContext) GetEnums() []*Enum {
+	return ctx.Enums
 }
 
 func (ctx *BlueprintContext) AddEntity(entity *Entity) {
@@ -297,14 +313,20 @@ func (ctx *BlueprintContext) GetObjectType(name string) (ObjectType, bool) {
 
 func (ctx *BlueprintContext) GetNameSpace() map[string]string {
 	if len(ctx.NameSpaces) == 0 {
+		// 映射 MME 文件中的枚举到 Enum 包
+		for _, enum := range ctx.Enums {
+			ctx.NameSpaces[enum.Name] = "Enum"
+		}
+
+		// 映射 NetWall 文件中的枚举到 Enum 包
 		for _, netwallFile := range ctx.NetWalls {
 			// 引用其他NetWall的数据结构
 			for _, ds := range netwallFile.DataStructs {
 				ctx.NameSpaces[ds.Name] = netwallFile.PackageName
 			}
-			// 引用其他NetWall的枚举
+			// 引用其他NetWall的枚举 - 所有枚举都映射到 Enum 包
 			for _, enum := range netwallFile.Enums {
-				ctx.NameSpaces[enum.Name] = netwallFile.PackageName
+				ctx.NameSpaces[enum.Name] = "Enum"
 			}
 		}
 	}
@@ -314,6 +336,11 @@ func (ctx *BlueprintContext) GetNameSpace() map[string]string {
 // SetHeadFile 设置头文件配置
 func (ctx *BlueprintContext) SetHeadFile(headFile *HeadFileConfig) {
 	ctx.HeadFile = headFile
+}
+
+func (ctx *BlueprintContext) HasNameSpace(name string) bool {
+	_, ok := ctx.NameSpaces[name]
+	return ok
 }
 
 func hasMapField(fields []*types.Field) bool {

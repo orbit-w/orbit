@@ -1,8 +1,7 @@
 package servicezone
 
 import (
-	"gitee.com/orbit-w/orbit/app/proto/common"
-	"gitee.com/orbit-w/orbit/app/proto/core"
+	"gitee.com/orbit-w/orbit/app/proto/enum"
 	"github.com/asynkron/protoactor-go/actor"
 )
 
@@ -28,7 +27,7 @@ const (
 type ServiceZone struct {
 	ID            string
 	Type          ZoneType
-	EntityTypeMap map[int64]common.EntityType
+	EntityTypeMap map[int64]enum.EntityType
 	Entities      map[int64]IEntity
 	// 订阅管理
 	subscribers map[string]*Subscriber // 订阅者集合，key 为订阅者 ID
@@ -42,7 +41,7 @@ func NewServiceZone(id string, zoneType ZoneType) *ServiceZone {
 	return &ServiceZone{
 		ID:            id,
 		Type:          zoneType,
-		EntityTypeMap: make(map[int64]common.EntityType),
+		EntityTypeMap: make(map[int64]enum.EntityType),
 		Entities:      make(map[int64]IEntity),
 		subscribers:   make(map[string]*Subscriber),
 	}
@@ -226,10 +225,10 @@ func (zone *ServiceZone) GetSubscribedEntities(subscriberId string) []IEntity {
 }
 
 // GetSubscriberStrategyType 获取订阅者的策略类型（用于网络协议序列化）
-func (zone *ServiceZone) GetSubscriberStrategyType(subscriberId string) (core.SubscribeStrategyType, bool) {
+func (zone *ServiceZone) GetSubscriberStrategyType(subscriberId string) (enum.SubscribeStrategyType, bool) {
 	subscriber, exists := zone.subscribers[subscriberId]
 	if !exists {
-		return core.SubscribeStrategyType_All, false
+		return enum.SubscribeStrategyType_All, false
 	}
 	return subscriber.Strategy.GetStrategyType(), true
 }
@@ -238,27 +237,27 @@ func (zone *ServiceZone) GetSubscriberStrategyType(subscriberId string) (core.Su
 // 这是一个便捷方法，用于从网络协议中接收到的枚举类型创建订阅
 func (zone *ServiceZone) SubscribeByStrategyType(
 	subscriberId string,
-	strategyType core.SubscribeStrategyType,
+	strategyType enum.SubscribeStrategyType,
 	params any,
 ) []IEntity {
 	var strategy ISubscribeStrategy
 
 	switch strategyType {
-	case core.SubscribeStrategyType_All:
+	case enum.SubscribeStrategyType_All:
 		strategy = NewAllEntitiesStrategy()
-	case core.SubscribeStrategyType_Only:
+	case enum.SubscribeStrategyType_Only:
 		if entityTypes, ok := params.([]string); ok {
 			strategy = NewOnlyStrategy(entityTypes)
 		} else {
 			strategy = NewOnlyStrategy(nil)
 		}
-	case core.SubscribeStrategyType_ById:
+	case enum.SubscribeStrategyType_ById:
 		if entityIds, ok := params.([]int64); ok {
 			strategy = NewByIdsStrategy(entityIds)
 		} else {
 			strategy = NewByIdsStrategy(nil)
 		}
-	case core.SubscribeStrategyType_Composite:
+	case enum.SubscribeStrategyType_Composite:
 		if compositeParams, ok := params.(struct {
 			Strategies []ISubscribeStrategy
 			Logic      CompositeLogic
@@ -267,7 +266,7 @@ func (zone *ServiceZone) SubscribeByStrategyType(
 		} else {
 			strategy = NewCompositeStrategy(nil, CompositeLogicAND)
 		}
-	case core.SubscribeStrategyType_ByDistance:
+	case enum.SubscribeStrategyType_ByDistance:
 		// TODO: 实现按距离订阅策略
 		panic("ByDistance strategy is not supported")
 	default:

@@ -28,42 +28,8 @@ func (g *ProtoGenerator) generateHeadfileProto(outputDir string) error {
 		}
 	}
 
-	// 生成 Entity enum
-	// 注意：即使没有通用数据结构，也要生成 Entity enum
-	if len(g.data.Entities) > 0 {
-		sb.WriteString("// EntityType 实体类型枚举\n")
-		sb.WriteString("enum EntityType {\n")
-		sb.WriteString("    Unspecified = 0;\n")
-
-		for i, entity := range g.data.Entities {
-			enumValueName := g.entityNameToEnumValue(entity.Name)
-			sb.WriteString(fmt.Sprintf("    %s = %d;\n", enumValueName, i+1))
-		}
-
-		sb.WriteString("}\n\n")
-	} else {
-		// 如果没有 Entity，至少生成空的 enum 定义（可选）
-		// 这里不生成，因为用户要求针对每种 Entity 对象生成 enum
-	}
-
-	// 自动生成 EntityRef message
-	// 如果存在 EntityType 枚举（即存在 Entities），则生成 EntityRef
-	if len(g.data.Entities) > 0 {
-		sb.WriteString("message EntityRef {\n")
-		sb.WriteString("    int64 Id = 1;\n")
-		sb.WriteString("    EntityType Type = 2;\n")
-		sb.WriteString("}\n\n")
-	}
-
 	content := sb.String()
 	return WriteFile(outputDir+"/common.proto", content)
-}
-
-// entityNameToEnumValue 将 Entity 名称转换为 enum 值名称
-// 例如: PlayerEntity -> PlayerEntity (保持驼峰命名)
-func (g *ProtoGenerator) entityNameToEnumValue(entityName string) string {
-	// 直接返回 Entity 名称，保持驼峰命名
-	return entityName
 }
 
 // MMEObjectAutoProtoImport 自动生成 MMEObject 的 Proto 导入

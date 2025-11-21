@@ -1,7 +1,7 @@
 package mme
 
 import (
-	"gitee.com/orbit-w/orbit/app/proto/common"
+	"gitee.com/orbit-w/orbit/app/proto/enum"
 	"gitee.com/orbit-w/orbit/app/proto/mme"
 	dirtyflag "gitee.com/orbit-w/orbit/lib/base/dirty_flag"
 	fieldmeta "gitee.com/orbit-w/orbit/lib/base/field_meta"
@@ -120,8 +120,8 @@ func (e *PlayerEntityWrapper) Name() string {
 }
 
 // GetEntityType 返回实体类型枚举
-func (e *PlayerEntityWrapper) GetEntityType() common.EntityType {
-	return common.EntityType_PlayerEntity
+func (e *PlayerEntityWrapper) GetEntityType() enum.EntityType {
+	return enum.EntityType_PlayerEntity
 }
 
 // MatchesAll 判断字段是否匹配所有类型标记

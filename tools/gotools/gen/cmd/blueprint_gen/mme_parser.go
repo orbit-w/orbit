@@ -10,7 +10,7 @@ import (
 )
 
 // parseMMEFiles 解析 MME YAML 文件
-func (p *Parser) parseMMEFiles() error {
+func (p *YamlParser) parseMMEFiles() error {
 	// 解析 entities.yaml
 	if err := p.ParseEntities(); err != nil {
 		return fmt.Errorf("failed to parse entities: %w", err)
@@ -35,7 +35,7 @@ func (p *Parser) parseMMEFiles() error {
 }
 
 // ParseEntities 解析 entities.yaml
-func (p *Parser) ParseEntities() error {
+func (p *YamlParser) ParseEntities() error {
 	filePath := p.ResolvePath("mme", "entities.yaml")
 	if !FileExists(filePath) {
 		return nil
@@ -65,13 +65,26 @@ func (p *Parser) ParseEntities() error {
 		}
 	}
 
+	// 解析枚举
+	enumList, ok := yamlData["Enums"].([]any)
+	if ok && enumList != nil {
+		enumParser := NewEnumParser()
+		for _, enumItem := range enumList {
+			enum := enumParser.ParseEnumItem(enumItem)
+			if enum == nil {
+				panic(fmt.Sprintf("Enum not found for item %v", enumItem))
+			}
+			p.ctx.AddEnum(enum)
+		}
+	}
+
 	return nil
 }
 
 // parseEntityFromMap 从 map 数据中解析单个 Entity
 // entityName: 实体名称
 // entityData: 实体数据，通常是包含字段定义的 map
-func (p *Parser) parseEntityFromMap(entityName string, entityData any) *Entity {
+func (p *YamlParser) parseEntityFromMap(entityName string, entityData any) *Entity {
 	entity := NewEntity()
 	entity.Name = entityName
 
@@ -110,7 +123,7 @@ func extractNumberFromValue(value any) int32 {
 }
 
 // ParseManagers 解析 manager.yaml
-func (p *Parser) ParseManagers() error {
+func (p *YamlParser) ParseManagers() error {
 	filePath := p.ResolvePath("mme", "manager.yaml")
 	if !FileExists(filePath) {
 		return nil
@@ -131,7 +144,7 @@ func (p *Parser) ParseManagers() error {
 	return nil
 }
 
-func (p *Parser) parseManagers(items []any) {
+func (p *YamlParser) parseManagers(items []any) {
 	for _, item := range items {
 		managerMap, ok := item.(map[string]any)
 		if !ok {
@@ -161,7 +174,7 @@ func (p *Parser) parseManagers(items []any) {
 // managerData: Manager 数据，可能是 nil 或包含字段定义的 map
 // managerMap: 完整的 managerMap，用于从平铺结构中提取字段
 // 返回: 解析后的 Manager
-func (p *Parser) parseManagerFromMap(managerName string, managerData any, managerMap map[string]any) *Manager {
+func (p *YamlParser) parseManagerFromMap(managerName string, managerData any, managerMap map[string]any) *Manager {
 	manager := NewManager()
 	manager.Name = managerName
 
@@ -189,7 +202,7 @@ func (p *Parser) parseManagerFromMap(managerName string, managerData any, manage
 // fieldsMap: 包含字段定义的 map
 // managerName: Manager 名称，用于验证
 // 返回: 解析后的字段列表（已按编号排序）
-func (p *Parser) parseManagerFields(fieldsMap map[string]any, managerName string) []*types.Field {
+func (p *YamlParser) parseManagerFields(fieldsMap map[string]any, managerName string) []*types.Field {
 	// 如果 fieldsMap 中包含 managerName，说明 yaml 文件结构有问题
 	if _, exists := fieldsMap[managerName]; exists {
 		panic(fmt.Sprintf("fieldsMap contains managerName '%s', which indicates a malformed yaml structure", managerName))
@@ -199,7 +212,7 @@ func (p *Parser) parseManagerFields(fieldsMap map[string]any, managerName string
 }
 
 // parseModules 解析 modules.yaml
-func (p *Parser) ParseModules() error {
+func (p *YamlParser) ParseModules() error {
 	filePath := p.ResolvePath("mme", "modules.yaml")
 	if !FileExists(filePath) {
 		return nil
@@ -230,7 +243,7 @@ func (p *Parser) ParseModules() error {
 // module: 模块
 // moduleItem: 模块的 Item，通常是包含字段定义/Settings定义的 map
 // 返回: 解析后的 Module
-func (p *Parser) parseModuleItem(module *Module, moduleItem []any) {
+func (p *YamlParser) parseModuleItem(module *Module, moduleItem []any) {
 	for i := range moduleItem {
 		keyWordItem := moduleItem[i]
 		keyWordItemMap := keyWordItem.(map[string]any)
@@ -254,7 +267,7 @@ func (p *Parser) parseModuleItem(module *Module, moduleItem []any) {
 }
 
 // ParseMechanisms 解析 mechanisms.yaml
-func (p *Parser) ParseMechanisms() error {
+func (p *YamlParser) ParseMechanisms() error {
 	filePath := p.ResolvePath("mme", "mechanisms.yaml")
 	if !FileExists(filePath) {
 		return nil
@@ -277,7 +290,7 @@ func (p *Parser) ParseMechanisms() error {
 	return nil
 }
 
-func (p *Parser) parseMechanismItem(mechItem map[string]any) *Mechanism {
+func (p *YamlParser) parseMechanismItem(mechItem map[string]any) *Mechanism {
 	mechanism := NewMechanism()
 	for mechKey, mechData := range mechItem {
 		switch mechKey {

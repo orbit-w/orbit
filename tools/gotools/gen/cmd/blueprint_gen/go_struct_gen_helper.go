@@ -15,7 +15,7 @@ func (g *GoStructGenerator) GenerateImport(obj MMEObjectBase, packageName string
 	// 导入实体Entity相关的包
 	switch obj.GetObjectType() {
 	case ObjectTypeEntity:
-		sb.WriteString("\t\"gitee.com/orbit-w/orbit/app/proto/common\"\n")
+		sb.WriteString("\t\"gitee.com/orbit-w/orbit/app/proto/enum\"\n")
 	}
 
 	sb.WriteString("\t\"gitee.com/orbit-w/orbit/app/proto/mme\"\n")
