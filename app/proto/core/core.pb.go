@@ -7,6 +7,7 @@
 package core
 
 import (
+	mme "gitee.com/orbit-w/orbit/app/proto/mme"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -305,6 +306,50 @@ func (*Request_HeartBeat) Descriptor() ([]byte, []int) {
 	return file_core_proto_rawDescGZIP(), []int{0, 1}
 }
 
+type Request_LoginRequest struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	PlayerEntityRef *mme.EntityRef         `protobuf:"bytes,1,opt,name=PlayerEntityRef,proto3,oneof" json:"PlayerEntityRef,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *Request_LoginRequest) Reset() {
+	*x = Request_LoginRequest{}
+	mi := &file_core_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Request_LoginRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Request_LoginRequest) ProtoMessage() {}
+
+func (x *Request_LoginRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_core_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Request_LoginRequest.ProtoReflect.Descriptor instead.
+func (*Request_LoginRequest) Descriptor() ([]byte, []int) {
+	return file_core_proto_rawDescGZIP(), []int{0, 2}
+}
+
+func (x *Request_LoginRequest) GetPlayerEntityRef() *mme.EntityRef {
+	if x != nil {
+		return x.PlayerEntityRef
+	}
+	return nil
+}
+
 type Request_SearchBook_Rsp struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Result        *Book                  `protobuf:"bytes,1,opt,name=Result,proto3,oneof" json:"Result,omitempty"`
@@ -314,7 +359,7 @@ type Request_SearchBook_Rsp struct {
 
 func (x *Request_SearchBook_Rsp) Reset() {
 	*x = Request_SearchBook_Rsp{}
-	mi := &file_core_proto_msgTypes[7]
+	mi := &file_core_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -326,7 +371,7 @@ func (x *Request_SearchBook_Rsp) String() string {
 func (*Request_SearchBook_Rsp) ProtoMessage() {}
 
 func (x *Request_SearchBook_Rsp) ProtoReflect() protoreflect.Message {
-	mi := &file_core_proto_msgTypes[7]
+	mi := &file_core_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -358,7 +403,7 @@ type Notify_BeAttacked struct {
 
 func (x *Notify_BeAttacked) Reset() {
 	*x = Notify_BeAttacked{}
-	mi := &file_core_proto_msgTypes[8]
+	mi := &file_core_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -370,7 +415,7 @@ func (x *Notify_BeAttacked) String() string {
 func (*Notify_BeAttacked) ProtoMessage() {}
 
 func (x *Notify_BeAttacked) ProtoReflect() protoreflect.Message {
-	mi := &file_core_proto_msgTypes[8]
+	mi := &file_core_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -398,7 +443,7 @@ var File_core_proto protoreflect.FileDescriptor
 const file_core_proto_rawDesc = "" +
 	"\n" +
 	"\n" +
-	"core.proto\x12\x04Core\"\xb9\x01\n" +
+	"core.proto\x12\x04Core\x1a\fcommon.proto\"\x9c\x02\n" +
 	"\aRequest\x1a\xa0\x01\n" +
 	"\n" +
 	"SearchBook\x12\x19\n" +
@@ -412,7 +457,10 @@ const file_core_proto_rawDesc = "" +
 	"\a_ResultB\b\n" +
 	"\x06_QueryB\r\n" +
 	"\v_PageNumber\x1a\v\n" +
-	"\tHeartBeat\";\n" +
+	"\tHeartBeat\x1aa\n" +
+	"\fLoginRequest\x12=\n" +
+	"\x0fPlayerEntityRef\x18\x01 \x01(\v2\x0e.MME.EntityRefH\x00R\x0fPlayerEntityRef\x88\x01\x01B\x12\n" +
+	"\x10_PlayerEntityRef\";\n" +
 	"\x06Notify\x1a1\n" +
 	"\n" +
 	"BeAttacked\x12\x19\n" +
@@ -439,7 +487,7 @@ func file_core_proto_rawDescGZIP() []byte {
 	return file_core_proto_rawDescData
 }
 
-var file_core_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_core_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_core_proto_goTypes = []any{
 	(*Request)(nil),                // 0: Core.Request
 	(*Notify)(nil),                 // 1: Core.Notify
@@ -448,16 +496,19 @@ var file_core_proto_goTypes = []any{
 	(*Error)(nil),                  // 4: Core.Error
 	(*Request_SearchBook)(nil),     // 5: Core.Request.SearchBook
 	(*Request_HeartBeat)(nil),      // 6: Core.Request.HeartBeat
-	(*Request_SearchBook_Rsp)(nil), // 7: Core.Request.SearchBook.Rsp
-	(*Notify_BeAttacked)(nil),      // 8: Core.Notify.BeAttacked
+	(*Request_LoginRequest)(nil),   // 7: Core.Request.LoginRequest
+	(*Request_SearchBook_Rsp)(nil), // 8: Core.Request.SearchBook.Rsp
+	(*Notify_BeAttacked)(nil),      // 9: Core.Notify.BeAttacked
+	(*mme.EntityRef)(nil),          // 10: MME.EntityRef
 }
 var file_core_proto_depIdxs = []int32{
-	2, // 0: Core.Request.SearchBook.Rsp.Result:type_name -> Core.Book
-	1, // [1:1] is the sub-list for method output_type
-	1, // [1:1] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	10, // 0: Core.Request.LoginRequest.PlayerEntityRef:type_name -> MME.EntityRef
+	2,  // 1: Core.Request.SearchBook.Rsp.Result:type_name -> Core.Book
+	2,  // [2:2] is the sub-list for method output_type
+	2,  // [2:2] is the sub-list for method input_type
+	2,  // [2:2] is the sub-list for extension type_name
+	2,  // [2:2] is the sub-list for extension extendee
+	0,  // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_core_proto_init() }
@@ -470,13 +521,14 @@ func file_core_proto_init() {
 	file_core_proto_msgTypes[5].OneofWrappers = []any{}
 	file_core_proto_msgTypes[7].OneofWrappers = []any{}
 	file_core_proto_msgTypes[8].OneofWrappers = []any{}
+	file_core_proto_msgTypes[9].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_core_proto_rawDesc), len(file_core_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
