@@ -7,7 +7,6 @@
 package mme
 
 import (
-	core "gitee.com/orbit-w/orbit/app/proto/core"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -97,7 +96,7 @@ func (*Notify) Descriptor() ([]byte, []int) {
 type Request_AskLevelUp struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	UpNum         *int32                 `protobuf:"varint,1,opt,name=UpNum,proto3,oneof" json:"UpNum,omitempty"`
-	Loc           *core.MMELocation      `protobuf:"bytes,1000,opt,name=Loc,proto3" json:"Loc,omitempty"`
+	Loc           *MMELocation           `protobuf:"bytes,1000,opt,name=Loc,proto3,oneof" json:"Loc,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -139,7 +138,7 @@ func (x *Request_AskLevelUp) GetUpNum() int32 {
 	return 0
 }
 
-func (x *Request_AskLevelUp) GetLoc() *core.MMELocation {
+func (x *Request_AskLevelUp) GetLoc() *MMELocation {
 	if x != nil {
 		return x.Loc
 	}
@@ -193,7 +192,7 @@ func (x *Request_AskLevelUp_Rsp) GetResult() string {
 type Notify_ExpChange struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Exp           *int32                 `protobuf:"varint,1,opt,name=Exp,proto3,oneof" json:"Exp,omitempty"`
-	Loc           *core.MMELocation      `protobuf:"bytes,1000,opt,name=Loc,proto3" json:"Loc,omitempty"`
+	Loc           *MMELocation           `protobuf:"bytes,1000,opt,name=Loc,proto3,oneof" json:"Loc,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -235,7 +234,7 @@ func (x *Notify_ExpChange) GetExp() int32 {
 	return 0
 }
 
-func (x *Notify_ExpChange) GetLoc() *core.MMELocation {
+func (x *Notify_ExpChange) GetLoc() *MMELocation {
 	if x != nil {
 		return x.Loc
 	}
@@ -246,22 +245,23 @@ var File_mme_proto protoreflect.FileDescriptor
 
 const file_mme_proto_rawDesc = "" +
 	"\n" +
-	"\tmme.proto\x12\x03MME\x1a\n" +
-	"core.proto\"\x92\x01\n" +
-	"\aRequest\x1a\x86\x01\n" +
+	"\tmme.proto\x12\x03MME\x1a\fcommon.proto\"\x9e\x01\n" +
+	"\aRequest\x1a\x92\x01\n" +
 	"\n" +
 	"AskLevelUp\x12\x19\n" +
-	"\x05UpNum\x18\x01 \x01(\x05H\x00R\x05UpNum\x88\x01\x01\x12$\n" +
-	"\x03Loc\x18\xe8\a \x01(\v2\x11.Core.MMELocationR\x03Loc\x1a-\n" +
+	"\x05UpNum\x18\x01 \x01(\x05H\x00R\x05UpNum\x88\x01\x01\x12(\n" +
+	"\x03Loc\x18\xe8\a \x01(\v2\x10.MME.MMELocationH\x01R\x03Loc\x88\x01\x01\x1a-\n" +
 	"\x03Rsp\x12\x1b\n" +
 	"\x06Result\x18\x01 \x01(\tH\x00R\x06Result\x88\x01\x01B\t\n" +
 	"\a_ResultB\b\n" +
-	"\x06_UpNum\"Z\n" +
-	"\x06Notify\x1aP\n" +
+	"\x06_UpNumB\x06\n" +
+	"\x04_Loc\"f\n" +
+	"\x06Notify\x1a\\\n" +
 	"\tExpChange\x12\x15\n" +
-	"\x03Exp\x18\x01 \x01(\x05H\x00R\x03Exp\x88\x01\x01\x12$\n" +
-	"\x03Loc\x18\xe8\a \x01(\v2\x11.Core.MMELocationR\x03LocB\x06\n" +
-	"\x04_ExpB'Z%gitee.com/orbit-w/orbit/app/proto/mmeb\x06proto3"
+	"\x03Exp\x18\x01 \x01(\x05H\x00R\x03Exp\x88\x01\x01\x12(\n" +
+	"\x03Loc\x18\xe8\a \x01(\v2\x10.MME.MMELocationH\x01R\x03Loc\x88\x01\x01B\x06\n" +
+	"\x04_ExpB\x06\n" +
+	"\x04_LocB'Z%gitee.com/orbit-w/orbit/app/proto/mmeb\x06proto3"
 
 var (
 	file_mme_proto_rawDescOnce sync.Once
@@ -282,11 +282,11 @@ var file_mme_proto_goTypes = []any{
 	(*Request_AskLevelUp)(nil),     // 2: MME.Request.AskLevelUp
 	(*Request_AskLevelUp_Rsp)(nil), // 3: MME.Request.AskLevelUp.Rsp
 	(*Notify_ExpChange)(nil),       // 4: MME.Notify.ExpChange
-	(*core.MMELocation)(nil),       // 5: Core.MMELocation
+	(*MMELocation)(nil),            // 5: MME.MMELocation
 }
 var file_mme_proto_depIdxs = []int32{
-	5, // 0: MME.Request.AskLevelUp.Loc:type_name -> Core.MMELocation
-	5, // 1: MME.Notify.ExpChange.Loc:type_name -> Core.MMELocation
+	5, // 0: MME.Request.AskLevelUp.Loc:type_name -> MME.MMELocation
+	5, // 1: MME.Notify.ExpChange.Loc:type_name -> MME.MMELocation
 	2, // [2:2] is the sub-list for method output_type
 	2, // [2:2] is the sub-list for method input_type
 	2, // [2:2] is the sub-list for extension type_name
@@ -299,6 +299,7 @@ func file_mme_proto_init() {
 	if File_mme_proto != nil {
 		return
 	}
+	file_common_proto_init()
 	file_mme_proto_msgTypes[2].OneofWrappers = []any{}
 	file_mme_proto_msgTypes[3].OneofWrappers = []any{}
 	file_mme_proto_msgTypes[4].OneofWrappers = []any{}

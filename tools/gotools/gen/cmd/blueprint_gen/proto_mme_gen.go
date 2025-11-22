@@ -58,85 +58,26 @@ func (g *ProtoGenerator) collectDataStructImports() []string {
 		fields = append(fields, ds.Fields...)
 	}
 
-	return g.collectEnumImportsFromFields(fields, "common")
+	// 使用统一的解析器收集所有导入（包括枚举和消息类型）
+	// 传入 "common" 作为 currentSourceProto，因为 DataStruct 生成到 common.proto
+	return g.resolver.CollectImportsFromFieldsWithSourceProto(fields, "common")
 }
 
-// collectEnumImportsFromFields 从字段列表中收集枚举类型的导入
+// collectEnumImportsFromFields 从字段列表中收集枚举类型的导入（已废弃，使用 TypeReferenceResolver）
 // currentSourceProto: 当前 proto 文件的 SourceProto（如 "entities", "managers", "common" 等）
 func (g *ProtoGenerator) collectEnumImportsFromFields(fields []*blueprint_types.Field, currentSourceProto string) []string {
-	imports := make(map[string]bool)
-
-	// 构建枚举名称到枚举的映射，便于快速查找
-	enumMap := make(map[string]*Enum)
-	for _, enum := range g.data.Enums {
-		enumMap[enum.Name] = enum
+	// 将 currentSourceProto 转换为包名
+	currentPackageName := g.resolver.getPackageNameForSource(currentSourceProto)
+	if currentPackageName == "" {
+		currentPackageName = "MME"
 	}
-
-	// 遍历所有字段
-	for _, field := range fields {
-		// 检查字段类型是否是枚举（通过类型名称匹配）
-		typeName := field.Type.Name
-		if typeName == "" {
-			typeName = field.Type.TypeName
-		}
-
-		// 检查类型名称是否对应一个枚举
-		if enum, exists := enumMap[typeName]; exists {
-			// 如果枚举不在当前 proto 文件中，需要导入
-			if enum.SourceProto != currentSourceProto {
-				// 根据 SourceProto 确定导入文件
-				importFile := g.getProtoImportForSource(enum.SourceProto)
-				if importFile != "" {
-					imports[importFile] = true
-				}
-			}
-		}
-
-		// 递归检查 map/xmap/repeated 的 value 类型
-		if field.Type.ValueType != nil {
-			valueTypeName := field.Type.ValueType.Name
-			if valueTypeName == "" {
-				valueTypeName = field.Type.ValueType.TypeName
-			}
-			if enum, exists := enumMap[valueTypeName]; exists {
-				if enum.SourceProto != currentSourceProto {
-					importFile := g.getProtoImportForSource(enum.SourceProto)
-					if importFile != "" {
-						imports[importFile] = true
-					}
-				}
-			}
-		}
-	}
-
-	// 转换为列表并排序
-	result := make([]string, 0, len(imports))
-	for imp := range imports {
-		result = append(result, imp)
-	}
-	return UniqueProtoImports(result)
+	// 使用统一的解析器收集所有导入
+	return g.resolver.CollectImportsFromFields(fields, currentPackageName)
 }
 
-// getProtoImportForSource 根据 SourceProto 返回对应的 proto 导入文件
+// getProtoImportForSource 根据 SourceProto 返回对应的 proto 导入文件（已废弃，使用 TypeReferenceResolver）
 func (g *ProtoGenerator) getProtoImportForSource(sourceProto string) string {
-	switch sourceProto {
-	case "entities":
-		return "entities.proto"
-	case "managers":
-		return "managers.proto"
-	case "modules":
-		return "modules.proto"
-	case "mechanisms":
-		return "mechanisms.proto"
-	case "common":
-		return "common.proto"
-	default:
-		// NetWall 包名，转换为小写并添加 .proto 后缀
-		if sourceProto != "" {
-			return strings.ToLower(sourceProto) + ".proto"
-		}
-		return ""
-	}
+	return g.resolver.getProtoImportForSource(sourceProto)
 }
 
 // MMEObjectAutoProtoImport 自动生成 MMEObject 的 Proto 导入
@@ -226,13 +167,8 @@ func (g *ProtoGenerator) generateMechanismsProto(outputDir string) error {
 	}
 
 	// 文件头部
-	imports := []string{}
-	if g.data.HeadFile != nil && len(g.data.HeadFile.CommonDataStructs) > 0 {
-		imports = append(imports, "common.proto")
-	}
-	// 收集枚举类型的导入
-	enumImports := g.collectEnumImportsFromFields(allFields, "mechanisms")
-	imports = append(imports, enumImports...)
+	// 使用统一的解析器收集所有导入（包括枚举和消息类型）
+	imports := g.resolver.CollectImportsFromFieldsWithSourceProto(allFields, "mechanisms")
 	sb.WriteString(g.generateProtoHeader("MME", imports))
 
 	// 生成所有 Mechanism
@@ -272,10 +208,11 @@ func (g *ProtoGenerator) generateMechanismsProto(outputDir string) error {
 					keyType = ToProtoTypeFromTypesFieldType(field.Type.KeyType)
 				}
 
-				// 获取 value 类型
+				// 获取 value 类型，使用解析器处理类型引用
 				valueType := "unknown"
 				if field.Type.ValueType != nil {
-					valueType = ToProtoTypeFromTypesFieldType(field.Type.ValueType)
+					// 使用解析器解析类型引用，自动处理包名前缀
+					valueType = g.resolver.ResolveTypeReference(field.Type.ValueType, "MME")
 				}
 
 				// 生成 ChangeList 字段和 message 定义（格式化后分多行）
@@ -310,11 +247,13 @@ func (g *ProtoGenerator) generateModulesProto(outputDir string) error {
 	sb := strings.Builder{}
 
 	// 文件头部
-	objects := []MMEObjectBase{}
+	// 收集所有 Module 的字段
+	allFields := make([]*blueprint_types.Field, 0)
 	for _, module := range g.data.Modules {
-		objects = append(objects, module.MMEObject)
+		allFields = append(allFields, module.Fields...)
 	}
-	imports := g.MMEObjectAutoProtoImport(objects, "modules")
+	// 使用统一的解析器收集所有导入
+	imports := g.resolver.CollectImportsFromFieldsWithSourceProto(allFields, "modules")
 	sb.WriteString(g.generateProtoHeader("MME", imports))
 
 	// 生成所有 Module
@@ -323,21 +262,9 @@ func (g *ProtoGenerator) generateModulesProto(outputDir string) error {
 
 		// 生成 Mechanism 引用字段（Module 中的 Mechanism 字段不应该是 optional）
 		for _, field := range module.Fields {
-			// 从 field.Type.TypeName 获取 Mechanism 名称
-			mechanismName := field.Type.TypeName
-			if mechanismName == "" {
-				continue // 跳过无效字段
-			}
-			fieldType := fmt.Sprintf("MME.%s", mechanismName)
-			// 确保编号不为 0
-			fieldNum := field.Number
-			if fieldNum == 0 {
-				fieldNum = 1 // 默认为 1
-			}
-			// 使用字段名
-			fieldName := strings.TrimSpace(field.Name)
-			sb.WriteString(fmt.Sprintf("    %s %s = %d;\n",
-				fieldType, fieldName, fieldNum))
+			// 使用通用的字段生成方法，自动处理类型引用和导入
+			fieldProto := g.generateFieldProto(field, field.Number, "MME")
+			sb.WriteString(fieldProto)
 		}
 
 		sb.WriteString("}\n\n")
@@ -360,11 +287,13 @@ func (g *ProtoGenerator) generateModulesProto(outputDir string) error {
 func (g *ProtoGenerator) generateManagersProto(outputDir string) error {
 	sb := strings.Builder{}
 
-	objects := []MMEObjectBase{}
+	// 收集所有 Manager 的字段
+	allFields := make([]*blueprint_types.Field, 0)
 	for _, manager := range g.data.Managers {
-		objects = append(objects, manager.MMEObject)
+		allFields = append(allFields, manager.Fields...)
 	}
-	imports := g.MMEObjectAutoProtoImport(objects, "managers")
+	// 使用统一的解析器收集所有导入
+	imports := g.resolver.CollectImportsFromFieldsWithSourceProto(allFields, "managers")
 	sb.WriteString(g.generateProtoHeader("MME", imports))
 
 	// 生成所有 Manager
@@ -388,17 +317,15 @@ func (g *ProtoGenerator) generateManagersProto(outputDir string) error {
 				}
 			}
 
-			// 获取 value 类型（Module 名称）
+			// 获取 value 类型（Module 名称），使用解析器处理类型引用
 			moduleName := "unknown"
 			if field.Type.ValueType != nil {
-				moduleName = g.typeConverter.GetMMEObjectName(field.Type.ValueType)
-				if moduleName == "" {
-					moduleName = g.typeConverter.ToProtoType(field.Type.ValueType)
-				}
+				// 使用解析器解析类型引用，自动处理包名前缀
+				moduleName = g.resolver.ResolveTypeReference(field.Type.ValueType, "MME")
 			}
 
 			// 生成字段定义
-			fieldType := fmt.Sprintf("map<%s, MME.%s>", keyType, moduleName)
+			fieldType := fmt.Sprintf("map<%s, %s>", keyType, moduleName)
 			sb.WriteString(fmt.Sprintf("    %s %s = %d;\n",
 				fieldType, field.Name, field.Number))
 
@@ -411,7 +338,7 @@ func (g *ProtoGenerator) generateManagersProto(outputDir string) error {
 				sb.WriteString(fmt.Sprintf("    repeated %s %s_XXXChangeList = %d;\n", recordName, field.Name, changeListFieldNumber))
 				sb.WriteString(fmt.Sprintf("    message %s {\n", recordName))
 				sb.WriteString(fmt.Sprintf("        %s Key = 1;\n", keyType))
-				sb.WriteString(fmt.Sprintf("        MME.%s Value = 2;\n", moduleName))
+				sb.WriteString(fmt.Sprintf("        %s Value = 2;\n", moduleName))
 				sb.WriteString("        bool IsDelete = 3;\n")
 				sb.WriteString("    }\n")
 			}
@@ -437,11 +364,13 @@ func (g *ProtoGenerator) generateManagersProto(outputDir string) error {
 func (g *ProtoGenerator) generateEntitiesProto(outputDir string) error {
 	sb := strings.Builder{}
 
-	objects := []MMEObjectBase{}
+	// 收集所有 Entity 的字段
+	allFields := make([]*blueprint_types.Field, 0)
 	for _, entity := range g.data.Entities {
-		objects = append(objects, entity.MMEObject)
+		allFields = append(allFields, entity.Fields...)
 	}
-	imports := g.MMEObjectAutoProtoImport(objects, "entities")
+	// 使用统一的解析器收集所有导入
+	imports := g.resolver.CollectImportsFromFieldsWithSourceProto(allFields, "entities")
 	sb.WriteString(g.generateProtoHeader("MME", imports))
 
 	// 生成所有 Entity
@@ -450,17 +379,9 @@ func (g *ProtoGenerator) generateEntitiesProto(outputDir string) error {
 
 		// 生成 Manager 字段
 		for _, field := range entity.Fields {
-			fieldType := field.Type.TypeName
-			// 确保编号不为 0
-			fieldNum := field.Number
-			if fieldNum == 0 {
-				fieldNum = 1 // 默认为 1
-			}
-			// 清理字段名（移除可能的冒号）
-			fieldName := strings.TrimSuffix(field.Name, ":")
-			fieldName = strings.TrimSpace(fieldName)
-			sb.WriteString(fmt.Sprintf("    %s %s = %d;\n",
-				fieldType, fieldName, fieldNum))
+			// 使用通用的字段生成方法，自动处理类型引用和导入
+			fieldProto := g.generateFieldProto(field, field.Number, "MME")
+			sb.WriteString(fieldProto)
 		}
 
 		// 自动添加 XXXId 字段（编号 10000）

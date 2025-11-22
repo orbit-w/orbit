@@ -23,10 +23,10 @@ const (
 
 type HeroModule struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Base          *HeroMechanism         `protobuf:"bytes,1,opt,name=Base,proto3" json:"Base,omitempty"`
-	LevelUp       *LevelUpMechanism      `protobuf:"bytes,2,opt,name=LevelUp,proto3" json:"LevelUp,omitempty"`
-	TalentUnlock  *ManualUnlockMechanism `protobuf:"bytes,3,opt,name=TalentUnlock,proto3" json:"TalentUnlock,omitempty"`
-	SkinWear      *WearMechanism         `protobuf:"bytes,4,opt,name=SkinWear,proto3" json:"SkinWear,omitempty"`
+	Base          *HeroMechanism         `protobuf:"bytes,1,opt,name=Base,proto3,oneof" json:"Base,omitempty"`
+	LevelUp       *LevelUpMechanism      `protobuf:"bytes,2,opt,name=LevelUp,proto3,oneof" json:"LevelUp,omitempty"`
+	TalentUnlock  *ManualUnlockMechanism `protobuf:"bytes,3,opt,name=TalentUnlock,proto3,oneof" json:"TalentUnlock,omitempty"`
+	SkinWear      *WearMechanism         `protobuf:"bytes,4,opt,name=SkinWear,proto3,oneof" json:"SkinWear,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -93,13 +93,18 @@ var File_modules_proto protoreflect.FileDescriptor
 
 const file_modules_proto_rawDesc = "" +
 	"\n" +
-	"\rmodules.proto\x12\x03MME\x1a\x10mechanisms.proto\"\xd5\x01\n" +
+	"\rmodules.proto\x12\x03MME\x1a\x10mechanisms.proto\"\x9c\x02\n" +
 	"\n" +
-	"HeroModule\x12&\n" +
-	"\x04Base\x18\x01 \x01(\v2\x12.MME.HeroMechanismR\x04Base\x12/\n" +
-	"\aLevelUp\x18\x02 \x01(\v2\x15.MME.LevelUpMechanismR\aLevelUp\x12>\n" +
-	"\fTalentUnlock\x18\x03 \x01(\v2\x1a.MME.ManualUnlockMechanismR\fTalentUnlock\x12.\n" +
-	"\bSkinWear\x18\x04 \x01(\v2\x12.MME.WearMechanismR\bSkinWearB'Z%gitee.com/orbit-w/orbit/app/proto/mmeb\x06proto3"
+	"HeroModule\x12+\n" +
+	"\x04Base\x18\x01 \x01(\v2\x12.MME.HeroMechanismH\x00R\x04Base\x88\x01\x01\x124\n" +
+	"\aLevelUp\x18\x02 \x01(\v2\x15.MME.LevelUpMechanismH\x01R\aLevelUp\x88\x01\x01\x12C\n" +
+	"\fTalentUnlock\x18\x03 \x01(\v2\x1a.MME.ManualUnlockMechanismH\x02R\fTalentUnlock\x88\x01\x01\x123\n" +
+	"\bSkinWear\x18\x04 \x01(\v2\x12.MME.WearMechanismH\x03R\bSkinWear\x88\x01\x01B\a\n" +
+	"\x05_BaseB\n" +
+	"\n" +
+	"\b_LevelUpB\x0f\n" +
+	"\r_TalentUnlockB\v\n" +
+	"\t_SkinWearB'Z%gitee.com/orbit-w/orbit/app/proto/mmeb\x06proto3"
 
 var (
 	file_modules_proto_rawDescOnce sync.Once
@@ -139,6 +144,7 @@ func file_modules_proto_init() {
 		return
 	}
 	file_mechanisms_proto_init()
+	file_modules_proto_msgTypes[0].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

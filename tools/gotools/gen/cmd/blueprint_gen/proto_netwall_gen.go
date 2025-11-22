@@ -90,12 +90,9 @@ func (g *ProtoGenerator) generateNetWallProtoFile(outputDir string, netwallFile 
 	return WriteFile(outputDir+"/"+fileName, content)
 }
 
-// collectNetWallImports 收集跨 NetWall 的引用（包括枚举类型）
+// collectNetWallImports 收集跨 NetWall 的引用（包括枚举类型和消息类型）
 func (g *ProtoGenerator) collectNetWallImports(wallFile *NetWallFile) []string {
-	imports := make(map[string]bool)
 	allMessages := make([]*NetMessage, 0)
-	nameSpaces := g.data.GetNameSpace()
-
 	allMessages = append(allMessages, wallFile.Requests...)
 	allMessages = append(allMessages, wallFile.Notifies...)
 	allMessages = append(allMessages, wallFile.DataStructs...)
@@ -109,44 +106,11 @@ func (g *ProtoGenerator) collectNetWallImports(wallFile *NetWallFile) []string {
 		}
 	}
 
-	// 收集枚举类型的导入
-	enumImports := g.collectEnumImportsFromFields(allFields, wallFile.PackageName)
-	for _, imp := range enumImports {
-		imports[imp] = true
-	}
+	// 使用统一的解析器收集所有导入（包括枚举和消息类型）
+	// CollectImportsFromFields 已经包含了枚举和消息类型的导入
+	imports := g.resolver.CollectImportsFromFields(allFields, wallFile.PackageName)
 
-	// 遍历所有消息的字段，检测跨 NetWall 引用（消息类型）
-	for _, msg := range allMessages {
-		for _, field := range msg.Fields {
-			name := field.Type.Name
-			if name == "" {
-				panic(fmt.Sprintf("NetWall %s 的消息 %s 的字段 %s 没有名称", msg.PackageName, msg.Name, field.Name))
-			}
-
-			packageName, ok := nameSpaces[name]
-			if ok && packageName != msg.PackageName {
-				fileName := strings.ToLower(packageName)
-				path := fileName + ".proto"
-				imports[path] = true
-			}
-		}
-	}
-
-	// 转换为切片并排序
-	result := make([]string, 0, len(imports))
-	for imp := range imports {
-		result = append(result, imp)
-	}
-	// 简单排序（按字母顺序）
-	for i := 0; i < len(result)-1; i++ {
-		for j := i + 1; j < len(result); j++ {
-			if result[i] > result[j] {
-				result[i], result[j] = result[j], result[i]
-			}
-		}
-	}
-
-	return result
+	return imports
 }
 
 // generateNetMessageProto 生成 NetMessage 的 Proto 定义

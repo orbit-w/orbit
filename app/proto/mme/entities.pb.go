@@ -23,7 +23,7 @@ const (
 
 type PlayerEntity struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	HeroManager   *HeroManager           `protobuf:"bytes,1,opt,name=HeroManager,proto3" json:"HeroManager,omitempty"`
+	HeroManager   *HeroManager           `protobuf:"bytes,1,opt,name=HeroManager,proto3,oneof" json:"HeroManager,omitempty"`
 	XXXId         int64                  `protobuf:"varint,10000,opt,name=XXXId,proto3" json:"XXXId,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -77,10 +77,11 @@ var File_entities_proto protoreflect.FileDescriptor
 
 const file_entities_proto_rawDesc = "" +
 	"\n" +
-	"\x0eentities.proto\x12\x03MME\x1a\x0emanagers.proto\"Y\n" +
-	"\fPlayerEntity\x122\n" +
-	"\vHeroManager\x18\x01 \x01(\v2\x10.MME.HeroManagerR\vHeroManager\x12\x15\n" +
-	"\x05XXXId\x18\x90N \x01(\x03R\x05XXXIdB'Z%gitee.com/orbit-w/orbit/app/proto/mmeb\x06proto3"
+	"\x0eentities.proto\x12\x03MME\x1a\x0emanagers.proto\"n\n" +
+	"\fPlayerEntity\x127\n" +
+	"\vHeroManager\x18\x01 \x01(\v2\x10.MME.HeroManagerH\x00R\vHeroManager\x88\x01\x01\x12\x15\n" +
+	"\x05XXXId\x18\x90N \x01(\x03R\x05XXXIdB\x0e\n" +
+	"\f_HeroManagerB'Z%gitee.com/orbit-w/orbit/app/proto/mmeb\x06proto3"
 
 var (
 	file_entities_proto_rawDescOnce sync.Once
@@ -114,6 +115,7 @@ func file_entities_proto_init() {
 		return
 	}
 	file_managers_proto_init()
+	file_entities_proto_msgTypes[0].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

@@ -11,13 +11,16 @@ import (
 type ProtoGenerator struct {
 	data          *BlueprintContext
 	typeConverter *TypeConverter
+	resolver      *TypeReferenceResolver
 }
 
 // NewProtoGenerator 创建新的 Proto 生成器
 func NewProtoGenerator(data *BlueprintContext) *ProtoGenerator {
+	typeConverter := NewTypeConverter("mme")
 	return &ProtoGenerator{
 		data:          data,
-		typeConverter: NewTypeConverter("mme"),
+		typeConverter: typeConverter,
+		resolver:      NewTypeReferenceResolver(data, typeConverter),
 	}
 }
 
@@ -102,19 +105,11 @@ func (g *ProtoGenerator) generateFieldProtoWithIndent(field *blueprint_types.Fie
 	}
 
 	// 获取字段类型
-	protoType := g.typeConverter.ToProtoType(&field.Type)
 	isOptional := g.typeConverter.IsOptionalInProto(&field.Type)
 
-	// 处理枚举类型：检查类型名称是否对应枚举，并添加包名前缀
-	protoType = g.resolveEnumTypeReference(protoType, &field.Type, currentPackageName)
-
-	// 处理消息类型：添加包名前缀（排除枚举类型，因为枚举已经在上面处理了）
-	if field.Type.IsMessage() && !g.isEnumType(&field.Type) {
-		nameSpaces := g.data.GetNameSpace()
-		if protoPackageName, ok := nameSpaces[field.Type.Name]; ok && protoPackageName != currentPackageName {
-			protoType = fmt.Sprintf("%s.%s", protoPackageName, field.Type.Name)
-		}
-	}
+	// 使用统一的类型引用解析器处理跨命名空间引用
+	// 对于 MME 包内的类型，不添加包名前缀（因为它们都在同一个包中）
+	protoType := g.resolver.ResolveTypeReference(&field.Type, currentPackageName)
 
 	// 确保字段名不包含冒号
 	fieldName := strings.TrimSuffix(field.Name, ":")
@@ -130,66 +125,20 @@ func (g *ProtoGenerator) generateFieldProtoWithIndent(field *blueprint_types.Fie
 	return builder.String()
 }
 
-// resolveEnumTypeReference 解析枚举类型引用，如果类型名称对应枚举，则添加包名前缀
+// resolveEnumTypeReference 解析枚举类型引用（已废弃，使用 TypeReferenceResolver）
+// 保留此方法以保持向后兼容，但实际使用 resolver.ResolveTypeReference
 func (g *ProtoGenerator) resolveEnumTypeReference(protoType string, fieldType *blueprint_types.FieldType, currentPackageName string) string {
-	// 获取类型名称
-	typeName := fieldType.Name
-	if typeName == "" {
-		typeName = fieldType.TypeName
-	}
-
-	// 检查类型名称是否对应枚举
-	for _, enum := range g.data.Enums {
-		if enum.Name == typeName {
-			// 如果枚举不在当前包中，需要添加包名前缀
-			if enum.SourceProto != currentPackageName {
-				// 根据 SourceProto 确定包名
-				packageName := g.getPackageNameForSource(enum.SourceProto)
-				if packageName != "" && packageName != currentPackageName {
-					// 如果包名是 MME，则不需要前缀（因为都在同一个包中）
-					// 否则添加包名前缀
-					if packageName != "MME" {
-						return fmt.Sprintf("%s.%s", packageName, typeName)
-					}
-				}
-			}
-			break
-		}
-	}
-
-	return protoType
+	return g.resolver.ResolveTypeReference(fieldType, currentPackageName)
 }
 
-// isEnumType 检查字段类型是否是枚举类型
+// isEnumType 检查字段类型是否是枚举类型（已废弃，使用 TypeReferenceResolver）
 func (g *ProtoGenerator) isEnumType(fieldType *blueprint_types.FieldType) bool {
-	// 获取类型名称
-	typeName := fieldType.Name
-	if typeName == "" {
-		typeName = fieldType.TypeName
-	}
-
-	// 检查类型名称是否对应枚举
-	for _, enum := range g.data.Enums {
-		if enum.Name == typeName {
-			return true
-		}
-	}
-
-	return false
+	return g.resolver.isEnumType(fieldType.Name)
 }
 
-// getPackageNameForSource 根据 SourceProto 返回对应的包名
+// getPackageNameForSource 根据 SourceProto 返回对应的包名（已废弃，使用 TypeReferenceResolver）
 func (g *ProtoGenerator) getPackageNameForSource(sourceProto string) string {
-	switch sourceProto {
-	case "entities", "managers", "modules", "mechanisms", "common":
-		return "MME" // 这些都在 MME 包中
-	default:
-		// NetWall 包名，返回原值（首字母大写）
-		if sourceProto != "" {
-			return strings.ToUpper(sourceProto[:1]) + sourceProto[1:]
-		}
-		return sourceProto
-	}
+	return g.resolver.getPackageNameForSource(sourceProto)
 }
 
 // generateFieldProtoFromOldField 从 Field 类型生成 Proto 定义（已统一使用 *blueprint_types.Field）

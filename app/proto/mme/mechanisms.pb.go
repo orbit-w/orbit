@@ -325,7 +325,7 @@ var File_mechanisms_proto protoreflect.FileDescriptor
 
 const file_mechanisms_proto_rawDesc = "" +
 	"\n" +
-	"\x10mechanisms.proto\x12\x03MME\x1a\fcommon.proto\"\x90\x01\n" +
+	"\x10mechanisms.proto\x12\x03MME\"\x90\x01\n" +
 	"\x10LevelUpMechanism\x12\x1f\n" +
 	"\bCurLevel\x18\x01 \x01(\x05H\x00R\bCurLevel\x88\x01\x01\x12\x1b\n" +
 	"\x06CurExp\x18\x02 \x01(\x05H\x01R\x06CurExp\x88\x01\x01\x12\x1b\n" +
@@ -406,7 +406,6 @@ func file_mechanisms_proto_init() {
 	if File_mechanisms_proto != nil {
 		return
 	}
-	file_common_proto_init()
 	file_mechanisms_proto_msgTypes[0].OneofWrappers = []any{}
 	file_mechanisms_proto_msgTypes[1].OneofWrappers = []any{}
 	file_mechanisms_proto_msgTypes[3].OneofWrappers = []any{}

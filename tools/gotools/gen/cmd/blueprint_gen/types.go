@@ -337,13 +337,42 @@ func (ctx *BlueprintContext) GetNameSpace() map[string]string {
 			ctx.NameSpaces[enum.Name] = "Enum"
 		}
 
-		// 映射 NetWall 文件中的枚举到 Enum 包
+		// 映射 MME 对象（Entities, Managers, Modules, Mechanisms）到 MME 包
+		for _, entity := range ctx.Entities {
+			ctx.NameSpaces[entity.Name] = "MME"
+		}
+		for _, manager := range ctx.Managers {
+			ctx.NameSpaces[manager.Name] = "MME"
+		}
+		for _, module := range ctx.Modules {
+			ctx.NameSpaces[module.Name] = "MME"
+		}
+		for _, mechanism := range ctx.Mechanisms {
+			ctx.NameSpaces[mechanism.Name] = "MME"
+		}
+
+		// 映射 Common DataStructs 到 MME 包
+		if ctx.HeadFile != nil {
+			for _, ds := range ctx.HeadFile.CommonDataStructs {
+				ctx.NameSpaces[ds.Name] = "MME"
+			}
+		}
+
+		// 映射 NetWall 文件中的消息和数据结构
 		for _, netwallFile := range ctx.NetWalls {
-			// 引用其他NetWall的数据结构
+			// 映射 NetWall 的 DataStructs
 			for _, ds := range netwallFile.DataStructs {
 				ctx.NameSpaces[ds.Name] = netwallFile.PackageName
 			}
-			// 引用其他NetWall的枚举 - 所有枚举都映射到 Enum 包
+			// 映射 NetWall 的 Requests
+			for _, req := range netwallFile.Requests {
+				ctx.NameSpaces[req.Name] = netwallFile.PackageName
+			}
+			// 映射 NetWall 的 Notifies
+			for _, notify := range netwallFile.Notifies {
+				ctx.NameSpaces[notify.Name] = netwallFile.PackageName
+			}
+			// 映射 NetWall 的枚举 - 所有枚举都映射到 Enum 包
 			for _, enum := range netwallFile.Enums {
 				ctx.NameSpaces[enum.Name] = "Enum"
 			}
