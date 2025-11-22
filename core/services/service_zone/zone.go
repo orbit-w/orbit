@@ -1,6 +1,9 @@
 package servicezone
 
-import "gitee.com/orbit-w/orbit/app/proto/mme"
+import (
+	"gitee.com/orbit-w/orbit/app/proto/mme"
+	"go.mongodb.org/mongo-driver/v2/bson"
+)
 
 type IServiceZone interface {
 	AddEntity(entity IEntity)
@@ -22,4 +25,11 @@ type ISubscriber interface {
 	GetSubscribedEntities(subscriberId string) []IEntity
 	// 获取订阅策略类型
 	GetSubscriberStrategyType(subscriberId string) (mme.SubscribeStrategyType, bool)
+}
+
+type ILoadResponse interface {
+	IsSuccess() bool
+	IsExists() bool
+	GetError() error
+	GetData() bson.Raw
 }

@@ -735,7 +735,162 @@ func (g *GoWrapperGenerator) generateManagerWrappers(outputDir string) error {
 
 // generateEntityWrappers 生成 Entity Wrapper
 func (g *GoWrapperGenerator) generateEntityWrappers(outputDir string) error {
-	for _, entity := range g.data.Entities {
+	if len(g.data.Entities) == 0 {
+		return nil
+	}
+
+	packageName := "mme"
+	firstEntity := g.data.Entities[0]
+	firstEntityFileName := GetEntityFileName(firstEntity.Name)
+	firstEntityFilePath := fmt.Sprintf("%s/%s", outputDir, firstEntityFileName)
+
+	// 检查第一个实体文件是否已存在，以及是否包含样板代码
+	existingContent := ""
+	hasBoilerplate := false
+	if FileExists(firstEntityFilePath) {
+		if data, err := ReadFileContent(firstEntityFilePath); err == nil {
+			existingContent = data
+			// 检查是否已包含样板代码
+			hasBoilerplate = strings.Contains(existingContent, "type IEntity interface") &&
+				strings.Contains(existingContent, "type EntityFactory") &&
+				strings.Contains(existingContent, "mapEntityFactories")
+		}
+	}
+
+	// 如果第一个实体文件不存在样板代码，生成共享的样板代码
+	if !hasBoilerplate {
+		boilerplate := g.generateEntityBoilerplate()
+		requiredImports := `import (
+	"fmt"
+
+	"gitee.com/orbit-w/orbit/app/proto/mme"
+	dirtyflag "gitee.com/orbit-w/orbit/lib/base/dirty_flag"
+	fieldmeta "gitee.com/orbit-w/orbit/lib/base/field_meta"
+	"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder"
+	mmemodel "gitee.com/orbit-w/orbit/lib/module/mme_model"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"google.golang.org/protobuf/proto"
+)`
+
+		// 如果文件已存在，需要重新组织文件结构
+		if existingContent != "" {
+			// 解析文件：提取 package、import（如果有）、其他内容
+			lines := strings.Split(existingContent, "\n")
+			var pkgLine string
+			var importBlock []string
+			var otherContent []string
+
+			// 查找 package 声明
+			pkgFound := false
+			inImport := false
+			importStartIdx := -1
+			importEndIdx := -1
+			braceCount := 0
+
+			for i, line := range lines {
+				trimmed := strings.TrimSpace(line)
+
+				// 查找 package 声明
+				if !pkgFound && strings.HasPrefix(trimmed, "package ") {
+					pkgLine = line
+					pkgFound = true
+					continue
+				}
+
+				// 查找 import 块
+				if pkgFound && !inImport && strings.HasPrefix(trimmed, "import") {
+					inImport = true
+					importStartIdx = i
+					importBlock = append(importBlock, line)
+					if strings.Contains(line, "(") {
+						braceCount = 1
+					} else {
+						// 单行 import
+						importEndIdx = i
+						inImport = false
+					}
+					continue
+				}
+
+				if inImport {
+					importBlock = append(importBlock, line)
+					braceCount += strings.Count(line, "(")
+					braceCount -= strings.Count(line, ")")
+					if braceCount == 0 {
+						importEndIdx = i
+						inImport = false
+					}
+					continue
+				}
+
+				// 其他内容（在 package 之后且不在 import 块中）
+				if pkgFound && (importEndIdx < 0 || i > importEndIdx) {
+					// 跳过错误位置的 import 块（在类型声明之后）
+					if strings.HasPrefix(trimmed, "import") {
+						// 这是错误位置的 import，跳过它
+						continue
+					}
+					otherContent = append(otherContent, line)
+				}
+			}
+
+			// 构建新文件内容：package -> import -> 样板代码 -> 其他内容
+			var newContent strings.Builder
+			if pkgLine != "" {
+				newContent.WriteString(pkgLine)
+				newContent.WriteString("\n\n")
+			} else {
+				newContent.WriteString("package " + packageName)
+				newContent.WriteString("\n\n")
+			}
+
+			// 写入 import 块（使用现有的或新的）
+			if len(importBlock) > 0 && importStartIdx >= 0 && importEndIdx >= 0 {
+				// 使用现有的 import 块（如果它在正确位置）
+				if importStartIdx == 1 || (importStartIdx > 1 && strings.TrimSpace(strings.Join(lines[1:importStartIdx], "")) == "") {
+					newContent.WriteString(strings.Join(importBlock, "\n"))
+					newContent.WriteString("\n\n")
+				} else {
+					// import 块在错误位置，使用新的
+					newContent.WriteString(requiredImports)
+					newContent.WriteString("\n\n")
+				}
+			} else {
+				// 没有 import 块，添加新的
+				newContent.WriteString(requiredImports)
+				newContent.WriteString("\n\n")
+			}
+
+			// 写入样板代码
+			newContent.WriteString(boilerplate)
+			newContent.WriteString("\n\n")
+
+			// 写入其他内容
+			if len(otherContent) > 0 {
+				otherText := strings.Join(otherContent, "\n")
+				otherText = strings.TrimLeft(otherText, " \t\r\n")
+				if otherText != "" {
+					newContent.WriteString(otherText)
+				}
+			}
+
+			existingContent = newContent.String()
+		} else {
+			// 文件不存在，创建新文件并包含样板代码
+			existingContent = fmt.Sprintf("package %s\n\n%s\n\n%s", packageName, requiredImports, boilerplate)
+		}
+
+		// 更新 init() 函数，添加所有实体的注册
+		existingContent = g.updateInitFunction(existingContent)
+
+		// 写入更新的内容回文件
+		if err := WriteFile(firstEntityFilePath, existingContent); err != nil {
+			return fmt.Errorf("failed to write boilerplate to %s: %w", firstEntityFilePath, err)
+		}
+	}
+
+	// 生成所有实体的 Wrapper 代码
+	for idx, entity := range g.data.Entities {
 		sb := strings.Builder{}
 
 		// Wrapper 代码（不包含 package 和 import，因为这些会从已有文件中获取）
@@ -758,16 +913,27 @@ func (g *GoWrapperGenerator) generateEntityWrappers(outputDir string) error {
 
 		sb.WriteString("}\n\n")
 
-		// 生成 New 构造函数
-		sb.WriteString(fmt.Sprintf("func New%s(data *%s) *%s {\n", wrapperName, entity.Name, wrapperName))
-		sb.WriteString("\tif data == nil {\n")
-		sb.WriteString("\t\tpanic(\"data is nil\")\n")
-		sb.WriteString("\t}\n")
-		sb.WriteString(fmt.Sprintf("\te := &%s{\n", wrapperName))
-		sb.WriteString("\t\tdata:       data,\n")
+		// 生成 New 构造函数（无参数版本）
+		sb.WriteString(fmt.Sprintf("func New%s() *%s {\n", wrapperName, wrapperName))
+		sb.WriteString(fmt.Sprintf("\treturn &%s{\n", wrapperName))
 		sb.WriteString("\t\tIDirtyFlag: dirtyflag.NewDirtyFlag(),\n")
 		sb.WriteString("\t\tfieldMetas: fieldmeta.NewFieldMetas(),\n")
-		sb.WriteString("\t}\n\n")
+		sb.WriteString("\t}\n")
+		sb.WriteString("}\n\n")
+
+		// 生成 Collection 方法
+		collectionName := GetEntityCollectionName(entity.Name)
+		sb.WriteString(fmt.Sprintf("func (e *%s) Collection() string {\n", wrapperName))
+		sb.WriteString(fmt.Sprintf("\treturn \"%s\"\n", collectionName))
+		sb.WriteString("}\n\n")
+
+		// 生成 Load 方法
+		sb.WriteString(fmt.Sprintf("func (e *%s) Load(raw bson.Raw) error {\n", wrapperName))
+		sb.WriteString(fmt.Sprintf("\tdata := New%s()\n", entity.Name))
+		sb.WriteString("\tif err := bson.Unmarshal(raw, data); err != nil {\n")
+		sb.WriteString("\t\treturn err\n")
+		sb.WriteString("\t}\n")
+		sb.WriteString("\te.data = data\n\n")
 
 		// 初始化嵌套的 Manager Wrapper
 		for _, field := range entity.Fields {
@@ -787,7 +953,7 @@ func (g *GoWrapperGenerator) generateEntityWrappers(outputDir string) error {
 			}
 		}
 
-		sb.WriteString("\treturn e\n")
+		sb.WriteString("\treturn nil\n")
 		sb.WriteString("}\n\n")
 
 		// 生成 InitFieldContext 方法
@@ -907,26 +1073,219 @@ func (g *GoWrapperGenerator) generateEntityWrappers(outputDir string) error {
 		fileName := GetEntityFileName(entity.Name)
 		filePath := fmt.Sprintf("%s/%s", outputDir, fileName)
 
-		// 读取现有文件内容（如果存在）
-		existingContent := ""
-		if FileExists(filePath) {
-			if data, err := ReadFileContent(filePath); err == nil {
-				existingContent = data
-			}
-		}
-
-		// 追加新内容（如果文件已存在，在末尾添加换行）
-		var newContent string
-		if existingContent != "" {
+		// 对于第一个实体，使用已更新的内容（包含样板代码）
+		if idx == 0 {
 			// 确保现有内容以换行结尾
 			existingContent = strings.TrimRight(existingContent, " \n\r\t")
-			newContent = existingContent + "\n\n" + sb.String()
-		}
+			newContent := existingContent + "\n\n" + sb.String()
+			if err := WriteFile(filePath, newContent); err != nil {
+				return err
+			}
+		} else {
+			// 对于其他实体，读取现有文件内容（如果存在）
+			entityExistingContent := ""
+			if FileExists(filePath) {
+				if data, err := ReadFileContent(filePath); err == nil {
+					entityExistingContent = data
+				}
+			}
 
-		if err := WriteFile(filePath, newContent); err != nil {
-			return err
+			// 追加新内容（如果文件已存在，在末尾添加换行）
+			var newContent string
+			if entityExistingContent != "" {
+				// 确保现有内容以换行结尾
+				entityExistingContent = strings.TrimRight(entityExistingContent, " \n\r\t")
+				newContent = entityExistingContent + "\n\n" + sb.String()
+			} else {
+				// 如果文件不存在，需要添加 package 声明和导入
+				imports := "import (\n"
+				imports += "\t\"gitee.com/orbit-w/orbit/app/proto/mme\"\n"
+				imports += "\tdirtyflag \"gitee.com/orbit-w/orbit/lib/base/dirty_flag\"\n"
+				imports += "\tfieldmeta \"gitee.com/orbit-w/orbit/lib/base/field_meta\"\n"
+				imports += "\t\"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder\"\n"
+				imports += "\tmmemodel \"gitee.com/orbit-w/orbit/lib/module/mme_model\"\n"
+				imports += "\t\"go.mongodb.org/mongo-driver/v2/bson\"\n"
+				imports += "\t\"google.golang.org/protobuf/proto\"\n"
+				imports += ")\n\n"
+				newContent = fmt.Sprintf("package %s\n\n%s", packageName, imports) + sb.String()
+			}
+
+			if err := WriteFile(filePath, newContent); err != nil {
+				return err
+			}
 		}
 	}
 
 	return nil
+}
+
+// generateEntityBoilerplate 生成实体样板代码（IEntity接口、EntityFactory类型等）
+func (g *GoWrapperGenerator) generateEntityBoilerplate() string {
+	var sb strings.Builder
+
+	// 生成 IEntity 接口
+	sb.WriteString("type IEntity interface {\n")
+	sb.WriteString("\tCollection() string\n")
+	sb.WriteString("\tLoad(raw bson.Raw) error\n")
+	sb.WriteString("\tGetEntityType() mme.EntityType\n")
+	sb.WriteString("\tInitFieldContext()\n")
+	sb.WriteString("\tClearAllDirtyFlags()\n")
+	sb.WriteString("\tBuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder, path *mgo_builder.NestedPath)\n")
+	sb.WriteString("\tToProto() proto.Message\n")
+	sb.WriteString("\tFromProto(msg proto.Message)\n")
+	sb.WriteString("\tToIncrementalProtoWithContext(ctx mmemodel.SyncContext) proto.Message\n")
+	sb.WriteString("}\n\n")
+
+	// 生成 EntityFactory 类型
+	sb.WriteString("type EntityFactory func() IEntity\n\n")
+
+	// 生成 mapEntityFactories 变量
+	sb.WriteString("var (\n")
+	sb.WriteString("\tmapEntityFactories = make(map[mme.EntityType]EntityFactory)\n")
+	sb.WriteString(")\n\n")
+
+	// 生成 init() 函数（包含所有实体的注册）
+	sb.WriteString("func init() {\n")
+	for _, entity := range g.data.Entities {
+		entityTypeEnumName := GenEntityTypeEnumName(entity.Name)
+		wrapperName := entity.Name + "Wrapper"
+		sb.WriteString(fmt.Sprintf("\tRegisterEntityFactory(mme.EntityType_%s, func() IEntity {\n", entityTypeEnumName))
+		sb.WriteString(fmt.Sprintf("\t\treturn New%s()\n", wrapperName))
+		sb.WriteString("\t})\n")
+	}
+	sb.WriteString("}\n\n")
+
+	// 生成 RegisterEntityFactory 函数
+	sb.WriteString("func RegisterEntityFactory(entityType mme.EntityType, factory EntityFactory) {\n")
+	sb.WriteString("\tmapEntityFactories[entityType] = factory\n")
+	sb.WriteString("}\n\n")
+
+	// 生成 GetEntityFactory 函数
+	sb.WriteString("func GetEntityFactory(entityType mme.EntityType) EntityFactory {\n")
+	sb.WriteString("\tfactory, ok := mapEntityFactories[entityType]\n")
+	sb.WriteString("\tif !ok {\n")
+	sb.WriteString("\t\treturn nil\n")
+	sb.WriteString("\t}\n")
+	sb.WriteString("\treturn factory\n")
+	sb.WriteString("}\n")
+
+	return sb.String()
+}
+
+// updateInitFunction 更新或创建 init() 函数，添加所有实体的注册
+func (g *GoWrapperGenerator) updateInitFunction(content string) string {
+	// 检查是否已存在 init() 函数
+	if strings.Contains(content, "func init()") {
+		// 查找现有的 init() 函数
+		lines := strings.Split(content, "\n")
+		inInit := false
+		initStartIdx := -1
+		initEndIdx := -1
+		braceCount := 0
+
+		for i, line := range lines {
+			trimmed := strings.TrimSpace(line)
+
+			if strings.HasPrefix(trimmed, "func init()") {
+				inInit = true
+				initStartIdx = i
+				braceCount = 0
+			}
+
+			if inInit {
+				// 计算大括号
+				braceCount += strings.Count(line, "{")
+				braceCount -= strings.Count(line, "}")
+
+				if braceCount == 0 && initStartIdx >= 0 {
+					initEndIdx = i
+					break
+				}
+			}
+		}
+
+		if initStartIdx >= 0 && initEndIdx >= 0 {
+			// 提取现有的 init() 函数内容
+			existingInitLines := lines[initStartIdx : initEndIdx+1]
+			existingInitContent := strings.Join(existingInitLines, "\n")
+
+			// 检查是否已包含所有实体的注册
+			allRegistered := true
+			for _, entity := range g.data.Entities {
+				entityTypeEnumName := GenEntityTypeEnumName(entity.Name)
+				registerPattern := fmt.Sprintf("RegisterEntityFactory(mme.EntityType_%s", entityTypeEnumName)
+				if !strings.Contains(existingInitContent, registerPattern) {
+					allRegistered = false
+					break
+				}
+			}
+
+			if !allRegistered {
+				// 在 init() 函数结束前添加缺失的注册
+				var updatedInitLines []string
+				updatedInitLines = append(updatedInitLines, existingInitLines[0]) // func init() {
+
+				// 添加现有的注册（如果有）
+				for i := 1; i < len(existingInitLines)-1; i++ {
+					updatedInitLines = append(updatedInitLines, existingInitLines[i])
+				}
+
+				// 添加缺失的注册
+				for _, entity := range g.data.Entities {
+					entityTypeEnumName := GenEntityTypeEnumName(entity.Name)
+					registerPattern := fmt.Sprintf("RegisterEntityFactory(mme.EntityType_%s", entityTypeEnumName)
+					if !strings.Contains(existingInitContent, registerPattern) {
+						wrapperName := entity.Name + "Wrapper"
+						updatedInitLines = append(updatedInitLines,
+							fmt.Sprintf("\tRegisterEntityFactory(mme.EntityType_%s, func() IEntity {", entityTypeEnumName))
+						updatedInitLines = append(updatedInitLines,
+							fmt.Sprintf("\t\treturn New%s()", wrapperName))
+						updatedInitLines = append(updatedInitLines, "\t})")
+					}
+				}
+
+				updatedInitLines = append(updatedInitLines, existingInitLines[len(existingInitLines)-1]) // }
+
+				// 重建内容
+				var result []string
+				result = append(result, lines[:initStartIdx]...)
+				result = append(result, updatedInitLines...)
+				result = append(result, lines[initEndIdx+1:]...)
+				return strings.Join(result, "\n")
+			}
+		}
+	} else {
+		// 如果不存在 init() 函数，在样板代码后添加
+		initCode := "\nfunc init() {\n"
+		for _, entity := range g.data.Entities {
+			entityTypeEnumName := GenEntityTypeEnumName(entity.Name)
+			wrapperName := entity.Name + "Wrapper"
+			initCode += fmt.Sprintf("\tRegisterEntityFactory(mme.EntityType_%s, func() IEntity {\n", entityTypeEnumName)
+			initCode += fmt.Sprintf("\t\treturn New%s()\n", wrapperName)
+			initCode += "\t})\n"
+		}
+		initCode += "}\n"
+
+		// 在 GetEntityFactory 函数后插入
+		if idx := strings.Index(content, "func GetEntityFactory"); idx >= 0 {
+			// 找到 GetEntityFactory 函数的结束位置
+			lines := strings.Split(content[idx:], "\n")
+			braceCount := 0
+			endIdx := 0
+			for i, line := range lines {
+				braceCount += strings.Count(line, "{")
+				braceCount -= strings.Count(line, "}")
+				if braceCount == 0 && i > 0 {
+					endIdx = i
+					break
+				}
+			}
+			if endIdx > 0 {
+				insertPos := idx + len(strings.Join(lines[:endIdx+1], "\n"))
+				return content[:insertPos] + "\n" + initCode + content[insertPos:]
+			}
+		}
+	}
+
+	return content
 }

@@ -2,6 +2,7 @@ package servicezone
 
 import (
 	"gitee.com/orbit-w/orbit/app/proto/mme"
+	"gitee.com/orbit-w/orbit/lib/module/persistence"
 	"github.com/asynkron/protoactor-go/actor"
 )
 
@@ -90,6 +91,18 @@ func (zone *ServiceZone) Stop() error {
 
 func (zone *ServiceZone) GetActorPID() *actor.PID {
 	return zone.actorPID
+}
+
+func (zone *ServiceZone) Load(id int64, entityType mme.EntityType) (IEntity, error) {
+	raw, err := persistence.Load(zone.ID, entityType.String(), id)
+	if err != nil {
+		return nil, err
+	}
+	entity, err := LoadEntity(entityType, raw)
+	if err != nil {
+		return nil, err
+	}
+	return entity, nil
 }
 
 // AddEntity 添加或更新 Entity（实现 IServiceZone 接口）

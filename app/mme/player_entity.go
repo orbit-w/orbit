@@ -6,8 +6,45 @@ import (
 	fieldmeta "gitee.com/orbit-w/orbit/lib/base/field_meta"
 	"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder"
 	mmemodel "gitee.com/orbit-w/orbit/lib/module/mme_model"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"google.golang.org/protobuf/proto"
 )
+
+type IEntity interface {
+	Collection() string
+	Load(raw bson.Raw) error
+	GetEntityType() mme.EntityType
+	InitFieldContext()
+	ClearAllDirtyFlags()
+	BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder, path *mgo_builder.NestedPath)
+	ToProto() proto.Message
+	FromProto(msg proto.Message)
+	ToIncrementalProtoWithContext(ctx mmemodel.SyncContext) proto.Message
+}
+
+type EntityFactory func() IEntity
+
+var (
+	mapEntityFactories = make(map[mme.EntityType]EntityFactory)
+)
+
+func init() {
+	RegisterEntityFactory(mme.EntityType_PlayerEntityType, func() IEntity {
+		return NewPlayerEntityWrapper()
+	})
+}
+
+func RegisterEntityFactory(entityType mme.EntityType, factory EntityFactory) {
+	mapEntityFactories[entityType] = factory
+}
+
+func GetEntityFactory(entityType mme.EntityType) EntityFactory {
+	factory, ok := mapEntityFactories[entityType]
+	if !ok {
+		return nil
+	}
+	return factory
+}
 
 const (
 	PlayerEntityFieldIndexXXXId       = uint8(0)
@@ -85,15 +122,23 @@ type PlayerEntityWrapper struct {
 	HeroManagerWrapper *HeroManagerWrapper
 }
 
-func NewPlayerEntityWrapper(data *PlayerEntity) *PlayerEntityWrapper {
-	if data == nil {
-		panic("data is nil")
-	}
-	e := &PlayerEntityWrapper{
-		data:       data,
+func NewPlayerEntityWrapper() *PlayerEntityWrapper {
+	return &PlayerEntityWrapper{
 		IDirtyFlag: dirtyflag.NewDirtyFlag(),
 		fieldMetas: fieldmeta.NewFieldMetas(),
 	}
+}
+
+func (e *PlayerEntityWrapper) Collection() string {
+	return "player_entitys"
+}
+
+func (e *PlayerEntityWrapper) Load(raw bson.Raw) error {
+	data := NewPlayerEntity()
+	if err := bson.Unmarshal(raw, data); err != nil {
+		return err
+	}
+	e.data = data
 
 	// 初始化嵌套的 HeroManager Wrapper
 	if data.HeroManager == nil {
@@ -102,7 +147,7 @@ func NewPlayerEntityWrapper(data *PlayerEntity) *PlayerEntityWrapper {
 	e.HeroManagerWrapper = NewHeroManagerWrapper(data.HeroManager)
 	e.HeroManagerWrapper.Link(e.GetDirtyTracker(), PlayerEntityDirtyHeroManagerBit)
 
-	return e
+	return nil
 }
 
 func (e *PlayerEntityWrapper) InitFieldContext() {

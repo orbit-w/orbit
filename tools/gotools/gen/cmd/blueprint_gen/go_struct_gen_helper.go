@@ -19,6 +19,10 @@ func (g *GoStructGenerator) GenerateImport(obj MMEObjectBase, packageName string
 	sb.WriteString("\tmmemodel \"gitee.com/orbit-w/orbit/lib/module/mme_model\"\n")
 	sb.WriteString("\t\"google.golang.org/protobuf/proto\"\n")
 
+	if obj.GetObjectType() == ObjectTypeEntity {
+		sb.WriteString("\t\"go.mongodb.org/mongo-driver/v2/bson\"\n")
+	}
+
 	var (
 		mapsImport bool // 是否已经导入了maps包
 		xmapImport bool // 是否已经导入了xmap包

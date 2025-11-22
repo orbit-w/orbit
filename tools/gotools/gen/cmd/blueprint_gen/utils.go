@@ -302,6 +302,17 @@ func GetEntityFileName(name string) string {
 	return snake + "_entity.go"
 }
 
+// GetEntityCollectionName 生成 Entity 集合名称
+// 例如: PlayerEntity -> player_entities (复数形式)
+func GetEntityCollectionName(name string) string {
+	snake := CamelToSnake(name)
+	// 转为复数形式：简单地在末尾加 s
+	if strings.HasSuffix(snake, "_entity") {
+		return snake + "s"
+	}
+	return snake + "s"
+}
+
 // containsSpecialChars 检查字符串是否包含特殊字符
 func containsSpecialChars(s string, specialChars []string) bool {
 	for _, char := range specialChars {

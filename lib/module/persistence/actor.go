@@ -102,14 +102,15 @@ func (p *PersistenceActor) handleLoadError(err error, req LoadRequest) *LoadResp
 			zap.String("Collection", req.Collection),
 			zap.String("Database", req.Database))
 		return &LoadResponse{
-			Success:    false,
+			Success:    true,
+			Exists:     false,
 			Error:      mongo.ErrNoDocuments,
 			Collection: req.Collection,
 			DocumentID: req.DocID,
 		}
 	}
 
-	// 其他错误
+	// 其他错误（文档可能存在，但由于其他原因加载失败）
 	p.logger.Error("Failed to load data",
 		zap.Error(err),
 		zap.Any("DocumentID", req.DocID),
@@ -117,6 +118,7 @@ func (p *PersistenceActor) handleLoadError(err error, req LoadRequest) *LoadResp
 		zap.String("Database", req.Database))
 	return &LoadResponse{
 		Success:    false,
+		Exists:     false, // 无法确定是否存在，但加载失败
 		Error:      err,
 		Collection: req.Collection,
 		DocumentID: req.DocID,
@@ -124,7 +126,7 @@ func (p *PersistenceActor) handleLoadError(err error, req LoadRequest) *LoadResp
 }
 
 // respondLoadSuccess 响应加载成功
-func (p *PersistenceActor) respondLoadSuccess(ctx actor.Context, req LoadRequest, data bson.M) {
+func (p *PersistenceActor) respondLoadSuccess(ctx actor.Context, req LoadRequest, raw bson.Raw) {
 	p.logger.Debug("Data loaded successfully",
 		zap.String("Collection", req.Collection),
 		zap.Any("DocumentID", req.DocID),
@@ -132,9 +134,10 @@ func (p *PersistenceActor) respondLoadSuccess(ctx actor.Context, req LoadRequest
 
 	ctx.Respond(&LoadResponse{
 		Success:    true,
+		Exists:     true,
 		Collection: req.Collection,
 		DocumentID: req.DocID,
-		Data:       data,
+		Data:       raw,
 	})
 }
 
@@ -171,15 +174,21 @@ func (p *PersistenceActor) handleLoadRequest(ctx actor.Context, req LoadRequest)
 	collection := p.GetCollection(req.Database, req.Collection)
 	singleResult := collection.FindOne(loadCtx, filter)
 
-	// 解码结果
-	result := bson.M{}
-	if err := singleResult.Decode(&result); err != nil {
+	// 先检查是否有错误（包括文档不存在的情况）
+	if err := singleResult.Err(); err != nil {
+		ctx.Respond(p.handleLoadError(err, req))
+		return
+	}
+
+	// 获取原始数据
+	raw, err := singleResult.Raw()
+	if err != nil {
 		ctx.Respond(p.handleLoadError(err, req))
 		return
 	}
 
 	// 响应成功
-	p.respondLoadSuccess(ctx, req, result)
+	p.respondLoadSuccess(ctx, req, raw)
 }
 
 // handlePersistenceRequest 处理单个持久化请求

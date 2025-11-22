@@ -49,6 +49,8 @@ type PersistenceRequest struct {
 type LoadResponse struct {
 	// Success 是否成功
 	Success bool
+	// 是否存在
+	Exists bool
 	// Error 错误信息（如果失败）
 	Error error
 	// Collection 集合名称
@@ -56,7 +58,23 @@ type LoadResponse struct {
 	// DocumentID 文档ID
 	DocumentID any
 	// Data 加载的文档数据（如果成功）
-	Data bson.M
+	Data bson.Raw
+}
+
+func (r *LoadResponse) GetError() error {
+	return r.Error
+}
+
+func (r *LoadResponse) GetData() bson.Raw {
+	return r.Data
+}
+
+func (r *LoadResponse) IsSuccess() bool {
+	return r.Success
+}
+
+func (r *LoadResponse) IsExists() bool {
+	return r.Exists
 }
 
 // PersistenceResponse 持久化响应消息

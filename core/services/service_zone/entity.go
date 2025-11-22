@@ -4,10 +4,16 @@ import (
 	"gitee.com/orbit-w/orbit/app/proto/mme"
 	"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder"
 	mmemodel "gitee.com/orbit-w/orbit/lib/module/mme_model"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"google.golang.org/protobuf/proto"
 )
 
 type IEntity interface {
+	// 获取 Entity 集合名称
+	Collection() string
+	// 加载 Entity 数据
+	Load(raw bson.Raw) error
+	// 获取 Entity 名称
 	Name() string
 	// 获取 Entity ID（XXXId）
 	GetXXXId() int64
