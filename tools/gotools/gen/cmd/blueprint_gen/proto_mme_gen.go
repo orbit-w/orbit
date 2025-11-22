@@ -171,6 +171,13 @@ func (g *ProtoGenerator) generateMechanismsProto(outputDir string) error {
 		sb.WriteString("}\n\n")
 	}
 
+	// 生成来自 mechanisms.yaml 的枚举
+	for _, enum := range g.data.Enums {
+		if enum.SourceProto == "mechanisms" {
+			sb.WriteString(generateEnumProto(enum))
+		}
+	}
+
 	content := sb.String()
 	return WriteFile(outputDir+"/mechanisms.proto", content)
 }
@@ -211,6 +218,13 @@ func (g *ProtoGenerator) generateModulesProto(outputDir string) error {
 		}
 
 		sb.WriteString("}\n\n")
+	}
+
+	// 生成来自 modules.yaml 的枚举
+	for _, enum := range g.data.Enums {
+		if enum.SourceProto == "modules" {
+			sb.WriteString(generateEnumProto(enum))
+		}
 	}
 
 	content := sb.String()
@@ -276,6 +290,13 @@ func (g *ProtoGenerator) generateManagersProto(outputDir string) error {
 		sb.WriteString("}\n\n")
 	}
 
+	// 生成来自 manager.yaml 的枚举
+	for _, enum := range g.data.Enums {
+		if enum.SourceProto == "managers" {
+			sb.WriteString(generateEnumProto(enum))
+		}
+	}
+
 	content := sb.String()
 	return WriteFile(outputDir+"/managers.proto", content)
 }
@@ -314,6 +335,13 @@ func (g *ProtoGenerator) generateEntitiesProto(outputDir string) error {
 		sb.WriteString("\n    int64 XXXId = 10000;\n")
 
 		sb.WriteString("}\n\n")
+	}
+
+	// 生成来自 entities.yaml 的枚举
+	for _, enum := range g.data.Enums {
+		if enum.SourceProto == "entities" {
+			sb.WriteString(generateEnumProto(enum))
+		}
 	}
 
 	content := sb.String()

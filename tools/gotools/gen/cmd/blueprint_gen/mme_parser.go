@@ -74,6 +74,7 @@ func (p *YamlParser) ParseEntities() error {
 			if enum == nil {
 				panic(fmt.Sprintf("Enum not found for item %v", enumItem))
 			}
+			enum.SourceProto = "entities"
 			p.ctx.AddEnum(enum)
 		}
 	}
@@ -140,6 +141,20 @@ func (p *YamlParser) ParseManagers() error {
 	}
 
 	p.parseManagers(managerList)
+
+	// 解析枚举
+	enumList, ok := yamlData["Enums"].([]any)
+	if ok && enumList != nil {
+		enumParser := NewEnumParser()
+		for _, enumItem := range enumList {
+			enum := enumParser.ParseEnumItem(enumItem)
+			if enum == nil {
+				panic(fmt.Sprintf("Enum not found for item %v", enumItem))
+			}
+			enum.SourceProto = "managers"
+			p.ctx.AddEnum(enum)
+		}
+	}
 
 	return nil
 }
@@ -236,6 +251,20 @@ func (p *YamlParser) ParseModules() error {
 		}
 	}
 
+	// 解析枚举
+	enumList, ok := yamlData["Enums"].([]any)
+	if ok && enumList != nil {
+		enumParser := NewEnumParser()
+		for _, enumItem := range enumList {
+			enum := enumParser.ParseEnumItem(enumItem)
+			if enum == nil {
+				panic(fmt.Sprintf("Enum not found for item %v", enumItem))
+			}
+			enum.SourceProto = "modules"
+			p.ctx.AddEnum(enum)
+		}
+	}
+
 	return nil
 }
 
@@ -284,6 +313,20 @@ func (p *YamlParser) ParseMechanisms() error {
 			if m != nil {
 				p.ctx.AddMechanism(m)
 			}
+		}
+	}
+
+	// 解析枚举
+	enumList, ok := yamlData["Enums"].([]any)
+	if ok && enumList != nil {
+		enumParser := NewEnumParser()
+		for _, enumItem := range enumList {
+			enum := enumParser.ParseEnumItem(enumItem)
+			if enum == nil {
+				panic(fmt.Sprintf("Enum not found for item %v", enumItem))
+			}
+			enum.SourceProto = "mechanisms"
+			p.ctx.AddEnum(enum)
 		}
 	}
 

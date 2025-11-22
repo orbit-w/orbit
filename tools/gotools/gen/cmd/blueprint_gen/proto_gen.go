@@ -53,10 +53,7 @@ func (g *ProtoGenerator) Generate(outputDir string) error {
 		return fmt.Errorf("failed to generate NetWall proto: %w", err)
 	}
 
-	// 生成 enum.proto（包含所有 NetWall 中的 Enum）
-	if err := g.generateEnumProtoFile(outputDir); err != nil {
-		return fmt.Errorf("failed to generate enum.proto: %w", err)
-	}
+	// 不再生成统一的 enum.proto，枚举已经生成到对应的 proto 文件中
 
 	return nil
 }

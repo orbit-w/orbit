@@ -1,7 +1,6 @@
 package mme
 
 import (
-	"gitee.com/orbit-w/orbit/app/proto/enum"
 	"gitee.com/orbit-w/orbit/app/proto/mme"
 	dirtyflag "gitee.com/orbit-w/orbit/lib/base/dirty_flag"
 	fieldmeta "gitee.com/orbit-w/orbit/lib/base/field_meta"

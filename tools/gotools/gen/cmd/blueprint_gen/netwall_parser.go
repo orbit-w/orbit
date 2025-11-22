@@ -228,6 +228,8 @@ func (p *YamlParser) parseEnumItems(ctx *NetWallFile, items []any) ([]*Enum, err
 		if enum == nil {
 			panic(fmt.Sprintf("Enum not found for item %v", item))
 		}
+		// NetWall 的枚举来源是 NetWall 的包名
+		enum.SourceProto = ctx.PackageName
 		ctx.AddEnum(enum)
 	}
 	return enums, nil

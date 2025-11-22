@@ -150,9 +150,10 @@ func (e *EnumValue) ParseComment() string {
 
 // Enum 枚举定义
 type Enum struct {
-	Name    string       // 枚举名称，如 ServiceZoneType
-	Values  []*EnumValue // 枚举值列表
-	Comment string       // 枚举注释
+	Name        string       // 枚举名称，如 ServiceZoneType
+	Values      []*EnumValue // 枚举值列表
+	Comment     string       // 枚举注释
+	SourceProto string       // 来源 proto 文件，如 "entities", "managers", "modules", "mechanisms" 或 NetWall 包名
 }
 
 // NetWallFile NetWall 文件内容

@@ -110,6 +110,11 @@ func (g *ProtoGenerator) generateNetWallProtoFile(outputDir string, netwallFile 
 		sb.WriteString("}\n\n")
 	}
 
+	// 生成来自对应 NetWall 文件的枚举
+	for _, enum := range netwallFile.Enums {
+		sb.WriteString(generateEnumProto(enum))
+	}
+
 	// 生成文件名（首字母小写）
 	fileName := strings.ToLower(packageName) + ".proto"
 	content := sb.String()
@@ -281,50 +286,4 @@ func (g *ProtoGenerator) generateNetMessageProto(msg *NetMessage, indent string)
 	sb.WriteString(fmt.Sprintf("%s}\n\n", indent))
 
 	return sb.String()
-}
-
-// generateEnumProtoFile 生成所有 NetWall 和 MME 文件中的 Enum 到一个 enum.proto 文件中
-func (g *ProtoGenerator) generateEnumProtoFile(outputDir string) error {
-	sb := strings.Builder{}
-
-	// 收集所有 Enum（包括 NetWall 和 MME 文件中的）
-	allEnums := make([]*Enum, 0)
-	enumMap := make(map[string]*Enum) // 用于去重，避免重复的 Enum
-
-	// 收集 MME 文件中的 Enum（如 entities.yaml 中的）
-	for _, enum := range g.data.Enums {
-		// 如果 Enum 名称已存在，跳过（避免重复）
-		if _, exists := enumMap[enum.Name]; !exists {
-			enumMap[enum.Name] = enum
-			allEnums = append(allEnums, enum)
-		}
-	}
-
-	// 收集所有 NetWall 中的 Enum
-	for _, netwallFile := range g.data.NetWalls {
-		for _, enum := range netwallFile.Enums {
-			// 如果 Enum 名称已存在，跳过（避免重复）
-			if _, exists := enumMap[enum.Name]; !exists {
-				enumMap[enum.Name] = enum
-				allEnums = append(allEnums, enum)
-			}
-		}
-	}
-
-	// 如果没有 Enum，不生成文件
-	if len(allEnums) == 0 {
-		return nil
-	}
-
-	// 生成文件头部，使用 Enum 作为 package 名称
-	sb.WriteString(g.generateProtoHeader("Enum", nil))
-
-	// 生成所有 Enum
-	for _, enum := range allEnums {
-		sb.WriteString(generateEnumProto(enum))
-	}
-
-	// 生成文件名
-	content := sb.String()
-	return WriteFile(outputDir+"/enum.proto", content)
 }
