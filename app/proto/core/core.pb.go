@@ -7,12 +7,11 @@
 package core
 
 import (
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
-
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -218,118 +217,6 @@ func (x *Error) GetReason() string {
 	return ""
 }
 
-type MMELocation struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	EntityId       *int64                 `protobuf:"varint,1,opt,name=EntityId,proto3,oneof" json:"EntityId,omitempty"`
-	ModuleId       *int32                 `protobuf:"varint,2,opt,name=ModuleId,proto3,oneof" json:"ModuleId,omitempty"`
-	MechanismIndex *int32                 `protobuf:"varint,3,opt,name=MechanismIndex,proto3,oneof" json:"MechanismIndex,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
-}
-
-func (x *MMELocation) Reset() {
-	*x = MMELocation{}
-	mi := &file_core_proto_msgTypes[5]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *MMELocation) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*MMELocation) ProtoMessage() {}
-
-func (x *MMELocation) ProtoReflect() protoreflect.Message {
-	mi := &file_core_proto_msgTypes[5]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use MMELocation.ProtoReflect.Descriptor instead.
-func (*MMELocation) Descriptor() ([]byte, []int) {
-	return file_core_proto_rawDescGZIP(), []int{5}
-}
-
-func (x *MMELocation) GetEntityId() int64 {
-	if x != nil && x.EntityId != nil {
-		return *x.EntityId
-	}
-	return 0
-}
-
-func (x *MMELocation) GetModuleId() int32 {
-	if x != nil && x.ModuleId != nil {
-		return *x.ModuleId
-	}
-	return 0
-}
-
-func (x *MMELocation) GetMechanismIndex() int32 {
-	if x != nil && x.MechanismIndex != nil {
-		return *x.MechanismIndex
-	}
-	return 0
-}
-
-type Coord struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	X             *int32                 `protobuf:"varint,1,opt,name=X,proto3,oneof" json:"X,omitempty"`
-	Y             *int32                 `protobuf:"varint,2,opt,name=Y,proto3,oneof" json:"Y,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *Coord) Reset() {
-	*x = Coord{}
-	mi := &file_core_proto_msgTypes[6]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *Coord) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Coord) ProtoMessage() {}
-
-func (x *Coord) ProtoReflect() protoreflect.Message {
-	mi := &file_core_proto_msgTypes[6]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Coord.ProtoReflect.Descriptor instead.
-func (*Coord) Descriptor() ([]byte, []int) {
-	return file_core_proto_rawDescGZIP(), []int{6}
-}
-
-func (x *Coord) GetX() int32 {
-	if x != nil && x.X != nil {
-		return *x.X
-	}
-	return 0
-}
-
-func (x *Coord) GetY() int32 {
-	if x != nil && x.Y != nil {
-		return *x.Y
-	}
-	return 0
-}
-
 type Request_SearchBook struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Query         *string                `protobuf:"bytes,1,opt,name=Query,proto3,oneof" json:"Query,omitempty"`
@@ -340,7 +227,7 @@ type Request_SearchBook struct {
 
 func (x *Request_SearchBook) Reset() {
 	*x = Request_SearchBook{}
-	mi := &file_core_proto_msgTypes[7]
+	mi := &file_core_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -352,7 +239,7 @@ func (x *Request_SearchBook) String() string {
 func (*Request_SearchBook) ProtoMessage() {}
 
 func (x *Request_SearchBook) ProtoReflect() protoreflect.Message {
-	mi := &file_core_proto_msgTypes[7]
+	mi := &file_core_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -390,7 +277,7 @@ type Request_HeartBeat struct {
 
 func (x *Request_HeartBeat) Reset() {
 	*x = Request_HeartBeat{}
-	mi := &file_core_proto_msgTypes[8]
+	mi := &file_core_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -402,7 +289,7 @@ func (x *Request_HeartBeat) String() string {
 func (*Request_HeartBeat) ProtoMessage() {}
 
 func (x *Request_HeartBeat) ProtoReflect() protoreflect.Message {
-	mi := &file_core_proto_msgTypes[8]
+	mi := &file_core_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -427,7 +314,7 @@ type Request_SearchBook_Rsp struct {
 
 func (x *Request_SearchBook_Rsp) Reset() {
 	*x = Request_SearchBook_Rsp{}
-	mi := &file_core_proto_msgTypes[9]
+	mi := &file_core_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -439,7 +326,7 @@ func (x *Request_SearchBook_Rsp) String() string {
 func (*Request_SearchBook_Rsp) ProtoMessage() {}
 
 func (x *Request_SearchBook_Rsp) ProtoReflect() protoreflect.Message {
-	mi := &file_core_proto_msgTypes[9]
+	mi := &file_core_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -471,7 +358,7 @@ type Notify_BeAttacked struct {
 
 func (x *Notify_BeAttacked) Reset() {
 	*x = Notify_BeAttacked{}
-	mi := &file_core_proto_msgTypes[10]
+	mi := &file_core_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -483,7 +370,7 @@ func (x *Notify_BeAttacked) String() string {
 func (*Notify_BeAttacked) ProtoMessage() {}
 
 func (x *Notify_BeAttacked) ProtoReflect() protoreflect.Message {
-	mi := &file_core_proto_msgTypes[10]
+	mi := &file_core_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -538,19 +425,7 @@ const file_core_proto_rawDesc = "" +
 	"\x02OK\"/\n" +
 	"\x05Error\x12\x1b\n" +
 	"\x06Reason\x18\x01 \x01(\tH\x00R\x06Reason\x88\x01\x01B\t\n" +
-	"\a_Reason\"\xa9\x01\n" +
-	"\vMMELocation\x12\x1f\n" +
-	"\bEntityId\x18\x01 \x01(\x03H\x00R\bEntityId\x88\x01\x01\x12\x1f\n" +
-	"\bModuleId\x18\x02 \x01(\x05H\x01R\bModuleId\x88\x01\x01\x12+\n" +
-	"\x0eMechanismIndex\x18\x03 \x01(\x05H\x02R\x0eMechanismIndex\x88\x01\x01B\v\n" +
-	"\t_EntityIdB\v\n" +
-	"\t_ModuleIdB\x11\n" +
-	"\x0f_MechanismIndex\"9\n" +
-	"\x05Coord\x12\x11\n" +
-	"\x01X\x18\x01 \x01(\x05H\x00R\x01X\x88\x01\x01\x12\x11\n" +
-	"\x01Y\x18\x02 \x01(\x05H\x01R\x01Y\x88\x01\x01B\x04\n" +
-	"\x02_XB\x04\n" +
-	"\x02_YB(Z&gitee.com/orbit-w/orbit/app/proto/coreb\x06proto3"
+	"\a_ReasonB(Z&gitee.com/orbit-w/orbit/app/proto/coreb\x06proto3"
 
 var (
 	file_core_proto_rawDescOnce sync.Once
@@ -564,19 +439,17 @@ func file_core_proto_rawDescGZIP() []byte {
 	return file_core_proto_rawDescData
 }
 
-var file_core_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_core_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_core_proto_goTypes = []any{
 	(*Request)(nil),                // 0: Core.Request
 	(*Notify)(nil),                 // 1: Core.Notify
 	(*Book)(nil),                   // 2: Core.Book
 	(*OK)(nil),                     // 3: Core.OK
 	(*Error)(nil),                  // 4: Core.Error
-	(*MMELocation)(nil),            // 5: Core.MMELocation
-	(*Coord)(nil),                  // 6: Core.Coord
-	(*Request_SearchBook)(nil),     // 7: Core.Request.SearchBook
-	(*Request_HeartBeat)(nil),      // 8: Core.Request.HeartBeat
-	(*Request_SearchBook_Rsp)(nil), // 9: Core.Request.SearchBook.Rsp
-	(*Notify_BeAttacked)(nil),      // 10: Core.Notify.BeAttacked
+	(*Request_SearchBook)(nil),     // 5: Core.Request.SearchBook
+	(*Request_HeartBeat)(nil),      // 6: Core.Request.HeartBeat
+	(*Request_SearchBook_Rsp)(nil), // 7: Core.Request.SearchBook.Rsp
+	(*Notify_BeAttacked)(nil),      // 8: Core.Notify.BeAttacked
 }
 var file_core_proto_depIdxs = []int32{
 	2, // 0: Core.Request.SearchBook.Rsp.Result:type_name -> Core.Book
@@ -595,17 +468,15 @@ func file_core_proto_init() {
 	file_core_proto_msgTypes[2].OneofWrappers = []any{}
 	file_core_proto_msgTypes[4].OneofWrappers = []any{}
 	file_core_proto_msgTypes[5].OneofWrappers = []any{}
-	file_core_proto_msgTypes[6].OneofWrappers = []any{}
 	file_core_proto_msgTypes[7].OneofWrappers = []any{}
-	file_core_proto_msgTypes[9].OneofWrappers = []any{}
-	file_core_proto_msgTypes[10].OneofWrappers = []any{}
+	file_core_proto_msgTypes[8].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_core_proto_rawDesc), len(file_core_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   11,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -41,6 +41,8 @@ func (g *ProtoGenerator) generateHeadfileProto(outputDir string) error {
 	}
 
 	content := sb.String()
+	// 格式化 proto 内容
+	content = FormatProtoContent(content)
 	return WriteFile(outputDir+"/common.proto", content)
 }
 
@@ -254,8 +256,6 @@ func (g *ProtoGenerator) generateMechanismsProto(outputDir string) error {
 		for _, field := range fields {
 			// 使用通用的字段生成方法，自动处理枚举类型引用
 			fieldProto := g.generateFieldProto(field, field.Number, "MME")
-			// 将缩进从 2 个空格改为 4 个空格（与 managers.proto 格式一致）
-			fieldProto = strings.ReplaceAll(fieldProto, "  ", "    ")
 			sb.WriteString(fieldProto)
 		}
 
@@ -278,10 +278,14 @@ func (g *ProtoGenerator) generateMechanismsProto(outputDir string) error {
 					valueType = ToProtoTypeFromTypesFieldType(field.Type.ValueType)
 				}
 
-				// 生成 ChangeList 字段和 message 定义（在同一行）
+				// 生成 ChangeList 字段和 message 定义（格式化后分多行）
 				changeListFieldNumber := 1000 + int32(field.Number)
-				sb.WriteString(fmt.Sprintf("    repeated %s %s_XXXChangeList = %d;  message %s { %s Key = 1; %s Value = 2; bool IsDelete = 3; }\n",
-					recordName, field.Name, changeListFieldNumber, recordName, keyType, valueType))
+				sb.WriteString(fmt.Sprintf("    repeated %s %s_XXXChangeList = %d;\n", recordName, field.Name, changeListFieldNumber))
+				sb.WriteString(fmt.Sprintf("    message %s {\n", recordName))
+				sb.WriteString(fmt.Sprintf("        %s Key = 1;\n", keyType))
+				sb.WriteString(fmt.Sprintf("        %s Value = 2;\n", valueType))
+				sb.WriteString("        bool IsDelete = 3;\n")
+				sb.WriteString("    }\n")
 			}
 		}
 
@@ -296,6 +300,8 @@ func (g *ProtoGenerator) generateMechanismsProto(outputDir string) error {
 	}
 
 	content := sb.String()
+	// 格式化 proto 内容
+	content = FormatProtoContent(content)
 	return WriteFile(outputDir+"/mechanisms.proto", content)
 }
 
@@ -345,6 +351,8 @@ func (g *ProtoGenerator) generateModulesProto(outputDir string) error {
 	}
 
 	content := sb.String()
+	// 格式化 proto 内容
+	content = FormatProtoContent(content)
 	return WriteFile(outputDir+"/modules.proto", content)
 }
 
@@ -394,13 +402,18 @@ func (g *ProtoGenerator) generateManagersProto(outputDir string) error {
 			sb.WriteString(fmt.Sprintf("    %s %s = %d;\n",
 				fieldType, field.Name, field.Number))
 
-			// 如果是 xmap，生成增量同步字段（在同一行）
+			// 如果是 xmap，生成增量同步字段（格式化后分多行）
 			if field.Type.Kind == blueprint_types.FieldKindXMap {
 				// 生成 ChangeRecord message
 				// 注意：recordName 应该是 "HeroMap_XXXMapChangeRecord" 而不是 "HeroManager_HeroMap_XXXMapChangeRecord"
 				recordName := fmt.Sprintf("%s_XXXMapChangeRecord", field.Name)
-				sb.WriteString(fmt.Sprintf("    repeated %s %s_XXXChangeList = %d;  message %s { %s Key = 1; MME.%s Value = 2; bool IsDelete = 3; }\n",
-					recordName, field.Name, 1000+int32(field.Number), recordName, keyType, moduleName))
+				changeListFieldNumber := 1000 + int32(field.Number)
+				sb.WriteString(fmt.Sprintf("    repeated %s %s_XXXChangeList = %d;\n", recordName, field.Name, changeListFieldNumber))
+				sb.WriteString(fmt.Sprintf("    message %s {\n", recordName))
+				sb.WriteString(fmt.Sprintf("        %s Key = 1;\n", keyType))
+				sb.WriteString(fmt.Sprintf("        MME.%s Value = 2;\n", moduleName))
+				sb.WriteString("        bool IsDelete = 3;\n")
+				sb.WriteString("    }\n")
 			}
 		}
 
@@ -415,6 +428,8 @@ func (g *ProtoGenerator) generateManagersProto(outputDir string) error {
 	}
 
 	content := sb.String()
+	// 格式化 proto 内容
+	content = FormatProtoContent(content)
 	return WriteFile(outputDir+"/managers.proto", content)
 }
 
@@ -455,5 +470,7 @@ func (g *ProtoGenerator) generateEntitiesProto(outputDir string) error {
 	}
 
 	content := sb.String()
+	// 格式化 proto 内容
+	content = FormatProtoContent(content)
 	return WriteFile(outputDir+"/entities.proto", content)
 }

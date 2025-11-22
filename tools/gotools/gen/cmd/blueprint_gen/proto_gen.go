@@ -81,9 +81,20 @@ func (g *ProtoGenerator) generateProtoHeader(packageName string, imports []strin
 
 // generateFieldProto 生成字段的 Proto 定义（新版本，使用 *blueprint_types.Field）
 // currentPackageName: 当前 proto 文件的包名，用于判断是否需要添加包名前缀
+// baseIndent: 基础缩进级别（默认为 1，表示 message 内的字段）
 func (g *ProtoGenerator) generateFieldProto(field *blueprint_types.Field, fieldNumber int32, currentPackageName string) string {
+	return g.generateFieldProtoWithIndent(field, fieldNumber, currentPackageName, 1)
+}
+
+// generateFieldProtoWithIndent 生成字段的 Proto 定义，支持自定义缩进级别
+// currentPackageName: 当前 proto 文件的包名，用于判断是否需要添加包名前缀
+// indentLevel: 缩进级别（1 = 4个空格，2 = 8个空格，以此类推）
+func (g *ProtoGenerator) generateFieldProtoWithIndent(field *blueprint_types.Field, fieldNumber int32, currentPackageName string, indentLevel int) string {
 	builder := NewCodeBuilder()
-	builder.SetIndentStr("  ")
+	builder.SetIndentStr("    ") // 使用 4 个空格作为缩进
+	for i := 0; i < indentLevel; i++ {
+		builder.Indent() // 设置缩进级别
+	}
 
 	// 添加注释
 	if field.Comment != "" {

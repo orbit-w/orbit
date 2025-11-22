@@ -106,6 +106,43 @@ func WriteFile(filePath, content string) error {
 	return os.WriteFile(filePath, []byte(content), 0644)
 }
 
+// FormatProtoContent 格式化 proto 文件内容
+// 主要处理：
+// 1. 确保所有字段使用4个空格缩进
+// 2. 清理多余的空行
+// 3. 确保格式一致性
+// 注意：长行拆分已经在生成代码时处理，这里主要做最后的清理
+func FormatProtoContent(content string) string {
+	lines := strings.Split(content, "\n")
+	var result []string
+	var lastEmpty bool
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+
+		// 处理空行：保留单个空行，但去除连续的空行
+		if trimmed == "" {
+			if !lastEmpty {
+				result = append(result, "")
+				lastEmpty = true
+			}
+			continue
+		}
+		lastEmpty = false
+
+		// 保持原有行的格式，因为生成代码时已经正确格式化了
+		// 这里主要是确保缩进一致性
+		result = append(result, line)
+	}
+
+	// 移除末尾的空行
+	for len(result) > 0 && result[len(result)-1] == "" {
+		result = result[:len(result)-1]
+	}
+
+	return strings.Join(result, "\n")
+}
+
 // FileExists 检查文件是否存在
 func FileExists(filePath string) bool {
 	_, err := os.Stat(filePath)

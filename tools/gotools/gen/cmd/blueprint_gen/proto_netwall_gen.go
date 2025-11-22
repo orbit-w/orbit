@@ -71,8 +71,6 @@ func (g *ProtoGenerator) generateNetWallProtoFile(outputDir string, netwallFile 
 			for _, field := range fields {
 				// 使用通用的字段生成方法，自动处理枚举类型引用
 				fieldProto := g.generateFieldProto(field, field.Number, packageName)
-				// 将缩进从 2 个空格改为 4 个空格（与 NetWall proto 格式一致）
-				fieldProto = strings.ReplaceAll(fieldProto, "  ", "    ")
 				sb.WriteString(fieldProto)
 			}
 		}
@@ -87,6 +85,8 @@ func (g *ProtoGenerator) generateNetWallProtoFile(outputDir string, netwallFile 
 	// 生成文件名（首字母小写）
 	fileName := strings.ToLower(packageName) + ".proto"
 	content := sb.String()
+	// 格式化 proto 内容
+	content = FormatProtoContent(content)
 	return WriteFile(outputDir+"/"+fileName, content)
 }
 
@@ -173,11 +173,12 @@ func (g *ProtoGenerator) generateNetMessageProto(msg *NetMessage, indent string)
 	}
 
 	// 生成字段定义
+	// 计算缩进级别：indent 是 "    "（4个空格），所以是 1 级缩进
+	indentLevel := len(indent) / 4
 	for _, field := range fields {
 		// 使用通用的字段生成方法，自动处理枚举类型引用
-		fieldProto := g.generateFieldProto(field, field.Number, msg.PackageName)
-		// 将缩进从 2 个空格改为 4 个空格，并添加消息的缩进
-		fieldProto = strings.ReplaceAll(fieldProto, "  ", indent+"    ")
+		// Request/Notify 内的字段需要 1 级缩进（4个空格）
+		fieldProto := g.generateFieldProtoWithIndent(field, field.Number, msg.PackageName, indentLevel+1)
 		sb.WriteString(fieldProto)
 	}
 
@@ -197,9 +198,8 @@ func (g *ProtoGenerator) generateNetMessageProto(msg *NetMessage, indent string)
 
 		for _, field := range rspFields {
 			// 使用通用的字段生成方法，自动处理枚举类型引用
-			fieldProto := g.generateFieldProto(field, field.Number, msg.PackageName)
-			// 将缩进从 2 个空格改为 8 个空格（Rsp 在 Request 内部），并添加消息的缩进
-			fieldProto = strings.ReplaceAll(fieldProto, "  ", indent+"        ")
+			// Rsp 在 Request/Notify 内部，需要 2 级缩进（8个空格）
+			fieldProto := g.generateFieldProtoWithIndent(field, field.Number, msg.PackageName, indentLevel+2)
 			sb.WriteString(fieldProto)
 		}
 		sb.WriteString(fmt.Sprintf("%s    }\n", indent))
