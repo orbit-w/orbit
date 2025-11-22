@@ -119,8 +119,8 @@ func (e *PlayerEntityWrapper) Name() string {
 }
 
 // GetEntityType 返回实体类型枚举
-func (e *PlayerEntityWrapper) GetEntityType() enum.EntityType {
-	return enum.EntityType_PlayerEntity
+func (e *PlayerEntityWrapper) GetEntityType() mme.EntityType {
+	return mme.EntityType_PlayerEntityType
 }
 
 // MatchesAll 判断字段是否匹配所有类型标记

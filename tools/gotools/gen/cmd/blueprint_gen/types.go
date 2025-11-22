@@ -138,6 +138,15 @@ type EnumValue struct {
 	Options map[string]string // 枚举值选项
 }
 
+func NewEnumValue(name string, number int32, comment string) *EnumValue {
+	return &EnumValue{
+		Name:    name,
+		Number:  number,
+		Comment: comment,
+		Options: make(map[string]string),
+	}
+}
+
 // ParseComment 解析枚举值注释
 func (e *EnumValue) ParseComment() string {
 	opt, ok := e.Options[EnumValueOptionContent]
@@ -154,6 +163,15 @@ type Enum struct {
 	Values      []*EnumValue // 枚举值列表
 	Comment     string       // 枚举注释
 	SourceProto string       // 来源 proto 文件，如 "entities", "managers", "modules", "mechanisms" 或 NetWall 包名
+}
+
+func NewEnum(name, comment, sourceProto string) *Enum {
+	return &Enum{
+		Name:        name,
+		Values:      make([]*EnumValue, 0),
+		Comment:     comment,
+		SourceProto: sourceProto,
+	}
 }
 
 // NetWallFile NetWall 文件内容

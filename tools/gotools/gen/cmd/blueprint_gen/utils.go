@@ -794,3 +794,7 @@ func generateEnumProto(enum *Enum) string {
 
 	return sb.String()
 }
+
+func GenEntityTypeEnumName(entityName string) string {
+	return fmt.Sprintf("%sType", entityName)
+}

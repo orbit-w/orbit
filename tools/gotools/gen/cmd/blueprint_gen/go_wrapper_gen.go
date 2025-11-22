@@ -823,8 +823,8 @@ func (g *GoWrapperGenerator) generateEntityWrappers(outputDir string) error {
 
 		// 生成 GetEntityType 方法
 		sb.WriteString("// GetEntityType 返回实体类型枚举\n")
-		sb.WriteString(fmt.Sprintf("func (e *%s) GetEntityType() enum.EntityType {\n", wrapperName))
-		sb.WriteString(fmt.Sprintf("\treturn enum.EntityType_%s\n", entity.Name))
+		sb.WriteString(fmt.Sprintf("func (e *%s) GetEntityType() mme.EntityType {\n", wrapperName))
+		sb.WriteString(fmt.Sprintf("\treturn mme.EntityType_%s\n", GenEntityTypeEnumName(entity.Name)))
 		sb.WriteString("}\n\n")
 
 		// 生成 MatchesAll 方法（实现 IFieldMetaContext 接口）

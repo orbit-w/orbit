@@ -79,6 +79,11 @@ func (p *YamlParser) ParseEntities() error {
 		}
 	}
 
+	// 解析 Register，生成 Entity 类型枚举
+	if err := p.parseEntityRegister(yamlData); err != nil {
+		return fmt.Errorf("failed to parse Register: %w", err)
+	}
+
 	return nil
 }
 
@@ -451,4 +456,82 @@ func sortFieldsByNumber(fields []*types.Field) {
 	sort.Slice(fields, func(i, j int) bool {
 		return fields[i].Number < fields[j].Number
 	})
+}
+
+// parseEntityRegister 解析 Register 部分，生成 Entity 类型枚举
+// Register 格式:
+//
+//	Register:
+//	  - PlayerEntity: 1
+//	  - AnotherEntity: 2
+func (p *YamlParser) parseEntityRegister(yamlData map[string]any) error {
+	registerList, ok := yamlData["Register"].([]any)
+	if !ok || registerList == nil {
+		return nil // Register 是可选的
+	}
+
+	// 构建 Entity 名称映射，用于验证
+	entityNameMap := make(map[string]bool)
+	for _, entity := range p.ctx.Entities {
+		entityNameMap[entity.Name] = true
+	}
+
+	// 创建枚举
+	enum := NewEnum("EntityType", "Entity 类型枚举，由 entity register 自动生成", "entities")
+
+	// 添加默认枚举值 0（protobuf 要求第一个枚举值必须为 0）
+	defaultEnumValue := NewEnumValue("EntityTypeUnknown", 0, "未知 Entity 类型")
+	defaultEnumValue.Options[EnumValueOptionContent] = defaultEnumValue.Comment
+	enum.Values = append(enum.Values, defaultEnumValue)
+
+	// 解析每个 Register 项
+	for _, registerItem := range registerList {
+		registerMap, ok := registerItem.(map[string]any)
+		if !ok {
+			continue
+		}
+
+		for entityKey, entityValue := range registerMap {
+			// 验证 Entity 是否存在
+			if !entityNameMap[entityKey] {
+				panic(fmt.Sprintf("Register 中定义的 Entity '%s' 不存在，请确保在 Entity 部分已定义", entityKey))
+			}
+
+			// 提取枚举值编号
+			enumValueNumber := extractNumberFromValue(entityValue)
+			if enumValueNumber == 0 {
+				panic(fmt.Sprintf("Register 中 Entity '%s' 的编号不能为 0", entityKey))
+			}
+
+			// 生成枚举值名称（Entity 名称 + "Type"）
+			enumValueName := GenEntityTypeEnumName(entityKey)
+
+			// 创建枚举值
+			enumValue := NewEnumValue(enumValueName, enumValueNumber, fmt.Sprintf("Entity 类型: %s", entityKey))
+			enumValue.Options[EnumValueOptionContent] = enumValue.Comment
+
+			enum.Values = append(enum.Values, enumValue)
+		}
+	}
+
+	// 按编号排序枚举值
+	sort.Slice(enum.Values, func(i, j int) bool {
+		return enum.Values[i].Number < enum.Values[j].Number
+	})
+
+	// 检查是否有重复的编号
+	numberMap := make(map[int32]string)
+	for _, value := range enum.Values {
+		if existingKey, exists := numberMap[value.Number]; exists {
+			panic(fmt.Sprintf("Register 中存在重复的编号 %d: '%s' 和 '%s'", value.Number, existingKey, value.Name))
+		}
+		numberMap[value.Number] = value.Name
+	}
+
+	// 添加到上下文
+	if len(enum.Values) > 0 {
+		p.ctx.AddEnum(enum)
+	}
+
+	return nil
 }
