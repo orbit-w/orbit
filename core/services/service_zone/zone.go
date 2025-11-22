@@ -1,6 +1,6 @@
 package servicezone
 
-import "gitee.com/orbit-w/orbit/app/proto/enum"
+import "gitee.com/orbit-w/orbit/app/proto/mme"
 
 type IServiceZone interface {
 	AddEntity(entity IEntity)
@@ -21,5 +21,5 @@ type ISubscriber interface {
 	// 获取已订阅的 Entities
 	GetSubscribedEntities(subscriberId string) []IEntity
 	// 获取订阅策略类型
-	GetSubscriberStrategyType(subscriberId string) (enum.SubscribeStrategyType, bool)
+	GetSubscriberStrategyType(subscriberId string) (mme.SubscribeStrategyType, bool)
 }
