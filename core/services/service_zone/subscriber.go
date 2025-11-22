@@ -1,6 +1,7 @@
 package servicezone
 
 import (
+	mmeobj "gitee.com/orbit-w/orbit/app/mme"
 	"gitee.com/orbit-w/orbit/app/proto/mme"
 )
 
@@ -49,7 +50,7 @@ func (s *Subscriber) ClearSubscribedEntities() {
 }
 
 // 订阅 Entity
-func (s *Subscriber) SubscribeEntity(entity IEntity) {
+func (s *Subscriber) SubscribeEntity(entity mmeobj.IEntity) {
 	id := entity.GetXXXId()
 	if entity == nil {
 		return

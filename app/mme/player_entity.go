@@ -13,6 +13,9 @@ import (
 type IEntity interface {
 	Collection() string
 	Load(raw bson.Raw) error
+	Name() string
+	GetXXXId() int64
+	SetXXXId(id int64)
 	GetEntityType() mme.EntityType
 	InitFieldContext()
 	ClearAllDirtyFlags()

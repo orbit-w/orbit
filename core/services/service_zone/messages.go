@@ -1,6 +1,7 @@
 package servicezone
 
 import (
+	mmeobj "gitee.com/orbit-w/orbit/app/mme"
 	"gitee.com/orbit-w/orbit/app/proto/mme"
 	"gitee.com/orbit-w/orbit/core/network"
 	"github.com/asynkron/protoactor-go/actor"
@@ -10,7 +11,7 @@ import (
 
 // AddEntityRequest 添加或更新 Entity 的请求
 type AddEntityRequest struct {
-	Entity IEntity
+	Entity mmeobj.IEntity
 }
 
 // AddEntityResponse 添加或更新 Entity 的响应
@@ -37,7 +38,7 @@ type SubscribeRequest struct {
 
 // SubscribeResponse 订阅响应
 type SubscribeResponse struct {
-	Entities []IEntity
+	Entities []mmeobj.IEntity
 }
 
 // SubscribeByIdsRequest 按 ID 列表订阅请求
@@ -78,7 +79,7 @@ type GetSubscribedEntitiesRequest struct {
 
 // GetSubscribedEntitiesResponse 获取已订阅的 Entities 响应
 type GetSubscribedEntitiesResponse struct {
-	Entities []IEntity
+	Entities []mmeobj.IEntity
 }
 
 // GetSubscriberStrategyTypeResponse 获取订阅策略类型响应

@@ -1,9 +1,13 @@
 package servicezone
 
 import (
+	"fmt"
+
+	mmeobj "gitee.com/orbit-w/orbit/app/mme"
 	"gitee.com/orbit-w/orbit/app/proto/mme"
 	"gitee.com/orbit-w/orbit/lib/module/persistence"
 	"github.com/asynkron/protoactor-go/actor"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 const (
@@ -29,7 +33,7 @@ type ServiceZone struct {
 	ID            string
 	Type          ZoneType
 	EntityTypeMap map[int64]mme.EntityType
-	Entities      map[int64]IEntity
+	Entities      map[int64]mmeobj.IEntity
 	// 订阅管理
 	subscribers map[string]*Subscriber // 订阅者集合，key 为订阅者 ID
 
@@ -43,7 +47,7 @@ func NewServiceZone(id string, zoneType ZoneType) *ServiceZone {
 		ID:            id,
 		Type:          zoneType,
 		EntityTypeMap: make(map[int64]mme.EntityType),
-		Entities:      make(map[int64]IEntity),
+		Entities:      make(map[int64]mmeobj.IEntity),
 		subscribers:   make(map[string]*Subscriber),
 	}
 }
@@ -93,25 +97,53 @@ func (zone *ServiceZone) GetActorPID() *actor.PID {
 	return zone.actorPID
 }
 
-func (zone *ServiceZone) Load(id int64, entityType mme.EntityType) (IEntity, error) {
-	raw, err := persistence.Load(zone.ID, entityType.String(), id)
+func (zone *ServiceZone) Load(id int64, entityType mme.EntityType) (mmeobj.IEntity, error) {
+	factory := mmeobj.GetEntityFactory(entityType)
+	if factory == nil {
+		return nil, fmt.Errorf("entity factory not found for entity type %d", entityType)
+	}
+	entity := factory()
+	future, err := persistence.Load(zone.ID, entity.Collection(), id)
 	if err != nil {
 		return nil, err
 	}
-	entity, err := LoadEntity(entityType, raw)
+	if err := future.Wait(); err != nil {
+		return nil, err
+	}
+	resp, err := future.Result()
 	if err != nil {
+		return nil, err
+	}
+	loadResp, ok := resp.(ILoadResponse)
+	if !ok {
+		return nil, fmt.Errorf("invalid load response type: %T", resp)
+	}
+
+	if err := loadResp.GetError(); err != nil {
+		return nil, err
+	}
+
+	if !loadResp.IsExists() {
+		// 如果不存在，则新建一个实体
+		entity.Load(bson.Raw{})
+		entity.SetXXXId(id)
+		return entity, nil
+	}
+
+	// 如果存在，则加载数据
+	if err := entity.Load(loadResp.GetData()); err != nil {
 		return nil, err
 	}
 	return entity, nil
 }
 
 // AddEntity 添加或更新 Entity（实现 IServiceZone 接口）
-func (zone *ServiceZone) AddEntity(entity IEntity) {
+func (zone *ServiceZone) AddEntity(entity mmeobj.IEntity) {
 	zone.SetEntity(entity)
 }
 
 // SetEntity 设置 Entity（添加或更新）
-func (zone *ServiceZone) SetEntity(entity IEntity) {
+func (zone *ServiceZone) SetEntity(entity mmeobj.IEntity) {
 	if entity == nil {
 		return
 	}
@@ -133,7 +165,7 @@ func (zone *ServiceZone) RemoveEntity(targetId int64) {
 	zone.RemoveFromSubscriptions(entity)
 }
 
-func (zone *ServiceZone) getEntityById(targetId int64) IEntity {
+func (zone *ServiceZone) getEntityById(targetId int64) mmeobj.IEntity {
 	// 直接使用 map 查找，O(1) 复杂度
 	entity, ok := zone.Entities[targetId]
 	if !ok {
@@ -146,7 +178,7 @@ func (zone *ServiceZone) getEntityById(targetId int64) IEntity {
 	return nil
 }
 
-func (zone *ServiceZone) addEntity(entity IEntity) {
+func (zone *ServiceZone) addEntity(entity mmeobj.IEntity) {
 	id := entity.GetXXXId()
 	zone.Entities[id] = entity
 
@@ -166,7 +198,7 @@ func (zone *ServiceZone) removeEntity(targetId int64) {
 // subscriberId: 订阅者唯一标识
 // strategy: 订阅策略
 // 返回: 订阅到的 Entity 列表
-func (zone *ServiceZone) Subscribe(subscriberId string, strategy ISubscribeStrategy) []IEntity {
+func (zone *ServiceZone) Subscribe(subscriberId string, strategy ISubscribeStrategy) []mmeobj.IEntity {
 	// 创建或获取订阅者
 	subscriber, exists := zone.subscribers[subscriberId]
 	if !exists {
@@ -180,7 +212,7 @@ func (zone *ServiceZone) Subscribe(subscriberId string, strategy ISubscribeStrat
 	}
 
 	// 根据策略筛选 Entities
-	subscribedEntities := make([]IEntity, 0)
+	subscribedEntities := make([]mmeobj.IEntity, 0)
 	for _, entity := range zone.Entities {
 		if strategy.ShouldSubscribe(entity) {
 			subscriber.SubscribeEntity(entity)
@@ -192,19 +224,19 @@ func (zone *ServiceZone) Subscribe(subscriberId string, strategy ISubscribeStrat
 }
 
 // SubscribeByIds 使用 ID 列表订阅（便捷方法）
-func (zone *ServiceZone) SubscribeByIds(subscriberId string, entityIds []int64) []IEntity {
+func (zone *ServiceZone) SubscribeByIds(subscriberId string, entityIds []int64) []mmeobj.IEntity {
 	strategy := NewByIdsStrategy(entityIds)
 	return zone.Subscribe(subscriberId, strategy)
 }
 
 // SubscribeByType 使用类型订阅（便捷方法）
-func (zone *ServiceZone) SubscribeByType(subscriberId string, entityTypes []string) []IEntity {
+func (zone *ServiceZone) SubscribeByType(subscriberId string, entityTypes []string) []mmeobj.IEntity {
 	strategy := NewByTypeStrategy(entityTypes)
 	return zone.Subscribe(subscriberId, strategy)
 }
 
 // SubscribeAll 订阅所有 Entities（便捷方法）
-func (zone *ServiceZone) SubscribeAll(subscriberId string) []IEntity {
+func (zone *ServiceZone) SubscribeAll(subscriberId string) []mmeobj.IEntity {
 	strategy := NewAllEntitiesStrategy()
 	return zone.Subscribe(subscriberId, strategy)
 }
@@ -220,13 +252,13 @@ func (zone *ServiceZone) Unsubscribe(subscriberId string) {
 }
 
 // GetSubscribedEntities 获取订阅者已订阅的 Entities
-func (zone *ServiceZone) GetSubscribedEntities(subscriberId string) []IEntity {
+func (zone *ServiceZone) GetSubscribedEntities(subscriberId string) []mmeobj.IEntity {
 	subscriber, exists := zone.subscribers[subscriberId]
 	if !exists {
 		return nil
 	}
 
-	entities := make([]IEntity, 0, len(subscriber.Entities))
+	entities := make([]mmeobj.IEntity, 0, len(subscriber.Entities))
 	subscriber.RangeSubscribedEntities(func(entityId int64) {
 		entity := zone.Entities[entityId]
 		// 过滤掉已删除的实体（nil 元素）
@@ -252,7 +284,7 @@ func (zone *ServiceZone) SubscribeByStrategyType(
 	subscriberId string,
 	strategyType mme.SubscribeStrategyType,
 	params any,
-) []IEntity {
+) []mmeobj.IEntity {
 	var strategy ISubscribeStrategy
 
 	switch strategyType {
@@ -292,7 +324,7 @@ func (zone *ServiceZone) SubscribeByStrategyType(
 
 // UpdateSubscriptions 当 Entity 添加或更新时，更新所有订阅者
 // 新添加的 Entity 会根据各订阅者的策略决定是否订阅
-func (zone *ServiceZone) UpdateSubscriptions(entity IEntity) {
+func (zone *ServiceZone) UpdateSubscriptions(entity mmeobj.IEntity) {
 	if entity == nil {
 		return
 	}
@@ -308,7 +340,7 @@ func (zone *ServiceZone) UpdateSubscriptions(entity IEntity) {
 }
 
 // RemoveFromSubscriptions 当 Entity 移除时，从所有订阅者中移除
-func (zone *ServiceZone) RemoveFromSubscriptions(entity IEntity) {
+func (zone *ServiceZone) RemoveFromSubscriptions(entity mmeobj.IEntity) {
 	id := entity.GetXXXId()
 	for _, subscriber := range zone.subscribers {
 		subscriber.UnsubscribeEntity(id)
