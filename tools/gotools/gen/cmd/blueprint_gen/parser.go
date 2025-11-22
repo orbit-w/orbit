@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	types "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types"
 )
 
 // YamlParser YAML 解析器
@@ -43,6 +45,78 @@ func (p *YamlParser) Parse() error {
 
 // parseHeadFile 解析 headfile.yaml
 func (p *YamlParser) parseHeadFile() error {
+	filePath := p.ResolvePath("mme", "headfile.yaml")
+	if !FileExists(filePath) {
+		return nil
+	}
+
+	yamlData, err := p.ReadYAMLFile(filePath)
+	if err != nil {
+		return err
+	}
+
+	// 创建 HeadFileConfig
+	headFileConfig := &HeadFileConfig{
+		EntityFields:              make(map[string]any),
+		ModuleFields:              make(map[string]any),
+		ModuleStorageOption:       make([]string, 0),
+		MechanismFields:           make(map[string]any),
+		MechanismDataFieldOptions: make(map[string]FieldOptionDefinition),
+		CommonDataStructs:         make([]DataStruct, 0),
+	}
+
+	// 解析 DataStruct
+	if dataStructList, ok := yamlData["DataStruct"].([]any); ok {
+		for _, dsItem := range dataStructList {
+			dsMap, ok := dsItem.(map[string]any)
+			if !ok {
+				continue
+			}
+
+			for dsName, dsData := range dsMap {
+				dataStruct := DataStruct{
+					Name:   dsName,
+					Fields: make([]*types.Field, 0),
+				}
+
+				if dsData != nil {
+					fieldsMap, ok := dsData.(map[string]any)
+					if ok {
+						// 解析字段
+						for fieldKey, fieldValue := range fieldsMap {
+							field := parseField(nil, fieldKey, fieldValue)
+							if field == nil {
+								panic(fmt.Sprintf("failed to parse field %s in DataStruct %s", fieldKey, dsName))
+							}
+							dataStruct.Fields = append(dataStruct.Fields, field)
+						}
+						// 按字段编号排序
+						sortFieldsByNumber(dataStruct.Fields)
+					}
+				}
+
+				headFileConfig.CommonDataStructs = append(headFileConfig.CommonDataStructs, dataStruct)
+			}
+		}
+	}
+
+	// 解析 Enums
+	if enumList, ok := yamlData["Enums"].([]any); ok && enumList != nil {
+		enumParser := NewEnumParser()
+		for _, enumItem := range enumList {
+			enum := enumParser.ParseEnumItem(enumItem)
+			if enum == nil {
+				panic(fmt.Sprintf("Enum not found for item %v", enumItem))
+			}
+			// headfile.yaml 中的枚举来源标记为 "common"
+			enum.SourceProto = "common"
+			p.ctx.AddEnum(enum)
+		}
+	}
+
+	// 设置 HeadFile 配置
+	p.ctx.SetHeadFile(headFileConfig)
+
 	return nil
 }
 

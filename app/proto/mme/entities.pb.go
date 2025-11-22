@@ -21,55 +21,6 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// Entity 类型枚举，由 entity register 自动生成
-type EntityType int32
-
-const (
-	// 未知 Entity 类型
-	EntityType_EntityTypeUnknown EntityType = 0
-	// Entity 类型: PlayerEntity
-	EntityType_PlayerEntityType EntityType = 1
-)
-
-// Enum value maps for EntityType.
-var (
-	EntityType_name = map[int32]string{
-		0: "EntityTypeUnknown",
-		1: "PlayerEntityType",
-	}
-	EntityType_value = map[string]int32{
-		"EntityTypeUnknown": 0,
-		"PlayerEntityType":  1,
-	}
-)
-
-func (x EntityType) Enum() *EntityType {
-	p := new(EntityType)
-	*p = x
-	return p
-}
-
-func (x EntityType) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (EntityType) Descriptor() protoreflect.EnumDescriptor {
-	return file_entities_proto_enumTypes[0].Descriptor()
-}
-
-func (EntityType) Type() protoreflect.EnumType {
-	return &file_entities_proto_enumTypes[0]
-}
-
-func (x EntityType) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use EntityType.Descriptor instead.
-func (EntityType) EnumDescriptor() ([]byte, []int) {
-	return file_entities_proto_rawDescGZIP(), []int{0}
-}
-
 type PlayerEntity struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	HeroManager   *HeroManager           `protobuf:"bytes,1,opt,name=HeroManager,proto3" json:"HeroManager,omitempty"`
@@ -129,11 +80,7 @@ const file_entities_proto_rawDesc = "" +
 	"\x0eentities.proto\x12\x03MME\x1a\x0emanagers.proto\"Y\n" +
 	"\fPlayerEntity\x122\n" +
 	"\vHeroManager\x18\x01 \x01(\v2\x10.MME.HeroManagerR\vHeroManager\x12\x15\n" +
-	"\x05XXXId\x18\x90N \x01(\x03R\x05XXXId*9\n" +
-	"\n" +
-	"EntityType\x12\x15\n" +
-	"\x11EntityTypeUnknown\x10\x00\x12\x14\n" +
-	"\x10PlayerEntityType\x10\x01B'Z%gitee.com/orbit-w/orbit/app/proto/mmeb\x06proto3"
+	"\x05XXXId\x18\x90N \x01(\x03R\x05XXXIdB'Z%gitee.com/orbit-w/orbit/app/proto/mmeb\x06proto3"
 
 var (
 	file_entities_proto_rawDescOnce sync.Once
@@ -147,15 +94,13 @@ func file_entities_proto_rawDescGZIP() []byte {
 	return file_entities_proto_rawDescData
 }
 
-var file_entities_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_entities_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
 var file_entities_proto_goTypes = []any{
-	(EntityType)(0),      // 0: MME.EntityType
-	(*PlayerEntity)(nil), // 1: MME.PlayerEntity
-	(*HeroManager)(nil),  // 2: MME.HeroManager
+	(*PlayerEntity)(nil), // 0: MME.PlayerEntity
+	(*HeroManager)(nil),  // 1: MME.HeroManager
 }
 var file_entities_proto_depIdxs = []int32{
-	2, // 0: MME.PlayerEntity.HeroManager:type_name -> MME.HeroManager
+	1, // 0: MME.PlayerEntity.HeroManager:type_name -> MME.HeroManager
 	1, // [1:1] is the sub-list for method output_type
 	1, // [1:1] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
@@ -174,14 +119,13 @@ func file_entities_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_entities_proto_rawDesc), len(file_entities_proto_rawDesc)),
-			NumEnums:      1,
+			NumEnums:      0,
 			NumMessages:   1,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_entities_proto_goTypes,
 		DependencyIndexes: file_entities_proto_depIdxs,
-		EnumInfos:         file_entities_proto_enumTypes,
 		MessageInfos:      file_entities_proto_msgTypes,
 	}.Build()
 	File_entities_proto = out.File

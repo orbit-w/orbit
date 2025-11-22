@@ -1,7 +1,7 @@
 package servicezone
 
 import (
-	"gitee.com/orbit-w/orbit/app/proto/enum"
+	"gitee.com/orbit-w/orbit/app/proto/mme"
 	"gitee.com/orbit-w/orbit/core/network"
 	"github.com/asynkron/protoactor-go/actor"
 )
@@ -83,14 +83,14 @@ type GetSubscribedEntitiesResponse struct {
 
 // GetSubscriberStrategyTypeResponse 获取订阅策略类型响应
 type GetSubscriberStrategyTypeResponse struct {
-	StrategyType enum.SubscribeStrategyType
+	StrategyType mme.SubscribeStrategyType
 	Exists       bool
 }
 
 // SubscribeByStrategyTypeRequest 根据策略类型订阅请求
 type SubscribeByStrategyTypeRequest struct {
 	SubscriberID     string
-	StrategyType     enum.SubscribeStrategyType
+	StrategyType     mme.SubscribeStrategyType
 	Params           any
 	ResponseReceiver *actor.PID
 }

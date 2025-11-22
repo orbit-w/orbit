@@ -2,7 +2,6 @@ package blueprint_gen
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -32,34 +31,15 @@ func (p *BaseParser) GetContext() *BlueprintContext {
 }
 
 // ReadYAMLFile 读取并解析 YAML 文件（支持多文档，用 --- 分隔）
+// 支持 map 和 list 类型的文档，list 会自动转换为 map
 func (p *BaseParser) ReadYAMLFile(filePath string) (map[string]any, error) {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file %s: %w", filePath, err)
 	}
 
-	// 使用 Decoder 支持多文档 YAML
-	decoder := yaml.NewDecoder(strings.NewReader(string(data)))
-	result := make(map[string]any)
-
-	// 解析所有文档并合并
-	for {
-		var doc map[string]any
-		if err := decoder.Decode(&doc); err != nil {
-			// EOF 表示所有文档解析完成
-			if err == io.EOF {
-				break
-			}
-			return nil, fmt.Errorf("failed to parse YAML file %s: %w", filePath, err)
-		}
-
-		// 合并文档内容
-		for k, v := range doc {
-			result[k] = v
-		}
-	}
-
-	return result, nil
+	reader := strings.NewReader(string(data))
+	return ReadMultiDocumentYAML(reader)
 }
 
 // ReadYAMLFileList 读取并解析 YAML 列表文件

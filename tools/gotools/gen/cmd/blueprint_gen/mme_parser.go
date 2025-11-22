@@ -477,7 +477,7 @@ func (p *YamlParser) parseEntityRegister(yamlData map[string]any) error {
 	}
 
 	// 创建枚举
-	enum := NewEnum("EntityType", "Entity 类型枚举，由 entity register 自动生成", "entities")
+	enum := NewEnum("EntityType", "Entity 类型枚举，由 entity register 自动生成", "common")
 
 	// 添加默认枚举值 0（protobuf 要求第一个枚举值必须为 0）
 	defaultEnumValue := NewEnumValue("EntityTypeUnknown", 0, "未知 Entity 类型")

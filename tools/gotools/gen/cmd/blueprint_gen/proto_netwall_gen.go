@@ -69,42 +69,11 @@ func (g *ProtoGenerator) generateNetWallProtoFile(outputDir string, netwallFile 
 			}
 
 			for _, field := range fields {
-				// 添加注释
-				if field.Comment != "" {
-					sb.WriteString(fmt.Sprintf("    // %s\n", field.Comment))
-				}
-
-				// 生成字段类型
-				protoType := g.typeConverter.ToProtoType(&field.Type)
-				isOptional := g.typeConverter.IsOptionalInProto(&field.Type)
-
-				// 如果是Message类型，则需要添加包名
-				if field.Type.IsMessage() {
-					protoPackageName, ok := g.data.NameSpaces[field.Type.Name]
-					if ok && protoPackageName != packageName {
-						protoType = fmt.Sprintf("%s.%s", protoPackageName, field.Type.Name)
-					}
-				}
-
-				// 如果是Enum类型，则需要添加包名（Enum包）
-				if field.Type.Kind == blueprint_types.FieldKindEnum {
-					nameSpaces := g.data.GetNameSpace()
-					protoPackageName, ok := nameSpaces[field.Type.Name]
-					if ok && protoPackageName != packageName {
-						protoType = fmt.Sprintf("%s.%s", protoPackageName, field.Type.Name)
-					}
-				}
-
-				// 确保字段名不包含冒号
-				fieldName := strings.TrimSuffix(field.Name, ":")
-				fieldName = strings.TrimSpace(fieldName)
-
-				// 构建字段定义（使用 4 个空格缩进）
-				if isOptional {
-					sb.WriteString(fmt.Sprintf("    optional %s %s = %d;\n", protoType, fieldName, field.Number))
-				} else {
-					sb.WriteString(fmt.Sprintf("    %s %s = %d;\n", protoType, fieldName, field.Number))
-				}
+				// 使用通用的字段生成方法，自动处理枚举类型引用
+				fieldProto := g.generateFieldProto(field, field.Number, packageName)
+				// 将缩进从 2 个空格改为 4 个空格（与 NetWall proto 格式一致）
+				fieldProto = strings.ReplaceAll(fieldProto, "  ", "    ")
+				sb.WriteString(fieldProto)
 			}
 		}
 		sb.WriteString("}\n\n")
@@ -121,7 +90,7 @@ func (g *ProtoGenerator) generateNetWallProtoFile(outputDir string, netwallFile 
 	return WriteFile(outputDir+"/"+fileName, content)
 }
 
-// collectNetWallImports 收集跨 NetWall 的引用
+// collectNetWallImports 收集跨 NetWall 的引用（包括枚举类型）
 func (g *ProtoGenerator) collectNetWallImports(wallFile *NetWallFile) []string {
 	imports := make(map[string]bool)
 	allMessages := make([]*NetMessage, 0)
@@ -131,7 +100,22 @@ func (g *ProtoGenerator) collectNetWallImports(wallFile *NetWallFile) []string {
 	allMessages = append(allMessages, wallFile.Notifies...)
 	allMessages = append(allMessages, wallFile.DataStructs...)
 
-	// 遍历所有消息的字段，检测跨 NetWall 引用
+	// 收集所有字段
+	allFields := make([]*blueprint_types.Field, 0)
+	for _, msg := range allMessages {
+		allFields = append(allFields, msg.Fields...)
+		if msg.Rsp != nil {
+			allFields = append(allFields, msg.Rsp.Fields...)
+		}
+	}
+
+	// 收集枚举类型的导入
+	enumImports := g.collectEnumImportsFromFields(allFields, wallFile.PackageName)
+	for _, imp := range enumImports {
+		imports[imp] = true
+	}
+
+	// 遍历所有消息的字段，检测跨 NetWall 引用（消息类型）
 	for _, msg := range allMessages {
 		for _, field := range msg.Fields {
 			name := field.Type.Name
@@ -190,42 +174,11 @@ func (g *ProtoGenerator) generateNetMessageProto(msg *NetMessage, indent string)
 
 	// 生成字段定义
 	for _, field := range fields {
-		// 添加注释
-		if field.Comment != "" {
-			sb.WriteString(fmt.Sprintf("%s    // %s\n", indent, field.Comment))
-		}
-
-		// 生成字段类型
-		protoType := g.typeConverter.ToProtoType(&field.Type)
-		isOptional := g.typeConverter.IsOptionalInProto(&field.Type)
-
-		// 如果是Message类型，则需要添加包名
-		if field.Type.IsMessage() {
-			protoPackageName, ok := g.data.NameSpaces[field.Type.Name]
-			if ok && protoPackageName != msg.PackageName {
-				protoType = fmt.Sprintf("%s.%s", protoPackageName, field.Type.Name)
-			}
-		}
-
-		// 如果是Enum类型，则需要添加包名（Enum包）
-		if field.Type.Kind == blueprint_types.FieldKindEnum {
-			nameSpaces := g.data.GetNameSpace()
-			protoPackageName, ok := nameSpaces[field.Type.Name]
-			if ok && protoPackageName != msg.PackageName {
-				protoType = fmt.Sprintf("%s.%s", protoPackageName, field.Type.Name)
-			}
-		}
-
-		// 确保字段名不包含冒号
-		fieldName := strings.TrimSuffix(field.Name, ":")
-		fieldName = strings.TrimSpace(fieldName)
-
-		// 构建字段定义（使用 4 个空格缩进）
-		if isOptional {
-			sb.WriteString(fmt.Sprintf("%s    optional %s %s = %d;\n", indent, protoType, fieldName, field.Number))
-		} else {
-			sb.WriteString(fmt.Sprintf("%s    %s %s = %d;\n", indent, protoType, fieldName, field.Number))
-		}
+		// 使用通用的字段生成方法，自动处理枚举类型引用
+		fieldProto := g.generateFieldProto(field, field.Number, msg.PackageName)
+		// 将缩进从 2 个空格改为 4 个空格，并添加消息的缩进
+		fieldProto = strings.ReplaceAll(fieldProto, "  ", indent+"    ")
+		sb.WriteString(fieldProto)
 	}
 
 	// 生成 Rsp（如果有）
@@ -243,42 +196,11 @@ func (g *ProtoGenerator) generateNetMessageProto(msg *NetMessage, indent string)
 		}
 
 		for _, field := range rspFields {
-			// 添加注释
-			if field.Comment != "" {
-				sb.WriteString(fmt.Sprintf("%s        // %s\n", indent, field.Comment))
-			}
-
-			// 生成字段类型
-			protoType := g.typeConverter.ToProtoType(&field.Type)
-			isOptional := g.typeConverter.IsOptionalInProto(&field.Type)
-
-			// 如果是Message类型，则需要添加包名
-			if field.Type.IsMessage() {
-				protoPackageName, ok := g.data.NameSpaces[field.Type.Name]
-				if ok && protoPackageName != msg.PackageName {
-					protoType = fmt.Sprintf("%s.%s", protoPackageName, field.Type.Name)
-				}
-			}
-
-			// 如果是Enum类型，则需要添加包名（Enum包）
-			if field.Type.Kind == blueprint_types.FieldKindEnum {
-				nameSpaces := g.data.GetNameSpace()
-				protoPackageName, ok := nameSpaces[field.Type.Name]
-				if ok && protoPackageName != msg.PackageName {
-					protoType = fmt.Sprintf("%s.%s", protoPackageName, field.Type.Name)
-				}
-			}
-
-			// 确保字段名不包含冒号
-			fieldName := strings.TrimSuffix(field.Name, ":")
-			fieldName = strings.TrimSpace(fieldName)
-
-			// 构建字段定义（使用 8 个空格缩进，因为 Rsp 在 Request 内部）
-			if isOptional {
-				sb.WriteString(fmt.Sprintf("%s        optional %s %s = %d;\n", indent, protoType, fieldName, field.Number))
-			} else {
-				sb.WriteString(fmt.Sprintf("%s        %s %s = %d;\n", indent, protoType, fieldName, field.Number))
-			}
+			// 使用通用的字段生成方法，自动处理枚举类型引用
+			fieldProto := g.generateFieldProto(field, field.Number, msg.PackageName)
+			// 将缩进从 2 个空格改为 8 个空格（Rsp 在 Request 内部），并添加消息的缩进
+			fieldProto = strings.ReplaceAll(fieldProto, "  ", indent+"        ")
+			sb.WriteString(fieldProto)
 		}
 		sb.WriteString(fmt.Sprintf("%s    }\n", indent))
 	}

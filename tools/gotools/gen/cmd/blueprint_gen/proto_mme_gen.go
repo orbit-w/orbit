@@ -11,20 +11,32 @@ import (
 func (g *ProtoGenerator) generateHeadfileProto(outputDir string) error {
 	sb := strings.Builder{}
 
-	// 文件头部 - headfile.proto 使用 Common package
-	sb.WriteString(g.generateProtoHeader("Common", nil))
+	// 收集 DataStruct 字段中引用的枚举类型，确定需要导入的 proto 文件
+	imports := g.collectDataStructImports()
 
-	// 生成通用数据结构
+	// 文件头部 - common.proto 使用 MME package
+	sb.WriteString(g.generateProtoHeader("MME", imports))
+
+	// 生成通用数据结构（DataStruct）
 	if g.data.HeadFile != nil {
 		for _, ds := range g.data.HeadFile.CommonDataStructs {
 			sb.WriteString(fmt.Sprintf("// %s\n", ds.Name))
 			sb.WriteString(fmt.Sprintf("message %s {\n", ds.Name))
 
-			for i, field := range ds.Fields {
-				sb.WriteString(g.generateFieldProtoFromOldField(field, int32(i+1)))
+			for _, field := range ds.Fields {
+				// 使用字段自身的编号（已在 YAML 中定义）
+				// 传入 "common" 作为 currentSourceProto，因为 DataStruct 生成到 common.proto
+				sb.WriteString(g.generateFieldProtoFromOldField(field, field.Number, "common"))
 			}
 
 			sb.WriteString("}\n\n")
+		}
+	}
+
+	// 生成来自 headfile.yaml 的枚举（SourceProto 为 "common"）
+	for _, enum := range g.data.Enums {
+		if enum.SourceProto == "common" {
+			sb.WriteString(generateEnumProto(enum))
 		}
 	}
 
@@ -32,11 +44,117 @@ func (g *ProtoGenerator) generateHeadfileProto(outputDir string) error {
 	return WriteFile(outputDir+"/common.proto", content)
 }
 
+// collectDataStructImports 收集 DataStruct 字段中引用的类型，返回需要导入的 proto 文件列表
+func (g *ProtoGenerator) collectDataStructImports() []string {
+	if g.data.HeadFile == nil {
+		return nil
+	}
+
+	// 收集所有 DataStruct 的字段
+	fields := make([]*blueprint_types.Field, 0)
+	for _, ds := range g.data.HeadFile.CommonDataStructs {
+		fields = append(fields, ds.Fields...)
+	}
+
+	return g.collectEnumImportsFromFields(fields, "common")
+}
+
+// collectEnumImportsFromFields 从字段列表中收集枚举类型的导入
+// currentSourceProto: 当前 proto 文件的 SourceProto（如 "entities", "managers", "common" 等）
+func (g *ProtoGenerator) collectEnumImportsFromFields(fields []*blueprint_types.Field, currentSourceProto string) []string {
+	imports := make(map[string]bool)
+
+	// 构建枚举名称到枚举的映射，便于快速查找
+	enumMap := make(map[string]*Enum)
+	for _, enum := range g.data.Enums {
+		enumMap[enum.Name] = enum
+	}
+
+	// 遍历所有字段
+	for _, field := range fields {
+		// 检查字段类型是否是枚举（通过类型名称匹配）
+		typeName := field.Type.Name
+		if typeName == "" {
+			typeName = field.Type.TypeName
+		}
+
+		// 检查类型名称是否对应一个枚举
+		if enum, exists := enumMap[typeName]; exists {
+			// 如果枚举不在当前 proto 文件中，需要导入
+			if enum.SourceProto != currentSourceProto {
+				// 根据 SourceProto 确定导入文件
+				importFile := g.getProtoImportForSource(enum.SourceProto)
+				if importFile != "" {
+					imports[importFile] = true
+				}
+			}
+		}
+
+		// 递归检查 map/xmap/repeated 的 value 类型
+		if field.Type.ValueType != nil {
+			valueTypeName := field.Type.ValueType.Name
+			if valueTypeName == "" {
+				valueTypeName = field.Type.ValueType.TypeName
+			}
+			if enum, exists := enumMap[valueTypeName]; exists {
+				if enum.SourceProto != currentSourceProto {
+					importFile := g.getProtoImportForSource(enum.SourceProto)
+					if importFile != "" {
+						imports[importFile] = true
+					}
+				}
+			}
+		}
+	}
+
+	// 转换为列表并排序
+	result := make([]string, 0, len(imports))
+	for imp := range imports {
+		result = append(result, imp)
+	}
+	return UniqueProtoImports(result)
+}
+
+// getProtoImportForSource 根据 SourceProto 返回对应的 proto 导入文件
+func (g *ProtoGenerator) getProtoImportForSource(sourceProto string) string {
+	switch sourceProto {
+	case "entities":
+		return "entities.proto"
+	case "managers":
+		return "managers.proto"
+	case "modules":
+		return "modules.proto"
+	case "mechanisms":
+		return "mechanisms.proto"
+	case "common":
+		return "common.proto"
+	default:
+		// NetWall 包名，转换为小写并添加 .proto 后缀
+		if sourceProto != "" {
+			return strings.ToLower(sourceProto) + ".proto"
+		}
+		return ""
+	}
+}
+
 // MMEObjectAutoProtoImport 自动生成 MMEObject 的 Proto 导入
-// 根据 MMEObject 的类型和名称，生成对应的 Proto 导入
+// 根据 MMEObject 的类型和名称，生成对应的 Proto 导入（包括枚举类型）
+// currentSourceProto: 当前 proto 文件的 SourceProto
 // 返回 Proto 导入列表
-func (g *ProtoGenerator) MMEObjectAutoProtoImport(mmeObjects []MMEObjectBase) []string {
+func (g *ProtoGenerator) MMEObjectAutoProtoImport(mmeObjects []MMEObjectBase, currentSourceProto string) []string {
 	imports := []string{}
+
+	// 收集所有字段
+	fields := make([]*blueprint_types.Field, 0)
+	for _, mmeObject := range mmeObjects {
+		fields = append(fields, mmeObject.GetFields()...)
+	}
+
+	// 收集枚举类型的导入
+	enumImports := g.collectEnumImportsFromFields(fields, currentSourceProto)
+	imports = append(imports, enumImports...)
+
+	// 收集其他类型的导入
 	for _, mmeObject := range mmeObjects {
 		for _, f := range mmeObject.GetFields() {
 			switch {
@@ -44,7 +162,6 @@ func (g *ProtoGenerator) MMEObjectAutoProtoImport(mmeObjects []MMEObjectBase) []
 				imports = append(imports, g.genMessageProtoImport(f.GetType()))
 			case f.Type.IsMMEObjectType():
 				objName := f.Type.GetName()
-				fmt.Println("objName", objName)
 				if objName != "" {
 					imports = append(imports, g.genMMEObjectProtoImport(objName))
 				}
@@ -58,7 +175,7 @@ func (g *ProtoGenerator) MMEObjectAutoProtoImport(mmeObjects []MMEObjectBase) []
 				case f.Type.ValueType.IsMessage():
 					imports = append(imports, g.genMessageProtoImport(f.GetValueType()))
 				default:
-					panic(fmt.Sprintf("unknown field type: %s", f.Type.ValueType.GetName()))
+					// 其他类型（如枚举）已在 collectEnumImportsFromFields 中处理
 				}
 			}
 		}
@@ -100,11 +217,20 @@ func (g *ProtoGenerator) genMMEObjectProtoImport(name string) string {
 func (g *ProtoGenerator) generateMechanismsProto(outputDir string) error {
 	sb := strings.Builder{}
 
+	// 收集所有 Mechanism 的字段，用于收集枚举导入
+	allFields := make([]*blueprint_types.Field, 0)
+	for _, mech := range g.data.Mechanisms {
+		allFields = append(allFields, mech.Fields...)
+	}
+
 	// 文件头部
 	imports := []string{}
 	if g.data.HeadFile != nil && len(g.data.HeadFile.CommonDataStructs) > 0 {
 		imports = append(imports, "common.proto")
 	}
+	// 收集枚举类型的导入
+	enumImports := g.collectEnumImportsFromFields(allFields, "mechanisms")
+	imports = append(imports, enumImports...)
 	sb.WriteString(g.generateProtoHeader("MME", imports))
 
 	// 生成所有 Mechanism
@@ -126,20 +252,11 @@ func (g *ProtoGenerator) generateMechanismsProto(outputDir string) error {
 
 		// 生成数据字段（按编号排序）
 		for _, field := range fields {
-			// 获取字段类型
-			protoType := g.typeConverter.ToProtoType(&field.Type)
-			isOptional := g.typeConverter.IsOptionalInProto(&field.Type)
-
-			// 确保字段名不包含冒号
-			fieldName := strings.TrimSuffix(field.Name, ":")
-			fieldName = strings.TrimSpace(fieldName)
-
-			// 生成字段定义（使用4个空格缩进，与 managers.proto 格式一致）
-			if isOptional {
-				sb.WriteString(fmt.Sprintf("    optional %s %s = %d;\n", protoType, fieldName, field.Number))
-			} else {
-				sb.WriteString(fmt.Sprintf("    %s %s = %d;\n", protoType, fieldName, field.Number))
-			}
+			// 使用通用的字段生成方法，自动处理枚举类型引用
+			fieldProto := g.generateFieldProto(field, field.Number, "MME")
+			// 将缩进从 2 个空格改为 4 个空格（与 managers.proto 格式一致）
+			fieldProto = strings.ReplaceAll(fieldProto, "  ", "    ")
+			sb.WriteString(fieldProto)
 		}
 
 		// 生成 xmap 的增量同步字段（在 message 内部）
@@ -191,7 +308,7 @@ func (g *ProtoGenerator) generateModulesProto(outputDir string) error {
 	for _, module := range g.data.Modules {
 		objects = append(objects, module.MMEObject)
 	}
-	imports := g.MMEObjectAutoProtoImport(objects)
+	imports := g.MMEObjectAutoProtoImport(objects, "modules")
 	sb.WriteString(g.generateProtoHeader("MME", imports))
 
 	// 生成所有 Module
@@ -239,7 +356,7 @@ func (g *ProtoGenerator) generateManagersProto(outputDir string) error {
 	for _, manager := range g.data.Managers {
 		objects = append(objects, manager.MMEObject)
 	}
-	imports := g.MMEObjectAutoProtoImport(objects)
+	imports := g.MMEObjectAutoProtoImport(objects, "managers")
 	sb.WriteString(g.generateProtoHeader("MME", imports))
 
 	// 生成所有 Manager
@@ -309,7 +426,7 @@ func (g *ProtoGenerator) generateEntitiesProto(outputDir string) error {
 	for _, entity := range g.data.Entities {
 		objects = append(objects, entity.MMEObject)
 	}
-	imports := g.MMEObjectAutoProtoImport(objects)
+	imports := g.MMEObjectAutoProtoImport(objects, "entities")
 	sb.WriteString(g.generateProtoHeader("MME", imports))
 
 	// 生成所有 Entity
@@ -335,13 +452,6 @@ func (g *ProtoGenerator) generateEntitiesProto(outputDir string) error {
 		sb.WriteString("\n    int64 XXXId = 10000;\n")
 
 		sb.WriteString("}\n\n")
-	}
-
-	// 生成来自 entities.yaml 的枚举
-	for _, enum := range g.data.Enums {
-		if enum.SourceProto == "entities" {
-			sb.WriteString(generateEnumProto(enum))
-		}
 	}
 
 	content := sb.String()
