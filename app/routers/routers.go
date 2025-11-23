@@ -18,7 +18,7 @@ import (
 )
 
 func init() {
-	RegisterHandler(pb.PID_Request_SearchBook, func(ctx servicezone.IContext, data []byte) (proto.Message, string, error) {
+	RegisterHandler(pb.PID_Request_LoginRequest, func(ctx servicezone.IContext, data []byte) (proto.Message, string, error) {
 		req := &core.Request_LoginRequest{}
 		if err := proto.Unmarshal(data, req); err != nil {
 			return nil, "", err

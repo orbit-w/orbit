@@ -23,6 +23,7 @@ func runBlueprintGen(cmd *cobra.Command, args []string) {
 	blueprintDir, _ := cmd.Flags().GetString("blueprint-dir")
 	protoOutput, _ := cmd.Flags().GetString("proto-output")
 	goOutput, _ := cmd.Flags().GetString("go-output")
+	protocolIDsOutput, _ := cmd.Flags().GetString("protocol-ids-output")
 	debug, _ := cmd.Flags().GetBool("debug")
 
 	if debug {
@@ -91,6 +92,18 @@ func runBlueprintGen(cmd *cobra.Command, args []string) {
 		println("Proto files generated successfully")
 	}
 
+	// 生成 protocol_ids.pb.go 文件
+	// protocol_ids.pb.go 应该输出到 app/proto/ 目录下，每个 NetWall 包生成一个文件
+	// 使用 protocol-ids-output 参数，默认值为 app/proto
+	if err := protoGen.GenerateProtocolIDs(protocolIDsOutput); err != nil {
+		cmd.PrintErrln("Failed to generate protocol_ids.pb.go:", err)
+		return
+	}
+
+	if debug {
+		println("protocol_ids.pb.go generated successfully")
+	}
+
 	// 生成 Go 文件
 	goGen := NewGoStructGenerator(data)
 	if err := goGen.Generate(goOutput); err != nil {
@@ -118,6 +131,7 @@ func InitCmd(father *cobra.Command) {
 	blueprintGenCmd.Flags().String("blueprint-dir", "../protocol/blueprint", "Directory containing blueprint YAML files")
 	blueprintGenCmd.Flags().String("proto-output", "../protocol/protocol", "Output directory for proto files")
 	blueprintGenCmd.Flags().String("go-output", "app/mme", "Output directory for Go files")
+	blueprintGenCmd.Flags().String("protocol-ids-output", "app/proto/pb", "Output directory for protocol_ids.pb.go file")
 	blueprintGenCmd.Flags().Bool("debug", false, "Enable debug mode")
 
 	father.AddCommand(blueprintGenCmd)

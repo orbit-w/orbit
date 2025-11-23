@@ -59,6 +59,12 @@ func (g *ProtoGenerator) Generate(outputDir string) error {
 	return nil
 }
 
+// GenerateProtocolIDs 生成 protocol_ids.pb.go 文件
+func (g *ProtoGenerator) GenerateProtocolIDs(outputDir string) error {
+	protocolIDGen := newProtocolIDGenerator(g.data)
+	return protocolIDGen.Generate(outputDir)
+}
+
 // generateProtoHeader 生成 Proto 文件头部
 func (g *ProtoGenerator) generateProtoHeader(packageName string, imports []string) string {
 	builder := NewCodeBuilder()
@@ -129,16 +135,6 @@ func (g *ProtoGenerator) generateFieldProtoWithIndent(field *blueprint_types.Fie
 // 保留此方法以保持向后兼容，但实际使用 resolver.ResolveTypeReference
 func (g *ProtoGenerator) resolveEnumTypeReference(protoType string, fieldType *blueprint_types.FieldType, currentPackageName string) string {
 	return g.resolver.ResolveTypeReference(fieldType, currentPackageName)
-}
-
-// isEnumType 检查字段类型是否是枚举类型（已废弃，使用 TypeReferenceResolver）
-func (g *ProtoGenerator) isEnumType(fieldType *blueprint_types.FieldType) bool {
-	return g.resolver.isEnumType(fieldType.Name)
-}
-
-// getPackageNameForSource 根据 SourceProto 返回对应的包名（已废弃，使用 TypeReferenceResolver）
-func (g *ProtoGenerator) getPackageNameForSource(sourceProto string) string {
-	return g.resolver.getPackageNameForSource(sourceProto)
 }
 
 // generateFieldProtoFromOldField 从 Field 类型生成 Proto 定义（已统一使用 *blueprint_types.Field）
