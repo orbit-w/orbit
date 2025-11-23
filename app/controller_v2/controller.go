@@ -28,12 +28,6 @@ func (c *Controller) HandleHeartBeat(req *core.Request_HeartBeat) proto.Message 
 	return nil
 }
 
-func (c *Controller) HandleLoginRequest(req *core.Request_LoginRequest, playerEntity *mmeobj.PlayerEntityWrapper) proto.Message {
-	// TODO: 实现业务逻辑
-	// playerEntity 已经由 Router 层加载完成，可以直接使用
-	return nil
-}
-
 func (c *Controller) HandleAskLevelUp(req *mme.Request_AskLevelUp) proto.Message {
 	// TODO: 实现业务逻辑
 	return nil
@@ -41,5 +35,11 @@ func (c *Controller) HandleAskLevelUp(req *mme.Request_AskLevelUp) proto.Message
 
 func (c *Controller) HandleSearchNewsPaper(req *sample.Request_SearchNewsPaper) proto.Message {
 	// TODO: 实现业务逻辑
+	return nil
+}
+
+func (c *Controller) HandleLoginRequest(req *core.Request_LoginRequest, playerEntity *mmeobj.PlayerEntityWrapper) proto.Message {
+	// TODO: 实现业务逻辑
+	// playerEntity 已经由 Router 层加载完成，可以直接使用
 	return nil
 }

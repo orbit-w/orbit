@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-// GenerateControllerMethods 生成或更新 Controller Handle 方法
+// GenerateControllerMethods 生成或更新 Controller Handle 方法（增量模式）
 func GenerateControllerMethods(ctx *RouterGenContext) error {
 	// 确定 Controller 文件路径
 	controllerPath := ctx.ControllerPath
@@ -29,14 +29,39 @@ func GenerateControllerMethods(ctx *RouterGenContext) error {
 		return fmt.Errorf("cannot determine controller file path, please specify --controller-path")
 	}
 
-	// 解析现有的 Controller 文件
+	// 检查文件是否存在
+	fileExists := false
+	if _, err := os.Stat(controllerPath); err == nil {
+		fileExists = true
+	}
+
+	// 解析现有的 Controller 文件，获取所有已存在的 Handle 方法（不管是否有实现）
 	existingMethods, err := parseExistingControllerMethods(ctx.Controller, controllerPath)
 	if err != nil {
-		// 如果文件不存在，existingMethods 为空，继续生成
+		// 如果文件不存在或解析失败，existingMethods 为空，继续生成
 		existingMethods = make(map[string]*MethodInfo)
 	}
 
-	// 生成新的 Controller 文件内容
+	// 筛选出需要生成的新方法（不存在的方法）
+	newRequests := make([]*RequestInfo, 0)
+	for _, req := range ctx.Requests {
+		methodName := fmt.Sprintf("Handle%s", req.RequestName)
+		if _, exists := existingMethods[methodName]; !exists {
+			newRequests = append(newRequests, req)
+		}
+	}
+
+	// 如果没有新方法需要生成，直接返回
+	if len(newRequests) == 0 {
+		return nil
+	}
+
+	// 如果文件已存在，使用增量模式追加新方法
+	if fileExists {
+		return appendNewMethods(ctx, controllerPath, newRequests)
+	}
+
+	// 如果文件不存在，生成完整的 Controller 文件
 	controllerCode, err := generateControllerFile(ctx, existingMethods)
 	if err != nil {
 		return fmt.Errorf("failed to generate controller code: %w", err)
@@ -89,6 +114,12 @@ func parseExistingControllerMethods(controller *ControllerInfo, routerOutputPath
 		return nil, fmt.Errorf("failed to parse controller file: %w", err)
 	}
 
+	// 确定 Controller 类型名
+	typeName := "Controller"
+	if controller != nil && controller.TypeName != "" {
+		typeName = controller.TypeName
+	}
+
 	// 查找 Controller 类型的方法
 	ast.Inspect(node, func(n ast.Node) bool {
 		switch x := n.(type) {
@@ -98,10 +129,12 @@ func parseExistingControllerMethods(controller *ControllerInfo, routerOutputPath
 				recv := x.Recv.List[0]
 				if starExpr, ok := recv.Type.(*ast.StarExpr); ok {
 					if ident, ok := starExpr.X.(*ast.Ident); ok {
-						if ident.Name == controller.TypeName {
+						if ident.Name == typeName {
 							// 这是 Controller 的方法
 							methodInfo := extractMethodInfo(x, fset, controllerPath)
 							if methodInfo != nil && strings.HasPrefix(methodInfo.Name, "Handle") {
+								// 增量模式：记录所有 Handle 方法（不管是否有实现）
+								// 只要方法存在就记录，用于判断是否需要生成
 								methods[methodInfo.Name] = methodInfo
 							}
 						}
@@ -145,6 +178,15 @@ func extractMethodInfo(fn *ast.FuncDecl, fset *token.FileSet, filePath string) *
 	if fn.Body != nil && methodInfo.HasBody {
 		// 读取原始文件内容来提取方法体
 		methodInfo.Body = extractMethodBody(fn, fset, filePath)
+
+		// 如果提取的 body 为空，但方法有保护标记，仍然保留
+		if methodInfo.Body == "" && hasPreserveMarker(fn) {
+			// 强制保留（即使看起来是空实现）
+			body := extractMethodBodyRaw(fn, fset, filePath)
+			if body != "" {
+				methodInfo.Body = body
+			}
+		}
 	}
 
 	return methodInfo
@@ -179,7 +221,95 @@ func extractMethodBody(fn *ast.FuncDecl, fset *token.FileSet, filePath string) s
 	}
 
 	body := string(data[start+1 : end-1]) // 去掉 { 和 }
-	return strings.TrimSpace(body)
+	bodyTrimmed := strings.TrimSpace(body)
+
+	// 检查是否是简单的 return nil（空实现，不保留）
+	if bodyTrimmed == "return nil" || bodyTrimmed == "return" {
+		return ""
+	}
+
+	// 检查是否包含业务代码
+	if !isBusinessCode(body) {
+		return "" // 不是业务代码，不保留
+	}
+
+	return body
+}
+
+// isBusinessCode 判断方法体是否包含业务代码
+// 业务代码的特征：
+// 1. 不是简单的 return nil
+// 2. 不是只有 TODO 注释
+// 3. 有实际的业务逻辑（如函数调用、变量赋值等）
+func isBusinessCode(body string) bool {
+	if body == "" {
+		return false
+	}
+
+	bodyTrimmed := strings.TrimSpace(body)
+
+	// 检查是否是简单的 return nil
+	if bodyTrimmed == "return nil" || bodyTrimmed == "return" {
+		return false
+	}
+
+	// 检查是否只有 TODO 注释
+	lines := strings.Split(bodyTrimmed, "\n")
+	hasNonCommentCode := false
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		// 跳过空行和注释
+		if trimmed == "" || strings.HasPrefix(trimmed, "//") {
+			continue
+		}
+		// 如果包含实际的代码（不是只有 return nil）
+		if trimmed != "return nil" && trimmed != "return" {
+			hasNonCommentCode = true
+			break
+		}
+	}
+
+	return hasNonCommentCode
+}
+
+// extractMethodBodyRaw 提取方法体（原始版本，不进行业务代码判断）
+func extractMethodBodyRaw(fn *ast.FuncDecl, fset *token.FileSet, filePath string) string {
+	if fn.Body == nil {
+		return ""
+	}
+
+	// 读取文件内容
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return ""
+	}
+
+	// 提取方法体的文本
+	start := fset.Position(fn.Body.Pos()).Offset
+	end := fset.Position(fn.Body.End()).Offset
+	if start < 0 || end < 0 || start >= len(data) || end > len(data) {
+		return ""
+	}
+
+	body := string(data[start+1 : end-1]) // 去掉 { 和 }
+	return body
+}
+
+// hasPreserveMarker 检查方法是否有保护标记
+// 支持注释：// +routergen:preserve 或 // routergen:preserve
+func hasPreserveMarker(fn *ast.FuncDecl) bool {
+	if fn.Doc == nil {
+		return false
+	}
+
+	for _, comment := range fn.Doc.List {
+		if strings.Contains(comment.Text, "+routergen:preserve") ||
+			strings.Contains(comment.Text, "routergen:preserve") {
+			return true
+		}
+	}
+
+	return false
 }
 
 // generateControllerFile 生成 Controller 文件
@@ -299,25 +429,32 @@ func generateHandleMethod(req *RequestInfo, controller *ControllerInfo, existing
 	code.WriteString(") proto.Message {\n")
 
 	// 生成方法体
+	// 优先保留已有的业务代码实现
 	if exists && existingMethod != nil && existingMethod.HasBody && existingMethod.Body != "" {
 		// 保留已有的实现
-		// 方法体已经包含了缩进，直接使用
 		body := existingMethod.Body
+
 		// 确保每行都有正确的缩进
 		lines := strings.Split(body, "\n")
-		for _, line := range lines {
+		for i, line := range lines {
 			trimmed := strings.TrimSpace(line)
 			if trimmed != "" {
 				// 如果行没有缩进，添加缩进
 				if !strings.HasPrefix(line, "\t") && !strings.HasPrefix(line, " ") {
-					code.WriteString("\t" + line + "\n")
+					code.WriteString("\t" + line)
 				} else {
-					code.WriteString(line + "\n")
+					code.WriteString(line)
 				}
-			} else {
+				// 如果不是最后一行，添加换行
+				if i < len(lines)-1 {
+					code.WriteString("\n")
+				}
+			} else if i < len(lines)-1 {
+				// 空行也要保留（除了最后一行）
 				code.WriteString("\n")
 			}
 		}
+		code.WriteString("\n")
 	} else {
 		// 生成默认实现
 		if len(req.EntityRefs) > 0 {
@@ -356,7 +493,7 @@ func inferControllerPathFromRouter(routerPath string) string {
 	// router 路径通常是 app/routers/routers.go
 	// controller 路径通常是 app/controller_v2/controller.go
 	dir := filepath.Dir(routerPath)
-	
+
 	// 尝试多个可能的路径
 	possiblePaths := []string{
 		filepath.Join(filepath.Dir(dir), "controller_v2", "controller.go"),
@@ -398,3 +535,103 @@ func findControllerFile(controller *ControllerInfo) string {
 	return ""
 }
 
+// appendNewMethods 增量模式：在现有文件中追加新方法
+func appendNewMethods(ctx *RouterGenContext, controllerPath string, newRequests []*RequestInfo) error {
+	// 读取现有文件内容
+	existingContent, err := os.ReadFile(controllerPath)
+	if err != nil {
+		return fmt.Errorf("failed to read existing controller file: %w", err)
+	}
+
+	// 解析现有文件，找到最后一个方法的位置
+	fset := token.NewFileSet()
+	node, err := parser.ParseFile(fset, controllerPath, existingContent, parser.ParseComments)
+	if err != nil {
+		return fmt.Errorf("failed to parse existing controller file: %w", err)
+	}
+
+	// 确定 Controller 类型名
+	typeName := "Controller"
+	if ctx.Controller != nil && ctx.Controller.TypeName != "" {
+		typeName = ctx.Controller.TypeName
+	}
+
+	// 找到最后一个 Handle 方法的位置
+	var lastMethodEnd token.Pos
+	ast.Inspect(node, func(n ast.Node) bool {
+		switch x := n.(type) {
+		case *ast.FuncDecl:
+			// 检查是否是 Controller 的方法
+			if x.Recv != nil && len(x.Recv.List) > 0 {
+				recv := x.Recv.List[0]
+				if starExpr, ok := recv.Type.(*ast.StarExpr); ok {
+					if ident, ok := starExpr.X.(*ast.Ident); ok {
+						if ident.Name == typeName && strings.HasPrefix(x.Name.Name, "Handle") {
+							// 更新最后一个方法的位置
+							if x.End() > lastMethodEnd {
+								lastMethodEnd = x.End()
+							}
+						}
+					}
+				}
+			}
+		}
+		return true
+	})
+
+	// 生成新方法的代码
+	var newMethodsCode strings.Builder
+	for _, req := range newRequests {
+		methodCode := generateHandleMethod(req, ctx.Controller, nil, false)
+		newMethodsCode.WriteString(methodCode)
+		newMethodsCode.WriteString("\n")
+	}
+
+	content := string(existingContent)
+
+	// 如果找到了最后一个方法，在它之后插入新方法
+	if lastMethodEnd > 0 {
+		insertPos := fset.Position(lastMethodEnd).Offset
+		if insertPos > 0 && insertPos < len(content) {
+			// 在最后一个方法之后插入新方法
+			before := content[:insertPos]
+			after := content[insertPos:]
+
+			// 确保在最后一个方法后有换行
+			if !strings.HasSuffix(before, "\n") {
+				before += "\n"
+			}
+			if !strings.HasSuffix(before, "\n\n") {
+				before += "\n"
+			}
+
+			content = before + newMethodsCode.String() + after
+		} else {
+			// 如果位置无效，直接追加到文件末尾
+			if !strings.HasSuffix(content, "\n") {
+				content += "\n"
+			}
+			content += newMethodsCode.String()
+		}
+	} else {
+		// 如果没有找到任何方法，追加到文件末尾
+		if !strings.HasSuffix(content, "\n") {
+			content += "\n"
+		}
+		content += "\n" + newMethodsCode.String()
+	}
+
+	// 格式化代码
+	formatted, err := format.Source([]byte(content))
+	if err != nil {
+		// 如果格式化失败，使用原始内容
+		formatted = []byte(content)
+	}
+
+	// 写入文件
+	if err := os.WriteFile(controllerPath, formatted, 0644); err != nil {
+		return fmt.Errorf("failed to write controller file: %w", err)
+	}
+
+	return nil
+}
