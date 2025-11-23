@@ -11,15 +11,17 @@ import (
 // ZoneActorBehavior ServiceZone Actor 的行为实现
 // 实现 actor.Behavior 接口
 type ZoneActorBehavior struct {
-	zone   *ServiceZone
-	logger *mlog.Logger
+	zone    *ServiceZone
+	context IContext
+	logger  *mlog.Logger
 }
 
 // NewZoneActorBehavior 创建新的 ZoneActorBehavior
 func NewZoneActorBehavior(zone *ServiceZone) actor.Actor {
 	return &ZoneActorBehavior{
-		zone:   zone,
-		logger: logger.GetLogger(),
+		zone:    zone,
+		logger:  logger.GetLogger(),
+		context: NewServiceZoneContext(zone),
 	}
 }
 

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"gitee.com/orbit-w/orbit/core/dispatch"
 	"gitee.com/orbit-w/orbit/lib/module/unipue_task_exec"
 	"github.com/asynkron/protoactor-go/actor"
 	cmap "github.com/orcaman/concurrent-map"
@@ -14,16 +13,14 @@ type ZoneManager struct {
 	system *actor.ActorSystem
 	cache  cmap.ConcurrentMap
 	exec   *unipue_task_exec.UniqueTaskExecutor
-	router *dispatch.Router
 	zones  []*ServiceZone
 }
 
-func NewZoneManager(router *dispatch.Router) *ZoneManager {
+func NewZoneManager() *ZoneManager {
 	return &ZoneManager{
 		system: actor.NewActorSystem(),
 		cache:  cmap.New(),
 		exec:   unipue_task_exec.NewUniqueTaskExecutor(),
-		router: router,
 	}
 }
 

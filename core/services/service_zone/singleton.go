@@ -4,7 +4,6 @@ import (
 	"sync"
 	"time"
 
-	"gitee.com/orbit-w/orbit/core/dispatch"
 	"github.com/asynkron/protoactor-go/actor"
 )
 
@@ -15,7 +14,7 @@ var (
 
 func GetZoneManager() *ZoneManager {
 	once.Do(func() {
-		globalManager = NewZoneManager(dispatch.GetRouter())
+		globalManager = NewZoneManager()
 	})
 	return globalManager
 }

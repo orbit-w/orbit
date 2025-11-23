@@ -5,30 +5,40 @@
 package routers
 
 import (
-	"gitee.com/orbit-w/orbit/app/controller"
+	"fmt"
+
+	controllerv2 "gitee.com/orbit-w/orbit/app/controller_v2"
+	"gitee.com/orbit-w/orbit/app/proto/core"
+	"gitee.com/orbit-w/orbit/app/proto/mme"
 	"gitee.com/orbit-w/orbit/app/proto/pb"
-	"gitee.com/orbit-w/orbit/core/dispatch"
+
+	mmeobj "gitee.com/orbit-w/orbit/app/mme"
+	servicezone "gitee.com/orbit-w/orbit/core/services/service_zone"
 	"google.golang.org/protobuf/proto"
 )
 
 func init() {
-
-	// Register route for Request_SearchBook -> Request_SearchBook_Rsp
-	dispatch.Register(pb.PID_Request_SearchBook, func(data []byte) (proto.Message, string, error) {
-		req := &pb.Request_SearchBook{}
+	Register(pb.PID_Request_SearchBook, func(ctx servicezone.IContext, data []byte) (proto.Message, string, error) {
+		req := &core.Request_LoginRequest{}
 		if err := proto.Unmarshal(data, req); err != nil {
 			return nil, "", err
 		}
-		return controller.GExampleController.HandleSearchBook(req), "Request_SearchBook_Rsp", nil
-	})
+		refs := make([]*mme.EntityRef, 0)
+		if req.PlayerEntityRef != nil {
+			refs = append(refs, req.PlayerEntityRef)
+		}
 
-	// Register route for Request_HeartBeat -> Rsp_OK
-	dispatch.Register(pb.PID_Request_HeartBeat, func(data []byte) (proto.Message, string, error) {
-		req := &pb.Request_HeartBeat{}
-		if err := proto.Unmarshal(data, req); err != nil {
+		entities, err := ctx.LoadRefs(refs)
+		if err != nil {
 			return nil, "", err
 		}
-		return controller.GExampleController.HandleHeartBeat(req), "Rsp_OK", nil
-	})
 
+		if len(entities) < len(refs) {
+			return nil, "", fmt.Errorf("not enough entities loaded")
+		}
+
+		// 根据Req中Ref的顺序，获取对应的实体
+		playerEntity := entities[0].(*mmeobj.PlayerEntityWrapper)
+		return controllerv2.GControllerV2.HandleLoginRequest(req, playerEntity), "Request_LoginRequest_Rsp", nil
+	})
 }

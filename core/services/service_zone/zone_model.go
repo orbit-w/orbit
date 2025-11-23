@@ -97,6 +97,25 @@ func (zone *ServiceZone) GetActorPID() *actor.PID {
 	return zone.actorPID
 }
 
+// LoadRefs 加载多个 EntityRef
+// refs: 实体引用列表
+// 返回: 实体列表, 错误
+func (zone *ServiceZone) LoadRefs(refs []*mme.EntityRef) ([]mmeobj.IEntity, error) {
+	entities := make([]mmeobj.IEntity, 0)
+	for _, ref := range refs {
+		entity, err := zone.Load(ref.GetEntityId(), ref.GetEntityType())
+		if err != nil {
+			return nil, err
+		}
+		entities = append(entities, entity)
+	}
+	return entities, nil
+}
+
+// Load 加载单个 Entity
+// id: 实体 ID
+// entityType: 实体类型
+// 返回: 实体, 错误
 func (zone *ServiceZone) Load(id int64, entityType mme.EntityType) (mmeobj.IEntity, error) {
 	factory := mmeobj.GetEntityFactory(entityType)
 	if factory == nil {

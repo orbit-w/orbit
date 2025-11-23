@@ -467,7 +467,7 @@ MME 采用四层结构：Entity → Manager → Module → Mechanism。
       Description: 数据访问权限（all/s/c）
       Choices: [all, s, c]
 
-- CommonDataStruct:
+- DataStruct:
   - Fish:
       int32  FishId: 1
       map<int32, int32> BodyMap: 2

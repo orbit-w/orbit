@@ -12,12 +12,10 @@ import (
 	"gitee.com/orbit-w/orbit/lib/module/logger"
 
 	"gitee.com/orbit-w/orbit/app/modules/service"
-	"gitee.com/orbit-w/orbit/core/dispatch"
 	"gitee.com/orbit-w/orbit/core/network"
 	stream "gitee.com/orbit-w/orbit/core/services/agent_stream"
 
 	_ "gitee.com/orbit-w/orbit/app/controller"
-	"google.golang.org/protobuf/proto"
 )
 
 /*
@@ -76,15 +74,16 @@ func gracefulShutdown(stopper func(ctx context.Context) error) {
 }
 
 var requestHandler = func(session *network.Session, data []byte, seq, pid uint32) error {
-	response, pid, err := dispatch.Dispatch(pid, data)
-	if err != nil {
-		return err
-	}
+	// response, pid, err := dispatch.Dispatch(pid, data)
+	// if err != nil {
+	// 	return err
+	// }
 
-	respData, err := proto.Marshal(response.(proto.Message))
-	if err != nil {
-		return err
-	}
+	// respData, err := proto.Marshal(response.(proto.Message))
+	// if err != nil {
+	// 	return err
+	// }
 
-	return session.SendData(respData, seq, pid)
+	// return session.SendData(respData, seq, pid)
+	return nil
 }
