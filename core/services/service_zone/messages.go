@@ -97,6 +97,7 @@ type SubscribeByStrategyTypeRequest struct {
 }
 
 type Request struct {
+	Seq     uint32
 	ZoneId  string
 	Session *network.Session
 	Bytes   []byte

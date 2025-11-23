@@ -18,11 +18,12 @@ import (
 )
 
 func init() {
-	Register(pb.PID_Request_SearchBook, func(ctx servicezone.IContext, data []byte) (proto.Message, string, error) {
+	RegisterHandler(pb.PID_Request_SearchBook, func(ctx servicezone.IContext, data []byte) (proto.Message, string, error) {
 		req := &core.Request_LoginRequest{}
 		if err := proto.Unmarshal(data, req); err != nil {
 			return nil, "", err
 		}
+
 		refs := make([]*mme.EntityRef, 0)
 		if req.PlayerEntityRef != nil {
 			refs = append(refs, req.PlayerEntityRef)
@@ -33,12 +34,15 @@ func init() {
 			return nil, "", err
 		}
 
-		if len(entities) < len(refs) {
-			return nil, "", fmt.Errorf("not enough entities loaded")
+		// 根据Req中Ref的顺序，获取对应的实体
+		var (
+			ok           bool
+			playerEntity *mmeobj.PlayerEntityWrapper
+		)
+		if playerEntity, ok = entities[0].(*mmeobj.PlayerEntityWrapper); !ok {
+			return nil, "", fmt.Errorf("player entity not found")
 		}
 
-		// 根据Req中Ref的顺序，获取对应的实体
-		playerEntity := entities[0].(*mmeobj.PlayerEntityWrapper)
 		return controllerv2.GControllerV2.HandleLoginRequest(req, playerEntity), "Request_LoginRequest_Rsp", nil
 	})
 }

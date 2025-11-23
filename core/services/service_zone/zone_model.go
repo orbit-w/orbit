@@ -54,6 +54,7 @@ func NewServiceZone(id string, zoneType ZoneType) *ServiceZone {
 
 // Start 启动 ServiceZone 的 Actor
 // 需要在 Actor 系统启动后调用
+// router: 路由分发器，用于处理请求（可选，如果为 nil 则无法处理请求）
 func (zone *ServiceZone) Start(system *actor.ActorSystem) error {
 	zone.actorSystem = system
 	// 直接创建持久化Actor，使用supervision策略

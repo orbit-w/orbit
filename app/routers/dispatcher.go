@@ -10,7 +10,7 @@ import (
 
 var (
 	// 全局路由器实例
-	globalRouter *Router
+	globalRouter *Routers
 
 	// 确保全局实例只初始化一次
 	routerOnce sync.Once
@@ -23,44 +23,28 @@ func Init() {
 	})
 }
 
-func GetRouter() *Router {
+func GetRouter() *Routers {
 	routerOnce.Do(func() {
 		globalRouter = NewRouter()
 	})
 	return globalRouter
 }
 
-func Register(pid uint32, router Handler) {
-	globalRouter.Register(pid, router)
+func RegisterHandler(pid uint32, router func(ctx servicezone.IContext, data []byte) (proto.Message, string, error)) {
+	globalRouter.RegisterHandler(pid, router)
 }
 
-// Dispatch 分发请求到对应的处理方法
-func Dispatch(pid uint32, data []byte) Handler {
-	if globalRouter == nil {
-		Init()
-	}
-
-	handler := globalRouter.Dispatch(pid)
-	if handler == nil {
-		return nil
-	}
-
-	return handler
+type Routers struct {
+	funcMap map[uint32]func(ctx servicezone.IContext, data []byte) (proto.Message, string, error)
 }
 
-type Handler func(ctx servicezone.IContext, data []byte) (proto.Message, string, error)
-
-type Router struct {
-	funcMap map[uint32]Handler
-}
-
-func NewRouter() *Router {
-	return &Router{
-		funcMap: make(map[uint32]Handler),
+func NewRouter() *Routers {
+	return &Routers{
+		funcMap: make(map[uint32]func(ctx servicezone.IContext, data []byte) (proto.Message, string, error)),
 	}
 }
 
-func (r *Router) Register(pid uint32, router Handler) {
+func (r *Routers) RegisterHandler(pid uint32, router func(ctx servicezone.IContext, data []byte) (proto.Message, string, error)) {
 	if _, ok := r.funcMap[pid]; ok {
 		panic(fmt.Sprintf("pid %d already registered", pid))
 	}
@@ -68,11 +52,11 @@ func (r *Router) Register(pid uint32, router Handler) {
 	r.funcMap[pid] = router
 }
 
-func (r *Router) Dispatch(pid uint32) Handler {
-	router, ok := r.funcMap[pid]
+func (r *Routers) Dispatch(pid uint32) func(ctx servicezone.IContext, data []byte) (proto.Message, string, error) {
+	handler, ok := r.funcMap[pid]
 	if !ok {
 		return nil
 	}
 
-	return router
+	return handler
 }

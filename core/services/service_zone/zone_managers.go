@@ -67,7 +67,7 @@ func (m *ZoneManager) Load(zoneId string, zoneType ...ZoneType) (*actor.PID, err
 		// 创建 ServiceZone
 		zone := NewServiceZone(zoneId, zt)
 
-		// 启动 Zone Actor
+		// 启动 Zone Actor，传递 router
 		if err := zone.Start(m.system); err != nil {
 			return fmt.Errorf("failed to start zone actor for zoneId %s: %w", zoneId, err)
 		}

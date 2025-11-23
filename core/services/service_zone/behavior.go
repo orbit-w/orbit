@@ -3,9 +3,11 @@ package servicezone
 import (
 	"gitee.com/orbit-w/meteor/bases/misc/utils"
 	"gitee.com/orbit-w/meteor/modules/mlog"
+	"gitee.com/orbit-w/orbit/app/proto/pb"
 	"gitee.com/orbit-w/orbit/lib/module/logger"
 	"github.com/asynkron/protoactor-go/actor"
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/proto"
 )
 
 // ZoneActorBehavior ServiceZone Actor 的行为实现
@@ -17,6 +19,7 @@ type ZoneActorBehavior struct {
 }
 
 // NewZoneActorBehavior 创建新的 ZoneActorBehavior
+// router: 路由分发器，由外部注入，用于解耦 service_zone 和 routers 之间的循环依赖
 func NewZoneActorBehavior(zone *ServiceZone) actor.Actor {
 	return &ZoneActorBehavior{
 		zone:    zone,
@@ -43,14 +46,33 @@ func (b *ZoneActorBehavior) Receive(ctx actor.Context) {
 	}
 }
 
-// HandleSend 处理发送消息（不需要响应）
+// HandleSend 处理发送消息
 func (ab *ZoneActorBehavior) HandleRequest(ctx actor.Context, req *Request) {
+	handler := globalRouter.Dispatch(req.Pid)
+	if handler == nil {
+		ab.logger.Error("ZoneActor received unknown message", zap.Uint32("Pid", req.Pid), zap.Any("Message", req))
+		return
+	}
 
-}
+	result, respName, err := handler(ab.context, req.Bytes)
+	if err != nil {
+		ab.logger.Error("ZoneActor handler error", zap.Error(err), zap.Uint32("Pid", req.Pid))
+	}
 
-// HandleForward 处理转发消息
-func (ab *ZoneActorBehavior) HandleForward(ctx actor.Context, msg any) {
+	if result == nil {
+		rpid, ok := pb.GetProtocolID(respName)
+		if !ok {
+			ab.logger.Error("ZoneActor received unknown message", zap.Uint32("Pid", req.Pid), zap.Any("Message", req))
+			return
+		}
+		respData, err := proto.Marshal(result)
+		if err != nil {
+			ab.logger.Error("ZoneActor marshal error", zap.Error(err), zap.Uint32("Pid", req.Pid))
+			return
+		}
 
+		req.Session.SendData(respData, req.Seq, rpid)
+	}
 }
 
 // HandleInit 处理初始化

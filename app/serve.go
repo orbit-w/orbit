@@ -12,8 +12,10 @@ import (
 	"gitee.com/orbit-w/orbit/lib/module/logger"
 
 	"gitee.com/orbit-w/orbit/app/modules/service"
+	"gitee.com/orbit-w/orbit/app/routers"
 	"gitee.com/orbit-w/orbit/core/network"
 	stream "gitee.com/orbit-w/orbit/core/services/agent_stream"
+	servicezone "gitee.com/orbit-w/orbit/core/services/service_zone"
 
 	_ "gitee.com/orbit-w/orbit/app/controller"
 )
@@ -26,6 +28,11 @@ import (
 
 func Serve(nodeId string) {
 	//cfg := config.GetConfig()
+
+	// 初始化 routers
+	routers.Init()
+
+	servicezone.InitWithRouter(routers.GetRouter())
 
 	// Init services
 	services := service.NewServices()
