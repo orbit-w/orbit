@@ -10,6 +10,7 @@ import (
 	controllerv2 "gitee.com/orbit-w/orbit/app/controller_v2"
 	"gitee.com/orbit-w/orbit/app/proto/core"
 	"gitee.com/orbit-w/orbit/app/proto/mme"
+	"gitee.com/orbit-w/orbit/app/proto/sample"
 	"gitee.com/orbit-w/orbit/app/proto/pb"
 
 	mmeobj "gitee.com/orbit-w/orbit/app/mme"
@@ -18,6 +19,22 @@ import (
 )
 
 func init() {
+	RegisterHandler(pb.PID_Request_SearchBook, func(ctx servicezone.IContext, data []byte) (proto.Message, string, error) {
+		req := &core.Request_SearchBook{}
+		if err := proto.Unmarshal(data, req); err != nil {
+			return nil, "", err
+		}
+
+		return controllerv2.GControllerV2.HandleSearchBook(req), "Request_SearchBook_Rsp", nil
+	})
+	RegisterHandler(pb.PID_Request_HeartBeat, func(ctx servicezone.IContext, data []byte) (proto.Message, string, error) {
+		req := &core.Request_HeartBeat{}
+		if err := proto.Unmarshal(data, req); err != nil {
+			return nil, "", err
+		}
+
+		return controllerv2.GControllerV2.HandleHeartBeat(req), "Request_HeartBeat_Rsp", nil
+	})
 	RegisterHandler(pb.PID_Request_LoginRequest, func(ctx servicezone.IContext, data []byte) (proto.Message, string, error) {
 		req := &core.Request_LoginRequest{}
 		if err := proto.Unmarshal(data, req); err != nil {
@@ -36,13 +53,29 @@ func init() {
 
 		// 根据Req中Ref的顺序，获取对应的实体
 		var (
-			ok           bool
 			playerEntity *mmeobj.PlayerEntityWrapper
+			ok bool
 		)
 		if playerEntity, ok = entities[0].(*mmeobj.PlayerEntityWrapper); !ok {
 			return nil, "", fmt.Errorf("player entity not found")
 		}
 
 		return controllerv2.GControllerV2.HandleLoginRequest(req, playerEntity), "Request_LoginRequest_Rsp", nil
+	})
+	RegisterHandler(pb.PID_Request_AskLevelUp, func(ctx servicezone.IContext, data []byte) (proto.Message, string, error) {
+		req := &mme.Request_AskLevelUp{}
+		if err := proto.Unmarshal(data, req); err != nil {
+			return nil, "", err
+		}
+
+		return controllerv2.GControllerV2.HandleAskLevelUp(req), "Request_AskLevelUp_Rsp", nil
+	})
+	RegisterHandler(pb.PID_Request_SearchNewsPaper, func(ctx servicezone.IContext, data []byte) (proto.Message, string, error) {
+		req := &sample.Request_SearchNewsPaper{}
+		if err := proto.Unmarshal(data, req); err != nil {
+			return nil, "", err
+		}
+
+		return controllerv2.GControllerV2.HandleSearchNewsPaper(req), "Request_SearchNewsPaper_Rsp", nil
 	})
 }

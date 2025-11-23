@@ -123,6 +123,19 @@ func runBlueprintGen(cmd *cobra.Command, args []string) {
 		println("Go files formatted successfully")
 	}
 
+	// 生成 Router 代码
+	controllerDir, _ := cmd.Flags().GetString("controller-dir")
+	routerOutput, _ := cmd.Flags().GetString("router-output")
+	controllerPath, _ := cmd.Flags().GetString("controller-path")
+	if routerOutput != "" && controllerDir != "" {
+		if err := generateRouterCode(data, controllerDir, routerOutput, controllerPath); err != nil {
+			cmd.PrintErrln("Warning: Failed to generate router code:", err)
+			// 不中断流程，仅打印警告
+		} else if debug {
+			println("Router code generated successfully")
+		}
+	}
+
 	cmd.Println("Blueprint code generation completed successfully!")
 }
 
@@ -132,6 +145,9 @@ func InitCmd(father *cobra.Command) {
 	blueprintGenCmd.Flags().String("proto-output", "../protocol/protocol", "Output directory for proto files")
 	blueprintGenCmd.Flags().String("go-output", "app/mme", "Output directory for Go files")
 	blueprintGenCmd.Flags().String("protocol-ids-output", "app/proto/pb", "Output directory for protocol_ids.pb.go file")
+	blueprintGenCmd.Flags().String("controller-dir", "app/controller_v2", "Directory containing Controller files")
+	blueprintGenCmd.Flags().String("router-output", "app/routers/routers.go", "Output file path for generated router code")
+	blueprintGenCmd.Flags().String("controller-path", "", "Controller file path (default: controller-dir/controller.go)")
 	blueprintGenCmd.Flags().Bool("debug", false, "Enable debug mode")
 
 	father.AddCommand(blueprintGenCmd)

@@ -1,0 +1,400 @@
+package router_gen
+
+import (
+	"fmt"
+	"go/ast"
+	"go/format"
+	"go/parser"
+	"go/token"
+	"os"
+	"path/filepath"
+	"strings"
+)
+
+// GenerateControllerMethods 生成或更新 Controller Handle 方法
+func GenerateControllerMethods(ctx *RouterGenContext) error {
+	// 确定 Controller 文件路径
+	controllerPath := ctx.ControllerPath
+	if controllerPath == "" {
+		// 尝试从 router output 推断
+		controllerPath = inferControllerPath(ctx)
+	}
+	if controllerPath == "" {
+		// 如果无法推断，使用默认路径
+		if ctx.Controller != nil {
+			controllerPath = findControllerFile(ctx.Controller)
+		}
+	}
+	if controllerPath == "" {
+		return fmt.Errorf("cannot determine controller file path, please specify --controller-path")
+	}
+
+	// 解析现有的 Controller 文件
+	existingMethods, err := parseExistingControllerMethods(ctx.Controller, controllerPath)
+	if err != nil {
+		// 如果文件不存在，existingMethods 为空，继续生成
+		existingMethods = make(map[string]*MethodInfo)
+	}
+
+	// 生成新的 Controller 文件内容
+	controllerCode, err := generateControllerFile(ctx, existingMethods)
+	if err != nil {
+		return fmt.Errorf("failed to generate controller code: %w", err)
+	}
+
+	// 写入文件
+	if err := os.WriteFile(controllerPath, []byte(controllerCode), 0644); err != nil {
+		return fmt.Errorf("failed to write controller file: %w", err)
+	}
+
+	return nil
+}
+
+// MethodInfo 方法信息
+type MethodInfo struct {
+	Name       string   // 方法名
+	Params     []string // 参数列表（字符串形式）
+	ReturnType string   // 返回类型
+	Body       string   // 方法体（如果有实现）
+	HasBody    bool     // 是否有方法体（不是空实现）
+}
+
+// parseExistingControllerMethods 解析现有的 Controller 方法
+func parseExistingControllerMethods(controller *ControllerInfo, routerOutputPath string) (map[string]*MethodInfo, error) {
+	methods := make(map[string]*MethodInfo)
+
+	// 从 router output 路径推断 controller 路径
+	controllerPath := inferControllerPathFromRouter(routerOutputPath)
+	if controllerPath == "" {
+		// 如果无法推断，尝试使用 controller 信息
+		if controller != nil {
+			// 尝试查找 controller 文件
+			controllerPath = findControllerFile(controller)
+		}
+	}
+
+	if controllerPath == "" {
+		return methods, nil // 文件不存在，返回空 map
+	}
+
+	// 检查文件是否存在
+	if _, err := os.Stat(controllerPath); os.IsNotExist(err) {
+		return methods, nil
+	}
+
+	// 解析 Go 文件
+	fset := token.NewFileSet()
+	node, err := parser.ParseFile(fset, controllerPath, nil, parser.ParseComments)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse controller file: %w", err)
+	}
+
+	// 查找 Controller 类型的方法
+	ast.Inspect(node, func(n ast.Node) bool {
+		switch x := n.(type) {
+		case *ast.FuncDecl:
+			// 检查是否是 Controller 的方法
+			if x.Recv != nil && len(x.Recv.List) > 0 {
+				recv := x.Recv.List[0]
+				if starExpr, ok := recv.Type.(*ast.StarExpr); ok {
+					if ident, ok := starExpr.X.(*ast.Ident); ok {
+						if ident.Name == controller.TypeName {
+							// 这是 Controller 的方法
+							methodInfo := extractMethodInfo(x, fset, controllerPath)
+							if methodInfo != nil && strings.HasPrefix(methodInfo.Name, "Handle") {
+								methods[methodInfo.Name] = methodInfo
+							}
+						}
+					}
+				}
+			}
+		}
+		return true
+	})
+
+	return methods, nil
+}
+
+// extractMethodInfo 提取方法信息
+func extractMethodInfo(fn *ast.FuncDecl, fset *token.FileSet, filePath string) *MethodInfo {
+	methodInfo := &MethodInfo{
+		Name:    fn.Name.Name,
+		Params:  make([]string, 0),
+		HasBody: fn.Body != nil && len(fn.Body.List) > 0,
+	}
+
+	// 提取参数
+	for _, param := range fn.Type.Params.List {
+		paramType := formatNode(param.Type, fset)
+		for _, name := range param.Names {
+			paramName := name.Name
+			methodInfo.Params = append(methodInfo.Params, fmt.Sprintf("%s %s", paramName, paramType))
+		}
+		if len(param.Names) == 0 {
+			// 匿名参数
+			methodInfo.Params = append(methodInfo.Params, paramType)
+		}
+	}
+
+	// 提取返回类型
+	if fn.Type.Results != nil && len(fn.Type.Results.List) > 0 {
+		methodInfo.ReturnType = formatNode(fn.Type.Results.List[0].Type, fset)
+	}
+
+	// 提取方法体（如果有实现且不是简单的 return nil）
+	if fn.Body != nil && methodInfo.HasBody {
+		// 读取原始文件内容来提取方法体
+		methodInfo.Body = extractMethodBody(fn, fset, filePath)
+	}
+
+	return methodInfo
+}
+
+// formatNode 格式化 AST 节点为字符串
+func formatNode(node ast.Node, fset *token.FileSet) string {
+	var buf strings.Builder
+	if err := format.Node(&buf, fset, node); err != nil {
+		return ""
+	}
+	return strings.TrimSpace(buf.String())
+}
+
+// extractMethodBody 提取方法体
+func extractMethodBody(fn *ast.FuncDecl, fset *token.FileSet, filePath string) string {
+	if fn.Body == nil {
+		return ""
+	}
+
+	// 读取文件内容
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return ""
+	}
+
+	// 提取方法体的文本
+	start := fset.Position(fn.Body.Pos()).Offset
+	end := fset.Position(fn.Body.End()).Offset
+	if start < 0 || end < 0 || start >= len(data) || end > len(data) {
+		return ""
+	}
+
+	body := string(data[start+1 : end-1]) // 去掉 { 和 }
+	return strings.TrimSpace(body)
+}
+
+// generateControllerFile 生成 Controller 文件
+func generateControllerFile(ctx *RouterGenContext, existingMethods map[string]*MethodInfo) (string, error) {
+	var code strings.Builder
+
+	// 生成文件头
+	code.WriteString("// Code generated by routergen. DO NOT EDIT.\n")
+	code.WriteString("// This file is automatically generated from NetWall YAML files.\n")
+	code.WriteString("// To regenerate, run: go generate or blueprintgen.\n\n")
+
+	// 生成包声明
+	if ctx.Controller != nil {
+		code.WriteString(fmt.Sprintf("package %s\n\n", ctx.Controller.PackageName))
+	} else {
+		code.WriteString("package controllerv2\n\n")
+	}
+
+	// 生成导入语句
+	code.WriteString("import (\n")
+	code.WriteString("\tmmeobj \"gitee.com/orbit-w/orbit/app/mme\"\n")
+
+	// 收集所有需要的包导入
+	packages := make(map[string]bool)
+	for _, req := range ctx.Requests {
+		packages[req.PackageName] = true
+	}
+
+	// 添加 proto 包导入
+	sortedPackages := make([]string, 0, len(packages))
+	for pkgName := range packages {
+		sortedPackages = append(sortedPackages, pkgName)
+	}
+	// 简单排序
+	for i := 0; i < len(sortedPackages)-1; i++ {
+		for j := i + 1; j < len(sortedPackages); j++ {
+			if sortedPackages[i] > sortedPackages[j] {
+				sortedPackages[i], sortedPackages[j] = sortedPackages[j], sortedPackages[i]
+			}
+		}
+	}
+
+	for _, pkgName := range sortedPackages {
+		code.WriteString(fmt.Sprintf("\t\"gitee.com/orbit-w/orbit/app/proto/%s\"\n", pkgName))
+	}
+
+	code.WriteString("\t\"google.golang.org/protobuf/proto\"\n")
+	code.WriteString(")\n\n")
+
+	// 确定 Controller 类型名和变量名
+	typeName := "Controller"
+	varName := "GControllerV2"
+	if ctx.Controller != nil {
+		if ctx.Controller.TypeName != "" {
+			typeName = ctx.Controller.TypeName
+		}
+		if ctx.Controller.VarName != "" {
+			varName = ctx.Controller.VarName
+		}
+	}
+
+	// 生成 Controller 变量
+	code.WriteString("var (\n")
+	code.WriteString(fmt.Sprintf("\t%s = &%s{}\n", varName, typeName))
+	code.WriteString(")\n\n")
+
+	// 生成 Controller 类型
+	code.WriteString(fmt.Sprintf("type %s struct{}\n\n", typeName))
+
+	// 生成 Handle 方法
+	for _, req := range ctx.Requests {
+		methodName := fmt.Sprintf("Handle%s", req.RequestName)
+		methodInfo, exists := existingMethods[methodName]
+
+		// 生成方法签名
+		code.WriteString(generateHandleMethod(req, ctx.Controller, methodInfo, exists))
+		code.WriteString("\n")
+	}
+
+	// 格式化代码
+	formatted, err := format.Source([]byte(code.String()))
+	if err != nil {
+		// 如果格式化失败，返回原始代码
+		return code.String(), nil
+	}
+
+	return string(formatted), nil
+}
+
+// generateHandleMethod 生成单个 Handle 方法
+func generateHandleMethod(req *RequestInfo, controller *ControllerInfo, existingMethod *MethodInfo, exists bool) string {
+	var code strings.Builder
+
+	methodName := fmt.Sprintf("Handle%s", req.RequestName)
+
+	// 确定 Controller 类型名
+	typeName := "Controller"
+	if controller != nil && controller.TypeName != "" {
+		typeName = controller.TypeName
+	}
+
+	// 生成方法签名
+	code.WriteString(fmt.Sprintf("func (c *%s) %s(", typeName, methodName))
+
+	// 第一个参数：Request
+	requestType := fmt.Sprintf("%s.Request_%s", req.PackageName, req.RequestName)
+	code.WriteString(fmt.Sprintf("req *%s", requestType))
+
+	// 后续参数：EntityRef 实体包装器
+	// 使用 mmeobj 别名（Controller 中统一使用 mmeobj）
+	for _, entityRef := range req.EntityRefs {
+		// 将 *mme. 替换为 *mmeobj.
+		wrapperType := strings.Replace(entityRef.WrapperType, "*mme.", "*mmeobj.", 1)
+		code.WriteString(fmt.Sprintf(", %s %s", entityRef.ParamName, wrapperType))
+	}
+
+	code.WriteString(") proto.Message {\n")
+
+	// 生成方法体
+	if exists && existingMethod != nil && existingMethod.HasBody && existingMethod.Body != "" {
+		// 保留已有的实现
+		// 方法体已经包含了缩进，直接使用
+		body := existingMethod.Body
+		// 确保每行都有正确的缩进
+		lines := strings.Split(body, "\n")
+		for _, line := range lines {
+			trimmed := strings.TrimSpace(line)
+			if trimmed != "" {
+				// 如果行没有缩进，添加缩进
+				if !strings.HasPrefix(line, "\t") && !strings.HasPrefix(line, " ") {
+					code.WriteString("\t" + line + "\n")
+				} else {
+					code.WriteString(line + "\n")
+				}
+			} else {
+				code.WriteString("\n")
+			}
+		}
+	} else {
+		// 生成默认实现
+		if len(req.EntityRefs) > 0 {
+			code.WriteString("\t// TODO: 实现业务逻辑\n")
+			for _, entityRef := range req.EntityRefs {
+				code.WriteString(fmt.Sprintf("\t// %s 已经由 Router 层加载完成，可以直接使用\n", entityRef.ParamName))
+			}
+		} else {
+			code.WriteString("\t// TODO: 实现业务逻辑\n")
+		}
+		code.WriteString("\treturn nil\n")
+	}
+
+	code.WriteString("}\n")
+
+	return code.String()
+}
+
+// inferControllerPath 从 RouterGenContext 推断 Controller 文件路径
+func inferControllerPath(ctx *RouterGenContext) string {
+	// 从 router output 路径推断
+	if ctx.OutputPath != "" {
+		return inferControllerPathFromRouter(ctx.OutputPath)
+	}
+
+	// 如果无法推断，使用默认路径
+	if ctx.Controller != nil {
+		return findControllerFile(ctx.Controller)
+	}
+
+	return ""
+}
+
+// inferControllerPathFromRouter 从 router 输出路径推断 controller 路径
+func inferControllerPathFromRouter(routerPath string) string {
+	// router 路径通常是 app/routers/routers.go
+	// controller 路径通常是 app/controller_v2/controller.go
+	dir := filepath.Dir(routerPath)
+	
+	// 尝试多个可能的路径
+	possiblePaths := []string{
+		filepath.Join(filepath.Dir(dir), "controller_v2", "controller.go"),
+		filepath.Join(filepath.Dir(dir), "controller", "controller.go"),
+		filepath.Join(dir, "..", "controller_v2", "controller.go"),
+		filepath.Join(dir, "..", "controller", "controller.go"),
+	}
+
+	for _, path := range possiblePaths {
+		if absPath, err := filepath.Abs(path); err == nil {
+			if _, err := os.Stat(absPath); err == nil {
+				return absPath
+			}
+		}
+	}
+
+	return ""
+}
+
+// findControllerFile 查找 Controller 文件
+func findControllerFile(controller *ControllerInfo) string {
+	// 尝试多个可能的路径
+	possibleDirs := []string{
+		"app/controller_v2",
+		"app/controller",
+		"orbit/app/controller_v2",
+		"orbit/app/controller",
+	}
+
+	for _, dir := range possibleDirs {
+		controllerPath := filepath.Join(dir, "controller.go")
+		if absPath, err := filepath.Abs(controllerPath); err == nil {
+			if _, err := os.Stat(absPath); err == nil {
+				return absPath
+			}
+		}
+	}
+
+	return ""
+}
+
