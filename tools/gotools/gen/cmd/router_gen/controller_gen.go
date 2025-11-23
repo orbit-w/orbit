@@ -550,6 +550,84 @@ func appendNewMethods(ctx *RouterGenContext, controllerPath string, newRequests 
 		return fmt.Errorf("failed to parse existing controller file: %w", err)
 	}
 
+	// 检查是否需要 mmeobj 导入
+	needsMMEObjImport := false
+	for _, req := range newRequests {
+		if len(req.EntityRefs) > 0 {
+			needsMMEObjImport = true
+			break
+		}
+	}
+
+	// 检查是否已经导入了 mmeobj
+	hasMMEObjImport := false
+	for _, imp := range node.Imports {
+		if imp.Path != nil {
+			importPath := strings.Trim(imp.Path.Value, "\"")
+			if importPath == "gitee.com/orbit-w/orbit/app/mme" {
+				// 检查是否有别名 mmeobj
+				if imp.Name != nil && imp.Name.Name == "mmeobj" {
+					hasMMEObjImport = true
+					break
+				}
+			}
+		}
+	}
+
+	// 如果需要 mmeobj 导入但没有，添加导入
+	content := string(existingContent)
+	if needsMMEObjImport && !hasMMEObjImport {
+		// 使用 AST 找到 import 块的位置
+		var importEndPos token.Pos
+		if len(node.Imports) > 0 {
+			// 找到最后一个 import 的位置
+			lastImport := node.Imports[len(node.Imports)-1]
+			importEndPos = lastImport.End()
+		} else {
+			// 如果没有导入，查找 import 关键字后的位置
+			// 查找 "import (" 或 "import"
+			importKeyword := strings.Index(content, "import (")
+			if importKeyword != -1 {
+				// 找到 import 块的开始
+				importStart := importKeyword + len("import (")
+				// 找到 import 块的结束
+				importEnd := strings.Index(content[importStart:], ")")
+				if importEnd != -1 {
+					importEndPos = token.Pos(importStart + importEnd)
+				}
+			}
+		}
+
+		// 将位置转换为字节偏移
+		if importEndPos > 0 {
+			importEndOffset := fset.Position(importEndPos).Offset
+			if importEndOffset > 0 && importEndOffset < len(content) {
+				// 找到这一行的结束位置（换行符）
+				lineEnd := strings.Index(content[importEndOffset:], "\n")
+				if lineEnd == -1 {
+					// 如果没有换行符，在当前位置后添加
+					lineEnd = 0
+				}
+				insertPos := importEndOffset + lineEnd
+
+				// 在最后一个导入后添加新导入
+				before := content[:insertPos]
+				after := content[insertPos:]
+				// 确保有正确的缩进和格式
+				newImport := "\n\tmmeobj \"gitee.com/orbit-w/orbit/app/mme\""
+				content = before + newImport + after
+
+				// 更新 existingContent
+				existingContent = []byte(content)
+				// 重新解析
+				node, err = parser.ParseFile(fset, controllerPath, existingContent, parser.ParseComments)
+				if err != nil {
+					return fmt.Errorf("failed to re-parse controller file: %w", err)
+				}
+			}
+		}
+	}
+
 	// 确定 Controller 类型名
 	typeName := "Controller"
 	if ctx.Controller != nil && ctx.Controller.TypeName != "" {
@@ -587,7 +665,7 @@ func appendNewMethods(ctx *RouterGenContext, controllerPath string, newRequests 
 		newMethodsCode.WriteString("\n")
 	}
 
-	content := string(existingContent)
+	// content 已经在前面声明过了，这里直接使用
 
 	// 如果找到了最后一个方法，在它之后插入新方法
 	if lastMethodEnd > 0 {
