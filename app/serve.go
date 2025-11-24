@@ -17,7 +17,7 @@ import (
 	stream "gitee.com/orbit-w/orbit/core/services/agent_stream"
 	servicezone "gitee.com/orbit-w/orbit/core/services/service_zone"
 
-	_ "gitee.com/orbit-w/orbit/app/controller"
+	_ "gitee.com/orbit-w/orbit/app/controller_v2"
 )
 
 /*
