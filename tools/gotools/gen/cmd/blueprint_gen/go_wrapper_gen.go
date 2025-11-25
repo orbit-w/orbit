@@ -733,6 +733,12 @@ func (g *GoWrapperGenerator) generateManagerWrappers(outputDir string) error {
 	return nil
 }
 
+// generateEntityInitFunction 生成 Entity 的 init 函数
+func generateEntityInitFunction(entityName string, wrapperName string) string {
+	entityTypeEnumName := GenEntityTypeEnumName(entityName)
+	return fmt.Sprintf("func init() {\n\tRegisterEntityFactory(mme.EntityType_%s, func() IEntity {\n\t\treturn New%s()\n\t})\n}\n\n", entityTypeEnumName, wrapperName)
+}
+
 // generateEntityWrappers 生成 Entity Wrapper
 func (g *GoWrapperGenerator) generateEntityWrappers(outputDir string) error {
 	if len(g.data.Entities) == 0 {
@@ -930,6 +936,9 @@ func (g *GoWrapperGenerator) generateEntityWrappers(outputDir string) error {
 		fileName := GetEntityFileName(entity.Name)
 		filePath := fmt.Sprintf("%s/%s", outputDir, fileName)
 
+		// 生成 init 函数（wrapperName 已在上面声明）
+		initFunction := generateEntityInitFunction(entity.Name, wrapperName)
+
 		// 读取现有文件内容（如果存在）
 		entityExistingContent := ""
 		if FileExists(filePath) {
@@ -941,9 +950,36 @@ func (g *GoWrapperGenerator) generateEntityWrappers(outputDir string) error {
 		// 追加新内容（如果文件已存在，在末尾添加换行）
 		var newContent string
 		if entityExistingContent != "" {
+			// 检查是否已经有 init 函数
+			hasInitFunction := strings.Contains(entityExistingContent, "func init()")
+
 			// 确保现有内容以换行结尾
 			entityExistingContent = strings.TrimRight(entityExistingContent, " \n\r\t")
-			newContent = entityExistingContent + "\n\n" + sb.String()
+
+			if !hasInitFunction {
+				// 如果没有 init 函数，需要在 import 之后插入
+				// 查找 import 块的结束位置
+				importEndIndex := strings.LastIndex(entityExistingContent, ")\n\n")
+				if importEndIndex == -1 {
+					// 如果没有找到 import 块，在 package 之后插入
+					packageEndIndex := strings.Index(entityExistingContent, "\n\n")
+					if packageEndIndex != -1 {
+						beforeInit := entityExistingContent[:packageEndIndex+2]
+						afterInit := entityExistingContent[packageEndIndex+2:]
+						newContent = beforeInit + initFunction + afterInit + "\n\n" + sb.String()
+					} else {
+						newContent = entityExistingContent + "\n\n" + initFunction + sb.String()
+					}
+				} else {
+					// 在 import 块之后插入 init 函数
+					beforeInit := entityExistingContent[:importEndIndex+3]
+					afterInit := entityExistingContent[importEndIndex+3:]
+					newContent = beforeInit + initFunction + afterInit + "\n\n" + sb.String()
+				}
+			} else {
+				// 如果已经有 init 函数，直接追加 Wrapper 代码
+				newContent = entityExistingContent + "\n\n" + sb.String()
+			}
 		} else {
 			// 如果文件不存在，需要添加 package 声明和导入
 			imports := "import (\n"
@@ -955,7 +991,7 @@ func (g *GoWrapperGenerator) generateEntityWrappers(outputDir string) error {
 			imports += "\t\"go.mongodb.org/mongo-driver/v2/bson\"\n"
 			imports += "\t\"google.golang.org/protobuf/proto\"\n"
 			imports += ")\n\n"
-			newContent = fmt.Sprintf("package %s\n\n%s", packageName, imports) + sb.String()
+			newContent = fmt.Sprintf("package %s\n\n%s%s", packageName, imports, initFunction) + sb.String()
 		}
 
 		if err := WriteFile(filePath, newContent); err != nil {

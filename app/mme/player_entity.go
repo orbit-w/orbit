@@ -21,6 +21,12 @@ const (
 	PlayerEntityDirtyHeroManagerBit int64 = 1 << PlayerEntityFieldIndexHeroManager
 )
 
+func init() {
+	RegisterEntityFactory(mme.EntityType_PlayerEntityType, func() IEntity {
+		return NewPlayerEntityWrapper()
+	})
+}
+
 type PlayerEntity struct {
 	XXXId       int64
 	HeroManager *HeroManager

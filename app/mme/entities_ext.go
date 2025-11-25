@@ -29,12 +29,6 @@ var (
 	mapEntityFactories = make(map[mme.EntityType]EntityFactory)
 )
 
-func init() {
-	RegisterEntityFactory(mme.EntityType_PlayerEntityType, func() IEntity {
-		return NewPlayerEntityWrapper()
-	})
-}
-
 func RegisterEntityFactory(entityType mme.EntityType, factory EntityFactory) {
 	mapEntityFactories[entityType] = factory
 }
