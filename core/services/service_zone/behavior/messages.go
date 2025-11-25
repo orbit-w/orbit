@@ -96,12 +96,9 @@ type SubscribeByStrategyTypeRequest struct {
 	ResponseReceiver *actor.PID
 }
 
-type Request struct {
-	Seq     uint32
-	ZoneId  string
-	Session *network.Session
-	Bytes   []byte
-	Pid     uint32
+type ClientRequest struct {
+	*network.ClientRequest
+	ZoneId string
 }
 
 type Response struct {

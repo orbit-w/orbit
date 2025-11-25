@@ -17,6 +17,22 @@ func NewClientRequest(seq uint32, pid uint32, in []byte, session *Session) *Clie
 	}
 }
 
+func (r *ClientRequest) GetPid() uint32 {
+	return r.pid
+}
+
+func (r *ClientRequest) GetSeq() uint32 {
+	return r.upSeq
+}
+
+func (r *ClientRequest) GetIn() []byte {
+	return r.in
+}
+
+func (r *ClientRequest) GetSession() *Session {
+	return r.session
+}
+
 func (r *ClientRequest) Response(data []byte, pid uint32) error {
 	return r.session.SendData(data, r.upSeq, pid)
 }
