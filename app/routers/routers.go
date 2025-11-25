@@ -10,72 +10,38 @@ import (
 	controllerv2 "gitee.com/orbit-w/orbit/app/controller_v2"
 	"gitee.com/orbit-w/orbit/app/proto/core"
 	"gitee.com/orbit-w/orbit/app/proto/mme"
-	"gitee.com/orbit-w/orbit/app/proto/sample"
 	"gitee.com/orbit-w/orbit/app/proto/pb"
+	"gitee.com/orbit-w/orbit/app/proto/sample"
 
 	mmeobj "gitee.com/orbit-w/orbit/app/mme"
-	servicezone "gitee.com/orbit-w/orbit/core/services/service_zone"
+	servicezone_behavior "gitee.com/orbit-w/orbit/core/services/service_zone/behavior"
 	"google.golang.org/protobuf/proto"
 )
 
 func init() {
-	RegisterHandler(pb.PID_Request_SearchBook, func(ctx servicezone.IContext, data []byte) (proto.Message, string, error) {
-		req := &core.Request_SearchBook{}
-		if err := proto.Unmarshal(data, req); err != nil {
-			return nil, "", err
-		}
-
+	RegisterHandler(pb.PID_Request_SearchBook, func(ctx servicezone_behavior.IContext, msg proto.Message, entities ...mmeobj.IEntity) (proto.Message, string, error) {
+		req := msg.(*core.Request_SearchBook)
 		return controllerv2.GControllerV2.HandleSearchBook(req), "Request_SearchBook_Rsp", nil
 	})
-	RegisterHandler(pb.PID_Request_HeartBeat, func(ctx servicezone.IContext, data []byte) (proto.Message, string, error) {
-		req := &core.Request_HeartBeat{}
-		if err := proto.Unmarshal(data, req); err != nil {
-			return nil, "", err
-		}
-
+	RegisterHandler(pb.PID_Request_HeartBeat, func(ctx servicezone_behavior.IContext, msg proto.Message, entities ...mmeobj.IEntity) (proto.Message, string, error) {
+		req := msg.(*core.Request_HeartBeat)
 		return controllerv2.GControllerV2.HandleHeartBeat(req), "Request_HeartBeat_Rsp", nil
 	})
-	RegisterHandler(pb.PID_Request_LoginRequest, func(ctx servicezone.IContext, data []byte) (proto.Message, string, error) {
-		req := &core.Request_LoginRequest{}
-		if err := proto.Unmarshal(data, req); err != nil {
-			return nil, "", err
-		}
-
-		refs := make([]*mme.EntityRef, 0)
-		if req.PlayerEntityRef != nil {
-			refs = append(refs, req.PlayerEntityRef)
-		}
-
-		entities, err := ctx.LoadRefs(refs)
-		if err != nil {
-			return nil, "", err
-		}
-
-		// 根据Req中Ref的顺序，获取对应的实体
-		var (
-			playerEntity *mmeobj.PlayerEntityWrapper
-			ok bool
-		)
-		if playerEntity, ok = entities[0].(*mmeobj.PlayerEntityWrapper); !ok {
+	RegisterHandler(pb.PID_Request_LoginRequest, func(ctx servicezone_behavior.IContext, msg proto.Message, entities ...mmeobj.IEntity) (proto.Message, string, error) {
+		req := msg.(*core.Request_LoginRequest)
+		playerEntity, ok := entities[0].(*mmeobj.PlayerEntityWrapper)
+		if !ok {
 			return nil, "", fmt.Errorf("player entity not found")
 		}
 
 		return controllerv2.GControllerV2.HandleLoginRequest(req, playerEntity), "Request_LoginRequest_Rsp", nil
 	})
-	RegisterHandler(pb.PID_Request_AskLevelUp, func(ctx servicezone.IContext, data []byte) (proto.Message, string, error) {
-		req := &mme.Request_AskLevelUp{}
-		if err := proto.Unmarshal(data, req); err != nil {
-			return nil, "", err
-		}
-
+	RegisterHandler(pb.PID_Request_AskLevelUp, func(ctx servicezone_behavior.IContext, msg proto.Message, entities ...mmeobj.IEntity) (proto.Message, string, error) {
+		req := msg.(*mme.Request_AskLevelUp)
 		return controllerv2.GControllerV2.HandleAskLevelUp(req), "Request_AskLevelUp_Rsp", nil
 	})
-	RegisterHandler(pb.PID_Request_SearchNewsPaper, func(ctx servicezone.IContext, data []byte) (proto.Message, string, error) {
-		req := &sample.Request_SearchNewsPaper{}
-		if err := proto.Unmarshal(data, req); err != nil {
-			return nil, "", err
-		}
-
+	RegisterHandler(pb.PID_Request_SearchNewsPaper, func(ctx servicezone_behavior.IContext, msg proto.Message, entities ...mmeobj.IEntity) (proto.Message, string, error) {
+		req := msg.(*sample.Request_SearchNewsPaper)
 		return controllerv2.GControllerV2.HandleSearchNewsPaper(req), "Request_SearchNewsPaper_Rsp", nil
 	})
 }

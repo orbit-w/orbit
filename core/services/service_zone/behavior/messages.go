@@ -1,4 +1,4 @@
-package servicezone
+package servicezone_behavior
 
 import (
 	mmeobj "gitee.com/orbit-w/orbit/app/mme"
@@ -32,7 +32,7 @@ type RemoveEntityResponse struct {
 // SubscribeRequest 订阅请求
 type SubscribeRequest struct {
 	SubscriberID     string
-	Strategy         ISubscribeStrategy
+	Strategy         mme.SubscribeStrategyType
 	ResponseReceiver *actor.PID // 可选，用于接收响应
 }
 

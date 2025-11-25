@@ -1,4 +1,4 @@
-package servicezone
+package servicezone_behavior
 
 import (
 	"gitee.com/orbit-w/meteor/bases/misc/utils"
@@ -10,22 +10,63 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+var (
+	globalRouter IRouter
+)
+
+func SetRouter(router IRouter) {
+	globalRouter = router
+}
+
 // ZoneActorBehavior ServiceZone Actor 的行为实现
 // 实现 actor.Behavior 接口
 type ZoneActorBehavior struct {
-	zone    *ServiceZone
-	context IContext
-	logger  *mlog.Logger
+	ctx    IContext
+	logger *mlog.Logger
 }
 
 // NewZoneActorBehavior 创建新的 ZoneActorBehavior
 // router: 路由分发器，由外部注入，用于解耦 service_zone 和 routers 之间的循环依赖
-func NewZoneActorBehavior(zone *ServiceZone) actor.Actor {
+func NewZoneActorBehavior(ctx IContext) actor.Actor {
 	return &ZoneActorBehavior{
-		zone:    zone,
-		logger:  logger.GetLogger(),
-		context: NewServiceZoneContext(zone),
+		ctx:    ctx,
+		logger: logger.GetLogger(),
 	}
+}
+
+// Start 启动 ServiceZone 的 Actor
+// 需要在 Actor 系统启动后调用
+// router: 路由分发器，用于处理请求（可选，如果为 nil 则无法处理请求）
+func Start(system *actor.ActorSystem, id string, ctx IContext) (*actor.PID, error) {
+	// 直接创建持久化Actor，使用supervision策略
+	// 这里不使用supervision系统，而是直接创建，但使用supervision策略来保证容错
+	decider := func(reason any) actor.Directive {
+		// 使用Resume策略，出错后继续运行
+		return actor.ResumeDirective
+	}
+	supervisor := actor.NewOneForOneStrategy(10, 1000, decider)
+
+	props := actor.PropsFromProducer(func() actor.Actor {
+		return NewZoneActorBehavior(ctx)
+	}, actor.WithSupervisor(supervisor))
+
+	// 直接在Root下创建Actor
+	actorCtx := system.Root
+	pid, err := actorCtx.SpawnNamed(props, id)
+	if err != nil {
+		return nil, err
+	}
+
+	return pid, nil
+}
+
+func Stop(system *actor.ActorSystem, pid *actor.PID) error {
+	actorCtx := system.Root
+	future := actorCtx.PoisonFuture(pid)
+	if err := future.Wait(); err != nil {
+		return err
+	}
+	return nil
 }
 
 // HandleRequest 处理请求消息（需要响应）
@@ -54,7 +95,19 @@ func (ab *ZoneActorBehavior) HandleRequest(ctx actor.Context, req *Request) {
 		return
 	}
 
-	result, respName, err := handler(ab.context, req.Bytes)
+	qw := NewRequestWrapper(req.Pid)
+	if err := qw.Unmarshal(req.Bytes); err != nil {
+		ab.logger.Error("ZoneActor unmarshal error", zap.Error(err), zap.Uint32("Pid", req.Pid))
+		return
+	}
+
+	entities, err := ab.ctx.LoadRefs(qw.GetRefs())
+	if err != nil {
+		ab.logger.Error("ZoneActor load refs error", zap.Error(err), zap.Uint32("Pid", req.Pid))
+		return
+	}
+
+	result, respName, err := handler(ab.ctx, qw.GetReq(), entities...)
 	if err != nil {
 		ab.logger.Error("ZoneActor handler error", zap.Error(err), zap.Uint32("Pid", req.Pid))
 	}
@@ -78,24 +131,21 @@ func (ab *ZoneActorBehavior) HandleRequest(ctx actor.Context, req *Request) {
 // HandleInit 处理初始化
 func (ab *ZoneActorBehavior) HandleInit(ctx actor.Context) error {
 	ab.logger.Info("ServiceZoneActor initialized",
-		zap.String("ActorName", ctx.Self().Id),
-		zap.String("ZoneID", ab.zone.ID))
+		zap.String("ActorName", ctx.Self().Id))
 	return nil
 }
 
 // HandleStopping 处理停止中
 func (ab *ZoneActorBehavior) HandleStopping(ctx actor.Context) error {
 	ab.logger.Info("ServiceZoneActor stopping",
-		zap.String("ActorName", ctx.Self().Id),
-		zap.String("ZoneID", ab.zone.ID))
+		zap.String("ActorName", ctx.Self().Id))
 	return nil
 }
 
 // HandleStopped 处理已停止
 func (ab *ZoneActorBehavior) HandleStopped(ctx actor.Context) error {
 	ab.logger.Info("ServiceZoneActor stopped",
-		zap.String("ActorName", ctx.Self().Id),
-		zap.String("ZoneID", ab.zone.ID))
+		zap.String("ActorName", ctx.Self().Id))
 	return nil
 }
 
@@ -105,23 +155,10 @@ func (ab *ZoneActorBehavior) handleAddEntity(msg *AddEntityRequest) *AddEntityRe
 		return &AddEntityResponse{Success: false}
 	}
 
-	ab.zone.addEntity(msg.Entity)
-	ab.zone.UpdateSubscriptions(msg.Entity)
+	ab.ctx.AddEntity(msg.Entity)
+	//ab.ctx.UpdateSubscriptions(msg.Entity)
 
 	return &AddEntityResponse{Success: true}
-}
-
-// handleRemoveEntity 处理移除 Entity 请求
-func (ab *ZoneActorBehavior) handleRemoveEntity(msg *RemoveEntityRequest) *RemoveEntityResponse {
-	entity := ab.zone.getEntityById(msg.EntityID)
-	if entity == nil {
-		return &RemoveEntityResponse{Success: false}
-	}
-
-	ab.zone.removeEntity(msg.EntityID)
-	ab.zone.RemoveFromSubscriptions(entity)
-
-	return &RemoveEntityResponse{Success: true}
 }
 
 // handleSubscribe 处理订阅请求

@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"sync"
 
-	servicezone "gitee.com/orbit-w/orbit/core/services/service_zone"
+	mmeobj "gitee.com/orbit-w/orbit/app/mme"
+	servicezone_behavior "gitee.com/orbit-w/orbit/core/services/service_zone/behavior"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -30,21 +31,21 @@ func GetRouter() *Routers {
 	return globalRouter
 }
 
-func RegisterHandler(pid uint32, router func(ctx servicezone.IContext, data []byte) (proto.Message, string, error)) {
+func RegisterHandler(pid uint32, router func(ctx servicezone_behavior.IContext, req proto.Message, entities ...mmeobj.IEntity) (proto.Message, string, error)) {
 	globalRouter.RegisterHandler(pid, router)
 }
 
 type Routers struct {
-	funcMap map[uint32]func(ctx servicezone.IContext, data []byte) (proto.Message, string, error)
+	funcMap map[uint32]func(ctx servicezone_behavior.IContext, req proto.Message, entities ...mmeobj.IEntity) (proto.Message, string, error)
 }
 
 func NewRouter() *Routers {
 	return &Routers{
-		funcMap: make(map[uint32]func(ctx servicezone.IContext, data []byte) (proto.Message, string, error)),
+		funcMap: make(map[uint32]func(ctx servicezone_behavior.IContext, req proto.Message, entities ...mmeobj.IEntity) (proto.Message, string, error)),
 	}
 }
 
-func (r *Routers) RegisterHandler(pid uint32, router func(ctx servicezone.IContext, data []byte) (proto.Message, string, error)) {
+func (r *Routers) RegisterHandler(pid uint32, router func(ctx servicezone_behavior.IContext, req proto.Message, entities ...mmeobj.IEntity) (proto.Message, string, error)) {
 	if _, ok := r.funcMap[pid]; ok {
 		panic(fmt.Sprintf("pid %d already registered", pid))
 	}
@@ -52,7 +53,7 @@ func (r *Routers) RegisterHandler(pid uint32, router func(ctx servicezone.IConte
 	r.funcMap[pid] = router
 }
 
-func (r *Routers) Dispatch(pid uint32) func(ctx servicezone.IContext, data []byte) (proto.Message, string, error) {
+func (r *Routers) Dispatch(pid uint32) func(ctx servicezone_behavior.IContext, req proto.Message, entities ...mmeobj.IEntity) (proto.Message, string, error) {
 	handler, ok := r.funcMap[pid]
 	if !ok {
 		return nil

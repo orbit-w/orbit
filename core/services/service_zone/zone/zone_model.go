@@ -6,7 +6,6 @@ import (
 	mmeobj "gitee.com/orbit-w/orbit/app/mme"
 	"gitee.com/orbit-w/orbit/app/proto/mme"
 	"gitee.com/orbit-w/orbit/lib/module/persistence"
-	"github.com/asynkron/protoactor-go/actor"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
@@ -36,9 +35,6 @@ type ServiceZone struct {
 	Entities      map[int64]mmeobj.IEntity
 	// 订阅管理
 	subscribers map[string]*Subscriber // 订阅者集合，key 为订阅者 ID
-
-	actorPID    *actor.PID
-	actorSystem *actor.ActorSystem
 }
 
 // NewServiceZone 创建新的服务区
@@ -50,52 +46,6 @@ func NewServiceZone(id string, zoneType ZoneType) *ServiceZone {
 		Entities:      make(map[int64]mmeobj.IEntity),
 		subscribers:   make(map[string]*Subscriber),
 	}
-}
-
-// Start 启动 ServiceZone 的 Actor
-// 需要在 Actor 系统启动后调用
-// router: 路由分发器，用于处理请求（可选，如果为 nil 则无法处理请求）
-func (zone *ServiceZone) Start(system *actor.ActorSystem) error {
-	zone.actorSystem = system
-	// 直接创建持久化Actor，使用supervision策略
-	// 这里不使用supervision系统，而是直接创建，但使用supervision策略来保证容错
-	decider := func(reason any) actor.Directive {
-		// 使用Resume策略，出错后继续运行
-		return actor.ResumeDirective
-	}
-	supervisor := actor.NewOneForOneStrategy(10, 1000, decider)
-
-	props := actor.PropsFromProducer(func() actor.Actor {
-		return NewZoneActorBehavior(zone)
-	}, actor.WithSupervisor(supervisor))
-
-	// 直接在Root下创建Actor
-	ctx := system.Root
-	pid, err := ctx.SpawnNamed(props, GenActorId(zone.ID))
-	if err != nil {
-		return err
-	}
-
-	zone.actorPID = pid
-	return nil
-}
-
-// Stop 停止 ServiceZone 的 Actor
-func (zone *ServiceZone) Stop() error {
-	if zone.actorPID != nil {
-		// 直接停止Actor
-		ctx := zone.actorSystem.Root
-		future := ctx.PoisonFuture(zone.actorPID)
-		zone.actorPID = nil
-		if err := future.Wait(); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (zone *ServiceZone) GetActorPID() *actor.PID {
-	return zone.actorPID
 }
 
 // LoadRefs 加载多个 EntityRef
