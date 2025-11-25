@@ -10,45 +10,6 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-type IEntity interface {
-	Collection() string
-	Load(raw bson.Raw) error
-	Name() string
-	GetXXXId() int64
-	SetXXXId(id int64)
-	GetEntityType() mme.EntityType
-	InitFieldContext()
-	ClearAllDirtyFlags()
-	BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder, path *mgo_builder.NestedPath)
-	ToProto() proto.Message
-	FromProto(msg proto.Message)
-	ToIncrementalProtoWithContext(ctx mmemodel.SyncContext) proto.Message
-}
-
-type EntityFactory func() IEntity
-
-var (
-	mapEntityFactories = make(map[mme.EntityType]EntityFactory)
-)
-
-func init() {
-	RegisterEntityFactory(mme.EntityType_PlayerEntityType, func() IEntity {
-		return NewPlayerEntityWrapper()
-	})
-}
-
-func RegisterEntityFactory(entityType mme.EntityType, factory EntityFactory) {
-	mapEntityFactories[entityType] = factory
-}
-
-func GetEntityFactory(entityType mme.EntityType) EntityFactory {
-	factory, ok := mapEntityFactories[entityType]
-	if !ok {
-		return nil
-	}
-	return factory
-}
-
 const (
 	PlayerEntityFieldIndexXXXId       = uint8(0)
 	PlayerEntityFieldIndexHeroManager = uint8(1)

@@ -740,18 +740,9 @@ func (g *GoWrapperGenerator) generateEntityWrappers(outputDir string) error {
 	}
 
 	packageName := "mme"
-	firstEntity := g.data.Entities[0]
-	firstEntityFileName := GetEntityFileName(firstEntity.Name)
-	firstEntityFilePath := fmt.Sprintf("%s/%s", outputDir, firstEntityFileName)
-
-	// 检查并生成样板代码
-	existingContent, err := g.ensureEntityBoilerplate(firstEntityFilePath, packageName)
-	if err != nil {
-		return fmt.Errorf("failed to ensure entity boilerplate: %w", err)
-	}
 
 	// 生成所有实体的 Wrapper 代码
-	for idx, entity := range g.data.Entities {
+	for _, entity := range g.data.Entities {
 		sb := strings.Builder{}
 
 		// Wrapper 代码（不包含 package 和 import，因为这些会从已有文件中获取）
@@ -939,412 +930,38 @@ func (g *GoWrapperGenerator) generateEntityWrappers(outputDir string) error {
 		fileName := GetEntityFileName(entity.Name)
 		filePath := fmt.Sprintf("%s/%s", outputDir, fileName)
 
-		// 对于第一个实体，使用已更新的内容（包含样板代码）
-		if idx == 0 {
+		// 读取现有文件内容（如果存在）
+		entityExistingContent := ""
+		if FileExists(filePath) {
+			if data, err := ReadFileContent(filePath); err == nil {
+				entityExistingContent = data
+			}
+		}
+
+		// 追加新内容（如果文件已存在，在末尾添加换行）
+		var newContent string
+		if entityExistingContent != "" {
 			// 确保现有内容以换行结尾
-			existingContent = strings.TrimRight(existingContent, " \n\r\t")
-			newContent := existingContent + "\n\n" + sb.String()
-			if err := WriteFile(filePath, newContent); err != nil {
-				return err
-			}
+			entityExistingContent = strings.TrimRight(entityExistingContent, " \n\r\t")
+			newContent = entityExistingContent + "\n\n" + sb.String()
 		} else {
-			// 对于其他实体，读取现有文件内容（如果存在）
-			entityExistingContent := ""
-			if FileExists(filePath) {
-				if data, err := ReadFileContent(filePath); err == nil {
-					entityExistingContent = data
-				}
-			}
+			// 如果文件不存在，需要添加 package 声明和导入
+			imports := "import (\n"
+			imports += "\t\"gitee.com/orbit-w/orbit/app/proto/mme\"\n"
+			imports += "\tdirtyflag \"gitee.com/orbit-w/orbit/lib/base/dirty_flag\"\n"
+			imports += "\tfieldmeta \"gitee.com/orbit-w/orbit/lib/base/field_meta\"\n"
+			imports += "\t\"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder\"\n"
+			imports += "\tmmemodel \"gitee.com/orbit-w/orbit/lib/module/mme_model\"\n"
+			imports += "\t\"go.mongodb.org/mongo-driver/v2/bson\"\n"
+			imports += "\t\"google.golang.org/protobuf/proto\"\n"
+			imports += ")\n\n"
+			newContent = fmt.Sprintf("package %s\n\n%s", packageName, imports) + sb.String()
+		}
 
-			// 追加新内容（如果文件已存在，在末尾添加换行）
-			var newContent string
-			if entityExistingContent != "" {
-				// 确保现有内容以换行结尾
-				entityExistingContent = strings.TrimRight(entityExistingContent, " \n\r\t")
-				newContent = entityExistingContent + "\n\n" + sb.String()
-			} else {
-				// 如果文件不存在，需要添加 package 声明和导入
-				imports := "import (\n"
-				imports += "\t\"gitee.com/orbit-w/orbit/app/proto/mme\"\n"
-				imports += "\tdirtyflag \"gitee.com/orbit-w/orbit/lib/base/dirty_flag\"\n"
-				imports += "\tfieldmeta \"gitee.com/orbit-w/orbit/lib/base/field_meta\"\n"
-				imports += "\t\"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder\"\n"
-				imports += "\tmmemodel \"gitee.com/orbit-w/orbit/lib/module/mme_model\"\n"
-				imports += "\t\"go.mongodb.org/mongo-driver/v2/bson\"\n"
-				imports += "\t\"google.golang.org/protobuf/proto\"\n"
-				imports += ")\n\n"
-				newContent = fmt.Sprintf("package %s\n\n%s", packageName, imports) + sb.String()
-			}
-
-			if err := WriteFile(filePath, newContent); err != nil {
-				return err
-			}
+		if err := WriteFile(filePath, newContent); err != nil {
+			return err
 		}
 	}
 
 	return nil
-}
-
-// generateEntityBoilerplate 生成实体样板代码（IEntity接口、EntityFactory类型等）
-func (g *GoWrapperGenerator) generateEntityBoilerplate() string {
-	var sb strings.Builder
-
-	// 生成 IEntity 接口
-	sb.WriteString("type IEntity interface {\n")
-	sb.WriteString("\tCollection() string\n")
-	sb.WriteString("\tHasAnyDirty() bool\n")
-	sb.WriteString("\tLoad(raw bson.Raw) error\n")
-	sb.WriteString("\tName() string\n")
-	sb.WriteString("\tGetXXXId() int64\n")
-	sb.WriteString("\tSetXXXId(id int64)\n")
-	sb.WriteString("\tGetEntityType() mme.EntityType\n")
-	sb.WriteString("\tInitFieldContext()\n")
-	sb.WriteString("\tClearAllDirtyFlags()\n")
-	sb.WriteString("\tBuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder, path *mgo_builder.NestedPath)\n")
-	sb.WriteString("\tToProto() proto.Message\n")
-	sb.WriteString("\tFromProto(msg proto.Message)\n")
-	sb.WriteString("\tToIncrementalProtoWithContext(ctx mmemodel.SyncContext) proto.Message\n")
-	sb.WriteString("}\n\n")
-
-	// 生成 EntityFactory 类型
-	sb.WriteString("type EntityFactory func() IEntity\n\n")
-
-	// 生成 mapEntityFactories 变量
-	sb.WriteString("var (\n")
-	sb.WriteString("\tmapEntityFactories = make(map[mme.EntityType]EntityFactory)\n")
-	sb.WriteString(")\n\n")
-
-	// 生成 init() 函数（包含所有实体的注册）
-	sb.WriteString("func init() {\n")
-	for _, entity := range g.data.Entities {
-		entityTypeEnumName := GenEntityTypeEnumName(entity.Name)
-		wrapperName := entity.Name + "Wrapper"
-		sb.WriteString(fmt.Sprintf("\tRegisterEntityFactory(mme.EntityType_%s, func() IEntity {\n", entityTypeEnumName))
-		sb.WriteString(fmt.Sprintf("\t\treturn New%s()\n", wrapperName))
-		sb.WriteString("\t})\n")
-	}
-	sb.WriteString("}\n\n")
-
-	// 生成 RegisterEntityFactory 函数
-	sb.WriteString("func RegisterEntityFactory(entityType mme.EntityType, factory EntityFactory) {\n")
-	sb.WriteString("\tmapEntityFactories[entityType] = factory\n")
-	sb.WriteString("}\n\n")
-
-	// 生成 GetEntityFactory 函数
-	sb.WriteString("func GetEntityFactory(entityType mme.EntityType) EntityFactory {\n")
-	sb.WriteString("\tfactory, ok := mapEntityFactories[entityType]\n")
-	sb.WriteString("\tif !ok {\n")
-	sb.WriteString("\t\treturn nil\n")
-	sb.WriteString("\t}\n")
-	sb.WriteString("\treturn factory\n")
-	sb.WriteString("}\n")
-
-	return sb.String()
-}
-
-// updateInitFunction 更新或创建 init() 函数，添加所有实体的注册
-func (g *GoWrapperGenerator) updateInitFunction(content string) string {
-	// 检查是否已存在 init() 函数
-	if strings.Contains(content, "func init()") {
-		// 查找现有的 init() 函数
-		lines := strings.Split(content, "\n")
-		inInit := false
-		initStartIdx := -1
-		initEndIdx := -1
-		braceCount := 0
-
-		for i, line := range lines {
-			trimmed := strings.TrimSpace(line)
-
-			if strings.HasPrefix(trimmed, "func init()") {
-				inInit = true
-				initStartIdx = i
-				braceCount = 0
-			}
-
-			if inInit {
-				// 计算大括号
-				braceCount += strings.Count(line, "{")
-				braceCount -= strings.Count(line, "}")
-
-				if braceCount == 0 && initStartIdx >= 0 {
-					initEndIdx = i
-					break
-				}
-			}
-		}
-
-		if initStartIdx >= 0 && initEndIdx >= 0 {
-			// 提取现有的 init() 函数内容
-			existingInitLines := lines[initStartIdx : initEndIdx+1]
-			existingInitContent := strings.Join(existingInitLines, "\n")
-
-			// 检查是否已包含所有实体的注册
-			allRegistered := true
-			for _, entity := range g.data.Entities {
-				entityTypeEnumName := GenEntityTypeEnumName(entity.Name)
-				registerPattern := fmt.Sprintf("RegisterEntityFactory(mme.EntityType_%s", entityTypeEnumName)
-				if !strings.Contains(existingInitContent, registerPattern) {
-					allRegistered = false
-					break
-				}
-			}
-
-			if !allRegistered {
-				// 在 init() 函数结束前添加缺失的注册
-				var updatedInitLines []string
-				updatedInitLines = append(updatedInitLines, existingInitLines[0]) // func init() {
-
-				// 添加现有的注册（如果有）
-				for i := 1; i < len(existingInitLines)-1; i++ {
-					updatedInitLines = append(updatedInitLines, existingInitLines[i])
-				}
-
-				// 添加缺失的注册
-				for _, entity := range g.data.Entities {
-					entityTypeEnumName := GenEntityTypeEnumName(entity.Name)
-					registerPattern := fmt.Sprintf("RegisterEntityFactory(mme.EntityType_%s", entityTypeEnumName)
-					if !strings.Contains(existingInitContent, registerPattern) {
-						wrapperName := entity.Name + "Wrapper"
-						updatedInitLines = append(updatedInitLines,
-							fmt.Sprintf("\tRegisterEntityFactory(mme.EntityType_%s, func() IEntity {", entityTypeEnumName))
-						updatedInitLines = append(updatedInitLines,
-							fmt.Sprintf("\t\treturn New%s()", wrapperName))
-						updatedInitLines = append(updatedInitLines, "\t})")
-					}
-				}
-
-				updatedInitLines = append(updatedInitLines, existingInitLines[len(existingInitLines)-1]) // }
-
-				// 重建内容
-				var result []string
-				result = append(result, lines[:initStartIdx]...)
-				result = append(result, updatedInitLines...)
-				result = append(result, lines[initEndIdx+1:]...)
-				return strings.Join(result, "\n")
-			}
-		}
-	} else {
-		// 如果不存在 init() 函数，在样板代码后添加
-		initCode := "\nfunc init() {\n"
-		for _, entity := range g.data.Entities {
-			entityTypeEnumName := GenEntityTypeEnumName(entity.Name)
-			wrapperName := entity.Name + "Wrapper"
-			initCode += fmt.Sprintf("\tRegisterEntityFactory(mme.EntityType_%s, func() IEntity {\n", entityTypeEnumName)
-			initCode += fmt.Sprintf("\t\treturn New%s()\n", wrapperName)
-			initCode += "\t})\n"
-		}
-		initCode += "}\n"
-
-		// 在 GetEntityFactory 函数后插入
-		if idx := strings.Index(content, "func GetEntityFactory"); idx >= 0 {
-			// 找到 GetEntityFactory 函数的结束位置
-			lines := strings.Split(content[idx:], "\n")
-			braceCount := 0
-			endIdx := 0
-			for i, line := range lines {
-				braceCount += strings.Count(line, "{")
-				braceCount -= strings.Count(line, "}")
-				if braceCount == 0 && i > 0 {
-					endIdx = i
-					break
-				}
-			}
-			if endIdx > 0 {
-				insertPos := idx + len(strings.Join(lines[:endIdx+1], "\n"))
-				return content[:insertPos] + "\n" + initCode + content[insertPos:]
-			}
-		}
-	}
-
-	return content
-}
-
-// parsedFileContent 表示解析后的文件内容结构
-type parsedFileContent struct {
-	packageLine    string
-	importBlock    []string
-	otherContent   []string
-	importStartIdx int
-	importEndIdx   int
-}
-
-// ensureEntityBoilerplate 确保实体文件包含样板代码，如果不存在则生成并插入
-func (g *GoWrapperGenerator) ensureEntityBoilerplate(filePath, packageName string) (string, error) {
-	existingContent, hasBoilerplate := g.checkBoilerplate(filePath)
-
-	if hasBoilerplate {
-		return existingContent, nil
-	}
-
-	boilerplate := g.generateEntityBoilerplate()
-	requiredImports := g.getRequiredImports()
-
-	var newContent string
-	if existingContent != "" {
-		// 文件已存在，需要重新组织文件结构
-		parsed := g.parseFileContent(existingContent)
-		newContent = g.reorganizeFileContent(parsed, packageName, requiredImports, boilerplate)
-	} else {
-		// 文件不存在，创建新文件并包含样板代码
-		newContent = fmt.Sprintf("package %s\n\n%s\n\n%s", packageName, requiredImports, boilerplate)
-	}
-
-	// 更新 init() 函数，添加所有实体的注册
-	newContent = g.updateInitFunction(newContent)
-
-	// 写入更新的内容回文件
-	if err := WriteFile(filePath, newContent); err != nil {
-		return "", fmt.Errorf("failed to write boilerplate to %s: %w", filePath, err)
-	}
-
-	return newContent, nil
-}
-
-// checkBoilerplate 检查文件是否包含样板代码
-func (g *GoWrapperGenerator) checkBoilerplate(filePath string) (content string, hasBoilerplate bool) {
-	if !FileExists(filePath) {
-		return "", false
-	}
-
-	data, err := ReadFileContent(filePath)
-	if err != nil {
-		return "", false
-	}
-
-	hasBoilerplate = strings.Contains(data, "type IEntity interface") &&
-		strings.Contains(data, "type EntityFactory") &&
-		strings.Contains(data, "mapEntityFactories")
-
-	return data, hasBoilerplate
-}
-
-// parseFileContent 解析文件内容，提取 package、import 和其他内容
-func (g *GoWrapperGenerator) parseFileContent(content string) *parsedFileContent {
-	parsed := &parsedFileContent{
-		importStartIdx: -1,
-		importEndIdx:   -1,
-	}
-
-	lines := strings.Split(content, "\n")
-	pkgFound := false
-	inImport := false
-	braceCount := 0
-
-	for i, line := range lines {
-		trimmed := strings.TrimSpace(line)
-
-		// 查找 package 声明
-		if !pkgFound && strings.HasPrefix(trimmed, "package ") {
-			parsed.packageLine = line
-			pkgFound = true
-			continue
-		}
-
-		// 查找 import 块
-		if pkgFound && !inImport && strings.HasPrefix(trimmed, "import") {
-			inImport = true
-			parsed.importStartIdx = i
-			parsed.importBlock = append(parsed.importBlock, line)
-			if strings.Contains(line, "(") {
-				braceCount = 1
-			} else {
-				// 单行 import
-				parsed.importEndIdx = i
-				inImport = false
-			}
-			continue
-		}
-
-		if inImport {
-			parsed.importBlock = append(parsed.importBlock, line)
-			braceCount += strings.Count(line, "(")
-			braceCount -= strings.Count(line, ")")
-			if braceCount == 0 {
-				parsed.importEndIdx = i
-				inImport = false
-			}
-			continue
-		}
-
-		// 其他内容（在 package 之后且不在 import 块中）
-		if pkgFound && (parsed.importEndIdx < 0 || i > parsed.importEndIdx) {
-			// 跳过错误位置的 import 块（在类型声明之后）
-			if strings.HasPrefix(trimmed, "import") {
-				continue
-			}
-			parsed.otherContent = append(parsed.otherContent, line)
-		}
-	}
-
-	return parsed
-}
-
-// reorganizeFileContent 重新组织文件内容：package -> import -> 样板代码 -> 其他内容
-func (g *GoWrapperGenerator) reorganizeFileContent(parsed *parsedFileContent, packageName, requiredImports, boilerplate string) string {
-	var newContent strings.Builder
-
-	// 写入 package 声明
-	if parsed.packageLine != "" {
-		newContent.WriteString(parsed.packageLine)
-		newContent.WriteString("\n\n")
-	} else {
-		newContent.WriteString("package " + packageName)
-		newContent.WriteString("\n\n")
-	}
-
-	// 写入 import 块（使用现有的或新的）
-	imports := g.selectImportBlock(parsed, requiredImports)
-	newContent.WriteString(imports)
-	newContent.WriteString("\n\n")
-
-	// 写入样板代码
-	newContent.WriteString(boilerplate)
-	newContent.WriteString("\n\n")
-
-	// 写入其他内容
-	if len(parsed.otherContent) > 0 {
-		otherText := strings.Join(parsed.otherContent, "\n")
-		otherText = strings.TrimLeft(otherText, " \t\r\n")
-		if otherText != "" {
-			newContent.WriteString(otherText)
-		}
-	}
-
-	return newContent.String()
-}
-
-// selectImportBlock 选择使用现有的 import 块还是新的 import 块
-func (g *GoWrapperGenerator) selectImportBlock(parsed *parsedFileContent, requiredImports string) string {
-	hasValidImport := len(parsed.importBlock) > 0 &&
-		parsed.importStartIdx >= 0 &&
-		parsed.importEndIdx >= 0
-
-	if !hasValidImport {
-		return requiredImports
-	}
-
-	// 检查 import 块是否在正确位置（紧跟在 package 之后，即索引为 1）
-	// 或者 package 和 import 之间只有空行
-	isInCorrectPosition := parsed.importStartIdx == 1
-
-	if isInCorrectPosition {
-		return strings.Join(parsed.importBlock, "\n")
-	}
-
-	// import 块在错误位置，使用新的
-	return requiredImports
-}
-
-// getRequiredImports 返回必需的 import 语句
-func (g *GoWrapperGenerator) getRequiredImports() string {
-	return `import (
-	"gitee.com/orbit-w/orbit/app/proto/mme"
-	dirtyflag "gitee.com/orbit-w/orbit/lib/base/dirty_flag"
-	fieldmeta "gitee.com/orbit-w/orbit/lib/base/field_meta"
-	"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder"
-	mmemodel "gitee.com/orbit-w/orbit/lib/module/mme_model"
-	"go.mongodb.org/mongo-driver/v2/bson"
-	"google.golang.org/protobuf/proto"
-)`
 }
