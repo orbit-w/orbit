@@ -52,8 +52,8 @@ func RunServices() *service.Services {
 	// Init services
 	services := service.NewServices()
 
-	services.Reg(new(stream.AgentStream))
-	services.Reg(persistence.New("configs/mongodb.toml"))
+	services.Reg(persistence.New("configs/mongodb.toml")) //启动持久化服务
+	services.Reg(new(stream.AgentStream))                 //启动AgentStream服务
 
 	return services
 }

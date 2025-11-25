@@ -68,6 +68,15 @@ func (p *Persistence) GracefulStop() error {
 	return nil
 }
 
+func (p *Persistence) Cast(req any) error {
+	if p.actorPID == nil {
+		return ErrDBNotInitialized
+	}
+	root := p.actorSystem.Root
+	root.Send(p.actorPID, req)
+	return nil
+}
+
 // Persist 异步持久化数据
 // collection: MongoDB集合名称
 // documentID: 文档ID

@@ -81,9 +81,9 @@ func Load[IDType any](database string, collection string, docID IDType) (*actor.
 	return future, nil
 }
 
-func Persist[IDType any](database string, collection string, documentID IDType, doc bson.M) (*actor.Future, error) {
+func Persist[IDType any](database string, collection string, documentID IDType, doc bson.M) error {
 	if globalPersistence == nil {
-		return nil, ErrDBNotInitialized
+		return ErrDBNotInitialized
 	}
 
 	req := PersistenceRequest{
@@ -93,12 +93,8 @@ func Persist[IDType any](database string, collection string, documentID IDType, 
 		Doc:        doc,
 	}
 
-	future, err := globalPersistence.Call(req, DefaultTimeout)
-	if err != nil {
-		mlog.Errorf("Persist failed: %v", err)
-		return nil, err
-	}
-	return future, nil
+	globalPersistence.Cast(req)
+	return nil
 }
 
 // PersistSync 同步持久化数据
