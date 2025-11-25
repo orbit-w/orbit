@@ -69,9 +69,9 @@ func generateRouterCode(ctx *RouterGenContext) error {
 	if !hasMME {
 		code.WriteString("\t\"gitee.com/orbit-w/orbit/app/proto/mme\"\n")
 	}
-	code.WriteString("\t\"gitee.com/orbit-w/orbit/app/proto/pb\"\n\n")
+	code.WriteString("\t\"gitee.com/orbit-w/orbit/app/proto/pb\"\n")
+	code.WriteString("\tservicezone_behavior \"gitee.com/orbit-w/orbit/core/services/service_zone/behavior\"\n\n")
 	code.WriteString("\tmmeobj \"gitee.com/orbit-w/orbit/app/mme\"\n")
-	code.WriteString("\tservicezone \"gitee.com/orbit-w/orbit/core/services/service_zone\"\n")
 	code.WriteString("\t\"google.golang.org/protobuf/proto\"\n")
 	code.WriteString(")\n\n")
 
@@ -93,8 +93,8 @@ func generateHandlerFunction(req *RequestInfo, controller *ControllerInfo) strin
 	// PID 常量名
 	pidName := fmt.Sprintf("PID_Request_%s", req.RequestName)
 
-	// Request 类型名
-	requestTypeFull := fmt.Sprintf("%s.Request_%s", req.PackageName, req.RequestName)
+	// Request 类型名（带包名）
+	requestTypeFull := fmt.Sprintf("*%s.Request_%s", req.PackageName, req.RequestName)
 
 	// 响应类型名
 	responseTypeName := fmt.Sprintf("Request_%s_Rsp", req.RequestName)
@@ -102,52 +102,27 @@ func generateHandlerFunction(req *RequestInfo, controller *ControllerInfo) strin
 	// Controller 调用
 	controllerCall := generateControllerCall(req, controller)
 
-	code.WriteString(fmt.Sprintf("\tRegisterHandler(pb.%s, func(ctx servicezone.IContext, data []byte) (proto.Message, string, error) {\n", pidName))
-	code.WriteString(fmt.Sprintf("\t\treq := &%s{}\n", requestTypeFull))
-	code.WriteString("\t\tif err := proto.Unmarshal(data, req); err != nil {\n")
-	code.WriteString("\t\t\treturn nil, \"\", err\n")
-	code.WriteString("\t\t}\n\n")
-
-	// 如果有 EntityRef，生成实体加载代码
+	// 生成函数签名：使用 msg proto.Message, entities ...mmeobj.IEntity
+	code.WriteString(fmt.Sprintf("\tRegisterHandler(pb.%s, func(ctx servicezone_behavior.IContext, msg proto.Message, entities ...mmeobj.IEntity) (proto.Message, string, error) {\n", pidName))
+	// 使用类型断言解析请求
+	code.WriteString(fmt.Sprintf("\t\treq := msg.(%s)\n", requestTypeFull))
+	// 如果有 EntityRef，生成实体提取和验证代码
 	if len(req.EntityRefs) > 0 {
-		// 收集 EntityRef
-		code.WriteString("\t\trefs := make([]*mme.EntityRef, 0)\n")
-		for _, entityRef := range req.EntityRefs {
-			code.WriteString(fmt.Sprintf("\t\tif req.%s != nil {\n", entityRef.FieldName))
-			code.WriteString(fmt.Sprintf("\t\t\trefs = append(refs, req.%s)\n", entityRef.FieldName))
-			code.WriteString("\t\t}\n")
-		}
-		code.WriteString("\n")
-
-		// 批量加载实体
-		code.WriteString("\t\tentities, err := ctx.LoadRefs(refs)\n")
-		code.WriteString("\t\tif err != nil {\n")
-		code.WriteString("\t\t\treturn nil, \"\", err\n")
-		code.WriteString("\t\t}\n\n")
-
-		// 类型转换和验证
-		code.WriteString("\t\t// 根据Req中Ref的顺序，获取对应的实体\n")
-		code.WriteString("\t\tvar (\n")
-		for _, entityRef := range req.EntityRefs {
-			// WrapperTypeWithAlias 已经包含 *，不需要再加
-			code.WriteString(fmt.Sprintf("\t\t\t%s %s\n", entityRef.ParamName, entityRef.WrapperTypeWithAlias))
-		}
-		code.WriteString("\t\t\tok bool\n")
-		code.WriteString("\t\t)\n")
-
+		// 从 entities 参数中提取实体并验证
 		for i, entityRef := range req.EntityRefs {
-			code.WriteString(fmt.Sprintf("\t\tif %s, ok = entities[%d].(%s); !ok {\n",
-				entityRef.ParamName, i, entityRef.WrapperTypeWithAlias))
-			code.WriteString(fmt.Sprintf("\t\t\treturn nil, \"\", fmt.Errorf(\"%s entity not found\")\n",
+			code.WriteString(fmt.Sprintf("\t\t%s, ok := entities[%d].(%s)\n", entityRef.ParamName, i, entityRef.WrapperTypeWithAlias))
+			code.WriteString("\t\tif !ok {\n")
+			code.WriteString(fmt.Sprintf("\t\t\treturn nil, \"\", fmt.Errorf(\"%s entity not found in entities\")\n",
 				strings.ToLower(entityRef.EntityName)))
 			code.WriteString("\t\t}\n")
 		}
+		// 有 EntityRef 时，验证代码后添加一个空行
 		code.WriteString("\n")
 	}
 
 	// 调用 Controller 方法
 	code.WriteString(fmt.Sprintf("\t\treturn %s, \"%s\", nil\n", controllerCall, responseTypeName))
-	code.WriteString("\t})\n")
+	code.WriteString("\t})\n\n")
 
 	return code.String()
 }
