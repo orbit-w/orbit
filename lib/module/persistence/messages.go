@@ -25,6 +25,8 @@ type LoadRequest struct {
 	Timeout time.Duration
 	// Context 请求上下文（可选）
 	Context context.Context
+	// ResponseReceiver 响应接收者（可选），用于接收加载结果
+	ResponseReceiver *actor.PID
 }
 
 // PersistenceRequest 持久化请求消息

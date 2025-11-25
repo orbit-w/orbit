@@ -62,6 +62,7 @@ func (s *PersistenceService) Stop() error {
 	return globalPersistence.GracefulStop()
 }
 
+// 同步加载数据
 func Load[IDType any](database string, collection string, docID IDType) (*actor.Future, error) {
 	if globalPersistence == nil {
 		return nil, ErrDBNotInitialized
@@ -79,6 +80,26 @@ func Load[IDType any](database string, collection string, docID IDType) (*actor.
 		return nil, err
 	}
 	return future, nil
+}
+
+// 异步加载数据
+func AsyncLoad[IDType any](database string, collection string, documentID IDType, responseReceiver *actor.PID) error {
+	if globalPersistence == nil {
+		return ErrDBNotInitialized
+	}
+
+	if responseReceiver == nil {
+		return ErrInvalidResponseReceiver
+	}
+
+	req := LoadRequest{
+		Database:         database,
+		Collection:       collection,
+		DocID:            documentID,
+		ResponseReceiver: responseReceiver,
+	}
+	globalPersistence.Cast(req)
+	return nil
 }
 
 func Persist[IDType any](database string, collection string, documentID IDType, doc bson.M) error {

@@ -5,6 +5,8 @@ import "errors"
 var (
 	// ErrInvalidRequest 无效的请求
 	ErrInvalidRequest = errors.New("invalid persistence request")
+	// ErrInvalidResponseReceiver 响应接收者为空
+	ErrInvalidResponseReceiver = errors.New("invalid response receiver")
 	// ErrWrapperIsNil Wrapper为nil
 	ErrWrapperIsNil = errors.New("wrapper is nil")
 	// ErrEmptyCollection 集合名称为空

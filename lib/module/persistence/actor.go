@@ -132,13 +132,18 @@ func (p *PersistenceActor) respondLoadSuccess(ctx actor.Context, req LoadRequest
 		zap.Any("DocumentID", req.DocID),
 		zap.String("Database", req.Database))
 
-	ctx.Respond(&LoadResponse{
+	resp := &LoadResponse{
 		Success:    true,
 		Exists:     true,
 		Collection: req.Collection,
 		DocumentID: req.DocID,
 		Data:       raw,
-	})
+	}
+	if req.ResponseReceiver != nil {
+		ctx.Send(req.ResponseReceiver, resp)
+	} else {
+		ctx.Respond(resp)
+	}
 }
 
 // getLoadContext 获取加载操作的上下文
