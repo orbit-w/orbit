@@ -136,6 +136,10 @@ func (e *PlayerEntityWrapper) Collection() string {
 	return "player_entitys"
 }
 
+func (e *PlayerEntityWrapper) HasAnyDirty() bool {
+	return e.IDirtyFlag.HasAnyDirty()
+}
+
 func (e *PlayerEntityWrapper) Load(raw bson.Raw) error {
 	data := NewPlayerEntity()
 	if err := bson.Unmarshal(raw, data); err != nil {

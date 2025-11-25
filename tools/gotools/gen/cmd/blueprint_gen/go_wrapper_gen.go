@@ -788,6 +788,11 @@ func (g *GoWrapperGenerator) generateEntityWrappers(outputDir string) error {
 		sb.WriteString(fmt.Sprintf("\treturn \"%s\"\n", collectionName))
 		sb.WriteString("}\n\n")
 
+		// 生成 HasAnyDirty 方法
+		sb.WriteString(fmt.Sprintf("func (e *%s) HasAnyDirty() bool {\n", wrapperName))
+		sb.WriteString("\treturn e.IDirtyFlag.HasAnyDirty()\n")
+		sb.WriteString("}\n\n")
+
 		// 生成 Load 方法
 		sb.WriteString(fmt.Sprintf("func (e *%s) Load(raw bson.Raw) error {\n", wrapperName))
 		sb.WriteString(fmt.Sprintf("\tdata := New%s()\n", entity.Name))
@@ -987,6 +992,7 @@ func (g *GoWrapperGenerator) generateEntityBoilerplate() string {
 	// 生成 IEntity 接口
 	sb.WriteString("type IEntity interface {\n")
 	sb.WriteString("\tCollection() string\n")
+	sb.WriteString("\tHasAnyDirty() bool\n")
 	sb.WriteString("\tLoad(raw bson.Raw) error\n")
 	sb.WriteString("\tName() string\n")
 	sb.WriteString("\tGetXXXId() int64\n")
