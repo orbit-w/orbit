@@ -97,7 +97,7 @@ type SubscribeByStrategyTypeRequest struct {
 }
 
 type ClientRequest struct {
-	*network.ClientRequest
+	network.IClientRequest
 	ZoneId string
 }
 

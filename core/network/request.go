@@ -1,5 +1,14 @@
 package network
 
+type IClientRequest interface {
+	GetPid() uint32
+	GetSeq() uint32
+	GetIn() []byte
+	GetSession() *Session
+	Response(data []byte, pid uint32) error
+	ResponseBatch(msgs []Message) error
+}
+
 type ClientRequest struct {
 	upSeq uint32
 	pid   uint32

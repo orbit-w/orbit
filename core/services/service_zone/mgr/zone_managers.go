@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"gitee.com/orbit-w/orbit/core/network"
 	servicezone_behavior "gitee.com/orbit-w/orbit/core/services/service_zone/behavior"
 	servicezone "gitee.com/orbit-w/orbit/core/services/service_zone/zone"
 	"gitee.com/orbit-w/orbit/lib/module/unipue_task_exec"
@@ -23,6 +24,13 @@ func NewZoneManager() *ZoneManager {
 		cache:  cmap.New(),
 		exec:   unipue_task_exec.NewUniqueTaskExecutor(),
 	}
+}
+
+func (z *ZoneManager) ClientRequest(zoneId string, originRequest network.IClientRequest) error {
+	return z.Cast(zoneId, &servicezone_behavior.ClientRequest{
+		IClientRequest: originRequest,
+		ZoneId:         zoneId,
+	})
 }
 
 func (z *ZoneManager) Cast(zoneId string, msg any) error {
