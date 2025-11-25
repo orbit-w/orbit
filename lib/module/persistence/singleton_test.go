@@ -10,7 +10,11 @@ import (
 )
 
 func TestSingleton(t *testing.T) {
-	InitSingletonPersistenceWithFile("mongodb.toml")
+	service := &PersistenceService{
+		PathConfig: "mongodb.toml",
+	}
+	service.Start()
+	defer service.Stop()
 
 	assert.NotNil(t, globalPersistence)
 
@@ -20,6 +24,4 @@ func TestSingleton(t *testing.T) {
 	assert.NotNil(t, resp)
 	assert.True(t, resp.Success)
 	fmt.Printf("ModifiedCount: %d, MatchedCount: %d\n", resp.ModifiedCount, resp.MatchedCount)
-	err = SingletonGracefulStop()
-	assert.NoError(t, err)
 }

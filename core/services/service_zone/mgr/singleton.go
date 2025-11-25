@@ -4,6 +4,7 @@ import (
 	"sync"
 	"time"
 
+	"gitee.com/orbit-w/orbit/core/network"
 	"github.com/asynkron/protoactor-go/actor"
 )
 
@@ -17,6 +18,10 @@ func GetZoneManager() *ZoneManager {
 		globalManager = NewZoneManager()
 	})
 	return globalManager
+}
+
+func ClientRequest(zoneId string, originRequest network.IClientRequest) error {
+	return GetZoneManager().ClientRequest(zoneId, originRequest)
 }
 
 func Cast(zoneId string, msg any) error {

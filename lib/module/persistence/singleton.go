@@ -15,7 +15,7 @@ var (
 	once              sync.Once
 )
 
-// InitSingletonPersistenceWithFile 初始化全局持久化
+// PersistenceService 持久化服务
 // 单例模式初始化
 // pathConfig: 配置文件路径
 // 配置文件格式为yaml或toml
@@ -26,9 +26,19 @@ var (
 //	uri: mongodb://localhost:27017
 //	database: test
 //	collection: test
-func InitSingletonPersistenceWithFile(pathConfig string) {
+type PersistenceService struct {
+	PathConfig string
+}
+
+func New(pathConfig string) *PersistenceService {
+	return &PersistenceService{
+		PathConfig: pathConfig,
+	}
+}
+
+func (s *PersistenceService) Start() error {
 	once.Do(func() {
-		cfg, err := mongodbdriver.NewConfigLoader().LoadConfig(pathConfig)
+		cfg, err := mongodbdriver.NewConfigLoader().LoadConfig(s.PathConfig)
 		if err != nil {
 			panic(err)
 		}
@@ -42,12 +52,10 @@ func InitSingletonPersistenceWithFile(pathConfig string) {
 		}
 		mlog.Infof("Global persistence initialized")
 	})
+	return nil
 }
 
-//TODO: 支持配置中心加载配置
-
-// SingletonGracefulStop 单例模式停止持久化系统
-func SingletonGracefulStop() error {
+func (s *PersistenceService) Stop() error {
 	if globalPersistence == nil {
 		return ErrDBNotInitialized
 	}

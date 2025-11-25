@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -10,12 +9,14 @@ import (
 	"time"
 
 	"gitee.com/orbit-w/orbit/lib/module/logger"
+	"gitee.com/orbit-w/orbit/lib/module/persistence"
 
 	"gitee.com/orbit-w/orbit/app/modules/service"
 	"gitee.com/orbit-w/orbit/app/routers"
 	"gitee.com/orbit-w/orbit/core/network"
 	stream "gitee.com/orbit-w/orbit/core/services/agent_stream"
 	servicezone_behavior "gitee.com/orbit-w/orbit/core/services/service_zone/behavior"
+	servicezone_mgr "gitee.com/orbit-w/orbit/core/services/service_zone/mgr"
 
 	_ "gitee.com/orbit-w/orbit/app/controller_v2"
 )
@@ -33,16 +34,10 @@ func Serve(nodeId string) {
 	routers.Init()
 
 	servicezone_behavior.SetRouter(routers.GetRouter())
-
-	// Init services
-	services := service.NewServices()
+	stream.RegisterRequestHandler(requestHandler)
 
 	// Register services
-	RegServices(services)
-
-	if err := services.Start(); err != nil {
-		panic(fmt.Sprintf("services start error: %v", err))
-	}
+	services := RunServices()
 
 	gracefulShutdown(func(ctx context.Context) error {
 		services.Stop()
@@ -52,10 +47,15 @@ func Serve(nodeId string) {
 	})
 }
 
-func RegServices(services *service.Services) {
-	stream.RegisterRequestHandler(requestHandler)
+func RunServices() *service.Services {
+
+	// Init services
+	services := service.NewServices()
 
 	services.Reg(new(stream.AgentStream))
+	services.Reg(persistence.New("configs/mongodb.toml"))
+
+	return services
 }
 
 // gracefulShutdown 优雅关闭服务
@@ -81,16 +81,6 @@ func gracefulShutdown(stopper func(ctx context.Context) error) {
 }
 
 var requestHandler = func(session *network.Session, data []byte, seq, pid uint32) error {
-	// response, pid, err := dispatch.Dispatch(pid, data)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// respData, err := proto.Marshal(response.(proto.Message))
-	// if err != nil {
-	// 	return err
-	// }
-
-	// return session.SendData(respData, seq, pid)
+	servicezone_mgr.ClientRequest("play", network.NewClientRequest(seq, pid, data, session))
 	return nil
 }
