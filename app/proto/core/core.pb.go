@@ -218,6 +218,58 @@ func (x *Error) GetReason() string {
 	return ""
 }
 
+type EntityChange struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	EntityRef     *mme.EntityRef         `protobuf:"bytes,1,opt,name=EntityRef,proto3,oneof" json:"EntityRef,omitempty"`
+	Data          []byte                 `protobuf:"bytes,2,opt,name=Data,proto3,oneof" json:"Data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EntityChange) Reset() {
+	*x = EntityChange{}
+	mi := &file_core_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EntityChange) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EntityChange) ProtoMessage() {}
+
+func (x *EntityChange) ProtoReflect() protoreflect.Message {
+	mi := &file_core_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EntityChange.ProtoReflect.Descriptor instead.
+func (*EntityChange) Descriptor() ([]byte, []int) {
+	return file_core_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *EntityChange) GetEntityRef() *mme.EntityRef {
+	if x != nil {
+		return x.EntityRef
+	}
+	return nil
+}
+
+func (x *EntityChange) GetData() []byte {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
 type Request_SearchBook struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Query         *string                `protobuf:"bytes,1,opt,name=Query,proto3,oneof" json:"Query,omitempty"`
@@ -228,7 +280,7 @@ type Request_SearchBook struct {
 
 func (x *Request_SearchBook) Reset() {
 	*x = Request_SearchBook{}
-	mi := &file_core_proto_msgTypes[5]
+	mi := &file_core_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -240,7 +292,7 @@ func (x *Request_SearchBook) String() string {
 func (*Request_SearchBook) ProtoMessage() {}
 
 func (x *Request_SearchBook) ProtoReflect() protoreflect.Message {
-	mi := &file_core_proto_msgTypes[5]
+	mi := &file_core_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -278,7 +330,7 @@ type Request_HeartBeat struct {
 
 func (x *Request_HeartBeat) Reset() {
 	*x = Request_HeartBeat{}
-	mi := &file_core_proto_msgTypes[6]
+	mi := &file_core_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -290,7 +342,7 @@ func (x *Request_HeartBeat) String() string {
 func (*Request_HeartBeat) ProtoMessage() {}
 
 func (x *Request_HeartBeat) ProtoReflect() protoreflect.Message {
-	mi := &file_core_proto_msgTypes[6]
+	mi := &file_core_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -315,7 +367,7 @@ type Request_LoginRequest struct {
 
 func (x *Request_LoginRequest) Reset() {
 	*x = Request_LoginRequest{}
-	mi := &file_core_proto_msgTypes[7]
+	mi := &file_core_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -327,7 +379,7 @@ func (x *Request_LoginRequest) String() string {
 func (*Request_LoginRequest) ProtoMessage() {}
 
 func (x *Request_LoginRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_core_proto_msgTypes[7]
+	mi := &file_core_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -359,7 +411,7 @@ type Request_SearchBook_Rsp struct {
 
 func (x *Request_SearchBook_Rsp) Reset() {
 	*x = Request_SearchBook_Rsp{}
-	mi := &file_core_proto_msgTypes[8]
+	mi := &file_core_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -371,7 +423,7 @@ func (x *Request_SearchBook_Rsp) String() string {
 func (*Request_SearchBook_Rsp) ProtoMessage() {}
 
 func (x *Request_SearchBook_Rsp) ProtoReflect() protoreflect.Message {
-	mi := &file_core_proto_msgTypes[8]
+	mi := &file_core_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -403,7 +455,7 @@ type Notify_BeAttacked struct {
 
 func (x *Notify_BeAttacked) Reset() {
 	*x = Notify_BeAttacked{}
-	mi := &file_core_proto_msgTypes[9]
+	mi := &file_core_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -415,7 +467,7 @@ func (x *Notify_BeAttacked) String() string {
 func (*Notify_BeAttacked) ProtoMessage() {}
 
 func (x *Notify_BeAttacked) ProtoReflect() protoreflect.Message {
-	mi := &file_core_proto_msgTypes[9]
+	mi := &file_core_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -436,6 +488,50 @@ func (x *Notify_BeAttacked) GetCurHp() int32 {
 		return *x.CurHp
 	}
 	return 0
+}
+
+type Notify_EntityChangeNotify struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	EntityChanges *EntityChange          `protobuf:"bytes,1,opt,name=EntityChanges,proto3" json:"EntityChanges,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Notify_EntityChangeNotify) Reset() {
+	*x = Notify_EntityChangeNotify{}
+	mi := &file_core_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Notify_EntityChangeNotify) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Notify_EntityChangeNotify) ProtoMessage() {}
+
+func (x *Notify_EntityChangeNotify) ProtoReflect() protoreflect.Message {
+	mi := &file_core_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Notify_EntityChangeNotify.ProtoReflect.Descriptor instead.
+func (*Notify_EntityChangeNotify) Descriptor() ([]byte, []int) {
+	return file_core_proto_rawDescGZIP(), []int{1, 1}
+}
+
+func (x *Notify_EntityChangeNotify) GetEntityChanges() *EntityChange {
+	if x != nil {
+		return x.EntityChanges
+	}
+	return nil
 }
 
 var File_core_proto protoreflect.FileDescriptor
@@ -460,12 +556,14 @@ const file_core_proto_rawDesc = "" +
 	"\tHeartBeat\x1aa\n" +
 	"\fLoginRequest\x12=\n" +
 	"\x0fPlayerEntityRef\x18\x01 \x01(\v2\x0e.MME.EntityRefH\x00R\x0fPlayerEntityRef\x88\x01\x01B\x12\n" +
-	"\x10_PlayerEntityRef\";\n" +
+	"\x10_PlayerEntityRef\"\x8b\x01\n" +
 	"\x06Notify\x1a1\n" +
 	"\n" +
 	"BeAttacked\x12\x19\n" +
 	"\x05CurHp\x18\x01 \x01(\x05H\x00R\x05CurHp\x88\x01\x01B\b\n" +
-	"\x06_CurHp\"1\n" +
+	"\x06_CurHp\x1aN\n" +
+	"\x12EntityChangeNotify\x128\n" +
+	"\rEntityChanges\x18\x01 \x01(\v2\x12.Core.EntityChangeR\rEntityChanges\"1\n" +
 	"\x04Book\x12\x1d\n" +
 	"\aContent\x18\x01 \x01(\tH\x00R\aContent\x88\x01\x01B\n" +
 	"\n" +
@@ -473,7 +571,13 @@ const file_core_proto_rawDesc = "" +
 	"\x02OK\"/\n" +
 	"\x05Error\x12\x1b\n" +
 	"\x06Reason\x18\x01 \x01(\tH\x00R\x06Reason\x88\x01\x01B\t\n" +
-	"\a_ReasonB(Z&gitee.com/orbit-w/orbit/app/proto/coreb\x06proto3"
+	"\a_Reason\"q\n" +
+	"\fEntityChange\x121\n" +
+	"\tEntityRef\x18\x01 \x01(\v2\x0e.MME.EntityRefH\x00R\tEntityRef\x88\x01\x01\x12\x17\n" +
+	"\x04Data\x18\x02 \x01(\fH\x01R\x04Data\x88\x01\x01B\f\n" +
+	"\n" +
+	"_EntityRefB\a\n" +
+	"\x05_DataB(Z&gitee.com/orbit-w/orbit/app/proto/coreb\x06proto3"
 
 var (
 	file_core_proto_rawDescOnce sync.Once
@@ -487,28 +591,32 @@ func file_core_proto_rawDescGZIP() []byte {
 	return file_core_proto_rawDescData
 }
 
-var file_core_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_core_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_core_proto_goTypes = []any{
-	(*Request)(nil),                // 0: Core.Request
-	(*Notify)(nil),                 // 1: Core.Notify
-	(*Book)(nil),                   // 2: Core.Book
-	(*OK)(nil),                     // 3: Core.OK
-	(*Error)(nil),                  // 4: Core.Error
-	(*Request_SearchBook)(nil),     // 5: Core.Request.SearchBook
-	(*Request_HeartBeat)(nil),      // 6: Core.Request.HeartBeat
-	(*Request_LoginRequest)(nil),   // 7: Core.Request.LoginRequest
-	(*Request_SearchBook_Rsp)(nil), // 8: Core.Request.SearchBook.Rsp
-	(*Notify_BeAttacked)(nil),      // 9: Core.Notify.BeAttacked
-	(*mme.EntityRef)(nil),          // 10: MME.EntityRef
+	(*Request)(nil),                   // 0: Core.Request
+	(*Notify)(nil),                    // 1: Core.Notify
+	(*Book)(nil),                      // 2: Core.Book
+	(*OK)(nil),                        // 3: Core.OK
+	(*Error)(nil),                     // 4: Core.Error
+	(*EntityChange)(nil),              // 5: Core.EntityChange
+	(*Request_SearchBook)(nil),        // 6: Core.Request.SearchBook
+	(*Request_HeartBeat)(nil),         // 7: Core.Request.HeartBeat
+	(*Request_LoginRequest)(nil),      // 8: Core.Request.LoginRequest
+	(*Request_SearchBook_Rsp)(nil),    // 9: Core.Request.SearchBook.Rsp
+	(*Notify_BeAttacked)(nil),         // 10: Core.Notify.BeAttacked
+	(*Notify_EntityChangeNotify)(nil), // 11: Core.Notify.EntityChangeNotify
+	(*mme.EntityRef)(nil),             // 12: MME.EntityRef
 }
 var file_core_proto_depIdxs = []int32{
-	10, // 0: Core.Request.LoginRequest.PlayerEntityRef:type_name -> MME.EntityRef
-	2,  // 1: Core.Request.SearchBook.Rsp.Result:type_name -> Core.Book
-	2,  // [2:2] is the sub-list for method output_type
-	2,  // [2:2] is the sub-list for method input_type
-	2,  // [2:2] is the sub-list for extension type_name
-	2,  // [2:2] is the sub-list for extension extendee
-	0,  // [0:2] is the sub-list for field type_name
+	12, // 0: Core.EntityChange.EntityRef:type_name -> MME.EntityRef
+	12, // 1: Core.Request.LoginRequest.PlayerEntityRef:type_name -> MME.EntityRef
+	2,  // 2: Core.Request.SearchBook.Rsp.Result:type_name -> Core.Book
+	5,  // 3: Core.Notify.EntityChangeNotify.EntityChanges:type_name -> Core.EntityChange
+	4,  // [4:4] is the sub-list for method output_type
+	4,  // [4:4] is the sub-list for method input_type
+	4,  // [4:4] is the sub-list for extension type_name
+	4,  // [4:4] is the sub-list for extension extendee
+	0,  // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_core_proto_init() }
@@ -519,16 +627,17 @@ func file_core_proto_init() {
 	file_core_proto_msgTypes[2].OneofWrappers = []any{}
 	file_core_proto_msgTypes[4].OneofWrappers = []any{}
 	file_core_proto_msgTypes[5].OneofWrappers = []any{}
-	file_core_proto_msgTypes[7].OneofWrappers = []any{}
+	file_core_proto_msgTypes[6].OneofWrappers = []any{}
 	file_core_proto_msgTypes[8].OneofWrappers = []any{}
 	file_core_proto_msgTypes[9].OneofWrappers = []any{}
+	file_core_proto_msgTypes[10].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_core_proto_rawDesc), len(file_core_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   10,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

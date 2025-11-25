@@ -11,6 +11,7 @@ import (
 // 所有协议ID常量
 const (
 	PID_Notify_BeAttacked uint32 = 0x8fee7235 // Notify_BeAttacked
+	PID_Notify_EntityChangeNotify uint32 = 0x3bbb05a7 // Notify_EntityChangeNotify
 	PID_Notify_ExpChange uint32 = 0xc8e2ba5f // Notify_ExpChange
 	PID_Request_AskLevelUp uint32 = 0x5f3b6570 // Request_AskLevelUp
 	PID_Request_AskLevelUp_Rsp uint32 = 0xa923e163 // Request_AskLevelUp_Rsp
@@ -28,6 +29,7 @@ const (
 // AllMessageNameToID 全局消息名称到ID的映射
 var AllMessageNameToID = map[string]uint32{
 	"Notify_BeAttacked": PID_Notify_BeAttacked,
+	"Notify_EntityChangeNotify": PID_Notify_EntityChangeNotify,
 	"Notify_ExpChange": PID_Notify_ExpChange,
 	"Request_AskLevelUp": PID_Request_AskLevelUp,
 	"Request_AskLevelUp_Rsp": PID_Request_AskLevelUp_Rsp,
@@ -44,6 +46,7 @@ var AllMessageNameToID = map[string]uint32{
 // AllIDToMessageName 全局ID到消息名称的映射
 var AllIDToMessageName = map[uint32]string{
 	PID_Notify_BeAttacked: "Notify_BeAttacked",
+	PID_Notify_EntityChangeNotify: "Notify_EntityChangeNotify",
 	PID_Notify_ExpChange: "Notify_ExpChange",
 	PID_Request_AskLevelUp: "Request_AskLevelUp",
 	PID_Request_AskLevelUp_Rsp: "Request_AskLevelUp_Rsp",
