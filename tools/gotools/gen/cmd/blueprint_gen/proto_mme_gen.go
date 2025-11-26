@@ -75,11 +75,6 @@ func (g *ProtoGenerator) collectEnumImportsFromFields(fields []*blueprint_types.
 	return g.resolver.CollectImportsFromFields(fields, currentPackageName)
 }
 
-// getProtoImportForSource 根据 SourceProto 返回对应的 proto 导入文件（已废弃，使用 TypeReferenceResolver）
-func (g *ProtoGenerator) getProtoImportForSource(sourceProto string) string {
-	return g.resolver.getProtoImportForSource(sourceProto)
-}
-
 // MMEObjectAutoProtoImport 自动生成 MMEObject 的 Proto 导入
 // 根据 MMEObject 的类型和名称，生成对应的 Proto 导入（包括枚举类型）
 // currentSourceProto: 当前 proto 文件的 SourceProto
