@@ -133,6 +133,58 @@ func (SubscribeStrategyType) EnumDescriptor() ([]byte, []int) {
 	return file_common_proto_rawDescGZIP(), []int{1}
 }
 
+type ZoneDispatchType int32
+
+const (
+	// 世界服分组
+	ZoneDispatchType_ForWorld ZoneDispatchType = 0
+	// 指定节点服分组
+	ZoneDispatchType_ForDesignated ZoneDispatchType = 1
+	// 随机服分组
+	ZoneDispatchType_ForRandom ZoneDispatchType = 2
+)
+
+// Enum value maps for ZoneDispatchType.
+var (
+	ZoneDispatchType_name = map[int32]string{
+		0: "ForWorld",
+		1: "ForDesignated",
+		2: "ForRandom",
+	}
+	ZoneDispatchType_value = map[string]int32{
+		"ForWorld":      0,
+		"ForDesignated": 1,
+		"ForRandom":     2,
+	}
+)
+
+func (x ZoneDispatchType) Enum() *ZoneDispatchType {
+	p := new(ZoneDispatchType)
+	*p = x
+	return p
+}
+
+func (x ZoneDispatchType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ZoneDispatchType) Descriptor() protoreflect.EnumDescriptor {
+	return file_common_proto_enumTypes[2].Descriptor()
+}
+
+func (ZoneDispatchType) Type() protoreflect.EnumType {
+	return &file_common_proto_enumTypes[2]
+}
+
+func (x ZoneDispatchType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ZoneDispatchType.Descriptor instead.
+func (ZoneDispatchType) EnumDescriptor() ([]byte, []int) {
+	return file_common_proto_rawDescGZIP(), []int{2}
+}
+
 // Entity 类型枚举，由 entity register 自动生成
 type EntityType int32
 
@@ -166,11 +218,11 @@ func (x EntityType) String() string {
 }
 
 func (EntityType) Descriptor() protoreflect.EnumDescriptor {
-	return file_common_proto_enumTypes[2].Descriptor()
+	return file_common_proto_enumTypes[3].Descriptor()
 }
 
 func (EntityType) Type() protoreflect.EnumType {
-	return &file_common_proto_enumTypes[2]
+	return &file_common_proto_enumTypes[3]
 }
 
 func (x EntityType) Number() protoreflect.EnumNumber {
@@ -179,7 +231,7 @@ func (x EntityType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use EntityType.Descriptor instead.
 func (EntityType) EnumDescriptor() ([]byte, []int) {
-	return file_common_proto_rawDescGZIP(), []int{2}
+	return file_common_proto_rawDescGZIP(), []int{3}
 }
 
 // Coord
@@ -393,7 +445,11 @@ const file_common_proto_rawDesc = "" +
 	"\x04ById\x10\x02\x12\x0e\n" +
 	"\n" +
 	"ByDistance\x10\x03\x12\r\n" +
-	"\tComposite\x10\x04*9\n" +
+	"\tComposite\x10\x04*B\n" +
+	"\x10ZoneDispatchType\x12\f\n" +
+	"\bForWorld\x10\x00\x12\x11\n" +
+	"\rForDesignated\x10\x01\x12\r\n" +
+	"\tForRandom\x10\x02*9\n" +
 	"\n" +
 	"EntityType\x12\x15\n" +
 	"\x11EntityTypeUnknown\x10\x00\x12\x14\n" +
@@ -411,18 +467,19 @@ func file_common_proto_rawDescGZIP() []byte {
 	return file_common_proto_rawDescData
 }
 
-var file_common_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
+var file_common_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
 var file_common_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_common_proto_goTypes = []any{
 	(ServiceZoneType)(0),       // 0: MME.ServiceZoneType
 	(SubscribeStrategyType)(0), // 1: MME.SubscribeStrategyType
-	(EntityType)(0),            // 2: MME.EntityType
-	(*Coord)(nil),              // 3: MME.Coord
-	(*MMELocation)(nil),        // 4: MME.MMELocation
-	(*EntityRef)(nil),          // 5: MME.EntityRef
+	(ZoneDispatchType)(0),      // 2: MME.ZoneDispatchType
+	(EntityType)(0),            // 3: MME.EntityType
+	(*Coord)(nil),              // 4: MME.Coord
+	(*MMELocation)(nil),        // 5: MME.MMELocation
+	(*EntityRef)(nil),          // 6: MME.EntityRef
 }
 var file_common_proto_depIdxs = []int32{
-	2, // 0: MME.EntityRef.EntityType:type_name -> MME.EntityType
+	3, // 0: MME.EntityRef.EntityType:type_name -> MME.EntityType
 	1, // [1:1] is the sub-list for method output_type
 	1, // [1:1] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
@@ -443,7 +500,7 @@ func file_common_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_common_proto_rawDesc), len(file_common_proto_rawDesc)),
-			NumEnums:      3,
+			NumEnums:      4,
 			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   0,
