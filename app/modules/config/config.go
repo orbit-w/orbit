@@ -12,7 +12,7 @@ var (
 )
 
 type Config struct {
-	Server  Server
+	Server  Server  `toml:"server"`
 	Cluster Cluster `toml:"cluster"`
 }
 
