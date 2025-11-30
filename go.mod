@@ -3,7 +3,7 @@ module gitee.com/orbit-w/orbit
 go 1.24
 
 require (
-	gitee.com/orbit-w/meteor v0.0.0-20251126162202-d61ef18b2971
+	gitee.com/orbit-w/meteor v0.0.0-20251127152046-9f75787fb4c8
 	github.com/BurntSushi/toml v1.4.0
 	github.com/asynkron/protoactor-go v0.0.0-20240822202345-3c0e61ca19c9
 	github.com/gogo/protobuf v1.3.2

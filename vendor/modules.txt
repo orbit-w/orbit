@@ -1,4 +1,4 @@
-# gitee.com/orbit-w/meteor v0.0.0-20251126162202-d61ef18b2971
+# gitee.com/orbit-w/meteor v0.0.0-20251127152046-9f75787fb4c8
 ## explicit; go 1.24
 gitee.com/orbit-w/meteor/bases/container/heap
 gitee.com/orbit-w/meteor/bases/container/priority_queue
@@ -8,10 +8,13 @@ gitee.com/orbit-w/meteor/bases/math
 gitee.com/orbit-w/meteor/bases/misc/common
 gitee.com/orbit-w/meteor/bases/misc/utils
 gitee.com/orbit-w/meteor/bases/net/bigendian_buf
+gitee.com/orbit-w/meteor/modules/cache/v1
 gitee.com/orbit-w/meteor/modules/database/no_sql/mongodb_driver
 gitee.com/orbit-w/meteor/modules/mlog
 gitee.com/orbit-w/meteor/modules/net/network
 gitee.com/orbit-w/meteor/modules/net/packet
+gitee.com/orbit-w/meteor/modules/subpub/subpub_redis
+gitee.com/orbit-w/meteor/modules/unique_task_exec
 # github.com/BurntSushi/toml v1.4.0
 ## explicit; go 1.18
 github.com/BurntSushi/toml

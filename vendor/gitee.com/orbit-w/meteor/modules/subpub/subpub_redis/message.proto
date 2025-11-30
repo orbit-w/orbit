@@ -1,0 +1,9 @@
+syntax = "proto3";
+package subpub_redis;
+option go_package = "gitee.com/orbit-w/meteor/modules/subpub/subpub_redis";
+
+message PubMessage {
+  string Sender = 1;
+  int64 Pid = 2;
+  bytes Data = 3;
+}

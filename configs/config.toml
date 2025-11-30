@@ -2,3 +2,6 @@
 stage = "dev"
 host = "127.0.0.1"
 port = "8950"
+
+[node]
+node_id = "game_node"
