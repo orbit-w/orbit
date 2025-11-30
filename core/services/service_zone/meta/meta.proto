@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package zone_meta;
+
+option go_package = ".;zone_meta";
+
+message ZoneMeta {
+  string Id = 1;
+  int32 Pattern = 2;
+  ZoneDispatcher Dispatcher = 3;
+}
+
+message ZoneDispatcher {
+  Zone_DispatcherType Type = 1;
+  string ServerId = 2; //最新的逻辑服ID
+  string NodeId = 3; //最新的节点ID
+}
+
+enum Zone_DispatcherType {
+  ForWorld = 0; // 世界分组
+  ForDesignated = 1; // 指定节点服分组
+  ForRandom = 2; // 随机服分组
+}
