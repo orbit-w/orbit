@@ -14,10 +14,15 @@ var (
 type Config struct {
 	Server  Server  `toml:"server"`
 	Cluster Cluster `toml:"cluster"`
+	Redis   Redis   `toml:"redis"`
 }
 
 type Cluster struct {
 	Nacos NacosConfig `toml:"nacos"`
+}
+
+func (c *Config) GetNacosConfig() NacosConfig {
+	return c.Cluster.Nacos
 }
 
 // NacosConfig Nacos 配置
@@ -32,9 +37,10 @@ type NacosConfig struct {
 }
 
 type Server struct {
-	Stage string `toml:"stage"`
-	Host  string `toml:"host"`
-	Port  string `toml:"port"`
+	Name  string `toml:"name"`  // 服务名称
+	Stage string `toml:"stage"` // 环境
+	Host  string `toml:"host"`  // 主机地址
+	Port  string `toml:"port"`  // 端口
 }
 
 func GetConfig() *Config {

@@ -10,6 +10,7 @@ gitee.com/orbit-w/meteor/bases/misc/utils
 gitee.com/orbit-w/meteor/bases/net/bigendian_buf
 gitee.com/orbit-w/meteor/modules/cache/v1
 gitee.com/orbit-w/meteor/modules/database/no_sql/mongodb_driver
+gitee.com/orbit-w/meteor/modules/database/rdb
 gitee.com/orbit-w/meteor/modules/mlog
 gitee.com/orbit-w/meteor/modules/net/network
 gitee.com/orbit-w/meteor/modules/net/packet

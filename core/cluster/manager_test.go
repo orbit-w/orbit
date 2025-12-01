@@ -14,10 +14,10 @@ import (
 )
 
 type TestConfig struct {
-	Nacos *config.NacosConfig `toml:"nacos"`
+	Nacos config.NacosConfig `toml:"nacos"`
 }
 
-func Setup(filename string) *config.NacosConfig {
+func Setup(filename string) config.NacosConfig {
 	// 读取测试配置
 	viper.SetConfigFile(filename)
 	viper.SetConfigType("toml")

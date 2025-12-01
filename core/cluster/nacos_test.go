@@ -128,13 +128,13 @@ func TestParseAddress(t *testing.T) {
 
 func TestNewNacosRegistry_InvalidConfig(t *testing.T) {
 	t.Run("配置为nil", func(t *testing.T) {
-		_, err := NewNacosRegistry(nil, "test-node-001", "127.0.0.1:8080", "test-service")
+		_, err := NewNacosRegistry(NacosConfig{}, "test-node-001", "127.0.0.1:8080", "test-service")
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "nacos config is nil")
 	})
 
 	t.Run("服务器地址为空", func(t *testing.T) {
-		config := &NacosConfig{
+		config := NacosConfig{
 			ServerHosts: []string{},
 		}
 
@@ -144,7 +144,7 @@ func TestNewNacosRegistry_InvalidConfig(t *testing.T) {
 	})
 
 	t.Run("节点地址格式错误", func(t *testing.T) {
-		config := &NacosConfig{
+		config := NacosConfig{
 			ServerHosts: []string{"127.0.0.1:8848"},
 		}
 
@@ -155,7 +155,7 @@ func TestNewNacosRegistry_InvalidConfig(t *testing.T) {
 
 	t.Run("服务器地址支持无端口域名-阿里云场景", func(t *testing.T) {
 		// 测试阿里云 Nacos 域名场景，服务器地址无端口
-		config := &NacosConfig{
+		config := NacosConfig{
 			ServerHosts:  []string{"mse-63a694613-p.nacos-ans.mse.aliyuncs.com"},
 			GroupName:    "TEST_GROUP",
 			TimeoutMs:    5000,
@@ -175,7 +175,7 @@ func TestNewNacosRegistry_InvalidConfig(t *testing.T) {
 
 	t.Run("服务器地址支持混合格式", func(t *testing.T) {
 		// 测试同时支持带端口和不带端口的服务器地址
-		config := &NacosConfig{
+		config := NacosConfig{
 			ServerHosts: []string{
 				"mse-63a694613-p.nacos-ans.mse.aliyuncs.com", // 无端口，使用默认端口
 				"127.0.0.1:8848", // 带端口
@@ -204,7 +204,7 @@ func TestNacosRegistry_GetCurrentNodeID(t *testing.T) {
 func TestNacosRegistry(t *testing.T) {
 	t.Run("注册服务", func(t *testing.T) {
 		// 测试阿里云 Nacos 域名场景，服务器地址无端口
-		config := &NacosConfig{
+		config := NacosConfig{
 			ServerHosts:  []string{"mse-63a694613-p.nacos-ans.mse.aliyuncs.com"},
 			GroupName:    "TEST_GROUP",
 			TimeoutMs:    5000,

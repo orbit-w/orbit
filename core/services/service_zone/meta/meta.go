@@ -1,9 +1,11 @@
 package zone_meta
 
 import (
+	sync "sync"
 	"time"
 
 	cachev1 "gitee.com/orbit-w/meteor/modules/cache/v1"
+	"github.com/redis/go-redis/v9"
 )
 
 const (
@@ -17,7 +19,31 @@ const (
 
 var (
 	cache *cachev1.Cache[*ZoneMeta]
+	once  sync.Once
 )
+
+type ZoneMetaService struct {
+	cli redis.UniversalClient
+}
+
+func NewZoneMetaService(_cli redis.UniversalClient) *ZoneMetaService {
+	return &ZoneMetaService{
+		cli: _cli,
+	}
+}
+
+func (s *ZoneMetaService) Start() error {
+	once.Do(func() {
+		cache = cachev1.NewCache(s.cli, CachePattern, func() *ZoneMeta {
+			return &ZoneMeta{}
+		})
+	})
+	return nil
+}
+
+func (s *ZoneMetaService) Stop() error {
+	return nil
+}
 
 func NewZoneMeta(id string, pattern int32, dispatcher *ZoneDispatcher) *ZoneMeta {
 	return &ZoneMeta{
@@ -27,8 +53,13 @@ func NewZoneMeta(id string, pattern int32, dispatcher *ZoneDispatcher) *ZoneMeta
 	}
 }
 
-func SetZoneMeta(id string, pattern int32, dispatcher *ZoneDispatcher) error {
-	return cache.Set(id, NewZoneMeta(id, pattern, dispatcher))
+func SetZoneMeta(id string, pattern int32, dispatcher *ZoneDispatcher) (*ZoneMeta, error) {
+	meta := NewZoneMeta(id, pattern, dispatcher)
+	err := cache.Set(id, meta)
+	if err != nil {
+		return nil, err
+	}
+	return meta, nil
 }
 
 func GetZoneMeta(id string) (*ZoneMeta, error) {

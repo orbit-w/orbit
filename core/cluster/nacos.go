@@ -24,7 +24,7 @@ type NacosConfig = config.NacosConfig
 
 // NacosRegistry Nacos 服务注册发现
 type NacosRegistry struct {
-	config       *NacosConfig
+	config       NacosConfig
 	namingClient naming_client.INamingClient
 	nodeID       string
 	nodeIP       string
@@ -39,11 +39,7 @@ type NacosRegistry struct {
 }
 
 // NewNacosRegistry 创建 Nacos 注册发现实例
-func NewNacosRegistry(config *NacosConfig, nodeID, nodeAddress, serviceName string) (*NacosRegistry, error) {
-	if config == nil {
-		return nil, fmt.Errorf("nacos config is nil")
-	}
-
+func NewNacosRegistry(config NacosConfig, nodeID, nodeAddress, serviceName string) (*NacosRegistry, error) {
 	// 设置默认值
 	if config.GroupName == "" {
 		config.GroupName = "DEFAULT_GROUP"

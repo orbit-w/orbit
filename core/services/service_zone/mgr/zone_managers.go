@@ -6,24 +6,39 @@ import (
 
 	"gitee.com/orbit-w/orbit/core/network"
 	servicezone_behavior "gitee.com/orbit-w/orbit/core/services/service_zone/behavior"
+	zone_meta "gitee.com/orbit-w/orbit/core/services/service_zone/meta"
 	servicezone "gitee.com/orbit-w/orbit/core/services/service_zone/zone"
 	"gitee.com/orbit-w/orbit/lib/module/unipue_task_exec"
 	"github.com/asynkron/protoactor-go/actor"
-	cmap "github.com/orcaman/concurrent-map"
+	cmap "github.com/orcaman/concurrent-map/v2"
 )
 
 type ZoneManager struct {
 	system *actor.ActorSystem
-	cache  cmap.ConcurrentMap
+	cache  cmap.ConcurrentMap[string, *actor.PID]
 	exec   *unipue_task_exec.UniqueTaskExecutor
 }
 
 func NewZoneManager() *ZoneManager {
-	return &ZoneManager{
+	globalManager = &ZoneManager{
 		system: actor.NewActorSystem(),
-		cache:  cmap.New(),
+		cache:  cmap.New[*actor.PID](),
 		exec:   unipue_task_exec.NewUniqueTaskExecutor(),
 	}
+	return globalManager
+}
+
+func (z *ZoneManager) Start() error {
+	return nil
+}
+
+func (m *ZoneManager) Stop() error {
+	for _, pid := range m.cache.Items() {
+		servicezone_behavior.Stop(m.system, pid)
+	}
+	m.cache.Clear()
+	m.system.Shutdown()
+	return nil
 }
 
 func (z *ZoneManager) ClientRequest(zoneId string, originRequest network.IClientRequest) error {
@@ -34,7 +49,7 @@ func (z *ZoneManager) ClientRequest(zoneId string, originRequest network.IClient
 }
 
 func (z *ZoneManager) Cast(zoneId string, msg any) error {
-	pid, err := z.Load(zoneId)
+	pid, err := z.GetZone(zoneId)
 	if err != nil {
 		return fmt.Errorf("zone %s not found: %w", zoneId, err)
 	}
@@ -44,7 +59,7 @@ func (z *ZoneManager) Cast(zoneId string, msg any) error {
 }
 
 func (z *ZoneManager) Call(zoneId string, req any, timeout ...time.Duration) (*actor.Future, error) {
-	pid, err := z.Load(zoneId)
+	pid, err := z.GetZone(zoneId)
 	if err != nil {
 		return nil, fmt.Errorf("zone %s not found: %w", zoneId, err)
 	}
@@ -53,28 +68,31 @@ func (z *ZoneManager) Call(zoneId string, req any, timeout ...time.Duration) (*a
 	return future, nil
 }
 
+func (z *ZoneManager) StartZoneWithMeta(zoneId string, meta *zone_meta.ZoneMeta) (*actor.PID, error) {
+	return z.Load(zoneId, meta)
+}
+
+func (m *ZoneManager) GetZone(zoneId string) (*actor.PID, error) {
+	if v, exists := m.cache.Get(zoneId); exists {
+		return v, nil
+	}
+	meta, err := zone_meta.GetZoneMeta(zoneId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get zone meta for zoneId %s: %w", zoneId, err)
+	}
+
+	return m.Load(zoneId, meta)
+}
+
 // Load 加载或创建 Zone Actor
 // zoneId: 服务区 ID
 // zoneType: 服务区类型（可选，如果为 nil 则使用默认类型 ZoneTypeWild）
 // 返回: Zone Actor 的 PID
-func (m *ZoneManager) Load(zoneId string, zoneType ...servicezone.ZoneType) (*actor.PID, error) {
-	// 先从缓存中查找
-	if v, exists := m.cache.Get(zoneId); exists {
-		if pid, ok := v.(*actor.PID); ok {
-			return pid, nil
-		}
-	}
-
-	// 确定 zoneType，如果没有提供则使用默认值
-	var zt servicezone.ZoneType = servicezone.ZoneTypeWild
-	if len(zoneType) > 0 {
-		zt = zoneType[0]
-	}
-
+func (m *ZoneManager) Load(zoneId string, zoneMeta *zone_meta.ZoneMeta) (*actor.PID, error) {
 	// 使用 ExecuteOnce 确保并发安全
 	re := m.exec.ExecuteOnce(zoneId, func() any {
 		// 创建 ServiceZone
-		zone := servicezone.NewServiceZone(zoneId, zt)
+		zone := servicezone.NewServiceZone(zoneId, zoneMeta)
 
 		// 启动 Zone Actor，传递 router
 		pid, err := servicezone_behavior.Start(m.system, servicezone.GenActorId(zoneId), zone)
@@ -97,14 +115,8 @@ func (m *ZoneManager) Load(zoneId string, zoneType ...servicezone.ZoneType) (*ac
 	}
 }
 
-func (m *ZoneManager) Stop() {
-	for _, pid := range m.cache.Items() {
-		if pid, ok := pid.(*actor.PID); ok {
-			servicezone_behavior.Stop(m.system, pid)
-		}
-	}
-	m.cache.Clear()
-	m.system.Shutdown()
+func (m *ZoneManager) ZoneExists(zoneId string) bool {
+	return m.cache.Has(zoneId)
 }
 
 func parseTimeout(timeout ...time.Duration) time.Duration {

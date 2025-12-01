@@ -2,21 +2,27 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"gitee.com/orbit-w/meteor/modules/database/rdb"
 	"gitee.com/orbit-w/orbit/lib/module/logger"
 	"gitee.com/orbit-w/orbit/lib/module/persistence"
 
+	"gitee.com/orbit-w/orbit/app/modules/config"
 	"gitee.com/orbit-w/orbit/app/modules/service"
 	"gitee.com/orbit-w/orbit/app/routers"
+	"gitee.com/orbit-w/orbit/core/cluster"
 	"gitee.com/orbit-w/orbit/core/network"
 	stream "gitee.com/orbit-w/orbit/core/services/agent_stream"
 	servicezone_behavior "gitee.com/orbit-w/orbit/core/services/service_zone/behavior"
+	zone_meta "gitee.com/orbit-w/orbit/core/services/service_zone/meta"
 	servicezone_mgr "gitee.com/orbit-w/orbit/core/services/service_zone/mgr"
+	servicezone "gitee.com/orbit-w/orbit/core/services/service_zone/zone"
 
 	_ "gitee.com/orbit-w/orbit/app/controller_v2"
 )
@@ -28,8 +34,7 @@ import (
 */
 
 func Serve(nodeId string) {
-	//cfg := config.GetConfig()
-
+	cfg := config.GetConfig()
 	// 初始化 routers
 	routers.Init()
 
@@ -37,7 +42,13 @@ func Serve(nodeId string) {
 	stream.RegisterRequestHandler(requestHandler)
 
 	// Register services
-	services := RunServices()
+	services := RunServices(cfg)
+
+	// 启动集群节点
+	ClusterSrartNode(cfg, nodeId)
+
+	// 启动Zone
+	StartZones(nodeId)
 
 	gracefulShutdown(func(ctx context.Context) error {
 		services.Stop()
@@ -47,15 +58,50 @@ func Serve(nodeId string) {
 	})
 }
 
-func RunServices() *service.Services {
-
+func RunServices(cfg *config.Config) *service.Services {
 	// Init services
 	services := service.NewServices()
+	redisService := service.Wrapper("redis_service").WrapStart(func() error {
+		rdb.Start(cfg.Redis.GetRedisClientOps())
+		return nil
+	}).WrapStop(func() error {
+		rdb.Stop()
+		return nil
+	})
 
-	services.Reg(persistence.New("configs/mongodb.toml")) //启动持久化服务
-	services.Reg(new(stream.AgentStream))                 //启动AgentStream服务
+	services.Reg(persistence.New("configs/mongodb.toml"))             //启动持久化服务
+	services.Reg(new(stream.AgentStream))                             //启动AgentStream服务
+	services.Reg(redisService)                                        //启动Redis服务
+	services.Reg(cluster.NewManager(cfg.Server.Name))                 //启动集群管理服务
+	services.Reg(servicezone_mgr.NewZoneManager())                    //启动ZoneManager服务
+	services.Reg(zone_meta.NewZoneMetaService(rdb.UniversalClient())) //启动ZoneMeta服务
 
 	return services
+}
+
+func StartZones(nodeId string) {
+	// 启动PlayerZone
+	id := servicezone_mgr.GenLocalZoneId(servicezone.ZoneTypePlayer, nodeId)
+	meta, err := zone_meta.SetZoneMeta(id, int32(servicezone.ZoneTypePlayer), &zone_meta.ZoneDispatcher{
+		Type:     zone_meta.Zone_DispatcherType_ForWorld,
+		ServerId: nodeId,
+		NodeId:   nodeId,
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = servicezone_mgr.StartZoneWithMeta(id, meta)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func ClusterSrartNode(cfg *config.Config, nodeId string) error {
+	nacosCfg := cfg.GetNacosConfig()
+	nodeAddress := fmt.Sprintf("%s:%s", cfg.Server.Host, cfg.Server.Port)
+	cluster.StartNode(nacosCfg, cfg.Server.Stage, nodeId, nodeAddress)
+	return nil
 }
 
 // gracefulShutdown 优雅关闭服务

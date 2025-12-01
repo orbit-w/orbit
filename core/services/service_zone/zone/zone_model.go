@@ -5,13 +5,14 @@ import (
 
 	mmeobj "gitee.com/orbit-w/orbit/app/mme"
 	"gitee.com/orbit-w/orbit/app/proto/mme"
+	zone_meta "gitee.com/orbit-w/orbit/core/services/service_zone/meta"
 	"gitee.com/orbit-w/orbit/lib/module/persistence"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 const (
 	// ZonePattern ServiceZone Actor 的 pattern
-	ZonePattern = "zone-pattern"
+	ZoneActorPattern = "zone-actor-pattern"
 )
 
 var (
@@ -19,18 +20,20 @@ var (
 // 在 behavior.go 中定义，这里只是声明
 )
 
-type ZoneType int32
+type ZonePattern int32
 
 const (
-	ZoneTypeDungeon ZoneType = iota
+	ZoneTypePlayer ZonePattern = iota
 	ZoneTypeCity
+	ZoneTypeDungeon
 	ZoneTypeWild
 	ZoneTypeArena
 )
 
 type ServiceZone struct {
 	ID            string
-	Type          ZoneType
+	Pattern       ZonePattern // 服务区模式
+	Meta          *zone_meta.ZoneMeta
 	EntityTypeMap map[int64]mme.EntityType
 	Entities      map[int64]mmeobj.IEntity
 	// 订阅管理
@@ -38,10 +41,11 @@ type ServiceZone struct {
 }
 
 // NewServiceZone 创建新的服务区
-func NewServiceZone(id string, zoneType ZoneType) *ServiceZone {
+func NewServiceZone(id string, meta *zone_meta.ZoneMeta) *ServiceZone {
 	return &ServiceZone{
 		ID:            id,
-		Type:          zoneType,
+		Pattern:       ZonePattern(meta.GetPattern()),
+		Meta:          meta,
 		EntityTypeMap: make(map[int64]mme.EntityType),
 		Entities:      make(map[int64]mmeobj.IEntity),
 		subscribers:   make(map[string]*Subscriber),
