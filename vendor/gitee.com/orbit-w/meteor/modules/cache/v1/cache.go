@@ -3,89 +3,138 @@ package v1
 import (
 	"context"
 	"fmt"
-	"log"
 	"strings"
+	"sync"
 	"time"
 
 	"gitee.com/orbit-w/meteor/modules/mlog"
-	"gitee.com/orbit-w/meteor/modules/subpub/subpub_redis"
 	"gitee.com/orbit-w/meteor/modules/unique_task_exec"
-	cmap "github.com/orcaman/concurrent-map/v2"
+	"github.com/orca-zhang/ecache"
+	"github.com/orca-zhang/ecache/dist"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
-
 	"google.golang.org/protobuf/proto"
 )
 
 const (
 	CachePattern = "meteor_cache"
+	CacheTTL     = 15 * time.Minute
 )
+
+var (
+	distInitOnce sync.Once
+)
+
+// universalClientAdapter 适配 redis.UniversalClient 到 dist.RedisCli 接口
+type universalClientAdapter struct {
+	cli redis.UniversalClient
+	ctx context.Context
+}
+
+func (a *universalClientAdapter) OK() bool {
+	return a.cli != nil && a.cli.Ping(a.ctx).Err() == nil
+}
+
+func (a *universalClientAdapter) Pub(channel, payload string) error {
+	return a.cli.Publish(a.ctx, channel, payload).Err()
+}
+
+func (a *universalClientAdapter) Sub(channel string, callback func(payload string)) error {
+	pubsub := a.cli.Subscribe(a.ctx, channel)
+	ch := pubsub.Channel()
+	go func() {
+		defer pubsub.Close()
+		for msg := range ch {
+			if msg != nil {
+				callback(msg.Payload)
+			}
+		}
+	}()
+	return nil
+}
 
 type Cache[V proto.Message] struct {
 	cli     redis.UniversalClient
 	ttl     time.Duration
 	Pattern string
-	cache   cmap.ConcurrentMap[string, *Item[V]]
+	cache   *ecache.Cache
 	exec    *unique_task_exec.UniqueTaskExecutor
-	subpub  subpub_redis.IPubSub
 	factory func() V
 	log     *mlog.Logger
 }
 
 func NewCache[V proto.Message](cli redis.UniversalClient, pattern string, factory func() V) *Cache[V] {
+	// 初始化 ecache，容量为 128 个分片，最大存储 1024 个元素，过期时间为 15 分钟
+	cache := ecache.NewLRUCache(128, 1024, CacheTTL)
+
 	c := &Cache[V]{
 		cli:     cli,
-		ttl:     15 * time.Minute,
+		ttl:     CacheTTL,
 		Pattern: pattern,
-		cache:   cmap.New[*Item[V]](),
+		cache:   cache,
 		exec:    unique_task_exec.NewUniqueTaskExecutor(),
 		factory: factory,
 		log:     mlog.WithPrefix("cache"),
 	}
-	c.subpub = subpub_redis.NewPubSub(cli, subpub_redis.CodecString, pattern, c.invoke())
+
+	// 初始化 dist 组件（只初始化一次）
+	distInitOnce.Do(func() {
+		// 使用适配器包装 UniversalClient
+		adapter := &universalClientAdapter{
+			cli: cli,
+			ctx: context.Background(),
+		}
+		dist.Init(adapter)
+	})
+
+	// 将缓存实例绑定到 pattern 对应的 pool
+	// dist 包会自动处理分布式一致性，当调用 dist.OnDel(pattern, key) 时
+	// 会通知所有节点删除该 pool 下的所有缓存实例中的 key
+	dist.Bind(pattern, cache)
+
 	return c
 }
 
+// 更新数据库，并通知所有节点（包括本节点）删除旧缓存，保证分布式一致性
+// 其他节点下次访问时会从 Redis 重新加载最新数据
+// 当前结点跟其他结点一样，都会有时间窗口去更新Redis，但最终Redis中的数据会是一致的
 func (c *Cache[V]) Set(key string, value V) error {
-	err := c.cli.Set(context.Background(), GenItemKey(c.Pattern, key), value, c.ttl).Err()
+	// 序列化 value
+	data, err := proto.Marshal(value)
 	if err != nil {
 		return err
 	}
 
-	if err := c.subpub.Publish(0, key); err != nil {
+	// 存储到 Redis
+	err = c.cli.Set(context.Background(), GenItemKey(c.Pattern, key), data, c.ttl).Err()
+	if err != nil {
 		return err
 	}
-	c.cache.Set(key, &Item[V]{
-		Value:    value,
-		ExpireAt: time.Now().Add(c.ttl),
-	})
+
+	// 通知其他节点删除旧缓存，保证分布式一致性
+	// 其他节点下次访问时会从 Redis 重新加载最新数据
+	dist.OnDel(c.Pattern, key)
 	return nil
 }
 
 func (c *Cache[V]) Get(key string) (V, error) {
-	if item, ok := c.cache.Get(key); ok {
-		// 检查是否过期
-		if !time.Now().After(item.ExpireAt) {
-			return item.Value, nil
+	// 先从本地缓存获取
+	if v, ok := c.cache.Get(key); ok {
+		if value, ok := v.(V); ok {
+			return value, nil
 		}
-		c.cache.Remove(key)
 	}
 	return c.Load(key)
 }
 
-// TODO:
-// 边缘情况处理：
-//
-//	1）极限情况下，A服务删除了数据，并发布，B在临界区成功读去到旧数据，并放入本地缓存中。这种情况下依赖TTL过期机制清除点B中的旧缓存。
 func (c *Cache[V]) Remove(key string) error {
 	if err := c.cli.Del(context.Background(), GenItemKey(c.Pattern, key)).Err(); err != nil {
 		c.log.Error("remove cache del failed", zap.Error(err))
 		return err
 	}
-	c.cache.Remove(key)
-	if err := c.subpub.Publish(0, key); err != nil {
-		c.log.Error("remove cache publish failed", zap.Error(err))
-	}
+	// 使用 dist.OnDel 触发分布式删除
+	// 这会通知所有节点（包括本节点）删除该 pool 下所有缓存实例中的 key
+	dist.OnDel(c.Pattern, key)
 	return nil
 }
 
@@ -93,9 +142,13 @@ func (c *Cache[V]) Load(key string) (V, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 	item := c.exec.ExecuteOnceWithContext(ctx, key, func() any {
-		if cachedItem, ok := c.cache.Get(key); ok {
-			return cachedItem.Value
+		// 再次检查本地缓存（可能在并发情况下已经被其他 goroutine 加载）
+		if v, ok := c.cache.Get(key); ok {
+			if value, ok := v.(V); ok {
+				return value
+			}
 		}
+		// 从 Redis 加载
 		v, err := c.cli.Get(context.Background(), GenItemKey(c.Pattern, key)).Result()
 		if err != nil {
 			return err
@@ -104,12 +157,8 @@ func (c *Cache[V]) Load(key string) (V, error) {
 		if err := proto.Unmarshal([]byte(v), value); err != nil {
 			return err
 		}
-		// 在缓存中设置值，如果缓存中已存在，则不设置
-		cacheItem := &Item[V]{
-			Value:    value,
-			ExpireAt: time.Now().Add(c.ttl),
-		}
-		_ = c.cache.SetIfAbsent(key, cacheItem)
+		// 存入本地缓存
+		c.cache.Put(key, value)
 		return value
 	})
 
@@ -125,15 +174,10 @@ func (c *Cache[V]) Load(key string) (V, error) {
 	}
 }
 
-func (c *Cache[V]) invoke() func(pid int64, body []byte, err error) {
-	return func(pid int64, body []byte, err error) {
-		if err != nil {
-			log.Println("invoke subpub failed: ", err)
-			return
-		}
-		key := string(body)
-		c.cache.Remove(key)
-	}
+// Stop 停止缓存（目前 dist 包会自动管理，此方法保留用于未来扩展）
+func (c *Cache[V]) Stop() {
+	// dist 包会自动管理订阅和清理，无需手动处理
+	// 如果需要清理，可以在这里添加逻辑
 }
 
 func GenItemKey(pattern string, key string) string {

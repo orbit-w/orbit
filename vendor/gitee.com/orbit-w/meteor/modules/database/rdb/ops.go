@@ -1,5 +1,7 @@
 package rdb
 
+import "time"
+
 type RedisClientOps struct {
 	Addr           []string
 	Cluster        bool
@@ -8,4 +10,5 @@ type RedisClientOps struct {
 	DB             int
 	MaxIdleConns   int
 	MaxActiveConns int
+	DialTimeout    time.Duration
 }

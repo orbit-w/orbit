@@ -5,6 +5,7 @@ import (
 	"errors"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -74,7 +75,14 @@ func NewClient(ops RedisClientOps) (redis.UniversalClient, error) {
 		})
 	}
 
-	if err := client.Ping(context.Background()).Err(); err != nil {
+	timeout := 5 * time.Second
+	if ops.DialTimeout > 0 {
+		timeout = ops.DialTimeout
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	if err := client.Ping(ctx).Err(); err != nil {
 		return nil, err
 	}
 
