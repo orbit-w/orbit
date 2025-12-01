@@ -3,7 +3,7 @@ module gitee.com/orbit-w/orbit
 go 1.24
 
 require (
-	gitee.com/orbit-w/meteor v0.0.0-20251127152046-9f75787fb4c8
+	gitee.com/orbit-w/meteor v0.0.0-20251201151543-fe7fa0442f3f
 	github.com/BurntSushi/toml v1.4.0
 	github.com/asynkron/protoactor-go v0.0.0-20240822202345-3c0e61ca19c9
 	github.com/gogo/protobuf v1.3.2
@@ -55,6 +55,7 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/orbit-w/meteor v0.0.0-20250330074908-5ee1edecdf27 // indirect
+	github.com/orca-zhang/ecache v1.1.3 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
