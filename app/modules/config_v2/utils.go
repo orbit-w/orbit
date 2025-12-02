@@ -6,10 +6,10 @@ import (
 )
 
 const (
-	DefaultPort uint64 = 9848
+	DefaultPort uint64 = 8848
 )
 
-// parseServerAddress 解析服务器地址（支持域名，无端口时使用默认端口 9848）
+// parseServerAddress 解析服务器地址（支持域名，无端口时使用默认端口 8848
 func parseServerAddress(address string) (string, uint64) {
 	if address == "" {
 		return "", DefaultPort // 默认端口

@@ -62,7 +62,7 @@ func (m *ConfigManager) InitConfig() error {
 	m.cfg = &Config{}
 
 	redisItem := &GameMainRedis{}
-	if err := m.ListenConfigItem(redisItem); err != nil {
+	if err := m.LoadConfigItme(redisItem); err != nil {
 		return fmt.Errorf("listen redis config failed: %w", err)
 	}
 
@@ -147,14 +147,14 @@ func (m *ConfigManager) LoadConfigItme(item ConfigItem) error {
 			zap.String("namespace", m.centerConfig.Nacos.NamespaceID),
 			zap.Strings("servers", m.centerConfig.Nacos.ServerHosts),
 			zap.Error(err))
-		return fmt.Errorf("get config from nacos failed (dataId=%s, group=%s, namespace=%s, servers=%v): %w",
-			item.GetDataId(), item.GetGroupId(), m.centerConfig.Nacos.NamespaceID,
-			m.centerConfig.Nacos.ServerHosts, err)
+		return err
 	}
 
 	if content == "" {
-		return fmt.Errorf("config content is empty from nacos (dataId=%s, group=%s)",
-			item.GetDataId(), item.GetGroupId())
+		logger.GetLogger().Error("config content is empty from nacos",
+			zap.String("dataId", item.GetDataId()),
+			zap.String("group", item.GetGroupId()))
+		return fmt.Errorf("config content is empty from nacos")
 	}
 
 	return item.Onload(GetConfig(), content)
@@ -171,16 +171,38 @@ func (m *ConfigManager) ListenConfigItem(item ConfigItem) error {
 		return fmt.Errorf("load config failed: %w", err)
 	}
 
-	return m.configClient.ListenConfig(vo.ConfigParam{
+	err := m.configClient.ListenConfig(vo.ConfigParam{
 		DataId: item.GetDataId(),
 		Group:  item.GetGroupId(),
 		OnChange: func(namespace, group, dataId, data string) {
+			logger.GetLogger().Info("config change notification received",
+				zap.String("dataId", dataId),
+				zap.String("group", group),
+				zap.String("namespace", namespace),
+				zap.Int("contentLength", len(data)))
+
 			err := item.Onload(GetConfig(), data)
 			if err != nil {
-				logger.GetLogger().Error("failed to load config", zap.Error(err), zap.String("group", item.GetGroupId()),
-					zap.String("dataId", item.GetDataId()))
+				logger.GetLogger().Error("failed to load config after change",
+					zap.Error(err),
+					zap.String("group", group),
+					zap.String("dataId", dataId))
 				return
 			}
+
+			logger.GetLogger().Info("config change processed successfully",
+				zap.String("dataId", dataId),
+				zap.String("group", group))
 		},
 	})
+
+	if err != nil {
+		return fmt.Errorf("listen config failed: %w", err)
+	}
+
+	logger.GetLogger().Info("config listener registered successfully",
+		zap.String("dataId", item.GetDataId()),
+		zap.String("group", item.GetGroupId()))
+
+	return nil
 }

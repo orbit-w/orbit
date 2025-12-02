@@ -5,18 +5,18 @@ import (
 
 	"gitee.com/orbit-w/meteor/modules/database/rdb"
 	"gitee.com/orbit-w/orbit/lib/module/logger"
-	"github.com/BurntSushi/toml"
 	"go.uber.org/zap"
+	"gopkg.in/yaml.v3"
 )
 
 type GameMainRedis struct {
-	Addr           []string `ymal:"addr"`
-	Username       string   `ymal:"username"`
-	Password       string   `ymal:"password"`
-	DB             int      `ymal:"db"`
-	Cluster        bool     `ymal:"cluster"`
-	MaxIdleConns   int      `ymal:"max_idle_conns"`
-	MaxActiveConns int      `ymal:"max_active_conns"`
+	Addr           []string `yaml:"addr"`
+	Username       string   `yaml:"username"`
+	Password       string   `yaml:"password"`
+	DB             int32    `yaml:"db"`
+	Cluster        bool     `yaml:"cluster"`
+	MaxIdleConns   int32    `yaml:"max_idle_conns"`
+	MaxActiveConns int32    `yaml:"max_active_conns"`
 }
 
 func (r *GameMainRedis) GetGroupId() string {
@@ -29,7 +29,7 @@ func (r *GameMainRedis) GetDataId() string {
 
 func (r *GameMainRedis) Onload(cfg *Config, content string) error {
 	redisConfig := new(GameMainRedis)
-	if err := toml.Unmarshal([]byte(content), redisConfig); err != nil {
+	if err := yaml.Unmarshal([]byte(content), redisConfig); err != nil {
 		logger.GetLogger().Error("failed to unmarshal game main redis config", zap.Error(err), zap.String("group", r.GetGroupId()), zap.String("dataId", r.GetDataId()))
 		return fmt.Errorf("failed to unmarshal game main redis config: %w", err)
 	}
@@ -44,9 +44,9 @@ func (r *GameMainRedis) GetRedisClientOps() rdb.RedisClientOps {
 		Addr:           r.Addr,
 		Username:       r.Username,
 		Password:       r.Password,
-		DB:             r.DB,
+		DB:             int(r.DB),
 		Cluster:        r.Cluster,
-		MaxIdleConns:   r.MaxIdleConns,
-		MaxActiveConns: r.MaxActiveConns,
+		MaxIdleConns:   int(r.MaxIdleConns),
+		MaxActiveConns: int(r.MaxActiveConns),
 	}
 }
