@@ -1,0 +1,9 @@
+redis:
+  addr:
+    - r-2vc71j95x8xtovlgerpd.redis.cn-chengdu.rds.aliyuncs.com:6379
+  username: r-2vc71j95x8xtovlger
+  password: "Z)cG1v)M9d="
+  db: 0
+  cluster: false
+  max_idle_conns: 20
+  max_active_conns: 50
