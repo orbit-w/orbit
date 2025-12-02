@@ -19,12 +19,9 @@ import (
 	"go.uber.org/zap"
 )
 
-// NacosConfig Nacos 配置（定义在 config 包中，这里使用别名引用）
-type NacosConfig = config.NacosConfig
-
 // NacosRegistry Nacos 服务注册发现
 type NacosRegistry struct {
-	config       NacosConfig
+	config       *config.NacosConfig
 	namingClient naming_client.INamingClient
 	nodeID       string
 	nodeIP       string
@@ -39,11 +36,8 @@ type NacosRegistry struct {
 }
 
 // NewNacosRegistry 创建 Nacos 注册发现实例
-func NewNacosRegistry(config NacosConfig, nodeID, nodeAddress, serviceName string) (*NacosRegistry, error) {
+func NewNacosRegistry(config *config.NacosConfig, nodeID, nodeAddress, serviceName string) (*NacosRegistry, error) {
 	// 设置默认值
-	if config.GroupName == "" {
-		config.GroupName = "DEFAULT_GROUP"
-	}
 	if config.TimeoutMs == 0 {
 		config.TimeoutMs = 5000
 	}
@@ -237,7 +231,6 @@ func (r *NacosRegistry) Register(metadata map[string]string) error {
 		Ip:          r.nodeIP,
 		Port:        r.nodePort,
 		ServiceName: r.serviceName,
-		GroupName:   r.config.GroupName,
 		Weight:      1.0,
 		Enable:      true,
 		Healthy:     true,
@@ -256,7 +249,7 @@ func (r *NacosRegistry) Register(metadata map[string]string) error {
 		zap.String("ip", r.nodeIP),
 		zap.Uint64("port", r.nodePort),
 		zap.String("service", r.serviceName),
-		zap.String("group", r.config.GroupName))
+		zap.String("namespace", r.config.NamespaceID))
 
 	// 启动心跳
 	r.startHeartbeat()
@@ -273,7 +266,6 @@ func (r *NacosRegistry) Deregister() error {
 		Ip:          r.nodeIP,
 		Port:        r.nodePort,
 		ServiceName: r.serviceName,
-		GroupName:   r.config.GroupName,
 		Ephemeral:   true,
 	})
 	if err != nil {
@@ -333,7 +325,6 @@ func (r *NacosRegistry) updateNodeMetadata(metadata map[string]string) error {
 		Ip:          r.nodeIP,
 		Port:        r.nodePort,
 		ServiceName: r.serviceName,
-		GroupName:   r.config.GroupName,
 		Weight:      1.0,
 		Enable:      true,
 		Healthy:     true,
@@ -368,20 +359,19 @@ func (r *NacosRegistry) startDiscovery() {
 		// 订阅服务变化（订阅会自动获取一次服务列表并触发回调）
 		err := r.namingClient.Subscribe(&vo.SubscribeParam{
 			ServiceName:       r.serviceName,
-			GroupName:         r.config.GroupName,
 			SubscribeCallback: r.onServiceChange,
 		})
 		if err != nil {
 			logger.GetLogger().Error("subscribe service failed",
 				zap.String("service", r.serviceName),
-				zap.String("group", r.config.GroupName),
+				zap.String("namespace", r.config.NamespaceID),
 				zap.Error(err))
 			return
 		}
 
 		logger.GetLogger().Info("service discovery subscribed",
 			zap.String("service", r.serviceName),
-			zap.String("group", r.config.GroupName))
+			zap.String("namespace", r.config.NamespaceID))
 
 		// 等待退出
 		<-r.ctx.Done()
@@ -389,7 +379,6 @@ func (r *NacosRegistry) startDiscovery() {
 		// 取消订阅（通过传入 nil callback 来取消）
 		_ = r.namingClient.Subscribe(&vo.SubscribeParam{
 			ServiceName:       r.serviceName,
-			GroupName:         r.config.GroupName,
 			SubscribeCallback: nil,
 		})
 	}()
@@ -427,13 +416,12 @@ func (r *NacosRegistry) buildNodeFromInstance(instance model.Instance) *Node {
 func (r *NacosRegistry) discoverServices() {
 	instances, err := r.namingClient.SelectInstances(vo.SelectInstancesParam{
 		ServiceName: r.serviceName,
-		GroupName:   r.config.GroupName,
 		HealthyOnly: true,
 	})
 	if err != nil {
 		logger.GetLogger().Error("discover services failed",
 			zap.String("service", r.serviceName),
-			zap.String("group", r.config.GroupName),
+			zap.String("namespace", r.config.NamespaceID),
 			zap.Error(err))
 		return
 	}

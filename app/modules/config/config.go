@@ -1,68 +1,74 @@
 package config
 
 import (
-	"os"
-
-	"github.com/BurntSushi/toml"
-	"github.com/spf13/viper"
+	"fmt"
 )
 
 var (
-	cfg Config
+	manager *ConfigManager
 )
 
+// 同一命名空间下，所有Data Id 的配置的集合，用于管理所有配置
 type Config struct {
-	Server  Server  `toml:"server"`
-	Cluster Cluster `toml:"cluster"`
-	Redis   Redis   `toml:"redis"`
+	GameMain *GameMainConfig `toml:"game_main"`
 }
 
-type Cluster struct {
-	Nacos NacosConfig `toml:"nacos"`
+func (c *Config) GetGameMainConfig() *GameMainConfig {
+	return c.GameMain
 }
 
-func (c *Config) GetNacosConfig() NacosConfig {
-	return c.Cluster.Nacos
+func (c *Config) GetServerName() string {
+	return c.GameMain.Server.Name
 }
 
-// NacosConfig Nacos 配置
-type NacosConfig struct {
-	ServerHosts  []string `toml:"server_hosts"`  // Nacos 服务器地址列表，格式: "127.0.0.1:8848"
-	NamespaceID  string   `toml:"namespace_id"`  // 命名空间ID
-	GroupName    string   `toml:"group_name"`    // 服务组名，默认: "DEFAULT_GROUP"
-	Username     string   `toml:"username"`      // 用户名（可选）
-	Password     string   `toml:"password"`      // 密码（可选）
-	TimeoutMs    uint64   `toml:"timeout_ms"`    // 超时时间（毫秒），默认: 5000
-	BeatInterval int64    `toml:"beat_interval"` // 心跳间隔（秒），默认: 5
+func (c *Config) GetServerStage() string {
+	return c.GameMain.Server.Stage
 }
 
-type Server struct {
-	Name  string `toml:"name"`  // 服务名称
-	Stage string `toml:"stage"` // 环境
-	Host  string `toml:"host"`  // 主机地址
-	Port  string `toml:"port"`  // 端口
+func (c *Config) GetRedisConfig() *GameMainRedis {
+	return c.GameMain.GetRedisConfig()
+}
+
+type GameMainConfig struct {
+	Server Server         `toml:"server"`
+	Redis  *GameMainRedis `toml:"redis"`
+}
+
+func (c *GameMainConfig) GetRedisConfig() *GameMainRedis {
+	return c.Redis
+}
+
+func (c *GameMainConfig) GetServerConfig() *Server {
+	return &c.Server
 }
 
 func GetConfig() *Config {
-	return &cfg
+	return manager.cfg
 }
 
-func LoadConfig(filename string) {
-	viper.SetConfigFile(filename)
-	viper.SetConfigType("toml")
+// 获取Nacos集群配置
+func GetNacosConfig() *NacosConfig {
+	return manager.centerConfig.Nacos
+}
 
-	// 尝试读取配置文件
-	if err := viper.ReadInConfig(); err != nil {
-		panic("viper read config failed")
-	}
+func GetGameMainConfig() *GameMainConfig {
+	return manager.cfg.GameMain
+}
 
-	// 读取配置文件
-	content, err := os.ReadFile(filename)
-	if err != nil {
-		panic("read config failed")
+func InitConfig(filename string) {
+	if manager == nil {
+		manager = NewConfigManager()
 	}
+	manager.Start(filename)
+}
 
-	if err := toml.Unmarshal(content, &cfg); err != nil {
-		panic("unmarshal config failed")
+func StopConfig() error {
+	if manager != nil {
+		return manager.Stop()
 	}
+	return nil
+}
+
+func GenDataId(serviceName, stage, packageName string) string {
+	return fmt.Sprintf("%s-%s-%s.yaml", serviceName, stage, packageName)
 }

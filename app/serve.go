@@ -12,6 +12,7 @@ import (
 	"gitee.com/orbit-w/meteor/modules/database/rdb"
 	"gitee.com/orbit-w/orbit/lib/module/logger"
 	"gitee.com/orbit-w/orbit/lib/module/persistence"
+	netutils "gitee.com/orbit-w/orbit/lib/utils/net_utils"
 
 	"gitee.com/orbit-w/orbit/app/modules/config"
 	"gitee.com/orbit-w/orbit/app/modules/service"
@@ -45,13 +46,17 @@ func Serve(nodeId string) {
 	services := RunServices(cfg)
 
 	// 启动集群节点
-	ClusterSrartNode(cfg, nodeId)
+	ClusterSrartNode(nodeId)
 
 	// 启动Zone
 	StartZones(nodeId)
 
 	gracefulShutdown(func(ctx context.Context) error {
+		// 停止服务
 		services.Stop()
+
+		// 停止配置管理器
+		config.StopConfig()
 		logger.GetLogger().Info("orbit service exit")
 		logger.StopLogger()
 		return nil
@@ -62,7 +67,7 @@ func RunServices(cfg *config.Config) *service.Services {
 	// Init services
 	services := service.NewServices()
 	redisService := service.Wrapper("redis_service").WrapStart(func() error {
-		rdb.Start(cfg.Redis.GetRedisClientOps())
+		rdb.Start(cfg.GetRedisConfig().GetRedisClientOps())
 		return nil
 	}).WrapStop(func() error {
 		rdb.Stop()
@@ -72,7 +77,7 @@ func RunServices(cfg *config.Config) *service.Services {
 	services.Reg(persistence.New("configs/mongodb.toml"))             //启动持久化服务
 	services.Reg(new(stream.AgentStream))                             //启动AgentStream服务
 	services.Reg(redisService)                                        //启动Redis服务
-	services.Reg(cluster.NewManager(cfg.Server.Name))                 //启动集群管理服务
+	services.Reg(cluster.NewManager(cfg.GetServerName()))             //启动集群管理服务
 	services.Reg(servicezone_mgr.NewZoneManager())                    //启动ZoneManager服务
 	services.Reg(zone_meta.NewZoneMetaService(rdb.UniversalClient())) //启动ZoneMeta服务
 
@@ -97,11 +102,17 @@ func StartZones(nodeId string) {
 	}
 }
 
-func ClusterSrartNode(cfg *config.Config, nodeId string) error {
-	nacosCfg := cfg.GetNacosConfig()
-	nodeAddress := fmt.Sprintf("%s:%s", cfg.Server.Host, cfg.Server.Port)
-	cluster.StartNode(nacosCfg, cfg.Server.Stage, nodeId, nodeAddress)
-	return nil
+func ClusterSrartNode(nodeId string) {
+	nacosCfg := config.GetNacosConfig()
+	ip, err := netutils.GetLocalIPv4()
+	if err != nil {
+		panic(err)
+	}
+	serverCfg := config.GetGameMainConfig().Server
+	nodeAddress := fmt.Sprintf("%s:%s", ip, serverCfg.Port)
+	if err := cluster.StartNode(nacosCfg, serverCfg.Stage, nodeId, nodeAddress); err != nil {
+		panic(err)
+	}
 }
 
 // gracefulShutdown 优雅关闭服务

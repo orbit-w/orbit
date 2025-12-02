@@ -12,6 +12,7 @@ import (
 	"gitee.com/orbit-w/orbit/app/modules/config"
 	"gitee.com/orbit-w/orbit/core/network"
 	"gitee.com/orbit-w/orbit/lib/module/logger"
+	netutils "gitee.com/orbit-w/orbit/lib/utils/net_utils"
 	"github.com/orbit-w/mux-go/metadata"
 	"go.uber.org/zap"
 )
@@ -111,6 +112,10 @@ func newSession(stream mux.IServerConn) (*network.Session, error) {
 
 func streamHost() string {
 	cfg := config.GetConfig()
-	ipAddr := net.ParseIP(cfg.Server.Host)
-	return net.JoinHostPort(ipAddr.String(), cfg.Server.Port)
+	ip, err := netutils.GetLocalIPv4()
+	if err != nil {
+		panic(err)
+	}
+	serverCfg := cfg.GetGameMainConfig().GetServerConfig()
+	return net.JoinHostPort(ip, serverCfg.Port)
 }

@@ -3,16 +3,18 @@ package config
 import (
 	"fmt"
 	"testing"
+	"time"
 )
 
-/*
-   @Author: orbit-w
-   @File: config_test
-   @2024 7月 周六 20:29
-*/
+func Test_InitConfig_Success(t *testing.T) {
+	InitConfig("./config_center.toml")
+	conf := GetConfig()
+	fmt.Println(conf)
+}
 
-func TestLoadConfig(t *testing.T) {
-	LoadConfig("./config.toml")
-	c := GetConfig()
-	fmt.Println(c)
+func Test_SubscribeConfig(t *testing.T) {
+	InitConfig("./config_center.toml")
+	conf := GetConfig()
+	fmt.Println(conf)
+	time.Sleep(time.Minute * 2)
 }

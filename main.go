@@ -21,7 +21,7 @@ var (
 func main() {
 	flag.Parse()
 
-	config.LoadConfig(*configPath)
+	config.InitConfig(*configPath)
 
 	app.Serve(*nodeId)
 }

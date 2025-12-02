@@ -18,9 +18,9 @@ func Test_orbit(t *testing.T) {
 }
 
 func Test_RedisDial(t *testing.T) {
-	config.LoadConfig("../configs/config.toml")
+	config.InitConfig("../configs/config.toml")
 	conf := config.GetConfig()
-	rdb.Start(conf.Redis.GetRedisClientOps())
+	rdb.Start(conf.GetRedisConfig().GetRedisClientOps())
 	cli := rdb.UniversalClient()
 	result, err := cli.Get(context.TODO(), "test").Result()
 	if err != nil && !errors.Is(err, redis.Nil) {
