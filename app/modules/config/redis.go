@@ -24,7 +24,7 @@ func (r *GameMainRedis) GetGroupId() string {
 }
 
 func (r *GameMainRedis) GetDataId() string {
-	return "game-main.yaml"
+	return "game.main"
 }
 
 func (r *GameMainRedis) Onload(cfg *Config, content string) error {

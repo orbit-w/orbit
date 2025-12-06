@@ -20,7 +20,7 @@ func (s *Server) GetGroupId() string {
 }
 
 func (s *Server) GetDataId() string {
-	return "game-main.yaml"
+	return "game.main"
 }
 
 func (s *Server) Onload(cfg *Config, content string) error {

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"gitee.com/orbit-w/meteor/modules/database/rdb"
+	"gitee.com/orbit-w/orbit/lib/module/db/mongo"
 	"gitee.com/orbit-w/orbit/lib/module/logger"
 	"gitee.com/orbit-w/orbit/lib/module/persistence"
 	netutils "gitee.com/orbit-w/orbit/lib/utils/net_utils"
@@ -65,6 +66,7 @@ func Serve(serverId string) {
 
 func RunServices(cfg *config.Config) *service.Services {
 	// Init services
+
 	services := service.NewServices()
 	redisService := service.Wrapper("redis_service").WrapStart(func() error {
 		rdb.Start(cfg.GetRedisConfig().GetRedisClientOps())
@@ -74,9 +76,18 @@ func RunServices(cfg *config.Config) *service.Services {
 		return nil
 	})
 
+	mongoService := service.Wrapper("mongo_service").WrapStart(func() error {
+		mongo.Start(cfg.GetGameMainConfig().GetMongoConfig())
+		return nil
+	}).WrapStop(func() error {
+		mongo.Stop()
+		return nil
+	})
+
 	services.Reg(persistence.New("configs/mongodb.toml"))             //启动持久化服务
 	services.Reg(new(stream.AgentStream))                             //启动AgentStream服务
 	services.Reg(redisService)                                        //启动Redis服务
+	services.Reg(mongoService)                                        //启动MongoDB服务
 	services.Reg(cluster.NewManager(cfg.GetServerName()))             //启动集群管理服务
 	services.Reg(servicezone_mgr.NewZoneManager())                    //启动ZoneManager服务
 	services.Reg(zone_meta.NewZoneMetaService(rdb.UniversalClient())) //启动ZoneMeta服务
@@ -146,5 +157,4 @@ var requestHandler = func(session *network.Session, data []byte, seq, pid uint32
 // 生成服务唯一Id工具函数
 func GenServerUniqueId(serverName, serverId string) string {
 	return fmt.Sprintf("%s-%s", serverName, serverId)
-
 }

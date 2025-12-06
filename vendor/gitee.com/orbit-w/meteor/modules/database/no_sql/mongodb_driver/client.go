@@ -2,6 +2,7 @@ package mongodbdriver
 
 import (
 	"context"
+	"sync/atomic"
 
 	"gitee.com/orbit-w/meteor/modules/mlog"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -9,8 +10,16 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo/readpref"
 )
 
+const (
+	stateInit int32 = iota
+	stateRunning
+	stateStopping
+	stateStopped
+)
+
 // MongoClient provides access to MongoDB for persistent storage
 type VirtualMongoClient struct {
+	state  atomic.Int32
 	client *mongo.Client
 	config MongoDBConfig
 	logger *mlog.Logger
@@ -45,6 +54,7 @@ func NewMongoClient(cfg MongoDBConfig) (*VirtualMongoClient, error) {
 		return nil, err
 	}
 
+	virtualClient.state.Store(stateRunning)
 	return virtualClient, nil
 }
 
@@ -63,7 +73,13 @@ func (c *VirtualMongoClient) Ping() error {
 	return c.client.Ping(ctx, readpref.Primary())
 }
 
+// 可重入且线程安全
 func (c *VirtualMongoClient) Disconnect(ctx context.Context) error {
+	// 如果状态不是running，则返回
+	if !c.state.CompareAndSwap(stateRunning, stateStopping) {
+		return nil
+	}
+
 	if ctx == nil {
 		var cancel func()
 		ctx, cancel = context.WithTimeout(context.Background(), c.config.DisconnectTimeout)
