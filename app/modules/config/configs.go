@@ -12,8 +12,8 @@ func GetNacosConfig() *NacosConfig {
 	return manager.centerConfig.Nacos
 }
 
-func GetGameMainConfig() *GameMainConfig {
-	return manager.cfg.GameMain
+func GetGameMainConfig() *MainConfigGroup {
+	return manager.cfg.GetGameMainConfig()
 }
 
 func InitConfig(filename string) {

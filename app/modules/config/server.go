@@ -30,6 +30,6 @@ func (s *Server) Onload(cfg *Config, content string) error {
 		return fmt.Errorf("failed to unmarshal server config: %w", err)
 	}
 
-	cfg.GameMain.Server = *server
+	cfg.GameMain.Server = server
 	return nil
 }
