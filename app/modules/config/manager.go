@@ -71,6 +71,11 @@ func (m *ConfigManager) InitConfig() error {
 		return fmt.Errorf("listen server config failed: %w", err)
 	}
 
+	mongoItem := &GameMainMongoFormat{}
+	if err := m.ListenConfigItem(mongoItem); err != nil {
+		return fmt.Errorf("listen mongo config failed: %w", err)
+	}
+
 	return nil
 
 }

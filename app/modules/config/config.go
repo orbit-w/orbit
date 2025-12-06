@@ -1,8 +1,6 @@
 package config
 
-import (
-	"fmt"
-)
+import mongodbdriver "gitee.com/orbit-w/meteor/modules/database/no_sql/mongodb_driver"
 
 var (
 	manager *ConfigManager
@@ -32,6 +30,7 @@ func (c *Config) GetRedisConfig() *GameMainRedis {
 type GameMainConfig struct {
 	Server Server         `toml:"server"`
 	Redis  *GameMainRedis `toml:"redis"`
+	Mongo  *mongodbdriver.MongoDBConfig
 }
 
 func (c *GameMainConfig) GetRedisConfig() *GameMainRedis {
@@ -42,33 +41,10 @@ func (c *GameMainConfig) GetServerConfig() *Server {
 	return &c.Server
 }
 
-func GetConfig() *Config {
-	return manager.cfg
+func (c *GameMainConfig) GetMongoConfig() *mongodbdriver.MongoDBConfig {
+	return c.Mongo
 }
 
-// 获取Nacos集群配置
-func GetNacosConfig() *NacosConfig {
-	return manager.centerConfig.Nacos
-}
-
-func GetGameMainConfig() *GameMainConfig {
-	return manager.cfg.GameMain
-}
-
-func InitConfig(filename string) {
-	if manager == nil {
-		manager = NewConfigManager()
-	}
-	manager.Start(filename)
-}
-
-func StopConfig() error {
-	if manager != nil {
-		return manager.Stop()
-	}
-	return nil
-}
-
-func GenDataId(serviceName, stage, packageName string) string {
-	return fmt.Sprintf("%s-%s-%s.yaml", serviceName, stage, packageName)
+func (c *GameMainConfig) SetMongoConfig(mongo *mongodbdriver.MongoDBConfig) {
+	c.Mongo = mongo
 }
