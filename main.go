@@ -15,7 +15,7 @@ import (
 
 var (
 	configPath = flag.String("config", "configs/config.toml", "path to config file")
-	nodeId     = flag.String("node_id", "game_nd00", "node id")
+	serverId   = flag.String("server_id", "1", "server id")
 )
 
 func main() {
@@ -23,5 +23,5 @@ func main() {
 
 	config.InitConfig(*configPath)
 
-	app.Serve(*nodeId)
+	app.Serve(*serverId)
 }

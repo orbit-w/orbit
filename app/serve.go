@@ -34,7 +34,7 @@ import (
    @2024 4月 周日 17:36
 */
 
-func Serve(nodeId string) {
+func Serve(serverId string) {
 	cfg := config.GetConfig()
 	// 初始化 routers
 	routers.Init()
@@ -46,10 +46,10 @@ func Serve(nodeId string) {
 	services := RunServices(cfg)
 
 	// 启动集群节点
-	ClusterSrartNode(nodeId)
+	ClusterSrartNode(serverId)
 
 	// 启动Zone
-	StartZones(nodeId)
+	StartZones(serverId)
 
 	gracefulShutdown(func(ctx context.Context) error {
 		// 停止服务
@@ -84,13 +84,13 @@ func RunServices(cfg *config.Config) *service.Services {
 	return services
 }
 
-func StartZones(nodeId string) {
+func StartZones(serverId string) {
 	// 启动PlayerZone
-	id := servicezone_mgr.GenLocalZoneId(servicezone.ZoneTypePlayer, nodeId)
+	id := servicezone_mgr.GenLocalZoneId(servicezone.ZoneTypePlayer, serverId)
 	meta, err := zone_meta.SetZoneMeta(id, int32(servicezone.ZoneTypePlayer), &zone_meta.ZoneDispatcher{
 		Type:     zone_meta.Zone_DispatcherType_ForWorld,
-		ServerId: nodeId,
-		NodeId:   nodeId,
+		ServerId: serverId,
+		NodeId:   serverId,
 	})
 	if err != nil {
 		panic(err)
@@ -102,15 +102,16 @@ func StartZones(nodeId string) {
 	}
 }
 
-func ClusterSrartNode(nodeId string) {
-	nacosCfg := config.GetNacosConfig()
+func ClusterSrartNode(serverId string) {
+	cfg := config.GetNacosConfig()
 	ip, err := netutils.GetLocalIPv4()
 	if err != nil {
 		panic(err)
 	}
 	serverCfg := config.GetGameMainConfig().Server
 	nodeAddress := fmt.Sprintf("%s:%s", ip, serverCfg.Port)
-	if err := cluster.StartNode(nacosCfg, serverCfg.Stage, nodeId, nodeAddress); err != nil {
+	id := GenServerUniqueId(serverCfg.Name, serverId)
+	if err := cluster.StartNode(cfg, serverCfg.Stage, id, nodeAddress); err != nil {
 		panic(err)
 	}
 }
@@ -140,4 +141,10 @@ func gracefulShutdown(stopper func(ctx context.Context) error) {
 var requestHandler = func(session *network.Session, data []byte, seq, pid uint32) error {
 	servicezone_mgr.ClientRequest("play", network.NewClientRequest(seq, pid, data, session))
 	return nil
+}
+
+// 生成服务唯一Id工具函数
+func GenServerUniqueId(serverName, serverId string) string {
+	return fmt.Sprintf("%s-%s", serverName, serverId)
+
 }
