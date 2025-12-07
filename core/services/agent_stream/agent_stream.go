@@ -9,7 +9,7 @@ import (
 	"github.com/orbit-w/mux-go"
 
 	gnetwork "gitee.com/orbit-w/meteor/modules/net/network"
-	"gitee.com/orbit-w/orbit/app/modules/config"
+	"gitee.com/orbit-w/orbit/app/modules/config_v2"
 	"gitee.com/orbit-w/orbit/core/network"
 	"gitee.com/orbit-w/orbit/lib/module/logger"
 	netutils "gitee.com/orbit-w/orbit/lib/utils/net_utils"
@@ -111,11 +111,9 @@ func newSession(stream mux.IServerConn) (*network.Session, error) {
 }
 
 func streamHost() string {
-	cfg := config.GetConfig()
-	ip, err := netutils.GetLocalIPv4()
+	ip, err := netutils.GetPublicIPv4()
 	if err != nil {
 		panic(err)
 	}
-	serverCfg := cfg.GetGameMainConfig().GetServerConfig()
-	return net.JoinHostPort(ip, serverCfg.Port)
+	return net.JoinHostPort(ip, config_v2.GetServerPort())
 }

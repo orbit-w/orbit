@@ -1,6 +1,10 @@
 package config_v2
 
 import (
+	"time"
+
+	mongodbdriver "gitee.com/orbit-w/meteor/modules/database/no_sql/mongodb_driver"
+	"gitee.com/orbit-w/meteor/modules/database/rdb"
 	"github.com/spf13/viper"
 )
 
@@ -56,6 +60,13 @@ func GetInt(dataId, group, key string) int {
 	return manager.GetInt(dataId, group, key)
 }
 
+func GetTimeDuration(dataId, group, key string) time.Duration {
+	if manager == nil {
+		return 0
+	}
+	return manager.GetTimeDuration(dataId, group, key)
+}
+
 // GetBool 获取布尔配置
 func GetBool(dataId, group, key string) bool {
 	if manager == nil {
@@ -101,4 +112,56 @@ func OnConfigChange(dataId, group string, callback func()) {
 	if manager != nil {
 		manager.OnConfigChange(dataId, group, callback)
 	}
+}
+
+// GetServerName 获取服务器名称
+func GetServerName() string {
+	return GetString(DtaIDGameMain, GroupServer, "name")
+}
+
+// GetServerStage 获取服务器阶段
+func GetServerStage() string {
+	return GetString(DtaIDGameMain, GroupServer, "stage")
+}
+
+// GetServerPort 获取服务器端口
+func GetServerPort() string {
+	return GetString(DtaIDGameMain, GroupServer, "port")
+}
+
+// GetRedisOps 获取 Redis 配置
+func GetRedisOps() rdb.RedisClientOps {
+	return rdb.RedisClientOps{
+		Addr:           GetStringSlice(DtaIDGameMain, GroupRedis, "addr"),
+		Cluster:        GetBool(DtaIDGameMain, GroupRedis, "cluster"),
+		Username:       GetString(DtaIDGameMain, GroupRedis, "username"),
+		Password:       GetString(DtaIDGameMain, GroupRedis, "password"),
+		DB:             int(GetInt(DtaIDGameMain, GroupRedis, "db")),
+		MaxIdleConns:   int(GetInt(DtaIDGameMain, GroupRedis, "max_idle_conns")),
+		MaxActiveConns: int(GetInt(DtaIDGameMain, GroupRedis, "max_active_conns")),
+	}
+}
+
+// GetMongoOps 获取 MongoDB 配置
+func GetMongoOps() *mongodbdriver.MongoDBConfig {
+	return &mongodbdriver.MongoDBConfig{
+		URI:             GetString(DtaIDGameMain, GroupMongo, "uri"),
+		ConnectTimeout:  GetTimeDuration(DtaIDGameMain, GroupMongo, "connect_timeout"),
+		MaxPoolSize:     uint64(GetInt(DtaIDGameMain, GroupMongo, "max_pool_size")),
+		MinPoolSize:     uint64(GetInt(DtaIDGameMain, GroupMongo, "min_pool_size")),
+		MaxConnIdleTime: GetTimeDuration(DtaIDGameMain, GroupMongo, "max_conn_idle_time"),
+		MaxConnecting:   uint64(GetInt(DtaIDGameMain, GroupMongo, "max_connecting")),
+		WriteTimeout:    GetTimeDuration(DtaIDGameMain, GroupMongo, "write_timeout"),
+		ReadTimeout:     GetTimeDuration(DtaIDGameMain, GroupMongo, "read_timeout"),
+		RetryWrites:     GetBool(DtaIDGameMain, GroupMongo, "retry_writes"),
+		RetryReads:      GetBool(DtaIDGameMain, GroupMongo, "retry_reads"),
+	}
+}
+
+// GetNacosConfig 获取 Nacos 配置
+func GetNacosConfig() *NacosConfig {
+	if manager == nil {
+		return nil
+	}
+	return manager.GetNacosConfig()
 }

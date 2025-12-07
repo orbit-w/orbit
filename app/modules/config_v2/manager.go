@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"gitee.com/orbit-w/orbit/lib/module/logger"
 	"github.com/go-viper/mapstructure/v2"
@@ -373,6 +374,14 @@ func (m *ConfigManager) GetInt(dataId, group, key string) int {
 	return v.GetInt(key)
 }
 
+func (m *ConfigManager) GetTimeDuration(dataId, group, key string) time.Duration {
+	v := m.GetViper(dataId, group)
+	if v == nil {
+		return 0
+	}
+	return v.GetDuration(key)
+}
+
 // GetBool 获取布尔配置
 func (m *ConfigManager) GetBool(dataId, group, key string) bool {
 	v := m.GetViper(dataId, group)
@@ -420,4 +429,8 @@ func (m *ConfigManager) UnmarshalKey(dataId, group, key string, rawVal any) erro
 
 func (m *ConfigManager) genConfigNameSpaceId(dataId string, group string) string {
 	return fmt.Sprintf("%s.%s", dataId, group)
+}
+
+func (m *ConfigManager) GetNacosConfig() *NacosConfig {
+	return m.centerConfig.Nacos
 }

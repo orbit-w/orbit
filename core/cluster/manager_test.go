@@ -2,42 +2,30 @@ package cluster
 
 import (
 	"fmt"
-	"os"
 	"testing"
 	"time"
 
-	"gitee.com/orbit-w/orbit/app/modules/config"
+	"gitee.com/orbit-w/orbit/app/modules/config_v2"
 	netutils "gitee.com/orbit-w/orbit/lib/utils/net_utils"
-	"github.com/BurntSushi/toml"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 )
 
-type TestConfig struct {
-	Nacos *config.NacosConfig `toml:"nacos"`
-}
-
-func Setup(filename string) *config.NacosConfig {
+func Setup(filename string) *config_v2.CenterConfig {
 	// 读取测试配置
 	viper.SetConfigFile(filename)
-	viper.SetConfigType("toml")
+	viper.SetConfigType("yaml")
 
 	// 尝试读取配置文件
 	if err := viper.ReadInConfig(); err != nil {
 		panic("viper read config failed")
 	}
 
-	// 读取配置文件
-	content, err := os.ReadFile(filename)
-	if err != nil {
-		panic("read config failed")
-	}
-
-	cfg := new(TestConfig)
-	if err := toml.Unmarshal(content, &cfg); err != nil {
+	cfg := new(config_v2.CenterConfig)
+	if err := viper.Unmarshal(&cfg); err != nil {
 		panic("unmarshal config failed")
 	}
-	return cfg.Nacos
+	return cfg
 }
 
 func TestManager_Start(t *testing.T) {
@@ -105,8 +93,8 @@ func TestManager_NewNode(t *testing.T) {
 		ip, err := netutils.GetLocalIPv4()
 		assert.NoError(t, err)
 		nodeAddress := fmt.Sprintf("%s:9000", ip)
-		cfg := Setup("./nacos.toml")
-		err = StartNode(cfg, "dev", nodeID, nodeAddress)
+		cfg := Setup("./config_center.yaml")
+		err = StartNode(cfg.Nacos, "dev", nodeID, nodeAddress)
 		assert.NoError(t, err)
 		node := manager.GetCurrentNode()
 

@@ -15,7 +15,7 @@ import (
 	"gitee.com/orbit-w/orbit/lib/module/persistence"
 	netutils "gitee.com/orbit-w/orbit/lib/utils/net_utils"
 
-	"gitee.com/orbit-w/orbit/app/modules/config"
+	"gitee.com/orbit-w/orbit/app/modules/config_v2"
 	"gitee.com/orbit-w/orbit/app/modules/service"
 	"gitee.com/orbit-w/orbit/app/routers"
 	"gitee.com/orbit-w/orbit/core/cluster"
@@ -36,13 +36,11 @@ import (
 */
 
 func Serve(serverId string) {
-	cfg := config.GetConfig()
-
 	servicezone_behavior.SetRouter(routers.GetRouter())
 	stream.RegisterRequestHandler(requestHandler)
 
 	// Register services
-	services := RunServices(cfg)
+	services := RunServices()
 
 	// 启动集群节点
 	ClusterSrartNode(serverId)
@@ -57,19 +55,19 @@ func Serve(serverId string) {
 		services.Stop()
 
 		// 停止配置管理器
-		config.StopConfig()
+		config_v2.StopConfig()
 		logger.GetLogger().Info("orbit service exit")
 		logger.StopLogger()
 		return nil
 	})
 }
 
-func RunServices(cfg *config.Config) *service.Services {
+func RunServices() *service.Services {
 	// Init services
 
 	services := service.NewServices()
 	redisService := service.Wrapper("redis_service").WrapStart(func() error {
-		rdb.Start(cfg.GetRedisConfig().GetRedisClientOps())
+		rdb.Start(config_v2.GetRedisOps())
 		return nil
 	}).WrapStop(func() error {
 		rdb.Stop()
@@ -77,19 +75,19 @@ func RunServices(cfg *config.Config) *service.Services {
 	})
 
 	mongoService := service.Wrapper("mongo_service").WrapStart(func() error {
-		mongo.Start(cfg.GetGameMainConfig().GetMongoConfig())
+		mongo.Start(config_v2.GetMongoOps())
 		return nil
 	}).WrapStop(func() error {
 		mongo.Stop()
 		return nil
 	})
-	services.Reg(new(stream.AgentStream))                 //启动AgentStream服务
-	services.Reg(redisService)                            //启动Redis服务
-	services.Reg(mongoService)                            //启动MongoDB服务
-	services.Reg(persistence.New())                       //启动持久化服务
-	services.Reg(cluster.NewManager(cfg.GetServerName())) //启动集群管理服务
-	services.Reg(zone_meta.NewZoneMetaService())          //启动ZoneMeta服务
-	services.Reg(servicezone_mgr.NewZoneManager())        //启动ZoneManager服务
+	services.Reg(new(stream.AgentStream))                       //启动AgentStream服务
+	services.Reg(redisService)                                  //启动Redis服务
+	services.Reg(mongoService)                                  //启动MongoDB服务
+	services.Reg(persistence.New())                             //启动持久化服务
+	services.Reg(cluster.NewManager(config_v2.GetServerName())) //启动集群管理服务
+	services.Reg(zone_meta.NewZoneMetaService())                //启动ZoneMeta服务
+	services.Reg(servicezone_mgr.NewZoneManager())              //启动ZoneManager服务
 
 	err := services.Start()
 	if err != nil {
@@ -118,15 +116,13 @@ func StartZones(serverId string) {
 }
 
 func ClusterSrartNode(serverId string) {
-	cfg := config.GetNacosConfig()
 	ip, err := netutils.GetPublicIPv4()
 	if err != nil {
 		panic(err)
 	}
-	serverCfg := config.GetGameMainConfig().Server
-	nodeAddress := fmt.Sprintf("%s:%s", ip, serverCfg.Port)
-	id := GenServerUniqueId(serverCfg.Name, serverId)
-	if err := cluster.StartNode(cfg, serverCfg.Stage, id, nodeAddress); err != nil {
+	nodeAddress := fmt.Sprintf("%s:%s", ip, config_v2.GetServerPort())
+	id := GenServerUniqueId(config_v2.GetServerName(), serverId)
+	if err := cluster.StartNode(config_v2.GetNacosConfig(), config_v2.GetServerStage(), id, nodeAddress); err != nil {
 		panic(err)
 	}
 }

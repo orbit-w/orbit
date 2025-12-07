@@ -4,7 +4,7 @@ import (
 	"flag"
 
 	"gitee.com/orbit-w/orbit/app"
-	"gitee.com/orbit-w/orbit/app/modules/config"
+	"gitee.com/orbit-w/orbit/app/modules/config_v2"
 )
 
 /*
@@ -21,7 +21,10 @@ var (
 func main() {
 	flag.Parse()
 
-	config.InitConfig(*configPath)
+	err := config_v2.InitConfig(*configPath)
+	if err != nil {
+		panic(err)
+	}
 
 	app.Serve(*serverId)
 }
