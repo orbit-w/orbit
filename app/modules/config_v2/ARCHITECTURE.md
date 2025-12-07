@@ -51,7 +51,7 @@
 ```
 1. 启动 ConfigManager
    ↓
-2. 读取 config_center.toml
+2. 读取 config_center.yaml
    - Nacos 连接配置
    - 配置源列表 (sources)
    ↓
@@ -231,7 +231,7 @@ func (m *ConfigManager) updateViper(dataId string, v *viper.Viper) {
 ### 初始化错误
 
 ```go
-if err := InitConfig("config_center.toml"); err != nil {
+if err := InitConfig("config_center.yaml"); err != nil {
     // 1. 文件不存在
     // 2. 配置格式错误
     // 3. Nacos 连接失败
@@ -280,24 +280,23 @@ value := GetString("non-exist", "DEFAULT_GROUP", "key")  // 返回空字符串
 
 ### 1. 配置源组织
 
-```toml
+```yaml
 # 按功能模块划分
-[[sources]]
-data_id = "game.server"
-group = "server"
-format = "yaml"
+sources:
+  - data_id: game.server
+    group: server
+    format: yaml
 
-[[sources]]
-data_id = "game.redis"
-group = "redis"
-format = "yaml"
+  - data_id: game.redis
+    group: redis
+    format: yaml
 ```
 
 ### 2. 错误处理
 
 ```go
 // 初始化时检查
-if err := config_v2.InitConfig("config.toml"); err != nil {
+if err := config_v2.InitConfig("config_center.yaml"); err != nil {
     log.Fatalf("Config init failed: %v", err)
 }
 

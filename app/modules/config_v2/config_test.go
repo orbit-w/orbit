@@ -8,13 +8,11 @@ import (
 func TestInitConfig(t *testing.T) {
 	// 注意：此测试需要实际的 Nacos 服务器和配置文件
 	// 在实际环境中运行前，请确保：
-	// 1. config_center.toml 文件存在且配置正确
+	// 1. config_center.yaml 文件存在且配置正确
 	// 2. Nacos 服务器可访问
 	// 3. 相应的配置项已在 Nacos 中配置
 
-	t.Skip("跳过集成测试，需要实际的 Nacos 环境")
-
-	configFile := "config_center.toml"
+	configFile := "./config_center.yaml"
 
 	// 测试配置初始化
 	t.Run("InitConfig", func(t *testing.T) {
@@ -26,11 +24,11 @@ func TestInitConfig(t *testing.T) {
 
 		// 测试获取配置
 		// 参数：dataId, group, key
-		serverName := GetString("game.main", "DEFAULT_GROUP", "name")
+		serverName := GetString(DtaIDGameMain, GroupServer, "name")
 		t.Logf("Server name: %s", serverName)
 
 		// 测试获取 Redis 配置
-		redisAddrs := GetStringSlice("game.main", "DEFAULT_GROUP", "addr")
+		redisAddrs := GetStringSlice(DtaIDGameMain, GroupRedis, "addr")
 		t.Logf("Redis addrs: %v", redisAddrs)
 	})
 }
@@ -39,7 +37,7 @@ func TestInitConfig(t *testing.T) {
 func TestGetConfigValues(t *testing.T) {
 	t.Skip("跳过集成测试，需要实际的 Nacos 环境")
 
-	err := InitConfig("config_center.toml")
+	err := InitConfig("config_center.yaml")
 	if err != nil {
 		t.Fatalf("InitConfig failed: %v", err)
 	}
@@ -75,7 +73,7 @@ func TestUnmarshal(t *testing.T) {
 		Port  int    `yaml:"port"`
 	}
 
-	err := InitConfig("config_center.toml")
+	err := InitConfig("config_center.yaml")
 	if err != nil {
 		t.Fatalf("InitConfig failed: %v", err)
 	}
@@ -94,7 +92,7 @@ func TestUnmarshal(t *testing.T) {
 func TestOnConfigChange(t *testing.T) {
 	t.Skip("跳过集成测试，需要实际的 Nacos 环境")
 
-	err := InitConfig("config_center.toml")
+	err := InitConfig("config_center.yaml")
 	if err != nil {
 		t.Fatalf("InitConfig failed: %v", err)
 	}

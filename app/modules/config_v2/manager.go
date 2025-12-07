@@ -9,6 +9,7 @@ import (
 	"sync/atomic"
 
 	"gitee.com/orbit-w/orbit/lib/module/logger"
+	"github.com/go-viper/mapstructure/v2"
 	"github.com/nacos-group/nacos-sdk-go/v2/clients"
 	"github.com/nacos-group/nacos-sdk-go/v2/clients/config_client"
 	"github.com/nacos-group/nacos-sdk-go/v2/common/constant"
@@ -28,7 +29,7 @@ const (
 
 // ConfigManager 配置管理器，使用 Nacos SDK 获取配置，注入到 Viper 中
 type ConfigManager struct {
-	centerConfig CenterConfig                // 配置中心基础配置
+	centerConfig *CenterConfig               // 配置中心基础配置
 	configClient config_client.IConfigClient // Nacos 配置客户端
 	vipers       map[string]*viper.Viper     // key: dataId.group, value: viper实例
 	mu           sync.RWMutex                // 保护 vipers map
@@ -39,8 +40,9 @@ type ConfigManager struct {
 // NewConfigManager 创建新的配置管理器
 func NewConfigManager() *ConfigManager {
 	return &ConfigManager{
-		vipers:    make(map[string]*viper.Viper),
-		callbacks: make(map[string][]func()),
+		centerConfig: &CenterConfig{},
+		vipers:       make(map[string]*viper.Viper),
+		callbacks:    make(map[string][]func()),
 	}
 }
 
@@ -84,13 +86,16 @@ func (m *ConfigManager) Stop() error {
 func (m *ConfigManager) loadCenterConfig(filename string) error {
 	v := viper.New()
 	v.SetConfigFile(filename)
-	v.SetConfigType("toml")
+	v.SetConfigType("yaml")
 
 	if err := v.ReadInConfig(); err != nil {
 		return fmt.Errorf("read config file failed: %w", err)
 	}
 
-	if err := v.Unmarshal(&m.centerConfig); err != nil {
+	// 配置 mapstructure 使用 yaml tag 而不是默认的 mapstructure tag
+	if err := v.Unmarshal(m.centerConfig, func(config *mapstructure.DecoderConfig) {
+		config.TagName = "yaml"
+	}); err != nil {
 		return fmt.Errorf("unmarshal config failed: %w", err)
 	}
 

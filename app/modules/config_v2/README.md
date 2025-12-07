@@ -40,33 +40,32 @@ Config V2 使用以下依赖：
 
 ### 2. 配置文件
 
-创建 `config_center.toml`:
+创建 `config_center.yaml`:
 
-```toml
-Type = "nacos"
+```yaml
+type: nacos
 
-[nacos]
-server_hosts = ["your-nacos-server.com:8848"]  # 支持多个服务器
-namespace_id = "your-namespace-id"
-username = ""
-password = ""
-timeout_ms = 5000
+nacos:
+  server_hosts:
+    - your-nacos-server.com:8848  # 支持多个服务器
+  namespace_id: your-namespace-id
+  username: ""
+  password: ""
+  timeout_ms: 5000
 
 # 配置源列表 - 可以添加任意多个
-[[sources]]
-data_id = "game.main"
-group = "server"
-format = "yaml"
+sources:
+  - data_id: game.main
+    group: server
+    format: yaml
 
-[[sources]]
-data_id = "game.main"
-group = "redis"
-format = "yaml"
+  - data_id: game.main
+    group: redis
+    format: yaml
 
-[[sources]]
-data_id = "custom.config"
-group = "DEFAULT_GROUP"
-format = "json"
+  - data_id: custom.config
+    group: DEFAULT_GROUP
+    format: json
 ```
 
 ### 3. Nacos 中的配置示例
@@ -99,7 +98,7 @@ import (
 
 func main() {
     // 1. 初始化配置
-    if err := config_v2.InitConfig("config_center.toml"); err != nil {
+    if err := config_v2.InitConfig("config_center.yaml"); err != nil {
         panic(err)
     }
     defer config_v2.StopConfig()
@@ -283,22 +282,20 @@ fmt.Printf("Redis: %+v\n", redisConfig)
 
 ### 示例 5：多配置源
 
-```toml
-# config_center.toml
-[[sources]]
-data_id = "game.main"
-group = "server"
-format = "yaml"
+```yaml
+# config_center.yaml
+sources:
+  - data_id: game.main
+    group: server
+    format: yaml
 
-[[sources]]
-data_id = "game.main"
-group = "redis"
-format = "yaml"
+  - data_id: game.main
+    group: redis
+    format: yaml
 
-[[sources]]
-data_id = "feature.flags"
-group = "feature"
-format = "json"
+  - data_id: feature.flags
+    group: feature
+    format: json
 ```
 
 ```go
@@ -324,7 +321,7 @@ config_v2.OnConfigChange("game.main", "server", func() {
 
 ## 配置格式支持
 
-支持的配置格式（在 `config_center.toml` 的 `format` 字段指定）：
+支持的配置格式（在 `config_center.yaml` 的 `format` 字段指定）：
 
 - `yaml` - YAML 格式（推荐）
 - `json` - JSON 格式
@@ -357,12 +354,12 @@ config.GetServerName()
 
 #### Config V2 方式
 
-```toml
-# 1. 在 config_center.toml 添加配置源
-[[sources]]
-data_id = "new.config"
-group = "new_group"
-format = "yaml"
+```yaml
+# 1. 在 config_center.yaml 添加配置源
+sources:
+  - data_id: new.config
+    group: new_group
+    format: yaml
 ```
 
 ```go
@@ -370,7 +367,7 @@ format = "yaml"
 value := config_v2.GetString("new.config", "new_group", "some.key")
 ```
 
-添加新配置项只需：**修改 toml 文件** = **零代码**
+添加新配置项只需：**修改 yaml 文件** = **零代码**
 
 ## 最佳实践
 
@@ -392,12 +389,14 @@ server:
 
 使用不同的 namespace 隔离不同环境：
 
-```toml
+```yaml
 # 开发环境
-namespace_id = "dev-namespace"
+nacos:
+  namespace_id: dev-namespace
 
 # 生产环境
-namespace_id = "prod-namespace"
+nacos:
+  namespace_id: prod-namespace
 ```
 
 ### 3. 配置热更新处理
@@ -418,7 +417,7 @@ config_v2.OnConfigChange("game.main", "server", func() {
 ### 4. 错误处理
 
 ```go
-if err := config_v2.InitConfig("config_center.toml"); err != nil {
+if err := config_v2.InitConfig("config_center.yaml"); err != nil {
     logger.Fatal("Failed to init config", zap.Error(err))
     // 根据错误类型做不同处理
     // 1. 文件不存在 -> 检查路径
@@ -480,20 +479,21 @@ curl http://your-nacos-server:8848/nacos/v1/console/health/liveness
 
 #### 步骤 1：更新配置文件
 
-```toml
-# 旧格式
+```yaml
+# 旧格式（TOML）
 [nacos]
 server_hosts = ["host1", "host2"]
 
-# 新格式
-[nacos]
-server_addr = "host1"
-server_port = 8848
+# 新格式（YAML）
+nacos:
+  server_hosts:
+    - host1
+    - host2
 
-[[sources]]
-data_id = "game.main"
-group = "server"
-format = "yaml"
+sources:
+  - data_id: game.main
+    group: server
+    format: yaml
 ```
 
 #### 步骤 2：替换代码
