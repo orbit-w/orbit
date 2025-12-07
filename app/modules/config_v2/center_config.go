@@ -11,9 +11,10 @@ type NacosConfig struct {
 
 // ConfigSource 配置源定义，支持从 Nacos 加载多个配置
 type ConfigSource struct {
-	DataID string `yaml:"data_id"` // Nacos DataID
-	Group  string `yaml:"group"`   // Nacos Group
-	Format string `yaml:"format"`  // 配置格式: yaml, json, toml, properties
+	DataID     string `yaml:"data_id"`     // Nacos DataID
+	Group      string `yaml:"group"`       // Nacos Group
+	Format     string `yaml:"format"`      // 配置格式: yaml, json, toml, properties
+	NeedListen bool   `yaml:"need_listen"` // 是否需要监听配置变化
 }
 
 // CenterConfig 配置中心配置

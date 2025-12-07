@@ -13,11 +13,14 @@ sources:
   - data_id: game.main
     group: server
     format: yaml
+    need_listen: true
 
   - data_id: game.main
     group: redis
     format: yaml
+    need_listen: false
 
   - data_id: game.main
     group: mongodb
     format: yaml
+    need_listen: false

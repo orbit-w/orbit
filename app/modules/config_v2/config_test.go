@@ -2,6 +2,7 @@ package config_v2
 
 import (
 	"testing"
+	"time"
 )
 
 // TestInitConfig 测试配置初始化
@@ -90,8 +91,6 @@ func TestUnmarshal(t *testing.T) {
 
 // TestOnConfigChange 测试配置变更回调
 func TestOnConfigChange(t *testing.T) {
-	t.Skip("跳过集成测试，需要实际的 Nacos 环境")
-
 	err := InitConfig("config_center.yaml")
 	if err != nil {
 		t.Fatalf("InitConfig failed: %v", err)
@@ -99,12 +98,15 @@ func TestOnConfigChange(t *testing.T) {
 	defer StopConfig()
 
 	// 注册配置变更回调
-	OnConfigChange("game.main", "DEFAULT_GROUP", func() {
+	OnConfigChange(DtaIDGameMain, GroupServer, func() {
 		t.Log("Config changed!")
-		serverName := GetString("game.main", "DEFAULT_GROUP", "name")
+		serverName := GetString(DtaIDGameMain, GroupServer, "name")
 		t.Logf("New server name: %s", serverName)
+		port := GetInt(DtaIDGameMain, GroupServer, "port")
+		t.Logf("New server port: %d", port)
 	})
 
 	// 等待配置变更...
 	// 注意：这需要手动在 Nacos 控制台修改配置来测试
+	time.Sleep(time.Minute * 2)
 }

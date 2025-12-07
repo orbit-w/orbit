@@ -199,8 +199,10 @@ func (m *ConfigManager) initAllSources() error {
 		}
 
 		// 监听配置变化
-		if err := m.listenConfigSource(source); err != nil {
-			return fmt.Errorf("listen source %s/%s failed: %w", source.Group, source.DataID, err)
+		if source.NeedListen {
+			if err := m.listenConfigSource(source); err != nil {
+				return fmt.Errorf("listen source %s/%s failed: %w", source.Group, source.DataID, err)
+			}
 		}
 	}
 	return nil
