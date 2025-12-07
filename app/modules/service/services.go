@@ -21,6 +21,7 @@ func (s *Services) Reg(service IService) *Services {
 	return s
 }
 
+// Start 启动所有服务,如果启动失败,则执行Rollback，停止所有已启动的服务
 func (s *Services) Start() error {
 	var (
 		err     error

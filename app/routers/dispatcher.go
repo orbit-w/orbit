@@ -18,7 +18,7 @@ var (
 )
 
 // Init 初始化分发器，注册所有控制器
-func Init() {
+func init() {
 	routerOnce.Do(func() {
 		globalRouter = NewRouter()
 	})

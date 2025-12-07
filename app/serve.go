@@ -37,8 +37,6 @@ import (
 
 func Serve(serverId string) {
 	cfg := config.GetConfig()
-	// 初始化 routers
-	routers.Init()
 
 	servicezone_behavior.SetRouter(routers.GetRouter())
 	stream.RegisterRequestHandler(requestHandler)
@@ -51,6 +49,8 @@ func Serve(serverId string) {
 
 	// 启动Zone
 	StartZones(serverId)
+
+	logger.GetLogger().Info("orbit service start complete")
 
 	gracefulShutdown(func(ctx context.Context) error {
 		// 停止服务
@@ -83,14 +83,18 @@ func RunServices(cfg *config.Config) *service.Services {
 		mongo.Stop()
 		return nil
 	})
+	services.Reg(new(stream.AgentStream))                 //启动AgentStream服务
+	services.Reg(redisService)                            //启动Redis服务
+	services.Reg(mongoService)                            //启动MongoDB服务
+	services.Reg(persistence.New())                       //启动持久化服务
+	services.Reg(cluster.NewManager(cfg.GetServerName())) //启动集群管理服务
+	services.Reg(zone_meta.NewZoneMetaService())          //启动ZoneMeta服务
+	services.Reg(servicezone_mgr.NewZoneManager())        //启动ZoneManager服务
 
-	services.Reg(persistence.New("configs/mongodb.toml"))             //启动持久化服务
-	services.Reg(new(stream.AgentStream))                             //启动AgentStream服务
-	services.Reg(redisService)                                        //启动Redis服务
-	services.Reg(mongoService)                                        //启动MongoDB服务
-	services.Reg(cluster.NewManager(cfg.GetServerName()))             //启动集群管理服务
-	services.Reg(servicezone_mgr.NewZoneManager())                    //启动ZoneManager服务
-	services.Reg(zone_meta.NewZoneMetaService(rdb.UniversalClient())) //启动ZoneMeta服务
+	err := services.Start()
+	if err != nil {
+		panic(err)
+	}
 
 	return services
 }
@@ -115,7 +119,7 @@ func StartZones(serverId string) {
 
 func ClusterSrartNode(serverId string) {
 	cfg := config.GetNacosConfig()
-	ip, err := netutils.GetLocalIPv4()
+	ip, err := netutils.GetPublicIPv4()
 	if err != nil {
 		panic(err)
 	}

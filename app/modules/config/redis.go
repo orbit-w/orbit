@@ -34,7 +34,8 @@ func (r *GameMainRedis) Onload(cfg *Config, content string) error {
 		return fmt.Errorf("failed to unmarshal game main redis config: %w", err)
 	}
 
-	cfg.GameMain.Redis = redisConfig
+	mainConf := cfg.GetGameMainConfig()
+	mainConf.SetRedisConfig(redisConfig)
 	return nil
 }
 

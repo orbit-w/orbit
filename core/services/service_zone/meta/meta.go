@@ -5,7 +5,7 @@ import (
 	"time"
 
 	cachev1 "gitee.com/orbit-w/meteor/modules/cache/v1"
-	"github.com/redis/go-redis/v9"
+	"gitee.com/orbit-w/meteor/modules/database/rdb"
 )
 
 const (
@@ -23,18 +23,16 @@ var (
 )
 
 type ZoneMetaService struct {
-	cli redis.UniversalClient
 }
 
-func NewZoneMetaService(_cli redis.UniversalClient) *ZoneMetaService {
-	return &ZoneMetaService{
-		cli: _cli,
-	}
+func NewZoneMetaService() *ZoneMetaService {
+	return &ZoneMetaService{}
 }
 
 func (s *ZoneMetaService) Start() error {
 	once.Do(func() {
-		cache = cachev1.NewCache(s.cli, CachePattern, func() *ZoneMeta {
+		cli := rdb.UniversalClient()
+		cache = cachev1.NewCache(cli, CachePattern, func() *ZoneMeta {
 			return &ZoneMeta{}
 		})
 	})

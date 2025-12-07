@@ -9,6 +9,12 @@ type Config struct {
 	GameMain *MainConfigGroup `toml:"game_main"`
 }
 
+func NewConfig() *Config {
+	return &Config{
+		GameMain: NewMainConfigGroup(),
+	}
+}
+
 func (c *Config) GetGameMainConfig() *MainConfigGroup {
 	return c.GameMain
 }

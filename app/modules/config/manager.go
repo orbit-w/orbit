@@ -59,7 +59,7 @@ func (m *ConfigManager) Stop() error {
 }
 
 func (m *ConfigManager) InitConfig() error {
-	m.cfg = &Config{}
+	m.cfg = NewConfig()
 
 	redisItem := &GameMainRedis{}
 	if err := m.LoadConfigItme(redisItem); err != nil {

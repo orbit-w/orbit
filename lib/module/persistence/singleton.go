@@ -4,8 +4,8 @@ import (
 	"context"
 	"sync"
 
-	mongodbdriver "gitee.com/orbit-w/meteor/modules/database/no_sql/mongodb_driver"
 	mlog "gitee.com/orbit-w/meteor/modules/mlog"
+	"gitee.com/orbit-w/orbit/lib/module/db/mongo"
 	"github.com/asynkron/protoactor-go/actor"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
@@ -30,22 +30,13 @@ type PersistenceService struct {
 	PathConfig string
 }
 
-func New(pathConfig string) *PersistenceService {
-	return &PersistenceService{
-		PathConfig: pathConfig,
-	}
+func New() *PersistenceService {
+	return &PersistenceService{}
 }
 
 func (s *PersistenceService) Start() error {
 	once.Do(func() {
-		cfg, err := mongodbdriver.NewConfigLoader().LoadConfig(s.PathConfig)
-		if err != nil {
-			panic(err)
-		}
-		cli, err := mongodbdriver.NewMongoClient(*cfg)
-		if err != nil {
-			panic(err)
-		}
+		cli := mongo.VirtualClient()
 		globalPersistence = NewPersistence(cli)
 		if err := globalPersistence.Start(); err != nil {
 			panic(err)
