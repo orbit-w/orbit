@@ -3,18 +3,26 @@ package orbit_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	"gitee.com/orbit-w/meteor/modules/database/rdb"
 	"gitee.com/orbit-w/orbit/app"
 
+	mmeobj "gitee.com/orbit-w/orbit/app/mme"
 	"gitee.com/orbit-w/orbit/app/modules/config_v2"
 	"gitee.com/orbit-w/orbit/app/modules/service"
+	"gitee.com/orbit-w/orbit/app/proto/core"
+	"gitee.com/orbit-w/orbit/app/proto/pb"
+	"gitee.com/orbit-w/orbit/app/routers"
+	servicezone_behavior "gitee.com/orbit-w/orbit/core/services/service_zone/behavior"
 	zone_meta "gitee.com/orbit-w/orbit/core/services/service_zone/meta"
 	servicezone_mgr "gitee.com/orbit-w/orbit/core/services/service_zone/mgr"
+	servicezone "gitee.com/orbit-w/orbit/core/services/service_zone/zone"
 	"gitee.com/orbit-w/orbit/lib/module/db/mongo"
 	"gitee.com/orbit-w/orbit/lib/module/persistence"
 	"github.com/redis/go-redis/v9"
+	"google.golang.org/protobuf/proto"
 )
 
 // 初始化服务
@@ -64,8 +72,45 @@ func Test_RedisDial(t *testing.T) {
 	t.Logf("get test result: %v", result)
 }
 
+func initRouter() {
+	routers.RegisterHandler(pb.PID_Request_LoginRequest, func(ctx servicezone_behavior.IContext, msg proto.Message, entities ...mmeobj.IEntity) (proto.Message, string, error) {
+		_ = msg.(*core.Request_LoginRequest)
+		playerEntity, ok := entities[0].(*mmeobj.PlayerEntityWrapper)
+		if !ok {
+			return nil, "", fmt.Errorf("player entity not found in entities")
+		}
+		playerEntity.SetXXXId(1600000)
+
+		var (
+			heroId int64 = 100001
+		)
+		mgr := playerEntity.GetHeroManager()
+		heroModule := mmeobj.NewHeroModule()
+		wrapper := mgr.HeroMap_Set(heroId, heroModule)
+		wrapper.GetLevelUp().SetCurLevel(10)
+
+		return &core.OK{}, "OK", nil
+	})
+}
+
 func Test_Persistence(t *testing.T) {
-	services := Setup("1")
+	serverId := "1"
+	services := Setup(serverId)
 	defer services.Stop()
 
+	// 启动PlayerZone
+	id := servicezone_mgr.GenLocalZoneId(servicezone.ZoneTypePlayer, serverId)
+	meta, err := zone_meta.SetZoneMeta(id, int32(servicezone.ZoneTypePlayer), &zone_meta.ZoneDispatcher{
+		Type:     zone_meta.Zone_DispatcherType_ForWorld,
+		ServerId: serverId,
+		NodeId:   serverId,
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = servicezone_mgr.StartZoneWithMeta(id, meta)
+	if err != nil {
+		panic(err)
+	}
 }
