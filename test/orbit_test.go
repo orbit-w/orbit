@@ -98,10 +98,13 @@ func initRouter() {
 			heroId int64 = 100001
 		)
 		mgr := playerEntity.GetHeroManager()
-		heroModule := mmeobj.NewHeroModule()
-		wrapper := mgr.HeroMap_Set(heroId, heroModule)
-		wrapper.GetLevelUp().SetCurLevel(888)
-
+		mgr.HeroMap_Range(func(id int64, heroModule *mmeobj.HeroModuleWrapper) bool {
+			if id == heroId {
+				heroModule.GetLevelUp().SetCurLevel(888)
+				return false
+			}
+			return true
+		})
 		return &core.OK{}, "OK", nil
 	})
 }
