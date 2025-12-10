@@ -326,14 +326,9 @@ func (g *BuildMongoUpdateCodeGenerator) GenerateBuildMongoUpdateMethod(fields []
 			case field.Type.GetKind().IsBaseType():
 				// 基础类型字段处理
 				methodName := strings.ToUpper(field.Name[0:1]) + field.Name[1:]
-				// 特殊处理：Id 字段使用 "_id" 作为 MongoDB 字段名
-				if field.Name == "Id" {
-					sb.WriteString(fmt.Sprintf("%s\tbuilder.SetNestedPath(path, \"_id\", %s.Get%s())\n",
-						indent, g.Receiver, methodName))
-				} else {
-					sb.WriteString(fmt.Sprintf("%s\tbuilder.SetNestedPath(path, \"%s\", %s.Get%s())\n",
-						indent, fieldNameSnake, g.Receiver, methodName))
-				}
+				// 所有字段统一使用 snake_case 命名，与 bson 标签保持一致
+				sb.WriteString(fmt.Sprintf("%s\tbuilder.SetNestedPath(path, \"%s\", %s.Get%s())\n",
+					indent, fieldNameSnake, g.Receiver, methodName))
 			case field.Type.GetKind().IsMMEObject():
 				// MMEObject 类型字段处理：调用嵌套 wrapper 的 BuildMongoUpdate 方法
 				wrapperFieldName := field.Name + "Wrapper"

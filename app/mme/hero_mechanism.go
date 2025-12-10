@@ -194,7 +194,7 @@ func (w *HeroMechanismWrapper) BuildMongoUpdate(builder *mgo_builder.MongoUpdate
 	}
 
 	if w.IsDirty(HeroMechanismDirtyIdBit) {
-		builder.SetNestedPath(path, "_id", w.GetId())
+		builder.SetNestedPath(path, "id", w.GetId())
 	}
 	if w.IsDirty(HeroMechanismDirtyConfIdBit) {
 		builder.SetNestedPath(path, "conf_id", w.GetConfId())
