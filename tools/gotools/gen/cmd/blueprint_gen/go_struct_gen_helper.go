@@ -3,6 +3,8 @@ package blueprint_gen
 import (
 	"fmt"
 	"strings"
+
+	mmeobject "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types/mme_obj"
 )
 
 func (g *GoStructGenerator) GenerateImport(obj MMEObjectBase, packageName string) string {
@@ -19,7 +21,7 @@ func (g *GoStructGenerator) GenerateImport(obj MMEObjectBase, packageName string
 	sb.WriteString("\tmmemodel \"gitee.com/orbit-w/orbit/lib/module/mme_model\"\n")
 	sb.WriteString("\t\"google.golang.org/protobuf/proto\"\n")
 
-	if obj.GetObjectType() == ObjectTypeEntity {
+	if obj.GetObjectType() == mmeobject.ObjectTypeEntity {
 		sb.WriteString("\t\"go.mongodb.org/mongo-driver/v2/bson\"\n")
 	}
 

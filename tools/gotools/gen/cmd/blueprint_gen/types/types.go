@@ -3,6 +3,8 @@ package blueprint_types
 import (
 	"fmt"
 	"strings"
+
+	mmeobject "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types/mme_obj"
 )
 
 // FieldType 字段类型定义 - 增强以支持深度元数据解析
@@ -304,8 +306,6 @@ func parseBaseOrStructType(typeStr string, ft *FieldType) *FieldType {
 // 命名模式通常以这些后缀结尾，如：PlayerEntity, HeroManager, HeroModule, HeroMechanism
 // 也支持带包名的限定名称，如：mme.HeroManager, core.PlayerEntity
 func isMMEObjectType(typeName string) bool {
-	// MME Object 类型的后缀
-	mmeObjectSuffixes := []string{"Entity", "Manager", "Module", "Mechanism"}
 
 	// 提取类型名称（去掉包名前缀）
 	typeNameOnly := typeName
@@ -313,14 +313,7 @@ func isMMEObjectType(typeName string) bool {
 		typeNameOnly = typeName[lastDot+1:]
 	}
 
-	// 检查是否以 MME Object 后缀结尾
-	for _, suffix := range mmeObjectSuffixes {
-		if strings.HasSuffix(typeNameOnly, suffix) {
-			return true
-		}
-	}
-
-	return false
+	return mmeobject.IsMMEObjectType(typeNameOnly)
 }
 
 // parseMapTypeRecursive 递归解析 map/xmap 的类型参数

@@ -145,16 +145,19 @@ func GetRedisOps() rdb.RedisClientOps {
 // GetMongoOps 获取 MongoDB 配置
 func GetMongoOps() *mongodbdriver.MongoDBConfig {
 	return &mongodbdriver.MongoDBConfig{
-		URI:             GetString(DtaIDGameMain, GroupMongo, "uri"),
-		ConnectTimeout:  GetTimeDuration(DtaIDGameMain, GroupMongo, "connect_timeout"),
-		MaxPoolSize:     uint64(GetInt(DtaIDGameMain, GroupMongo, "max_pool_size")),
-		MinPoolSize:     uint64(GetInt(DtaIDGameMain, GroupMongo, "min_pool_size")),
-		MaxConnIdleTime: GetTimeDuration(DtaIDGameMain, GroupMongo, "max_conn_idle_time"),
-		MaxConnecting:   uint64(GetInt(DtaIDGameMain, GroupMongo, "max_connecting")),
-		WriteTimeout:    GetTimeDuration(DtaIDGameMain, GroupMongo, "write_timeout"),
-		ReadTimeout:     GetTimeDuration(DtaIDGameMain, GroupMongo, "read_timeout"),
-		RetryWrites:     GetBool(DtaIDGameMain, GroupMongo, "retry_writes"),
-		RetryReads:      GetBool(DtaIDGameMain, GroupMongo, "retry_reads"),
+		URI:                    GetString(DtaIDGameMain, GroupMongo, "uri"),
+		ConnectTimeout:         GetTimeDuration(DtaIDGameMain, GroupMongo, "connect_timeout"),
+		MaxPoolSize:            uint64(GetInt(DtaIDGameMain, GroupMongo, "max_pool_size")),
+		MinPoolSize:            uint64(GetInt(DtaIDGameMain, GroupMongo, "min_pool_size")),
+		MaxConnIdleTime:        GetTimeDuration(DtaIDGameMain, GroupMongo, "max_conn_idle_time"),
+		MaxConnecting:          uint64(GetInt(DtaIDGameMain, GroupMongo, "max_connecting")),
+		WriteTimeout:           GetTimeDuration(DtaIDGameMain, GroupMongo, "write_timeout"),
+		ReadTimeout:            GetTimeDuration(DtaIDGameMain, GroupMongo, "read_timeout"),
+		RetryWrites:            GetBool(DtaIDGameMain, GroupMongo, "retry_writes"),
+		RetryReads:             GetBool(DtaIDGameMain, GroupMongo, "retry_reads"),
+		PingTimeout:            GetTimeDuration(DtaIDGameMain, GroupMongo, "ping_timeout"),
+		DisconnectTimeout:      GetTimeDuration(DtaIDGameMain, GroupMongo, "disconnect_timeout"),
+		ServerSelectionTimeout: GetTimeDuration(DtaIDGameMain, GroupMongo, "server_selection_timeout"),
 	}
 }
 

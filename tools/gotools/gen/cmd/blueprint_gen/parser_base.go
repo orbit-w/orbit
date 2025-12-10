@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"gitee.com/orbit-w/meteor/bases/misc/utils"
+	field_parser "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/parser"
 	types "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types"
 	"gopkg.in/yaml.v3"
 )
@@ -62,24 +63,16 @@ func (p *BaseParser) ResolvePath(paths ...string) string {
 	return filepath.Join(append([]string{p.blueprintDir}, paths...)...)
 }
 
-// ParseFieldDefinitionToTypesField 将字段定义字符串解析为 types.Field
-func (p *BaseParser) ParseFieldDefinitionToTypesField(fieldDef string) (*types.Field, error) {
-	return ParseFieldDefinition(fieldDef)
-}
-
 // ParseMessageFields 解析消息字段（通用逻辑），统一使用 *types.Field
 func (p *BaseParser) ParseMessageFields(fieldsMap map[string]any) ([]*types.Field, error) {
 	result := make([]*types.Field, 0)
 
 	for fieldKey, fieldDef := range fieldsMap {
-		var field *types.Field
-		var err error
-
 		fieldStr := utils.ToString(fieldDef)
 		// int32 FieldName: 1
 		// fieldKey 包含类型和字段名，如 "string Query"
-		field, err = ParseFieldDefinition(fieldKey + ": " + fieldStr)
-		if err == nil && field != nil {
+		field := field_parser.ParseFieldDefinition(fieldKey + ": " + fieldStr)
+		if field != nil {
 			result = append(result, field)
 			continue
 		}

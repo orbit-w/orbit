@@ -3,6 +3,7 @@ package mongodbdriver
 import (
 	"context"
 	"sync/atomic"
+	"time"
 
 	"gitee.com/orbit-w/meteor/modules/mlog"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -36,6 +37,13 @@ func NewMongoClient(cfg MongoDBConfig) (*VirtualMongoClient, error) {
 		SetRetryWrites(cfg.RetryWrites).
 		SetRetryReads(cfg.RetryReads).
 		SetConnectTimeout(cfg.ConnectTimeout)
+
+	if cfg.ServerSelectionTimeout > 0 {
+		clientOptions.SetServerSelectionTimeout(cfg.ServerSelectionTimeout)
+	} else {
+		// 默认 30 秒
+		clientOptions.SetServerSelectionTimeout(30 * time.Second)
+	}
 
 	cli, err := mongo.Connect(clientOptions)
 	if err != nil {

@@ -2,6 +2,8 @@ package blueprint_types
 
 import (
 	"strings"
+
+	mmeobject "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types/mme_obj"
 )
 
 // Field 字段定义 - 增强以支持深度元数据解析
@@ -58,6 +60,11 @@ func (f *Field) IsXMapField() bool {
 
 func (f *Field) IsMMEObjectType() bool {
 	return f.Type.IsMMEObjectType()
+}
+
+// GetMMEObjectType 获取 MME Object 类型
+func (f *Field) GetMMEObjectType() mmeobject.ObjectType {
+	return f.Metadata.MMEObjectType
 }
 
 // FieldOption 字段选项

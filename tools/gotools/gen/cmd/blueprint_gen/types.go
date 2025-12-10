@@ -4,16 +4,7 @@ import (
 	"fmt"
 
 	types "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types"
-)
-
-// ObjectType MME 对象类型
-type ObjectType string
-
-const (
-	ObjectTypeEntity    ObjectType = "Entity"
-	ObjectTypeManager   ObjectType = "Manager"
-	ObjectTypeModule    ObjectType = "Module"
-	ObjectTypeMechanism ObjectType = "Mechanism"
+	mmeobject "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types/mme_obj"
 )
 
 // FieldOption 字段选项（保留用于兼容，但应该使用 types.FieldOption）
@@ -30,7 +21,7 @@ type Mechanism struct {
 
 func NewMechanism() *Mechanism {
 	return &Mechanism{
-		MMEObject: NewMMEObject(ObjectTypeMechanism),
+		MMEObject: NewMMEObject(mmeobject.ObjectTypeMechanism),
 		Requests:  make([]*NetMessage, 0),
 		Notifies:  make([]*NetMessage, 0),
 	}
@@ -43,7 +34,7 @@ type Module struct {
 
 func NewModule() *Module {
 	return &Module{
-		MMEObject: NewMMEObject(ObjectTypeModule),
+		MMEObject: NewMMEObject(mmeobject.ObjectTypeModule),
 	}
 }
 
@@ -54,7 +45,7 @@ type Manager struct {
 
 func NewManager() *Manager {
 	return &Manager{
-		MMEObject: NewMMEObject(ObjectTypeManager),
+		MMEObject: NewMMEObject(mmeobject.ObjectTypeManager),
 	}
 }
 
@@ -65,7 +56,7 @@ type Entity struct {
 
 func NewEntity() *Entity {
 	return &Entity{
-		MMEObject: NewMMEObject(ObjectTypeEntity),
+		MMEObject: NewMMEObject(mmeobject.ObjectTypeEntity),
 	}
 }
 
@@ -249,7 +240,7 @@ type BlueprintContext struct {
 	Mechanisms    []*Mechanism
 	NetWalls      []*NetWallFile
 	Enums         []*Enum
-	ObjectTypeMap map[string]ObjectType
+	ObjectTypeMap map[string]mmeobject.ObjectType
 	NameSpaces    map[string]string // 包名空间,建立对象类型与包名空间的映射
 	NameSpaceMap  map[string]bool   // 命名空间检查，enum/struct/table不允许有重复的命名空间
 }
@@ -262,7 +253,7 @@ func NewBlueprintContext() *BlueprintContext {
 		Mechanisms:    make([]*Mechanism, 0),
 		NetWalls:      make([]*NetWallFile, 0),
 		Enums:         make([]*Enum, 0),
-		ObjectTypeMap: make(map[string]ObjectType),
+		ObjectTypeMap: make(map[string]mmeobject.ObjectType),
 		NameSpaces:    make(map[string]string),
 		NameSpaceMap:  make(map[string]bool),
 	}
@@ -282,22 +273,22 @@ func (ctx *BlueprintContext) GetEnums() []*Enum {
 
 func (ctx *BlueprintContext) AddEntity(entity *Entity) {
 	ctx.Entities = append(ctx.Entities, entity)
-	ctx.ObjectTypeMap[entity.Name] = ObjectTypeEntity
+	ctx.ObjectTypeMap[entity.Name] = mmeobject.ObjectTypeEntity
 }
 
 func (ctx *BlueprintContext) AddManager(manager *Manager) {
 	ctx.Managers = append(ctx.Managers, manager)
-	ctx.ObjectTypeMap[manager.Name] = ObjectTypeManager
+	ctx.ObjectTypeMap[manager.Name] = mmeobject.ObjectTypeManager
 }
 
 func (ctx *BlueprintContext) AddModule(module *Module) {
 	ctx.Modules = append(ctx.Modules, module)
-	ctx.ObjectTypeMap[module.Name] = ObjectTypeModule
+	ctx.ObjectTypeMap[module.Name] = mmeobject.ObjectTypeModule
 }
 
 func (ctx *BlueprintContext) AddMechanism(mechanism *Mechanism) {
 	ctx.Mechanisms = append(ctx.Mechanisms, mechanism)
-	ctx.ObjectTypeMap[mechanism.Name] = ObjectTypeMechanism
+	ctx.ObjectTypeMap[mechanism.Name] = mmeobject.ObjectTypeMechanism
 }
 
 // AddNetWallFile 添加 NetWallFile
@@ -318,14 +309,14 @@ func (ctx *BlueprintContext) CheckEntityFields() {
 				panic(fmt.Sprintf("entity %s 的 %s 字段类型不支持，必须是 MMEObject 类型", entity.Name, field.Name))
 			}
 
-			if t != ObjectTypeManager {
+			if t != mmeobject.ObjectTypeManager {
 				panic(fmt.Sprintf("entity %s 的 %s 字段类型不支持，必须是 Manager 类型", entity.Name, field.Name))
 			}
 		}
 	}
 }
 
-func (ctx *BlueprintContext) GetObjectType(name string) (ObjectType, bool) {
+func (ctx *BlueprintContext) GetObjectType(name string) (mmeobject.ObjectType, bool) {
 	objType, ok := ctx.ObjectTypeMap[name]
 	return objType, ok
 }

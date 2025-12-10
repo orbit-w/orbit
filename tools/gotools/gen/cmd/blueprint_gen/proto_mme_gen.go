@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	blueprint_types "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types"
+	mmeobject "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types/mme_obj"
 )
 
 // generateHeadfileProto 生成 common.proto
@@ -138,13 +139,13 @@ func (g *ProtoGenerator) genMMEObjectProtoImport(name string) string {
 		return ""
 	}
 	switch objType {
-	case ObjectTypeEntity:
+	case mmeobject.ObjectTypeEntity:
 		return GenerateProtoImport("entities")
-	case ObjectTypeManager:
+	case mmeobject.ObjectTypeManager:
 		return GenerateProtoImport("managers")
-	case ObjectTypeModule:
+	case mmeobject.ObjectTypeModule:
 		return GenerateProtoImport("modules")
-	case ObjectTypeMechanism:
+	case mmeobject.ObjectTypeMechanism:
 		return GenerateProtoImport("mechanisms")
 	default:
 		panic(fmt.Sprintf("unknown object type: %s", objType))

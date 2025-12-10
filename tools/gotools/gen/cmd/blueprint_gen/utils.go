@@ -5,93 +5,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	types "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types"
+	mmeobject "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types/mme_obj"
 )
-
-// ParseFieldOptions 解析字段选项字符串
-// 格式: [blueprint:"access=all", orbit:"Access=all"]
-func ParseFieldOptions(optionStr string) types.FieldOption {
-	opt := types.FieldOption{}
-
-	if optionStr == "" {
-		return opt
-	}
-
-	// 使用正则表达式提取 access=xxx
-	re := regexp.MustCompile(`access\s*=\s*([a-z]+)`)
-	matches := re.FindStringSubmatch(optionStr)
-	if len(matches) >= 2 {
-		opt.Access = matches[1]
-	} else {
-		opt.Access = "all" // 默认值
-	}
-
-	return opt
-}
-
-// ParseFieldDefinition 解析字段定义行，直接返回 *types.Field
-// 格式: int32 FieldName: 1 [blueprint:"access=all"]
-// 或者: HeroManager HeroManager: 1 [blueprint:"access=all"]
-func ParseFieldDefinition(line string) (*types.Field, error) {
-	field := &types.Field{}
-
-	// 提取注释
-	parts := strings.Split(line, "#")
-	if len(parts) > 1 {
-		field.Comment = strings.TrimSpace(parts[1])
-		line = strings.TrimSpace(parts[0])
-	}
-
-	// 提取选项 [blueprint:"access=all"]
-	var optionStr string
-	if idx := strings.Index(line, "["); idx != -1 {
-		optionStr = line[idx:]
-		line = line[:idx]
-		line = strings.TrimSpace(line)
-	}
-	field.Options = ParseFieldOptions(optionStr)
-
-	// 解析字段编号 : N
-	re := regexp.MustCompile(`:\s*(\d+)\s*`)
-	matches := re.FindStringSubmatch(line)
-	if len(matches) < 2 {
-		return nil, fmt.Errorf("field number not found in: %s", line)
-	}
-
-	var num int32
-	if _, err := fmt.Sscanf(matches[1], "%d", &num); err != nil {
-		return nil, err
-	}
-	field.Number = num
-
-	// 移除 :N 部分
-	line = re.ReplaceAllString(line, "")
-	line = strings.TrimSpace(line)
-
-	// 分割类型和字段名
-	parts = strings.Fields(line)
-	if len(parts) < 2 {
-		return nil, fmt.Errorf("invalid field format: %s", line)
-	}
-
-	// 类型部分是前面的所有部分（可能包含空格，如 "Core.MMELocation"）
-	// 字段名是最后一部分
-	field.Name = parts[len(parts)-1]
-	typeParts := parts[:len(parts)-1]
-	typeStr := strings.Join(typeParts, " ")
-
-	// 使用 types.ParseTypeString 解析类型
-	fieldType, err := types.ParseTypeString(typeStr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse type: %w", err)
-	}
-	field.Type = *fieldType
-
-	return field, nil
-}
 
 // EnsureDir 确保目录存在
 func EnsureDir(dir string) error {
@@ -325,46 +243,54 @@ func containsSpecialChars(s string, specialChars []string) bool {
 
 // BuildMongoUpdateCodeGenerator BuildMongoUpdate 代码生成器
 type BuildMongoUpdateCodeGenerator struct {
-	ObjectName  string     // 对象名称，如 "LevelUpMechanism"
-	WrapperName string     // 包装器名称，如 "LevelUpMechanismWrapper"
-	Receiver    string     // 接收器名称，如 "w" 或 "m"
-	ObjectType  ObjectType // 对象类型：Mechanism/Module/Manager
+	ObjectName  string               // 对象名称，如 "LevelUpMechanism"
+	WrapperName string               // 包装器名称，如 "LevelUpMechanismWrapper"
+	Receiver    string               // 接收器名称，如 "w" 或 "m"
+	ObjectType  mmeobject.ObjectType // 对象类型：Mechanism/Module/Manager/Entity
 }
 
 // GenerateBuildMongoUpdateMethod 生成 BuildMongoUpdate 方法的完整代码
 func (g *BuildMongoUpdateCodeGenerator) GenerateBuildMongoUpdateMethod(fields []*types.Field) string {
 	var sb strings.Builder
 
-	// 方法注释
-	sb.WriteString("// BuildMongoUpdate 构建MongoDB更新操作\n")
-	if g.ObjectType == ObjectTypeManager {
-		sb.WriteString("// 注意：Manager 层级通常不直接构建 MongoDB 更新，而是由 Entity 层处理\n")
-	}
+	// 生成方法签名
+	g.GenerateBuildMongoUpdateMethodFuncSign(&sb)
 
-	// 方法签名
-	sb.WriteString(fmt.Sprintf("func (%s *%s) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder, path *mgo_builder.NestedPath) {\n",
-		g.Receiver, g.WrapperName))
-	sb.WriteString(fmt.Sprintf("\tif %s == nil {\n", g.Receiver))
-	sb.WriteString("\t\treturn\n")
-	sb.WriteString("\t}\n\n")
+	// 确定缩进级别
+	indent := "\t"
+	if g.ObjectType == mmeobject.ObjectTypeEntity {
+		indent = "\t\t" // Entity 类型多一层缩进（因为有 HasAnyDirty 检查）
+	}
 
 	for i := range fields {
 		field := fields[i]
+
+		switch {
+		case g.ObjectType.IsEntity():
+			// Entity 类型只处理 Manager 类型的字段
+			if field.IsMMEObjectType() {
+				fieldType := field.GetMMEObjectType()
+				if !fieldType.IsManager() {
+					panic(fmt.Sprintf("field %s is not MMEObject type, it is %s", field.Name, fieldType.String()))
+				}
+			}
+		}
+
 		dirtyBitName := fmt.Sprintf("%sDirty%sBit", g.ObjectName, field.Name)
 		fieldNameSnake := CamelToSnake(field.Name)
-		sb.WriteString(fmt.Sprintf("\tif %s.IsDirty(%s) {\n", g.Receiver, dirtyBitName))
+		sb.WriteString(fmt.Sprintf("%sif %s.IsDirty(%s) {\n", indent, g.Receiver, dirtyBitName))
 		switch field.Type.Kind {
 		case types.FieldKindMap:
 			switch {
 			case field.Type.ValueKind().IsBaseType():
 				keyType := field.Type.KeyKind().String()
 				valueType := field.Type.ValueKind().String()
-				sb.WriteString(fmt.Sprintf("\t\tcopy := make(map[%s]%s, len(%s.data.%s))\n",
-					keyType, valueType, g.Receiver, field.Name))
-				sb.WriteString(fmt.Sprintf("\t\tmaps.Copy(copy, %s.data.%s)\n",
-					g.Receiver, field.Name))
-				sb.WriteString(fmt.Sprintf("\t\tbuilder.SetNestedPath(path, \"%s\", copy)\n",
-					fieldNameSnake))
+				sb.WriteString(fmt.Sprintf("%s\tcopy := make(map[%s]%s, len(%s.data.%s))\n",
+					indent, keyType, valueType, g.Receiver, field.Name))
+				sb.WriteString(fmt.Sprintf("%s\tmaps.Copy(copy, %s.data.%s)\n",
+					indent, g.Receiver, field.Name))
+				sb.WriteString(fmt.Sprintf("%s\tbuilder.SetNestedPath(path, \"%s\", copy)\n",
+					indent, fieldNameSnake))
 			case field.Type.ValueKind().IsMMEObject():
 				panic(fmt.Sprintf("field %s value type is MMEObject, not supported for Map", field.Name))
 			default:
@@ -379,19 +305,19 @@ func (g *BuildMongoUpdateCodeGenerator) GenerateBuildMongoUpdateMethod(fields []
 			case valueType.GetKind().IsBaseType():
 				// 值类型 XMap，使用 accessor.Clone()
 				accessorName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Accessor"
-				sb.WriteString(fmt.Sprintf("\t\tbuilder.SetNestedPath(path, \"%s\", %s.%s.Clone())\n",
-					fieldNameSnake, g.Receiver, accessorName))
+				sb.WriteString(fmt.Sprintf("%s\tbuilder.SetNestedPath(path, \"%s\", %s.%s.Clone())\n",
+					indent, fieldNameSnake, g.Receiver, accessorName))
 			case valueType.GetKind().IsMessage():
 				panic(fmt.Sprintf("field %s value type is message type, not supported", field.Name))
 			case valueType.GetKind().IsMMEObject():
 				// MME Object 类型 XMap，使用 DeepCopy()
 				valueName := field.GetValueName()
 				linkFieldName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Link"
-				sb.WriteString("\t\t//map 结构无法做增量更新，所以需要全量拷贝\n")
-				sb.WriteString(fmt.Sprintf("\t\tcopy := make(map[%s]*%s, %s.%s.Len())\n",
-					field.Type.KeyKind().String(), valueName, g.Receiver, linkFieldName))
-				sb.WriteString(fmt.Sprintf("\t\t%s.%s.DeepCopy(&copy)\n", g.Receiver, linkFieldName))
-				sb.WriteString(fmt.Sprintf("\t\tbuilder.SetNestedPath(path, \"%s\", copy)\n", fieldNameSnake))
+				sb.WriteString(fmt.Sprintf("%s\t//map 结构无法做增量更新，所以需要全量拷贝\n", indent))
+				sb.WriteString(fmt.Sprintf("%s\tcopy := make(map[%s]*%s, %s.%s.Len())\n",
+					indent, field.Type.KeyKind().String(), valueName, g.Receiver, linkFieldName))
+				sb.WriteString(fmt.Sprintf("%s\t%s.%s.DeepCopy(&copy)\n", indent, g.Receiver, linkFieldName))
+				sb.WriteString(fmt.Sprintf("%s\tbuilder.SetNestedPath(path, \"%s\", copy)\n", indent, fieldNameSnake))
 			default:
 				panic(fmt.Sprintf("field %s value type is not supported", field.Name))
 			}
@@ -402,24 +328,29 @@ func (g *BuildMongoUpdateCodeGenerator) GenerateBuildMongoUpdateMethod(fields []
 				methodName := strings.ToUpper(field.Name[0:1]) + field.Name[1:]
 				// 特殊处理：Id 字段使用 "_id" 作为 MongoDB 字段名
 				if field.Name == "Id" {
-					sb.WriteString(fmt.Sprintf("\t\tbuilder.SetNestedPath(path, \"_id\", %s.Get%s())\n",
-						g.Receiver, methodName))
+					sb.WriteString(fmt.Sprintf("%s\tbuilder.SetNestedPath(path, \"_id\", %s.Get%s())\n",
+						indent, g.Receiver, methodName))
 				} else {
-					sb.WriteString(fmt.Sprintf("\t\tbuilder.SetNestedPath(path, \"%s\", %s.Get%s())\n",
-						fieldNameSnake, g.Receiver, methodName))
+					sb.WriteString(fmt.Sprintf("%s\tbuilder.SetNestedPath(path, \"%s\", %s.Get%s())\n",
+						indent, fieldNameSnake, g.Receiver, methodName))
 				}
 			case field.Type.GetKind().IsMMEObject():
 				// MMEObject 类型字段处理：调用嵌套 wrapper 的 BuildMongoUpdate 方法
 				wrapperFieldName := field.Name + "Wrapper"
-				sb.WriteString(fmt.Sprintf("\t\tif %s.%s != nil {\n",
-					g.Receiver, wrapperFieldName))
-				sb.WriteString(fmt.Sprintf("\t\t\t%s.%s.BuildMongoUpdate(builder, path.Field(\"%s\"))\n",
-					g.Receiver, wrapperFieldName, fieldNameSnake))
-				sb.WriteString("\t\t}\n")
+				sb.WriteString(fmt.Sprintf("%s\tif %s.%s != nil {\n",
+					indent, g.Receiver, wrapperFieldName))
+				sb.WriteString(fmt.Sprintf("%s\t\t%s.%s.BuildMongoUpdate(builder, path.Field(\"%s\"))\n",
+					indent, g.Receiver, wrapperFieldName, fieldNameSnake))
+				sb.WriteString(fmt.Sprintf("%s\t}\n", indent))
 			default:
 				panic(fmt.Sprintf("field %s value type is not supported", field.Name))
 			}
 		}
+		sb.WriteString(fmt.Sprintf("%s}\n", indent))
+	}
+
+	// Entity 类型需要关闭 HasAnyDirty 的大括号
+	if g.ObjectType == mmeobject.ObjectTypeEntity {
 		sb.WriteString("\t}\n")
 	}
 
@@ -427,12 +358,43 @@ func (g *BuildMongoUpdateCodeGenerator) GenerateBuildMongoUpdateMethod(fields []
 	return sb.String()
 }
 
+// GenerateBuildMongoUpdateMethodFuncSign 生成 BuildMongoUpdate 方法的函数签名
+func (g *BuildMongoUpdateCodeGenerator) GenerateBuildMongoUpdateMethodFuncSign(sb *strings.Builder) {
+	// 方法注释
+	sb.WriteString("// BuildMongoUpdate 构建MongoDB更新操作\n")
+	if g.ObjectType == mmeobject.ObjectTypeManager {
+		sb.WriteString("// 注意：Manager 层级通常不直接构建 MongoDB 更新，而是由 Entity 层处理\n")
+	}
+
+	// Entity 类型的方法签名不同：不接受 path 参数
+	if g.ObjectType == mmeobject.ObjectTypeEntity {
+		sb.WriteString(fmt.Sprintf("func (%s *%s) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder) {\n",
+			g.Receiver, g.WrapperName))
+		sb.WriteString(fmt.Sprintf("\tif %s == nil {\n", g.Receiver))
+		sb.WriteString("\t\treturn\n")
+		sb.WriteString("\t}\n\n")
+
+		// Entity 类型需要先检查是否有脏数据
+		sb.WriteString(fmt.Sprintf("\tif %s.HasAnyDirty() {\n", g.Receiver))
+		// Entity 类型在内部创建 path
+		sb.WriteString(fmt.Sprintf("\t\tpath := mgo_builder.NewNestedPathWithField(%s.Collection())\n", g.Receiver))
+	} else {
+		// 其他类型（Mechanism, Module, Manager）的方法签名：接受 path 参数
+		sb.WriteString(fmt.Sprintf("func (%s *%s) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder, path *mgo_builder.NestedPath) {\n",
+			g.Receiver, g.WrapperName))
+		sb.WriteString(fmt.Sprintf("\tif %s == nil {\n", g.Receiver))
+		sb.WriteString("\t\treturn\n")
+		sb.WriteString("\t}\n\n")
+	}
+
+}
+
 // ToIncrementalProtoCodeGenerator ToIncrementalProto 代码生成器
 type ToIncrementalProtoCodeGenerator struct {
-	ObjectName  string     // 对象名称，如 "LevelUpMechanism"
-	WrapperName string     // 包装器名称，如 "LevelUpMechanismWrapper"
-	Receiver    string     // 接收器名称，如 "w" 或 "m"
-	ObjectType  ObjectType // 对象类型：Mechanism/Module/Manager
+	ObjectName  string               // 对象名称，如 "LevelUpMechanism"
+	WrapperName string               // 包装器名称，如 "LevelUpMechanismWrapper"
+	Receiver    string               // 接收器名称，如 "w" 或 "m"
+	ObjectType  mmeobject.ObjectType // 对象类型：Mechanism/Module/Manager
 }
 
 // GenerateToIncrementalProtoMethod 生成 ToIncrementalProto 方法的完整代码
@@ -473,7 +435,7 @@ func (g *ToIncrementalProtoCodeGenerator) GenerateToIncrementalProtoMethod(field
 			switch {
 			case valueType.GetKind().IsMMEObject():
 				// MME Object 类型 XMap（仅 Manager 支持）
-				if g.ObjectType != ObjectTypeManager {
+				if g.ObjectType != mmeobject.ObjectTypeManager {
 					panic(fmt.Sprintf("field %s is XMap with MME Object value type, only supported in Manager", field.Name))
 				}
 
@@ -595,11 +557,11 @@ func (g *ToIncrementalProtoCodeGenerator) GenerateToIncrementalProtoMethod(field
 
 // WrapperMethodCodeGenerator Wrapper 方法代码生成器
 type WrapperMethodCodeGenerator struct {
-	ObjectName  string     // 对象名称，如 "HeroModule"
-	WrapperName string     // 包装器名称，如 "HeroModuleWrapper"
-	Receiver    string     // 接收器名称，如 "w" 或 "m"
-	ProtoPkg    string     // Proto 包名，如 "mme"
-	ObjectType  ObjectType // 对象类型：Mechanism/Module/Manager/Entity
+	ObjectName  string               // 对象名称，如 "HeroModule"
+	WrapperName string               // 包装器名称，如 "HeroModuleWrapper"
+	Receiver    string               // 接收器名称，如 "w" 或 "m"
+	ProtoPkg    string               // Proto 包名，如 "mme"
+	ObjectType  mmeobject.ObjectType // 对象类型：Mechanism/Module/Manager/Entity
 }
 
 // GenerateDeepCopyMethod 生成 DeepCopy 方法
@@ -720,7 +682,7 @@ func (g *WrapperMethodCodeGenerator) GenerateDeepCopyToMethod(fields []*types.Fi
 func (g *WrapperMethodCodeGenerator) GenerateToProtoMethod() string {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("// ToProto 将 %s 数据转换为完整的 protobuf 结构体\n", g.ObjectName))
-	if g.ObjectType == ObjectTypeEntity {
+	if g.ObjectType == mmeobject.ObjectTypeEntity {
 		sb.WriteString(fmt.Sprintf("func (%s *%s) ToProto() proto.Message {\n", g.Receiver, g.WrapperName))
 	} else {
 		sb.WriteString(fmt.Sprintf("func (%s *%s) ToProto() *%s.%s {\n", g.Receiver, g.WrapperName, g.ProtoPkg, g.ObjectName))
@@ -737,7 +699,7 @@ func (g *WrapperMethodCodeGenerator) GenerateToProtoMethod() string {
 func (g *WrapperMethodCodeGenerator) GenerateFromProtoMethod(fields []*types.Field) string {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("// FromProto 从 protobuf 结构体加载数据到 %s\n", g.ObjectName))
-	if g.ObjectType == ObjectTypeEntity {
+	if g.ObjectType == mmeobject.ObjectTypeEntity {
 		sb.WriteString(fmt.Sprintf("func (%s *%s) FromProto(msg proto.Message) {\n", g.Receiver, g.WrapperName))
 		sb.WriteString(fmt.Sprintf("\tif %s == nil || %s.data == nil || msg == nil {\n", g.Receiver, g.Receiver))
 		sb.WriteString("\t\treturn\n")

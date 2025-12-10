@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	types "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types"
+	mmeobject "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types/mme_obj"
 )
 
 // GoWrapperGenerator Go Wrapper 生成器
@@ -194,12 +195,14 @@ func (g *GoWrapperGenerator) generateMechanismWrappers(outputDir string) error {
 		}
 		sb.WriteString("}\n\n")
 
+		// 如何是Entity，生成对应的Init方法
+
 		// 生成 BuildMongoUpdate 方法
 		generator := &BuildMongoUpdateCodeGenerator{
 			ObjectName:  mech.Name,
 			WrapperName: wrapperName,
 			Receiver:    "w",
-			ObjectType:  ObjectTypeMechanism,
+			ObjectType:  mmeobject.ObjectTypeMechanism,
 		}
 		sb.WriteString(generator.GenerateBuildMongoUpdateMethod(mech.Fields))
 
@@ -207,7 +210,7 @@ func (g *GoWrapperGenerator) generateMechanismWrappers(outputDir string) error {
 			ObjectName:  mech.Name,
 			WrapperName: wrapperName,
 			Receiver:    "w",
-			ObjectType:  ObjectTypeMechanism,
+			ObjectType:  mmeobject.ObjectTypeMechanism,
 		}
 		sb.WriteString(generatorToIncrementalProto.GenerateToIncrementalProtoMethod(mech.Fields))
 
@@ -216,7 +219,7 @@ func (g *GoWrapperGenerator) generateMechanismWrappers(outputDir string) error {
 			WrapperName: wrapperName,
 			Receiver:    "w",
 			ProtoPkg:    "mme",
-			ObjectType:  ObjectTypeMechanism,
+			ObjectType:  mmeobject.ObjectTypeMechanism,
 		}
 
 		sb.WriteString(wrapperMethodCodeGenerator.GenerateToProtoMethod())
@@ -437,7 +440,7 @@ func (g *GoWrapperGenerator) generateModuleWrappers(outputDir string) error {
 			ObjectName:  module.Name,
 			WrapperName: wrapperName,
 			Receiver:    "w",
-			ObjectType:  ObjectTypeModule,
+			ObjectType:  mmeobject.ObjectTypeModule,
 		}
 		sb.WriteString(generator.GenerateBuildMongoUpdateMethod(module.Fields))
 
@@ -446,7 +449,7 @@ func (g *GoWrapperGenerator) generateModuleWrappers(outputDir string) error {
 			WrapperName: wrapperName,
 			Receiver:    "w",
 			ProtoPkg:    "mme",
-			ObjectType:  ObjectTypeModule,
+			ObjectType:  mmeobject.ObjectTypeModule,
 		}
 		sb.WriteString(wrapperMethodCodeGenerator.GenerateToProtoMethod())
 		sb.WriteString(wrapperMethodCodeGenerator.GenerateFromProtoMethod(module.Fields))
@@ -458,7 +461,7 @@ func (g *GoWrapperGenerator) generateModuleWrappers(outputDir string) error {
 			ObjectName:  module.Name,
 			WrapperName: wrapperName,
 			Receiver:    "w",
-			ObjectType:  ObjectTypeModule,
+			ObjectType:  mmeobject.ObjectTypeModule,
 		}
 		sb.WriteString(generatorToIncrementalProto.GenerateToIncrementalProtoMethod(module.Fields))
 
@@ -681,7 +684,7 @@ func (g *GoWrapperGenerator) generateManagerWrappers(outputDir string) error {
 			ObjectName:  manager.Name,
 			WrapperName: wrapperName,
 			Receiver:    "m",
-			ObjectType:  ObjectTypeManager,
+			ObjectType:  mmeobject.ObjectTypeManager,
 		}
 		sb.WriteString(generator.GenerateBuildMongoUpdateMethod(manager.Fields))
 
@@ -690,7 +693,7 @@ func (g *GoWrapperGenerator) generateManagerWrappers(outputDir string) error {
 			WrapperName: wrapperName,
 			Receiver:    "m",
 			ProtoPkg:    "mme",
-			ObjectType:  ObjectTypeManager,
+			ObjectType:  mmeobject.ObjectTypeManager,
 		}
 		sb.WriteString(wrapperMethodCodeGenerator.GenerateToProtoMethod())
 		sb.WriteString(wrapperMethodCodeGenerator.GenerateFromProtoMethod(manager.Fields))
@@ -702,7 +705,7 @@ func (g *GoWrapperGenerator) generateManagerWrappers(outputDir string) error {
 			ObjectName:  manager.Name,
 			WrapperName: wrapperName,
 			Receiver:    "m",
-			ObjectType:  ObjectTypeManager,
+			ObjectType:  mmeobject.ObjectTypeManager,
 		}
 		sb.WriteString(generatorToIncrementalProto.GenerateToIncrementalProtoMethod(manager.Fields))
 
@@ -907,7 +910,7 @@ func (g *GoWrapperGenerator) generateEntityWrappers(outputDir string) error {
 			ObjectName:  entity.Name,
 			WrapperName: wrapperName,
 			Receiver:    "e",
-			ObjectType:  ObjectTypeEntity,
+			ObjectType:  mmeobject.ObjectTypeEntity,
 		}
 		sb.WriteString(generator.GenerateBuildMongoUpdateMethod(entity.Fields))
 
@@ -916,7 +919,7 @@ func (g *GoWrapperGenerator) generateEntityWrappers(outputDir string) error {
 			WrapperName: wrapperName,
 			Receiver:    "e",
 			ProtoPkg:    "mme",
-			ObjectType:  ObjectTypeEntity,
+			ObjectType:  mmeobject.ObjectTypeEntity,
 		}
 		sb.WriteString(wrapperMethodCodeGenerator.GenerateToProtoMethod())
 		sb.WriteString(wrapperMethodCodeGenerator.GenerateFromProtoMethod(entity.Fields))
@@ -928,7 +931,7 @@ func (g *GoWrapperGenerator) generateEntityWrappers(outputDir string) error {
 			ObjectName:  entity.Name,
 			WrapperName: wrapperName,
 			Receiver:    "e",
-			ObjectType:  ObjectTypeEntity,
+			ObjectType:  mmeobject.ObjectTypeEntity,
 		}
 		sb.WriteString(generatorToIncrementalProto.GenerateToIncrementalProtoMethod(entity.Fields))
 

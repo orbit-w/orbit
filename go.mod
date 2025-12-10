@@ -3,9 +3,9 @@ module gitee.com/orbit-w/orbit
 go 1.24
 
 require (
-	gitee.com/orbit-w/meteor v0.0.0-20251206043733-348149757251
-	github.com/BurntSushi/toml v1.4.0
+	gitee.com/orbit-w/meteor v0.0.0-20251210075022-91f6de426ed6
 	github.com/asynkron/protoactor-go v0.0.0-20240822202345-3c0e61ca19c9
+	github.com/go-viper/mapstructure/v2 v2.4.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/nacos-group/nacos-sdk-go/v2 v2.3.5
 	github.com/orbit-w/mux-go v0.0.0-20250330080341-4434feaa0de6
@@ -19,6 +19,7 @@ require (
 )
 
 require (
+	github.com/BurntSushi/toml v1.4.0 // indirect
 	github.com/alibabacloud-go/alibabacloud-gateway-pop v0.0.6 // indirect
 	github.com/alibabacloud-go/alibabacloud-gateway-spi v0.0.5 // indirect
 	github.com/alibabacloud-go/darabonba-array v0.1.0 // indirect
@@ -45,7 +46,6 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/deckarep/golang-set v1.7.1 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
-	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
 	github.com/golang/mock v1.6.0 // indirect
 	github.com/golang/snappy v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect

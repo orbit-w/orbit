@@ -17,7 +17,7 @@ type IEntity interface {
 	GetEntityType() mme.EntityType
 	InitFieldContext()
 	ClearAllDirtyFlags()
-	BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder, path *mgo_builder.NestedPath)
+	BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder)
 	ToProto() proto.Message
 	FromProto(msg proto.Message)
 	ToIncrementalProtoWithContext(ctx mmemodel.SyncContext) proto.Message

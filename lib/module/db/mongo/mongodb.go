@@ -12,7 +12,6 @@ import (
 var (
 	globalMongoDBManager *MongoDBManager
 	once                 sync.Once
-	initErr              error
 )
 
 // VirtualClient 获取全局 MongoDB 客户端
@@ -32,7 +31,7 @@ type MongoDBManager struct {
 
 // Start 启动 MongoDB 管理器（全局单例）
 // 多次调用只会初始化一次，后续调用会返回首次初始化的结果
-func Start(cfg *mongodbdriver.MongoDBConfig) error {
+func Start(cfg *mongodbdriver.MongoDBConfig) (initErr error) {
 	once.Do(func() {
 		cli, err := mongodbdriver.NewMongoClient(*cfg)
 		if err != nil {

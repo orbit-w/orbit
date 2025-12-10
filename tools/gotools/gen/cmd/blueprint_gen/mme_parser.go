@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 
+	field_parser "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/parser"
 	types "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types"
 )
 
@@ -444,10 +445,7 @@ func buildFieldDefinition(fieldKey string, fieldValue any) string {
 // fieldDef: 字段定义字符串，格式: "int32 FieldName: 1 [blueprint:\"access=all\"]"
 // 返回: 解析后的 *types.Field，如果解析失败返回 nil
 func parseAndConvertFieldDefinition(fieldDef string) *types.Field {
-	field, err := ParseFieldDefinition(fieldDef)
-	if err != nil {
-		return nil
-	}
+	field := field_parser.ParseFieldDefinition(fieldDef)
 	return field
 }
 

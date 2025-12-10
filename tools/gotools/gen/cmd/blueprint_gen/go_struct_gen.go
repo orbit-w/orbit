@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	types "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types"
+	mmeobject "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types/mme_obj"
 )
 
 // GoStructGenerator Go 结构体生成器
@@ -610,7 +611,7 @@ func (g *GoStructGenerator) isMMEObjectType(fieldType *types.FieldType) bool {
 }
 
 // isMMEObjectType 判断是否是 MME Object 类型
-func isMMEObjectType(objectType ObjectType) bool {
-	return objectType == ObjectTypeModule || objectType == ObjectTypeMechanism ||
-		objectType == ObjectTypeManager || objectType == ObjectTypeEntity
+func isMMEObjectType(objectType mmeobject.ObjectType) bool {
+	return objectType == mmeobject.ObjectTypeModule || objectType == mmeobject.ObjectTypeMechanism ||
+		objectType == mmeobject.ObjectTypeManager || objectType == mmeobject.ObjectTypeEntity
 }

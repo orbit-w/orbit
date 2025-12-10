@@ -173,14 +173,17 @@ func (e *PlayerEntityWrapper) ClearAllDirtyFlags() {
 }
 
 // BuildMongoUpdate 构建MongoDB更新操作
-func (e *PlayerEntityWrapper) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder, path *mgo_builder.NestedPath) {
+func (e *PlayerEntityWrapper) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder) {
 	if e == nil {
 		return
 	}
 
-	if e.IsDirty(PlayerEntityDirtyHeroManagerBit) {
-		if e.HeroManagerWrapper != nil {
-			e.HeroManagerWrapper.BuildMongoUpdate(builder, path.Field("hero_manager"))
+	if e.HasAnyDirty() {
+		path := mgo_builder.NewNestedPathWithField(e.Collection())
+		if e.IsDirty(PlayerEntityDirtyHeroManagerBit) {
+			if e.HeroManagerWrapper != nil {
+				e.HeroManagerWrapper.BuildMongoUpdate(builder, path.Field("hero_manager"))
+			}
 		}
 	}
 }

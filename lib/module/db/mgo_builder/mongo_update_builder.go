@@ -98,8 +98,13 @@ func NewNestedPath() *NestedPath {
 	return &NestedPath{parts: []string{}}
 }
 
+func NewNestedPathWithField(fieldName string) *NestedPath {
+	return &NestedPath{parts: []string{fieldName}}
+}
+
 func (np *NestedPath) Field(name string) *NestedPath {
 	co := new(NestedPath)
+	co.parts = make([]string, len(np.parts))
 	copy(co.parts, np.parts)
 	co.parts = append(co.parts, name)
 	return co

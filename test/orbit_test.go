@@ -5,20 +5,25 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"gitee.com/orbit-w/meteor/modules/database/rdb"
 	"gitee.com/orbit-w/orbit/app"
+	"go.mongodb.org/mongo-driver/v2/bson"
 
 	mmeobj "gitee.com/orbit-w/orbit/app/mme"
 	"gitee.com/orbit-w/orbit/app/modules/config_v2"
 	"gitee.com/orbit-w/orbit/app/modules/service"
 	"gitee.com/orbit-w/orbit/app/proto/core"
+	"gitee.com/orbit-w/orbit/app/proto/mme"
 	"gitee.com/orbit-w/orbit/app/proto/pb"
 	"gitee.com/orbit-w/orbit/app/routers"
+	"gitee.com/orbit-w/orbit/core/network"
 	servicezone_behavior "gitee.com/orbit-w/orbit/core/services/service_zone/behavior"
 	zone_meta "gitee.com/orbit-w/orbit/core/services/service_zone/meta"
 	servicezone_mgr "gitee.com/orbit-w/orbit/core/services/service_zone/mgr"
 	servicezone "gitee.com/orbit-w/orbit/core/services/service_zone/zone"
+	"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder"
 	"gitee.com/orbit-w/orbit/lib/module/db/mongo"
 	"gitee.com/orbit-w/orbit/lib/module/persistence"
 	"github.com/redis/go-redis/v9"
@@ -27,7 +32,9 @@ import (
 
 // 初始化服务
 func Setup(nodeId string) *service.Services {
-	config_v2.InitConfig("../configs/config_center.yaml")
+	if err := config_v2.InitConfig("../configs/config_center.yaml"); err != nil {
+		panic(err)
+	}
 	services := service.NewServices()
 	redisService := service.Wrapper("redis_service").WrapStart(func() error {
 		rdb.Start(config_v2.GetRedisOps())
@@ -38,8 +45,7 @@ func Setup(nodeId string) *service.Services {
 	})
 
 	mongoService := service.Wrapper("mongo_service").WrapStart(func() error {
-		mongo.Start(config_v2.GetMongoOps())
-		return nil
+		return mongo.Start(config_v2.GetMongoOps())
 	}).WrapStop(func() error {
 		mongo.Stop()
 		return nil
@@ -51,7 +57,11 @@ func Setup(nodeId string) *service.Services {
 	services.Reg(zone_meta.NewZoneMetaService())   //启动ZoneMeta服务
 	services.Reg(servicezone_mgr.NewZoneManager()) //启动ZoneManager服务
 
-	services.Start()
+	if err := services.Start(); err != nil {
+		tr := err.Error()
+		fmt.Println(tr)
+		panic(err)
+	}
 	return services
 }
 
@@ -93,8 +103,45 @@ func initRouter() {
 	})
 }
 
+func Test_SetPlayerEntity(t *testing.T) {
+	serverId := "1"
+	services := Setup(serverId)
+	defer services.Stop()
+
+	playerEntity := mmeobj.NewPlayerEntity()
+	playerEntity.XXXId = 1600000
+	wrapper := mmeobj.NewPlayerEntityWrapper()
+	raw, err := bson.Marshal(playerEntity)
+	if err != nil {
+		panic(err)
+	}
+	wrapper.Load(raw)
+	heroWrapper := wrapper.GetHeroManager().HeroMap_Set(100001, mmeobj.NewHeroModule())
+	heroWrapper.GetBase().SetId(100001)
+	heroWrapper.GetBase().SetConfId(100001)
+	heroWrapper.GetBase().SetCreateTime(time.Now().Unix())
+	heroWrapper.GetBase().SetUseTimes(10)
+	heroWrapper.GetLevelUp().SetCurExp(100001)
+	heroWrapper.GetLevelUp().SetConfId(100001)
+	heroWrapper.GetLevelUp().SetCurLevel(10)
+	builder := mgo_builder.NewMongoUpdateBuilder()
+	wrapper.BuildMongoUpdate(builder)
+	update := builder.Build()
+	resp, err := persistence.PersistSync(context.TODO(), "test", wrapper.Collection(), wrapper.GetXXXId(), update)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(resp.Success)
+	fmt.Println(resp.MatchedCount)
+	fmt.Println(resp.ModifiedCount)
+	fmt.Println(resp.Collection)
+	fmt.Println(resp.DocumentID)
+	fmt.Println(resp.Error)
+}
+
 func Test_Persistence(t *testing.T) {
 	serverId := "1"
+	initRouter()
 	services := Setup(serverId)
 	defer services.Stop()
 
@@ -113,4 +160,22 @@ func Test_Persistence(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
+
+	ref := &mme.EntityRef{}
+	ref.EntityId = proto.Int64(1600000)
+	ref.EntityType = mme.EntityType_PlayerEntityType.Enum()
+
+	req := &core.Request_LoginRequest{
+		PlayerEntityRef: ref,
+	}
+	data, err := proto.Marshal(req)
+	if err != nil {
+		panic(err)
+	}
+	err = servicezone_mgr.ClientRequest(id, network.NewClientRequest(1, pb.PID_Request_LoginRequest, data, nil))
+	if err != nil {
+		panic(err)
+	}
+
+	time.Sleep(5 * time.Minute)
 }

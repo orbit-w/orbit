@@ -1,0 +1,27 @@
+type: nacos
+
+nacos:
+  server_hosts:
+    - mse-63a694613-p.nacos-ans.mse.aliyuncs.com
+  namespace_id: 85a5d5cf-a969-4d61-841d-7a3829f0f28c
+  username: ""  # 用户名（可选）
+  password: ""  # 密码（可选）
+  timeout_ms: 5000  # 超时时间（毫秒）
+  beat_interval: 5  # 心跳间隔（秒）
+
+# 配置源列表 - 可以配置多个 DataId/Group
+sources:
+  - data_id: game.main
+    group: server
+    format: yaml
+    need_listen: true
+
+  - data_id: game.main
+    group: redis
+    format: yaml
+    need_listen: false
+
+  - data_id: game.main
+    group: mongodb
+    format: yaml
+    need_listen: false
