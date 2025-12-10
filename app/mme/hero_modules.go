@@ -25,10 +25,10 @@ const (
 )
 
 type HeroModule struct {
-	Base         *HeroMechanism
-	LevelUp      *LevelUpMechanism
-	TalentUnlock *ManualUnlockMechanism
-	SkinWear     *WearMechanism
+	Base         *HeroMechanism         `bson:"base"`
+	LevelUp      *LevelUpMechanism      `bson:"level_up"`
+	TalentUnlock *ManualUnlockMechanism `bson:"talent_unlock"`
+	SkinWear     *WearMechanism         `bson:"skin_wear"`
 }
 
 func NewHeroModule() *HeroModule {

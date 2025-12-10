@@ -22,8 +22,8 @@ const (
 )
 
 type WearMechanism struct {
-	WearMap map[int32]int32
-	ConfId  int32
+	WearMap map[int32]int32 `bson:"wear_map"`
+	ConfId  int32           `bson:"conf_id"`
 }
 
 func NewWearMechanism() *WearMechanism {

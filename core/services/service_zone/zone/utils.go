@@ -15,3 +15,7 @@ func parseTimeout(timeout ...time.Duration) time.Duration {
 	}
 	return 5 * time.Second
 }
+
+func ZoneIdToDatabase(zoneId string) string {
+	return fmt.Sprintf("zone_%s", zoneId)
+}

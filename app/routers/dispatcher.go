@@ -35,6 +35,11 @@ func RegisterHandler(pid uint32, router func(ctx servicezone_behavior.IContext, 
 	globalRouter.RegisterHandler(pid, router)
 }
 
+// RegisterFackRouter 注册虚假路由，用于测试
+func RegisterFackRouter(pid uint32, router func(ctx servicezone_behavior.IContext, req proto.Message, entities ...mmeobj.IEntity) (proto.Message, string, error)) {
+	globalRouter.funcMap[pid] = router
+}
+
 type Routers struct {
 	funcMap map[uint32]func(ctx servicezone_behavior.IContext, req proto.Message, entities ...mmeobj.IEntity) (proto.Message, string, error)
 }

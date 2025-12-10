@@ -20,7 +20,7 @@ const (
 )
 
 type ManualUnlockMechanism struct {
-	UnlockMap map[int32]bool
+	UnlockMap map[int32]bool `bson:"unlock_map"`
 }
 
 func NewManualUnlockMechanism() *ManualUnlockMechanism {

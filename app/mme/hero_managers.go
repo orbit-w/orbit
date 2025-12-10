@@ -21,7 +21,7 @@ const (
 )
 
 type HeroManager struct {
-	HeroMap map[int64]*HeroModule
+	HeroMap map[int64]*HeroModule `bson:"hero_map"`
 }
 
 func NewHeroManager() *HeroManager {

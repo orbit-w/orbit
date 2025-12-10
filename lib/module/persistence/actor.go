@@ -181,6 +181,12 @@ func (p *PersistenceActor) handleLoadRequest(ctx actor.Context, req LoadRequest)
 
 	// 先检查是否有错误（包括文档不存在的情况）
 	if err := singleResult.Err(); err != nil {
+		str := err.Error()
+		p.logger.Error("Failed to load data",
+			zap.String("Error", str),
+			zap.Any("DocumentID", req.DocID),
+			zap.String("Collection", req.Collection),
+			zap.String("Database", req.Database))
 		ctx.Respond(p.handleLoadError(err, req))
 		return
 	}

@@ -32,6 +32,9 @@ import (
 
 // 初始化服务
 func Setup(nodeId string) *service.Services {
+	// 初始化路由器
+	servicezone_behavior.SetRouter(routers.GetRouter())
+
 	if err := config_v2.InitConfig("../configs/config_center.yaml"); err != nil {
 		panic(err)
 	}
@@ -83,13 +86,13 @@ func Test_RedisDial(t *testing.T) {
 }
 
 func initRouter() {
-	routers.RegisterHandler(pb.PID_Request_LoginRequest, func(ctx servicezone_behavior.IContext, msg proto.Message, entities ...mmeobj.IEntity) (proto.Message, string, error) {
+	servicezone_behavior.SetRouter(routers.GetRouter())
+	routers.RegisterFackRouter(pb.PID_Request_LoginRequest, func(ctx servicezone_behavior.IContext, msg proto.Message, entities ...mmeobj.IEntity) (proto.Message, string, error) {
 		_ = msg.(*core.Request_LoginRequest)
 		playerEntity, ok := entities[0].(*mmeobj.PlayerEntityWrapper)
 		if !ok {
 			return nil, "", fmt.Errorf("player entity not found in entities")
 		}
-		playerEntity.SetXXXId(1600000)
 
 		var (
 			heroId int64 = 100001
@@ -97,13 +100,14 @@ func initRouter() {
 		mgr := playerEntity.GetHeroManager()
 		heroModule := mmeobj.NewHeroModule()
 		wrapper := mgr.HeroMap_Set(heroId, heroModule)
-		wrapper.GetLevelUp().SetCurLevel(10)
+		wrapper.GetLevelUp().SetCurLevel(888)
 
 		return &core.OK{}, "OK", nil
 	})
 }
 
-func Test_SetPlayerEntity(t *testing.T) {
+// 测试设置PlayerEntity并持久化
+func Test_SetPlayerEntityAndPersist(t *testing.T) {
 	serverId := "1"
 	services := Setup(serverId)
 	defer services.Stop()
@@ -124,10 +128,21 @@ func Test_SetPlayerEntity(t *testing.T) {
 	heroWrapper.GetLevelUp().SetCurExp(100001)
 	heroWrapper.GetLevelUp().SetConfId(100001)
 	heroWrapper.GetLevelUp().SetCurLevel(10)
+
+	heroWrapper2 := wrapper.GetHeroManager().HeroMap_Set(100002, mmeobj.NewHeroModule())
+	heroWrapper2.GetBase().SetId(100002)
+	heroWrapper2.GetBase().SetConfId(100002)
+	heroWrapper2.GetBase().SetCreateTime(time.Now().Unix())
+	heroWrapper2.GetBase().SetUseTimes(10)
+	heroWrapper2.GetLevelUp().SetCurExp(100001)
+	heroWrapper2.GetLevelUp().SetConfId(100001)
+	heroWrapper2.GetLevelUp().SetCurLevel(10)
 	builder := mgo_builder.NewMongoUpdateBuilder()
 	wrapper.BuildMongoUpdate(builder)
 	update := builder.Build()
-	resp, err := persistence.PersistSync(context.TODO(), "test", wrapper.Collection(), wrapper.GetXXXId(), update)
+	zoneId := servicezone_mgr.GenLocalZoneId(servicezone.ZoneTypePlayer, serverId)
+	database := servicezone.ZoneIdToDatabase(zoneId)
+	resp, err := persistence.PersistSync(context.TODO(), database, wrapper.Collection(), wrapper.GetXXXId(), update)
 	if err != nil {
 		panic(err)
 	}
@@ -139,7 +154,7 @@ func Test_SetPlayerEntity(t *testing.T) {
 	fmt.Println(resp.Error)
 }
 
-func Test_Persistence(t *testing.T) {
+func Test_RequestLogin(t *testing.T) {
 	serverId := "1"
 	initRouter()
 	services := Setup(serverId)

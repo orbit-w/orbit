@@ -23,9 +23,9 @@ const (
 )
 
 type LevelUpMechanism struct {
-	CurLevel int32
-	CurExp   int32
-	ConfId   int32
+	CurLevel int32 `bson:"cur_level"`
+	CurExp   int32 `bson:"cur_exp"`
+	ConfId   int32 `bson:"conf_id"`
 }
 
 func NewLevelUpMechanism() *LevelUpMechanism {

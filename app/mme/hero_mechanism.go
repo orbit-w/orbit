@@ -29,11 +29,11 @@ const (
 )
 
 type HeroMechanism struct {
-	Id         int64
-	ConfId     int32
-	CreateTime int64
-	UseTimes   int32
-	Skills     map[int32]int32
+	Id         int64           `bson:"id"`
+	ConfId     int32           `bson:"conf_id"`
+	CreateTime int64           `bson:"create_time"`
+	UseTimes   int32           `bson:"use_times"`
+	Skills     map[int32]int32 `bson:"skills"`
 }
 
 func NewHeroMechanism() *HeroMechanism {

@@ -27,3 +27,7 @@ bin/
 /app/core/actors/actor/logs
 .vscode
 .DS_Store
+/test/cache
+/test/logs
+/test/data
+/test/log

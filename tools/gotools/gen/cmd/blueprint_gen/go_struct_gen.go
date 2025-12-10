@@ -81,7 +81,8 @@ func (g *GoStructGenerator) generateMechanismFiles(outputDir string) error {
 		sb.WriteString(fmt.Sprintf("type %s struct {\n", mech.Name))
 		for _, field := range mech.Fields {
 			goType := ToGoTypeFromTypesFieldType(&field.Type, packageName)
-			sb.WriteString(fmt.Sprintf("\t%s %s\n", field.Name, goType))
+			bsonTag := GenerateBsonTag(field.Name)
+			sb.WriteString(fmt.Sprintf("\t%s %s %s\n", field.Name, goType, bsonTag))
 		}
 		sb.WriteString("}\n\n")
 
@@ -252,7 +253,8 @@ func (g *GoStructGenerator) generateModuleFiles(outputDir string) error {
 		sb.WriteString(fmt.Sprintf("type %s struct {\n", module.Name))
 		for _, field := range module.Fields {
 			goType := ToGoTypeFromTypesFieldType(&field.Type, packageName)
-			sb.WriteString(fmt.Sprintf("\t%s %s\n", field.Name, goType))
+			bsonTag := GenerateBsonTag(field.Name)
+			sb.WriteString(fmt.Sprintf("\t%s %s %s\n", field.Name, goType, bsonTag))
 		}
 		sb.WriteString("}\n\n")
 
@@ -357,7 +359,8 @@ func (g *GoStructGenerator) generateManagerFiles(outputDir string) error {
 		sb.WriteString(fmt.Sprintf("type %s struct {\n", manager.Name))
 		for _, field := range manager.Fields {
 			goType := ToGoTypeFromTypesFieldType(&field.Type, packageName)
-			sb.WriteString(fmt.Sprintf("\t%s %s\n", field.Name, goType))
+			bsonTag := GenerateBsonTag(field.Name)
+			sb.WriteString(fmt.Sprintf("\t%s %s %s\n", field.Name, goType, bsonTag))
 		}
 		sb.WriteString("}\n\n")
 
@@ -485,10 +488,11 @@ func (g *GoStructGenerator) generateEntityFiles(outputDir string) error {
 
 		// 生成结构体
 		sb.WriteString(fmt.Sprintf("type %s struct {\n", entity.Name))
-		sb.WriteString("\tXXXId int64\n")
+		sb.WriteString("\tXXXId int64 `bson:\"_id\"`\n")
 		for _, field := range entity.Fields {
 			goType := ToGoTypeFromTypesFieldType(&field.Type, packageName)
-			sb.WriteString(fmt.Sprintf("\t%s %s\n", field.Name, goType))
+			bsonTag := GenerateBsonTag(field.Name)
+			sb.WriteString(fmt.Sprintf("\t%s %s %s\n", field.Name, goType, bsonTag))
 		}
 		sb.WriteString("}\n\n")
 

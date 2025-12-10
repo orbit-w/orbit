@@ -23,7 +23,8 @@ var (
 type ZonePattern int32
 
 const (
-	ZoneTypePlayer ZonePattern = iota
+	ZoneTypeUnknown ZonePattern = iota
+	ZoneTypePlayer
 	ZoneTypeCity
 	ZoneTypeDungeon
 	ZoneTypeWild
@@ -77,7 +78,8 @@ func (zone *ServiceZone) Load(id int64, entityType mme.EntityType) (mmeobj.IEnti
 		return nil, fmt.Errorf("entity factory not found for entity type %d", entityType)
 	}
 	entity := factory()
-	future, err := persistence.Load(zone.ID, entity.Collection(), id)
+	database := ZoneIdToDatabase(zone.ID)
+	future, err := persistence.Load(database, entity.Collection(), id)
 	if err != nil {
 		return nil, err
 	}

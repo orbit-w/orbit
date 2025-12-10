@@ -808,3 +808,11 @@ func generateEnumProto(enum *Enum) string {
 func GenEntityTypeEnumName(entityName string) string {
 	return fmt.Sprintf("%sType", entityName)
 }
+
+// GenerateBsonTag 生成 bson tag
+// 将字段名转换为小写加下划线的格式
+// 例如: ConfId -> bson:"conf_id"
+func GenerateBsonTag(fieldName string) string {
+	snakeName := CamelToSnake(fieldName)
+	return fmt.Sprintf("`bson:\"%s\"`", snakeName)
+}

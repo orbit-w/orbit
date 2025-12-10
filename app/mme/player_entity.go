@@ -28,8 +28,8 @@ func init() {
 }
 
 type PlayerEntity struct {
-	XXXId       int64
-	HeroManager *HeroManager
+	XXXId       int64        `bson:"_id"`
+	HeroManager *HeroManager `bson:"hero_manager"`
 }
 
 func NewPlayerEntity() *PlayerEntity {
@@ -179,7 +179,7 @@ func (e *PlayerEntityWrapper) BuildMongoUpdate(builder *mgo_builder.MongoUpdateB
 	}
 
 	if e.HasAnyDirty() {
-		path := mgo_builder.NewNestedPathWithField(e.Collection())
+		path := mgo_builder.NewNestedPath()
 		if e.IsDirty(PlayerEntityDirtyHeroManagerBit) {
 			if e.HeroManagerWrapper != nil {
 				e.HeroManagerWrapper.BuildMongoUpdate(builder, path.Field("hero_manager"))
