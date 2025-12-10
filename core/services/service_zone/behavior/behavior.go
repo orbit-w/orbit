@@ -4,8 +4,12 @@ import (
 	"gitee.com/orbit-w/meteor/bases/misc/utils"
 	"gitee.com/orbit-w/meteor/modules/mlog"
 	mmeobj "gitee.com/orbit-w/orbit/app/mme"
+	"gitee.com/orbit-w/orbit/app/proto/core"
+	"gitee.com/orbit-w/orbit/app/proto/mme"
 	"gitee.com/orbit-w/orbit/app/proto/pb"
+	"gitee.com/orbit-w/orbit/core/network"
 	"gitee.com/orbit-w/orbit/lib/module/logger"
+	mmemodel "gitee.com/orbit-w/orbit/lib/module/mme_model"
 	"github.com/asynkron/protoactor-go/actor"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
@@ -111,36 +115,91 @@ func (ab *ZoneActorBehavior) HandleRequest(ctx actor.Context, req *ClientRequest
 		return
 	}
 
-	result, respName, err := handler(ab.ctx, qw.GetReq(), entities...)
+	resp, respName, err := handler(ab.ctx, qw.GetReq(), entities...)
 	if err != nil {
 		ab.logger.Error("ZoneActor handler error", zap.Error(err), zap.Uint32("Pid", pid))
 	}
 
 	ab.Persist(entities)
 
-	if result == nil {
-		rpid, ok := pb.GetProtocolID(respName)
-		if !ok {
-			ab.logger.Error("ZoneActor received unknown message", zap.Uint32("Pid", pid), zap.Any("Message", req))
-			return
-		}
-		respData, err := proto.Marshal(result)
-		if err != nil {
-			ab.logger.Error("ZoneActor marshal error", zap.Error(err), zap.Uint32("Pid", pid))
-			return
-		}
-
-		req.Response(respData, rpid)
-	}
+	ab.SendMessage(req.IClientRequest, entities, resp, respName)
 
 	for _, entity := range entities {
 		entity.ClearAllDirtyFlags()
 	}
 }
 
-// TODO：当map Value类型是Wrapper时，当只要有一个字段有变更，就需要无视Wrapper其他字段DirtyFlag，直接持久化Wrapper的子对象
 func (ab *ZoneActorBehavior) Persist(entities []mmeobj.IEntity) {
 	ab.ctx.Persist(entities...)
+}
+
+func (ab *ZoneActorBehavior) SendMessage(request network.IClientRequest, entities []mmeobj.IEntity, resp proto.Message, respName string) {
+	messages := make([]network.Message, 0)
+	// 发送实体变更消息
+	for i := range entities {
+		entity := entities[i]
+		rawData, err := packEntityChange(entity)
+		if err != nil {
+			ab.logger.Error("ZoneActor pack entity change error", zap.Error(err))
+			continue
+		}
+		if rawData == nil {
+			continue
+		}
+		messages = append(messages, network.Message{
+			Pid:  pb.PID_Notify_EntityChangeNotify,
+			Seq:  0,
+			Data: rawData,
+		})
+	}
+
+	if resp != nil {
+		rpid, ok := pb.GetProtocolID(respName)
+		if !ok {
+			ab.logger.Error("ZoneActor received unknown message", zap.String("RespName", respName))
+			return
+		}
+		respData, err := proto.Marshal(resp)
+		if err != nil {
+			ab.logger.Error("ZoneActor marshal error", zap.Error(err), zap.String("RespName", respName))
+			return
+		}
+		messages = append(messages, network.Message{
+			Pid:  rpid,
+			Seq:  request.GetSeq(),
+			Data: respData,
+		})
+	}
+
+	request.ResponseBatch(messages)
+}
+
+func packEntityChange(entity mmeobj.IEntity) ([]byte, error) {
+	change := entity.ToIncrementalProtoWithContext(mmemodel.SyncContextClient)
+	if change == nil {
+		return nil, nil
+	}
+
+	changeRaw, err := proto.Marshal(change)
+	if err != nil {
+		return nil, err
+	}
+	entityId := entity.GetXXXId()
+	entityType := entity.GetEntityType()
+	ntf := &core.Notify_EntityChangeNotify{
+		EntityChanges: &core.EntityChange{
+			EntityRef: &mme.EntityRef{
+				EntityId:   &entityId,
+				EntityType: &entityType,
+			},
+			Data: changeRaw,
+		},
+	}
+	rawData, err := proto.Marshal(ntf)
+	if err != nil {
+		return nil, err
+	}
+	return rawData, nil
 }
 
 // HandleInit 处理初始化
