@@ -132,6 +132,10 @@ func (ab *ZoneActorBehavior) HandleRequest(ctx actor.Context, req *ClientRequest
 
 		req.Response(respData, rpid)
 	}
+
+	for _, entity := range entities {
+		entity.ClearAllDirtyFlags()
+	}
 }
 
 // TODO：当map Value类型是Wrapper时，当只要有一个字段有变更，就需要无视Wrapper其他字段DirtyFlag，直接持久化Wrapper的子对象
