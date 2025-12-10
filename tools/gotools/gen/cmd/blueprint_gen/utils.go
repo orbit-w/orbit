@@ -372,7 +372,7 @@ func (g *BuildMongoUpdateCodeGenerator) GenerateBuildMongoUpdateMethodFuncSign(s
 		// Entity 类型需要先检查是否有脏数据
 		sb.WriteString(fmt.Sprintf("\tif %s.HasAnyDirty() {\n", g.Receiver))
 		// Entity 类型在内部创建 path
-		sb.WriteString(fmt.Sprintf("\t\tpath := mgo_builder.NewNestedPathWithField(%s.Collection())\n", g.Receiver))
+		sb.WriteString("\t\tpath := mgo_builder.NewNestedPath()\n")
 	} else {
 		// 其他类型（Mechanism, Module, Manager）的方法签名：接受 path 参数
 		sb.WriteString(fmt.Sprintf("func (%s *%s) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBuilder, path *mgo_builder.NestedPath) {\n",
