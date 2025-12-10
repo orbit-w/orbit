@@ -339,6 +339,7 @@ func (zone *ServiceZone) Persist(entities ...mmeobj.IEntity) {
 		builder := mgo_builder.NewMongoUpdateBuilder()
 		entity.BuildMongoUpdate(builder)
 		update := builder.Build()
+		entity.ClearAllDirtyFlags()
 		persistence.Persist(ZoneIdToDatabase(zone.ID), entity.Collection(), entity.GetXXXId(), update)
 	}
 }
