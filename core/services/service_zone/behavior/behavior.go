@@ -116,6 +116,8 @@ func (ab *ZoneActorBehavior) HandleRequest(ctx actor.Context, req *ClientRequest
 		ab.logger.Error("ZoneActor handler error", zap.Error(err), zap.Uint32("Pid", pid))
 	}
 
+	ab.Persist(entities)
+
 	if result == nil {
 		rpid, ok := pb.GetProtocolID(respName)
 		if !ok {
@@ -132,8 +134,9 @@ func (ab *ZoneActorBehavior) HandleRequest(ctx actor.Context, req *ClientRequest
 	}
 }
 
+// TODO：当map Value类型是Wrapper时，当只要有一个字段有变更，就需要无视Wrapper其他字段DirtyFlag，直接持久化Wrapper的子对象
 func (ab *ZoneActorBehavior) Persist(entities []mmeobj.IEntity) {
-
+	ab.ctx.Persist(entities...)
 }
 
 // HandleInit 处理初始化

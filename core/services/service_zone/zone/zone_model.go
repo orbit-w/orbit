@@ -6,6 +6,7 @@ import (
 	mmeobj "gitee.com/orbit-w/orbit/app/mme"
 	"gitee.com/orbit-w/orbit/app/proto/mme"
 	zone_meta "gitee.com/orbit-w/orbit/core/services/service_zone/meta"
+	"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder"
 	"gitee.com/orbit-w/orbit/lib/module/persistence"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
@@ -99,15 +100,24 @@ func (zone *ServiceZone) Load(id int64, entityType mme.EntityType) (mmeobj.IEnti
 		return nil, err
 	}
 
+	var raw bson.Raw
+
 	if !loadResp.IsExists() {
 		// 如果不存在，则新建一个实体
-		entity.Load(bson.Raw{})
-		entity.SetXXXId(id)
-		return entity, nil
+		data := bson.M{
+			"_id": id,
+		}
+		var err error
+		raw, err = bson.Marshal(data)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		raw = loadResp.GetData()
 	}
 
 	// 如果存在，则加载数据
-	if err := entity.Load(loadResp.GetData()); err != nil {
+	if err := entity.Load(raw); err != nil {
 		return nil, err
 	}
 	return entity, nil
@@ -320,5 +330,15 @@ func (zone *ServiceZone) RemoveFromSubscriptions(entity mmeobj.IEntity) {
 	id := entity.GetXXXId()
 	for _, subscriber := range zone.subscribers {
 		subscriber.UnsubscribeEntity(id)
+	}
+}
+
+// Persist 异步持久化实体数据
+func (zone *ServiceZone) Persist(entities ...mmeobj.IEntity) {
+	for _, entity := range entities {
+		builder := mgo_builder.NewMongoUpdateBuilder()
+		entity.BuildMongoUpdate(builder)
+		update := builder.Build()
+		persistence.Persist(ZoneIdToDatabase(zone.ID), entity.Collection(), entity.GetXXXId(), update)
 	}
 }
