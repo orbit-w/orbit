@@ -110,19 +110,31 @@ func (g *ProtoGenerator) generateFieldProtoWithIndent(field *blueprint_types.Fie
 		builder.WriteLine("// %s", field.Comment)
 	}
 
+	fieldType := field.GetType()
+	// 检查是否是 repeated 字段
+	isRepeated := fieldType.GetLabel().IsRepeated()
+
 	// 获取字段类型
-	isOptional := g.typeConverter.IsOptionalInProto(&field.Type)
+	// 注意：map/xmap 字段的 Label 已在解析时设置为 Unknown，因此 IsOptional() 会返回 false
+	isOptional := fieldType.GetLabel().IsOptional()
 
 	// 使用统一的类型引用解析器处理跨命名空间引用
 	// 对于 MME 包内的类型，不添加包名前缀（因为它们都在同一个包中）
-	protoType := g.resolver.ResolveTypeReference(&field.Type, currentPackageName)
+	protoType := g.resolver.ResolveTypeReference(fieldType, currentPackageName)
+
+	// 对于 repeated 字段，需要解析其元素类型而不是 repeated 类型本身
+	if isRepeated && fieldType.GetValueType() != nil {
+		protoType = g.resolver.ResolveTypeReference(fieldType.GetValueType(), currentPackageName)
+	}
 
 	// 确保字段名不包含冒号
 	fieldName := strings.TrimSuffix(field.Name, ":")
 	fieldName = strings.TrimSpace(fieldName)
 
 	// 构建字段定义
-	if isOptional {
+	if isRepeated {
+		builder.WriteLine("repeated %s %s = %d;", protoType, fieldName, fieldNumber)
+	} else if isOptional {
 		builder.WriteLine("optional %s %s = %d;", protoType, fieldName, fieldNumber)
 	} else {
 		builder.WriteLine("%s %s = %d;", protoType, fieldName, fieldNumber)

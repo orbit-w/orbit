@@ -82,6 +82,18 @@ func (ft FieldType) GetTypeName() string {
 	return ft.Kind.String()
 }
 
+func (ft FieldType) GetLabel() FieldLabel {
+	return ft.Label
+}
+
+func (ft FieldType) LabelRepeated() bool {
+	return ft.Label == FieldLabelRepeated
+}
+
+func (ft FieldType) LabelOptional() bool {
+	return ft.Label == FieldLabelOptional
+}
+
 // isXMapValueMMEObject 判断xmap的Value类型是否是MMEObject
 // xmap Value不允许是map/xmap/repeated类型
 func (ft FieldType) IsXMapValueMMEObject() bool {
@@ -175,6 +187,14 @@ const (
 	FieldLabelRepeated FieldLabel = 2 // 重复字段
 )
 
+func (l FieldLabel) IsRepeated() bool {
+	return l == FieldLabelRepeated
+}
+
+func (l FieldLabel) IsOptional() bool {
+	return l == FieldLabelOptional
+}
+
 // String 返回字段标签的字符串表示
 func (l FieldLabel) String() string {
 	switch l {
@@ -214,7 +234,7 @@ func ParseTypeString(typeStr string) (*FieldType, error) {
 	// 检查是否是 xmap
 	if strings.HasPrefix(typeStr, "xmap<") {
 		ft.Kind = FieldKindXMap
-		ft.Label = FieldLabelOptional
+		ft.Label = FieldLabelUnknown // map/xmap 字段不应该有 optional/required/repeated 标签
 		ft.Name = "xmap"
 		return parseMapTypeRecursive(typeStr[5:], ft)
 	}
@@ -222,7 +242,7 @@ func ParseTypeString(typeStr string) (*FieldType, error) {
 	// 检查是否是 map
 	if strings.HasPrefix(typeStr, "map<") {
 		ft.Kind = FieldKindMap
-		ft.Label = FieldLabelOptional
+		ft.Label = FieldLabelUnknown // map/xmap 字段不应该有 optional/required/repeated 标签
 		ft.Name = "map"
 		return parseMapTypeRecursive(typeStr[4:], ft)
 	}
