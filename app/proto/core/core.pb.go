@@ -492,7 +492,7 @@ func (x *Notify_BeAttacked) GetCurHp() int32 {
 
 type Notify_EntityChangeNotify struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	EntityChanges *EntityChange          `protobuf:"bytes,1,opt,name=EntityChanges,proto3" json:"EntityChanges,omitempty"`
+	EntityChanges []*EntityChange        `protobuf:"bytes,1,rep,name=EntityChanges,proto3" json:"EntityChanges,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -527,7 +527,7 @@ func (*Notify_EntityChangeNotify) Descriptor() ([]byte, []int) {
 	return file_core_proto_rawDescGZIP(), []int{1, 1}
 }
 
-func (x *Notify_EntityChangeNotify) GetEntityChanges() *EntityChange {
+func (x *Notify_EntityChangeNotify) GetEntityChanges() []*EntityChange {
 	if x != nil {
 		return x.EntityChanges
 	}
@@ -563,7 +563,7 @@ const file_core_proto_rawDesc = "" +
 	"\x05CurHp\x18\x01 \x01(\x05H\x00R\x05CurHp\x88\x01\x01B\b\n" +
 	"\x06_CurHp\x1aN\n" +
 	"\x12EntityChangeNotify\x128\n" +
-	"\rEntityChanges\x18\x01 \x01(\v2\x12.Core.EntityChangeR\rEntityChanges\"1\n" +
+	"\rEntityChanges\x18\x01 \x03(\v2\x12.Core.EntityChangeR\rEntityChanges\"1\n" +
 	"\x04Book\x12\x1d\n" +
 	"\aContent\x18\x01 \x01(\tH\x00R\aContent\x88\x01\x01B\n" +
 	"\n" +

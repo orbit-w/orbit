@@ -133,18 +133,29 @@ func (ab *ZoneActorBehavior) Persist(entities []mmeobj.IEntity) {
 	ab.ctx.Persist(entities...)
 }
 
-func (ab *ZoneActorBehavior) SendMessage(request network.IClientRequest, entities []mmeobj.IEntity, resp proto.Message, respName string) {
-	messages := make([]network.Message, 0)
+func (ab *ZoneActorBehavior) PackEntityChangeNotify(entities []mmeobj.IEntity, messages []network.Message) []network.Message {
+	var changes []*core.EntityChange
 	// 发送实体变更消息
 	for i := range entities {
 		entity := entities[i]
-		rawData, err := packEntityChange(entity)
+		change, err := packEntityChange(entity)
 		if err != nil {
 			ab.logger.Error("ZoneActor pack entity change error", zap.Error(err))
 			continue
 		}
-		if rawData == nil {
+		if change == nil {
 			continue
+		}
+		changes = append(changes, change)
+	}
+
+	if len(changes) > 0 {
+		rawData, err := proto.Marshal(&core.Notify_EntityChangeNotify{
+			EntityChanges: changes,
+		})
+		if err != nil {
+			ab.logger.Error("ZoneActor marshal entity change notify error", zap.Error(err))
+			return messages
 		}
 		messages = append(messages, network.Message{
 			Pid:  pb.PID_Notify_EntityChangeNotify,
@@ -152,29 +163,44 @@ func (ab *ZoneActorBehavior) SendMessage(request network.IClientRequest, entitie
 			Data: rawData,
 		})
 	}
-
-	if resp != nil {
-		rpid, ok := pb.GetProtocolID(respName)
-		if !ok {
-			ab.logger.Error("ZoneActor received unknown message", zap.String("RespName", respName))
-			return
-		}
-		respData, err := proto.Marshal(resp)
-		if err != nil {
-			ab.logger.Error("ZoneActor marshal error", zap.Error(err), zap.String("RespName", respName))
-			return
-		}
-		messages = append(messages, network.Message{
-			Pid:  rpid,
-			Seq:  request.GetSeq(),
-			Data: respData,
-		})
-	}
-
-	request.ResponseBatch(messages)
+	return messages
 }
 
-func packEntityChange(entity mmeobj.IEntity) ([]byte, error) {
+func (ab *ZoneActorBehavior) PackResponse(seq uint32, resp proto.Message, respName string, messages []network.Message) []network.Message {
+	if resp == nil {
+		return messages
+	}
+
+	rpid, ok := pb.GetProtocolID(respName)
+	if !ok {
+		ab.logger.Error("ZoneActor received unknown message", zap.String("RespName", respName))
+		return messages
+	}
+	respData, err := proto.Marshal(resp)
+	if err != nil {
+		ab.logger.Error("ZoneActor marshal error", zap.Error(err), zap.String("RespName", respName))
+		return messages
+	}
+	messages = append(messages, network.Message{
+		Pid:  rpid,
+		Seq:  seq,
+		Data: respData,
+	})
+
+	return messages
+}
+
+func (ab *ZoneActorBehavior) SendMessage(request network.IClientRequest, entities []mmeobj.IEntity, resp proto.Message, respName string) {
+	messages := make([]network.Message, 0)
+	messages = ab.PackEntityChangeNotify(entities, messages)
+	messages = ab.PackResponse(request.GetSeq(), resp, respName, messages)
+
+	if len(messages) > 0 {
+		request.ResponseBatch(messages)
+	}
+}
+
+func packEntityChange(entity mmeobj.IEntity) (*core.EntityChange, error) {
 	change := entity.ToIncrementalProtoWithContext(mmemodel.SyncContextClient)
 	if change == nil {
 		return nil, nil
@@ -186,20 +212,13 @@ func packEntityChange(entity mmeobj.IEntity) ([]byte, error) {
 	}
 	entityId := entity.GetXXXId()
 	entityType := entity.GetEntityType()
-	ntf := &core.Notify_EntityChangeNotify{
-		EntityChanges: &core.EntityChange{
-			EntityRef: &mme.EntityRef{
-				EntityId:   &entityId,
-				EntityType: &entityType,
-			},
-			Data: changeRaw,
+	return &core.EntityChange{
+		EntityRef: &mme.EntityRef{
+			EntityId:   &entityId,
+			EntityType: &entityType,
 		},
-	}
-	rawData, err := proto.Marshal(ntf)
-	if err != nil {
-		return nil, err
-	}
-	return rawData, nil
+		Data: changeRaw,
+	}, nil
 }
 
 // HandleInit 处理初始化
