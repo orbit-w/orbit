@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"gitee.com/orbit-w/orbit/app/modules/config_v2"
+	"gitee.com/orbit-w/orbit/config_v2"
 	"gitee.com/orbit-w/orbit/lib/module/logger"
 	"github.com/nacos-group/nacos-sdk-go/v2/clients"
 	"github.com/nacos-group/nacos-sdk-go/v2/clients/naming_client"

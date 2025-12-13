@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"gitee.com/orbit-w/orbit/app/modules/config_v2"
+	"gitee.com/orbit-w/orbit/config_v2"
 	"gitee.com/orbit-w/orbit/lib/module/logger"
 	"go.uber.org/zap"
 )

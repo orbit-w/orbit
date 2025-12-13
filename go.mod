@@ -8,7 +8,6 @@ require (
 	github.com/asynkron/protoactor-go v0.0.0-20240822202345-3c0e61ca19c9
 	github.com/go-viper/mapstructure/v2 v2.4.0
 	github.com/nacos-group/nacos-sdk-go/v2 v2.3.5
-	github.com/orbit-w/mux-go v0.0.0-20250330080341-4434feaa0de6
 	github.com/orcaman/concurrent-map/v2 v2.0.1
 	github.com/redis/go-redis/v9 v9.7.3
 	github.com/spf13/cobra v1.9.1
@@ -55,7 +54,6 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
-	github.com/orbit-w/meteor v0.0.0-20250330074908-5ee1edecdf27 // indirect
 	github.com/orca-zhang/ecache v1.1.3 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect

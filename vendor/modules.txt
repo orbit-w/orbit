@@ -253,24 +253,6 @@ github.com/nacos-group/nacos-sdk-go/v2/vo
 # github.com/natefinch/lumberjack v2.0.0+incompatible
 ## explicit
 github.com/natefinch/lumberjack
-# github.com/orbit-w/meteor v0.0.0-20250330074908-5ee1edecdf27
-## explicit; go 1.21
-github.com/orbit-w/meteor/bases/container/ring_buffer
-github.com/orbit-w/meteor/bases/math
-github.com/orbit-w/meteor/bases/misc/common
-github.com/orbit-w/meteor/bases/misc/number_utils
-github.com/orbit-w/meteor/bases/misc/utils
-github.com/orbit-w/meteor/bases/net/bigendian_buf
-github.com/orbit-w/meteor/modules/mlog
-github.com/orbit-w/meteor/modules/net/network
-github.com/orbit-w/meteor/modules/net/packet
-github.com/orbit-w/meteor/modules/net/transport
-github.com/orbit-w/meteor/modules/unbounded
-github.com/orbit-w/meteor/modules/wrappers/sender_wrapper
-# github.com/orbit-w/mux-go v0.0.0-20250330080341-4434feaa0de6
-## explicit; go 1.21.0
-github.com/orbit-w/mux-go
-github.com/orbit-w/mux-go/metadata
 # github.com/orca-zhang/ecache v1.1.3
 ## explicit; go 1.14
 github.com/orca-zhang/ecache

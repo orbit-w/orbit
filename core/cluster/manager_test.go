@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"gitee.com/orbit-w/orbit/app/modules/config_v2"
+	"gitee.com/orbit-w/orbit/config_v2"
 	netutils "gitee.com/orbit-w/orbit/lib/utils/net_utils"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"

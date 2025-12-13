@@ -6,13 +6,13 @@ import (
 	"io"
 	"net"
 
-	"github.com/orbit-w/mux-go"
+	"gitee.com/orbit-w/mux-go"
 
 	gnetwork "gitee.com/orbit-w/meteor/modules/net/network"
-	"gitee.com/orbit-w/orbit/app/modules/config_v2"
+	"gitee.com/orbit-w/mux-go/metadata"
+	"gitee.com/orbit-w/orbit/config_v2"
 	"gitee.com/orbit-w/orbit/core/network"
 	"gitee.com/orbit-w/orbit/lib/module/logger"
-	"github.com/orbit-w/mux-go/metadata"
 	"go.uber.org/zap"
 )
 

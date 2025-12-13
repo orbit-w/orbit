@@ -4,7 +4,7 @@ import (
 	"flag"
 
 	"gitee.com/orbit-w/orbit/app"
-	"gitee.com/orbit-w/orbit/app/modules/config_v2"
+	"gitee.com/orbit-w/orbit/config_v2"
 )
 
 /*

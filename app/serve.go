@@ -15,9 +15,9 @@ import (
 	"gitee.com/orbit-w/orbit/lib/module/persistence"
 	netutils "gitee.com/orbit-w/orbit/lib/utils/net_utils"
 
-	"gitee.com/orbit-w/orbit/app/modules/config_v2"
 	"gitee.com/orbit-w/orbit/app/modules/service"
 	"gitee.com/orbit-w/orbit/app/routers"
+	"gitee.com/orbit-w/orbit/config_v2"
 	"gitee.com/orbit-w/orbit/core/cluster"
 	"gitee.com/orbit-w/orbit/core/network"
 	stream "gitee.com/orbit-w/orbit/core/services/agent_stream"

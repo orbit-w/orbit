@@ -12,12 +12,12 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 
 	mmeobj "gitee.com/orbit-w/orbit/app/mme"
-	"gitee.com/orbit-w/orbit/app/modules/config_v2"
 	"gitee.com/orbit-w/orbit/app/modules/service"
 	"gitee.com/orbit-w/orbit/app/proto/core"
 	"gitee.com/orbit-w/orbit/app/proto/mme"
 	"gitee.com/orbit-w/orbit/app/proto/pb"
 	"gitee.com/orbit-w/orbit/app/routers"
+	"gitee.com/orbit-w/orbit/config_v2"
 	"gitee.com/orbit-w/orbit/core/network"
 	servicezone_behavior "gitee.com/orbit-w/orbit/core/services/service_zone/behavior"
 	zone_meta "gitee.com/orbit-w/orbit/core/services/service_zone/meta"
@@ -220,7 +220,7 @@ func Test_ProtoToWrapper(t *testing.T) {
 		panic(err)
 	}
 
-	playerId := int64(1600006)
+	playerId := int64(1600007)
 
 	playerEntity := mmeobj.NewPlayerEntity()
 	playerEntity.XXXId = playerId
