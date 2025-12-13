@@ -128,5 +128,5 @@ func ResponseError(response IResponse, reason string) {
 	if err != nil {
 		return
 	}
-	response.Response(rawData, pb.PID_Rsp_Fail)
+	response.Response(rawData, pb.PID_Rsp_Error)
 }

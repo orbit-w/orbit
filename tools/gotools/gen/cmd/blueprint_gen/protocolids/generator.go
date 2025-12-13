@@ -46,8 +46,11 @@ func (g *Generator) Generate(outputDir string) error {
 		return nil
 	}
 
-	// 添加通用的 Response 消息（Rsp_OK 和 Rsp_Fail）
+	// 添加通用的 Response 消息（Rsp_OK 和 Error）
 	g.addCommonResponseMessages(&allMessages)
+
+	// 将 Error 重命名为 Rsp_Error（保持与 Rsp_OK 命名一致）
+	g.renameErrorToRspError(&allMessages)
 
 	// 生成协议ID
 	messageIDs := g.generateProtocolIDs(allMessages)
@@ -130,17 +133,17 @@ func (g *Generator) createNotifyMessageInfo(packageName string, notify NetMessag
 	}
 }
 
-// addCommonResponseMessages 添加通用的 Response 消息（Rsp_OK 和 Rsp_Fail）
+// addCommonResponseMessages 添加通用的 Response 消息（Rsp_OK 和 Error）
 func (g *Generator) addCommonResponseMessages(messages *[]MessageInfo) {
 	hasRspOK := false
-	hasRspFail := false
+	hasError := false
 
 	for _, msg := range *messages {
 		if msg.FullName == "Rsp_OK" {
 			hasRspOK = true
 		}
-		if msg.FullName == "Rsp_Fail" {
-			hasRspFail = true
+		if msg.FullName == "Error" {
+			hasError = true
 		}
 	}
 
@@ -151,11 +154,21 @@ func (g *Generator) addCommonResponseMessages(messages *[]MessageInfo) {
 			PidName:  "pb-Rsp_OK",
 		})
 	}
-	if !hasRspFail {
+	if !hasError {
 		*messages = append(*messages, MessageInfo{
-			FullName: "Rsp_Fail",
-			PidName:  "pb-Rsp_Fail",
+			FullName: "Error",
+			PidName:  "pb-Error",
 		})
+	}
+}
+
+// renameErrorToRspError 将 Error 重命名为 Rsp_Error，保持与 Rsp_OK 命名一致
+func (g *Generator) renameErrorToRspError(messages *[]MessageInfo) {
+	for i := range *messages {
+		if (*messages)[i].FullName == "Error" {
+			(*messages)[i].FullName = "Rsp_Error"
+			// PidName 保持不变，仍使用 pb-Error 生成哈希，确保 ID 稳定
+		}
 	}
 }
 
@@ -179,4 +192,3 @@ func (g *Generator) generateProtocolIDs(messages []MessageInfo) []MessageID {
 
 	return messageIDs
 }
-
