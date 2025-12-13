@@ -2,10 +2,12 @@
 ## explicit; go 1.24
 gitee.com/orbit-w/meteor/bases/container/heap
 gitee.com/orbit-w/meteor/bases/container/priority_queue
+gitee.com/orbit-w/meteor/bases/container/ring_buffer
 gitee.com/orbit-w/meteor/bases/container/xmap
 gitee.com/orbit-w/meteor/bases/dirty/dirty_tracker
 gitee.com/orbit-w/meteor/bases/math
 gitee.com/orbit-w/meteor/bases/misc/common
+gitee.com/orbit-w/meteor/bases/misc/number_utils
 gitee.com/orbit-w/meteor/bases/misc/utils
 gitee.com/orbit-w/meteor/bases/net/bigendian_buf
 gitee.com/orbit-w/meteor/modules/cache/v1
@@ -14,7 +16,14 @@ gitee.com/orbit-w/meteor/modules/database/rdb
 gitee.com/orbit-w/meteor/modules/mlog
 gitee.com/orbit-w/meteor/modules/net/network
 gitee.com/orbit-w/meteor/modules/net/packet
+gitee.com/orbit-w/meteor/modules/net/transport
+gitee.com/orbit-w/meteor/modules/unbounded
 gitee.com/orbit-w/meteor/modules/unique_task_exec
+gitee.com/orbit-w/meteor/modules/wrappers/sender_wrapper
+# gitee.com/orbit-w/mux-go v0.0.0-20251213142011-ead621af2ef1
+## explicit; go 1.24.0
+gitee.com/orbit-w/mux-go
+gitee.com/orbit-w/mux-go/metadata
 # github.com/BurntSushi/toml v1.4.0
 ## explicit; go 1.18
 github.com/BurntSushi/toml
@@ -165,10 +174,6 @@ github.com/go-logr/stdr
 ## explicit; go 1.18
 github.com/go-viper/mapstructure/v2
 github.com/go-viper/mapstructure/v2/internal/errors
-# github.com/gogo/protobuf v1.3.2
-## explicit; go 1.15
-github.com/gogo/protobuf/proto
-github.com/gogo/protobuf/protoc-gen-gogo/descriptor
 # github.com/golang/mock v1.6.0
 ## explicit; go 1.11
 github.com/golang/mock/gomock
@@ -320,14 +325,10 @@ github.com/redis/go-redis/v9/internal/rand
 github.com/redis/go-redis/v9/internal/util
 # github.com/rogpeppe/go-internal v1.14.1
 ## explicit; go 1.23
-# github.com/sagikazarmark/locafero v0.11.0
+# github.com/sagikazarmark/locafero v0.12.0
 ## explicit; go 1.23.0
 github.com/sagikazarmark/locafero
-# github.com/sourcegraph/conc v0.3.1-0.20240121214520-5f936abd7ae8
-## explicit; go 1.20
-github.com/sourcegraph/conc
-github.com/sourcegraph/conc/panics
-github.com/sourcegraph/conc/pool
+github.com/sagikazarmark/locafero/internal/queue
 # github.com/spf13/afero v1.15.0
 ## explicit; go 1.23.0
 github.com/spf13/afero
@@ -472,7 +473,7 @@ go.opentelemetry.io/otel/trace/noop
 # go.uber.org/multierr v1.11.0
 ## explicit; go 1.19
 go.uber.org/multierr
-# go.uber.org/zap v1.27.0
+# go.uber.org/zap v1.27.1
 ## explicit; go 1.19
 go.uber.org/zap
 go.uber.org/zap/buffer
@@ -486,15 +487,15 @@ go.uber.org/zap/zapcore
 # go.yaml.in/yaml/v3 v3.0.4
 ## explicit; go 1.16
 go.yaml.in/yaml/v3
-# golang.org/x/crypto v0.36.0
-## explicit; go 1.23.0
+# golang.org/x/crypto v0.46.0
+## explicit; go 1.24.0
 golang.org/x/crypto/ocsp
 golang.org/x/crypto/pbkdf2
 golang.org/x/crypto/pkcs12
 golang.org/x/crypto/pkcs12/internal/rc2
 golang.org/x/crypto/scrypt
-# golang.org/x/net v0.38.0
-## explicit; go 1.23.0
+# golang.org/x/net v0.48.0
+## explicit; go 1.24.0
 golang.org/x/net/context
 golang.org/x/net/http/httpguts
 golang.org/x/net/http2
@@ -505,18 +506,18 @@ golang.org/x/net/internal/socks
 golang.org/x/net/internal/timeseries
 golang.org/x/net/proxy
 golang.org/x/net/trace
-# golang.org/x/sync v0.16.0
-## explicit; go 1.23.0
+# golang.org/x/sync v0.19.0
+## explicit; go 1.24.0
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
 golang.org/x/sync/singleflight
-# golang.org/x/sys v0.31.0
-## explicit; go 1.23.0
+# golang.org/x/sys v0.39.0
+## explicit; go 1.24.0
 golang.org/x/sys/unix
 golang.org/x/sys/windows
 golang.org/x/sys/windows/registry
-# golang.org/x/text v0.28.0
-## explicit; go 1.23.0
+# golang.org/x/text v0.32.0
+## explicit; go 1.24.0
 golang.org/x/text/encoding
 golang.org/x/text/encoding/internal
 golang.org/x/text/encoding/internal/identifier

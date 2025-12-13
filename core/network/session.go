@@ -4,7 +4,7 @@ import (
 	"sync/atomic"
 
 	"gitee.com/orbit-w/meteor/modules/net/packet"
-	"github.com/orbit-w/mux-go"
+	"gitee.com/orbit-w/mux-go"
 )
 
 const (
