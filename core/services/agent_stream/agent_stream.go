@@ -12,7 +12,6 @@ import (
 	"gitee.com/orbit-w/orbit/app/modules/config_v2"
 	"gitee.com/orbit-w/orbit/core/network"
 	"gitee.com/orbit-w/orbit/lib/module/logger"
-	netutils "gitee.com/orbit-w/orbit/lib/utils/net_utils"
 	"github.com/orbit-w/mux-go/metadata"
 	"go.uber.org/zap"
 )
@@ -111,9 +110,9 @@ func newSession(stream mux.IServerConn) (*network.Session, error) {
 }
 
 func streamHost() string {
-	ip, err := netutils.GetPublicIPv4()
-	if err != nil {
-		panic(err)
-	}
-	return net.JoinHostPort(ip, config_v2.GetServerPort())
+	// ip, err := netutils.GetLocalIPv4()
+	// if err != nil {
+	// 	panic(err)
+	// }
+	return net.JoinHostPort("127.0.0.1", config_v2.GetServerPort())
 }

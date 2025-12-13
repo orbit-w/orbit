@@ -220,7 +220,7 @@ func Test_ProtoToWrapper(t *testing.T) {
 		panic(err)
 	}
 
-	playerId := int64(1600005)
+	playerId := int64(1600006)
 
 	playerEntity := mmeobj.NewPlayerEntity()
 	playerEntity.XXXId = playerId
@@ -238,6 +238,16 @@ func Test_ProtoToWrapper(t *testing.T) {
 	heroWrapper.GetLevelUp().SetCurExp(100001)
 	heroWrapper.GetLevelUp().SetConfId(100001)
 	heroWrapper.GetLevelUp().SetCurLevel(10)
+	acc := heroWrapper.GetSkinWear().GetWearMapAccessor()
+	acc.Set(100001, 100001)
+	acc.Set(100002, 100002)
+	acc.Set(100003, 100003)
+	acc.Set(100004, 100004)
+	acc.Set(100005, 100005)
+	acc.Set(100006, 100006)
+	acc.Set(100007, 100007)
+	acc.Set(100008, 100008)
+	acc.Set(100009, 100009)
 	pbMsg := wrapper.ToProto()
 	playerData, err := proto.Marshal(pbMsg)
 	if err != nil {
