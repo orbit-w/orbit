@@ -486,6 +486,9 @@ func (g *GoStructGenerator) generateEntityFiles(outputDir string) error {
 		}
 		sb.WriteString(")\n\n")
 
+		// 生成 init 函数，注册 Entity Factory 和 Entity Data Factory
+		sb.WriteString(g.genEntityInitFunction(entity))
+
 		// 生成结构体
 		sb.WriteString(fmt.Sprintf("type %s struct {\n", entity.Name))
 		sb.WriteString("\tXXXId int64 `bson:\"_id\"`\n")
@@ -534,6 +537,28 @@ func (g *GoStructGenerator) generateEntityFiles(outputDir string) error {
 	}
 
 	return nil
+}
+
+// genEntityInitFunction 生成 Entity 的 init 函数，注册工厂方法
+func (g *GoStructGenerator) genEntityInitFunction(entity *Entity) string {
+	var sb strings.Builder
+
+	sb.WriteString("func init() {\n")
+
+	// 生成 RegisterEntityFactory 调用
+	entityTypeEnumName := GenEntityTypeEnumName(entity.Name)
+	sb.WriteString(fmt.Sprintf("\tRegisterEntityFactory(mme.EntityType_%s, func() IEntity {\n", entityTypeEnumName))
+	sb.WriteString(fmt.Sprintf("\t\treturn New%sWrapper()\n", entity.Name))
+	sb.WriteString("\t})\n\n")
+
+	// 生成 RegisterEntityDataFactory 调用
+	sb.WriteString(fmt.Sprintf("\tRegisterEntityDataFactory(mme.EntityType_%s, func() proto.Message {\n", entityTypeEnumName))
+	sb.WriteString(fmt.Sprintf("\t\treturn &mme.%s{}\n", entity.Name))
+	sb.WriteString("\t})\n")
+
+	sb.WriteString("}\n\n")
+
+	return sb.String()
 }
 
 // genEntityFromProtoMethod 生成 Entity 的 FromProto 方法
