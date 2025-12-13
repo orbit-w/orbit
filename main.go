@@ -14,7 +14,7 @@ import (
 */
 
 var (
-	configPath = flag.String("config", "configs/config.toml", "path to config file")
+	configPath = flag.String("config", "configs/config_center.yaml", "path to config file")
 	serverId   = flag.String("server_id", "1", "server id")
 )
 
