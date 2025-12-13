@@ -21,6 +21,7 @@ const (
 	PID_Request_SearchBook_Rsp uint32 = 0xf1d19d0a // Request_SearchBook_Rsp
 	PID_Request_SearchNewsPaper uint32 = 0xd20e5854 // Request_SearchNewsPaper
 	PID_Request_SearchNewsPaper_Rsp uint32 = 0x9bed598e // Request_SearchNewsPaper_Rsp
+	PID_Request_SetEntityRequest uint32 = 0xb8fae1d6 // Request_SetEntityRequest
 	PID_Rsp_Fail uint32 = 0xe7385d89 // Rsp_Fail
 	PID_Rsp_OK uint32 = 0x9bc692b8 // Rsp_OK
 
@@ -39,6 +40,7 @@ var AllMessageNameToID = map[string]uint32{
 	"Request_SearchBook_Rsp": PID_Request_SearchBook_Rsp,
 	"Request_SearchNewsPaper": PID_Request_SearchNewsPaper,
 	"Request_SearchNewsPaper_Rsp": PID_Request_SearchNewsPaper_Rsp,
+	"Request_SetEntityRequest": PID_Request_SetEntityRequest,
 	"Rsp_Fail": PID_Rsp_Fail,
 	"Rsp_OK": PID_Rsp_OK,
 }
@@ -56,6 +58,7 @@ var AllIDToMessageName = map[uint32]string{
 	PID_Request_SearchBook_Rsp: "Request_SearchBook_Rsp",
 	PID_Request_SearchNewsPaper: "Request_SearchNewsPaper",
 	PID_Request_SearchNewsPaper_Rsp: "Request_SearchNewsPaper_Rsp",
+	PID_Request_SetEntityRequest: "Request_SetEntityRequest",
 	PID_Rsp_Fail: "Rsp_Fail",
 	PID_Rsp_OK: "Rsp_OK",
 }

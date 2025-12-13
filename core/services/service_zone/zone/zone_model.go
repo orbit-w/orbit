@@ -64,6 +64,7 @@ func (zone *ServiceZone) LoadRefs(refs []*mme.EntityRef) ([]mmeobj.IEntity, erro
 		if err != nil {
 			return nil, err
 		}
+		//zone.SetEntity(entity)
 		entities = append(entities, entity)
 	}
 	return entities, nil

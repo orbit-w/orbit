@@ -23,10 +23,15 @@ type IEntity interface {
 	ToIncrementalProtoWithContext(ctx mmemodel.SyncContext) proto.Message
 }
 
-type EntityFactory func() IEntity
+type (
+	EntityFactory func() IEntity
+
+	EntityDataFactory func() proto.Message
+)
 
 var (
-	mapEntityFactories = make(map[mme.EntityType]EntityFactory)
+	mapEntityFactories     = make(map[mme.EntityType]EntityFactory)
+	mapEntityDataFactories = make(map[mme.EntityType]EntityDataFactory)
 )
 
 func RegisterEntityFactory(entityType mme.EntityType, factory EntityFactory) {
@@ -35,6 +40,18 @@ func RegisterEntityFactory(entityType mme.EntityType, factory EntityFactory) {
 
 func GetEntityFactory(entityType mme.EntityType) EntityFactory {
 	factory, ok := mapEntityFactories[entityType]
+	if !ok {
+		return nil
+	}
+	return factory
+}
+
+func RegisterEntityDataFactory(entityType mme.EntityType, factory EntityDataFactory) {
+	mapEntityDataFactories[entityType] = factory
+}
+
+func GetEntityDataFactory(entityType mme.EntityType) EntityDataFactory {
+	factory, ok := mapEntityDataFactories[entityType]
 	if !ok {
 		return nil
 	}

@@ -39,6 +39,11 @@ func init() {
 		return controllerv2.GControllerV2.HandleLoginRequest(req, playerEntity), "Request_LoginRequest_Rsp", nil
 	})
 
+	RegisterHandler(pb.PID_Request_SetEntityRequest, func(ctx servicezone_behavior.IContext, msg proto.Message, entities ...mmeobj.IEntity) (proto.Message, string, error) {
+		req := msg.(*core.Request_SetEntityRequest)
+		return controllerv2.GControllerV2.HandleSetEntityRequest(req), "Request_SetEntityRequest_Rsp", nil
+	})
+
 	RegisterHandler(pb.PID_Request_AskLevelUp, func(ctx servicezone_behavior.IContext, msg proto.Message, entities ...mmeobj.IEntity) (proto.Message, string, error) {
 		req := msg.(*mme.Request_AskLevelUp)
 		return controllerv2.GControllerV2.HandleAskLevelUp(req), "Request_AskLevelUp_Rsp", nil

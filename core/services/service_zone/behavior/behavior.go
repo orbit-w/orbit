@@ -86,7 +86,7 @@ func (b *ZoneActorBehavior) Receive(ctx actor.Context) {
 	case *actor.Stopped:
 		b.logger.Info("ZoneActor stopped", zap.String("ActorID", ctx.Self().Id))
 	case *ClientRequest:
-		b.HandleRequest(ctx, msg)
+		b.HandleClientRequest(ctx, msg)
 	case *AddEntityRequest:
 		b.HandleAddEntity(ctx, msg)
 	default:
@@ -94,8 +94,19 @@ func (b *ZoneActorBehavior) Receive(ctx actor.Context) {
 	}
 }
 
+// HandleClientRequest 处理客户端请求
+func (ab *ZoneActorBehavior) HandleClientRequest(ctx actor.Context, req *ClientRequest) {
+	pid := req.GetPid()
+	switch pid {
+	case pb.PID_Request_SetEntityRequest: // 设置实体请求
+		ab.HandleSystemRequest_SetEntity(ctx, req)
+	default:
+		ab.HandleClientRequestByRouter(ctx, req) // 其他请求交给Handler处理
+	}
+}
+
 // HandleSend 处理发送消息
-func (ab *ZoneActorBehavior) HandleRequest(ctx actor.Context, req *ClientRequest) {
+func (ab *ZoneActorBehavior) HandleClientRequestByRouter(ctx actor.Context, req *ClientRequest) {
 	pid := req.GetPid()
 	handler := globalRouter.Dispatch(pid)
 	if handler == nil {

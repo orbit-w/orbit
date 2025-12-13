@@ -2,9 +2,12 @@ package servicezone_behavior
 
 import (
 	mmeobj "gitee.com/orbit-w/orbit/app/mme"
+	"gitee.com/orbit-w/orbit/app/proto/core"
 	"gitee.com/orbit-w/orbit/app/proto/mme"
+	"gitee.com/orbit-w/orbit/app/proto/pb"
 	"gitee.com/orbit-w/orbit/core/network"
 	"github.com/asynkron/protoactor-go/actor"
+	"google.golang.org/protobuf/proto"
 )
 
 // ZoneActorMessages 定义 ServiceZone Actor 的所有消息类型
@@ -104,4 +107,26 @@ type ClientRequest struct {
 type Response struct {
 	Error error
 	Msg   any
+}
+
+type IResponse interface {
+	Response(data []byte, pid uint32) error
+}
+
+func ResponseOK(response IResponse) {
+	rawData, err := proto.Marshal(&core.OK{})
+	if err != nil {
+		return
+	}
+	response.Response(rawData, pb.PID_Rsp_OK)
+}
+
+func ResponseError(response IResponse, reason string) {
+	rawData, err := proto.Marshal(&core.Error{
+		Reason: proto.String(reason),
+	})
+	if err != nil {
+		return
+	}
+	response.Response(rawData, pb.PID_Rsp_Fail)
 }

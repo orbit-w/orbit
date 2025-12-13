@@ -1,0 +1,62 @@
+package servicezone_behavior
+
+import (
+	mmeobj "gitee.com/orbit-w/orbit/app/mme"
+	"gitee.com/orbit-w/orbit/app/proto/core"
+	"gitee.com/orbit-w/orbit/app/proto/mme"
+	"github.com/asynkron/protoactor-go/actor"
+	"go.uber.org/zap"
+	"google.golang.org/protobuf/proto"
+)
+
+func (ab *ZoneActorBehavior) HandleSystemRequest_SetEntity(ctx actor.Context, clientRequest *ClientRequest) {
+	var err error
+	defer func() {
+		if err != nil {
+			ab.logger.Error("ZoneActor error", zap.Error(err), zap.Uint32("Pid", clientRequest.GetPid()))
+			ResponseError(clientRequest, err.Error())
+		} else {
+			ResponseOK(clientRequest)
+		}
+	}()
+
+	req := new(core.Request_SetEntityRequest)
+	if err = proto.Unmarshal(clientRequest.GetIn(), req); err != nil {
+		ab.logger.Error("ZoneActor unmarshal error", zap.Error(err), zap.Uint32("Pid", clientRequest.GetPid()))
+		return
+	}
+
+	ref := req.GetEntityRef()
+	if ref == nil {
+		ab.logger.Error("ZoneActor received unknown message", zap.Uint32("Pid", clientRequest.GetPid()))
+		err = ErrEntityRefNil
+		return
+	}
+
+	factory := mmeobj.GetEntityFactory(mme.EntityType(ref.GetEntityType()))
+	if factory == nil {
+		ab.logger.Error("ZoneActor received unknown message", zap.Uint32("Pid", clientRequest.GetPid()))
+		err = ErrEntityFactoryNotFound
+		return
+	}
+	entity := factory()
+
+	pbFactory := mmeobj.GetEntityDataFactory(mme.EntityType(ref.GetEntityType()))
+	if pbFactory == nil {
+		ab.logger.Error("ZoneActor received unknown message", zap.Uint32("Pid", clientRequest.GetPid()))
+		err = ErrEntityDataFactoryNotFound
+		return
+	}
+	pb := pbFactory()
+	if err = proto.Unmarshal(req.GetData(), pb); err != nil {
+		ab.logger.Error("ZoneActor unmarshal error", zap.Error(err), zap.Uint32("Pid", clientRequest.GetPid()))
+		err = ErrEntityDataUnmarshalFailed
+		return
+	}
+
+	entity.FromProto(pb)
+
+	//ab.ctx.SetEntity(entity)
+
+	ab.Persist([]mmeobj.IEntity{entity})
+}

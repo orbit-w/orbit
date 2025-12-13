@@ -157,6 +157,7 @@ func Test_SetPlayerEntityAndPersist(t *testing.T) {
 	fmt.Println(resp.Error)
 }
 
+// 测试路由请求处理逻辑
 func Test_RequestLogin(t *testing.T) {
 	serverId := "1"
 	initRouter()
@@ -196,4 +197,8 @@ func Test_RequestLogin(t *testing.T) {
 	}
 
 	time.Sleep(5 * time.Minute)
+}
+
+func Test_ProtoToWrapper(t *testing.T) {
+
 }

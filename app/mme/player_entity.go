@@ -25,6 +25,10 @@ func init() {
 	RegisterEntityFactory(mme.EntityType_PlayerEntityType, func() IEntity {
 		return NewPlayerEntityWrapper()
 	})
+
+	RegisterEntityDataFactory(mme.EntityType_PlayerEntityType, func() proto.Message {
+		return &mme.PlayerEntity{}
+	})
 }
 
 type PlayerEntity struct {

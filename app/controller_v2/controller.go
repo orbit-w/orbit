@@ -44,3 +44,8 @@ func (c *Controller) HandleLoginRequest(req *core.Request_LoginRequest, playerEn
 	// playerEntity 已经由 Router 层加载完成，可以直接使用
 	return nil
 }
+
+func (c *Controller) HandleSetEntityRequest(req *core.Request_SetEntityRequest) proto.Message {
+	// TODO: 实现业务逻辑
+	return nil
+}
