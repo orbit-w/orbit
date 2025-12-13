@@ -104,7 +104,7 @@ func (p *PersistenceActor) handleLoadError(err error, req LoadRequest) *LoadResp
 		return &LoadResponse{
 			Success:    true,
 			Exists:     false,
-			Error:      mongo.ErrNoDocuments,
+			Error:      nil,
 			Collection: req.Collection,
 			DocumentID: req.DocID,
 		}

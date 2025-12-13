@@ -33,13 +33,12 @@ func (ab *ZoneActorBehavior) HandleSystemRequest_SetEntity(ctx actor.Context, cl
 		return
 	}
 
-	factory := mmeobj.GetEntityFactory(mme.EntityType(ref.GetEntityType()))
-	if factory == nil {
-		ab.logger.Error("ZoneActor received unknown message", zap.Uint32("Pid", clientRequest.GetPid()))
-		err = ErrEntityFactoryNotFound
+	entity, err := ab.ctx.Load(ref.GetEntityId(), mme.EntityType(ref.GetEntityType()))
+	if err != nil {
+		ab.logger.Error("ZoneActor load error", zap.Error(err), zap.Uint32("Pid", clientRequest.GetPid()))
+		err = ErrEntityLoadFailed
 		return
 	}
-	entity := factory()
 
 	pbFactory := mmeobj.GetEntityDataFactory(mme.EntityType(ref.GetEntityType()))
 	if pbFactory == nil {

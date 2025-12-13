@@ -43,9 +43,15 @@ func (r *ClientRequest) GetSession() *Session {
 }
 
 func (r *ClientRequest) Response(data []byte, pid uint32) error {
+	if r.session == nil {
+		return nil
+	}
 	return r.session.SendData(data, r.upSeq, pid)
 }
 
 func (r *ClientRequest) ResponseBatch(msgs []Message) error {
+	if r.session == nil {
+		return nil
+	}
 	return r.session.SendMessageBatch(msgs)
 }

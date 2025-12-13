@@ -166,10 +166,11 @@ func (x *HeroMechanism) GetSkills_XXXChangeList() []*HeroMechanism_Skills_XXXMap
 }
 
 type ManualUnlockMechanism struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	UnlockMap     map[int32]bool         `protobuf:"bytes,1,rep,name=UnlockMap,proto3" json:"UnlockMap,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                   protoimpl.MessageState                                `protogen:"open.v1"`
+	UnlockMap               map[int32]bool                                        `protobuf:"bytes,1,rep,name=UnlockMap,proto3" json:"UnlockMap,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
+	UnlockMap_XXXChangeList []*ManualUnlockMechanism_UnlockMap_XXXMapChangeRecord `protobuf:"bytes,1001,rep,name=UnlockMap_XXXChangeList,json=UnlockMapXXXChangeList,proto3" json:"UnlockMap_XXXChangeList,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
 }
 
 func (x *ManualUnlockMechanism) Reset() {
@@ -209,12 +210,20 @@ func (x *ManualUnlockMechanism) GetUnlockMap() map[int32]bool {
 	return nil
 }
 
+func (x *ManualUnlockMechanism) GetUnlockMap_XXXChangeList() []*ManualUnlockMechanism_UnlockMap_XXXMapChangeRecord {
+	if x != nil {
+		return x.UnlockMap_XXXChangeList
+	}
+	return nil
+}
+
 type WearMechanism struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	WearMap       map[int32]int32        `protobuf:"bytes,1,rep,name=WearMap,proto3" json:"WearMap,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
-	ConfId        *int32                 `protobuf:"varint,2,opt,name=ConfId,proto3,oneof" json:"ConfId,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                 protoimpl.MessageState                      `protogen:"open.v1"`
+	WearMap               map[int32]int32                             `protobuf:"bytes,1,rep,name=WearMap,proto3" json:"WearMap,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
+	ConfId                *int32                                      `protobuf:"varint,2,opt,name=ConfId,proto3,oneof" json:"ConfId,omitempty"`
+	WearMap_XXXChangeList []*WearMechanism_WearMap_XXXMapChangeRecord `protobuf:"bytes,1001,rep,name=WearMap_XXXChangeList,json=WearMapXXXChangeList,proto3" json:"WearMap_XXXChangeList,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *WearMechanism) Reset() {
@@ -259,6 +268,13 @@ func (x *WearMechanism) GetConfId() int32 {
 		return *x.ConfId
 	}
 	return 0
+}
+
+func (x *WearMechanism) GetWearMap_XXXChangeList() []*WearMechanism_WearMap_XXXMapChangeRecord {
+	if x != nil {
+		return x.WearMap_XXXChangeList
+	}
+	return nil
 }
 
 type HeroMechanism_Skills_XXXMapChangeRecord struct {
@@ -321,6 +337,126 @@ func (x *HeroMechanism_Skills_XXXMapChangeRecord) GetIsDelete() bool {
 	return false
 }
 
+type ManualUnlockMechanism_UnlockMap_XXXMapChangeRecord struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Key           int32                  `protobuf:"varint,1,opt,name=Key,proto3" json:"Key,omitempty"`
+	Value         bool                   `protobuf:"varint,2,opt,name=Value,proto3" json:"Value,omitempty"`
+	IsDelete      bool                   `protobuf:"varint,3,opt,name=IsDelete,proto3" json:"IsDelete,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ManualUnlockMechanism_UnlockMap_XXXMapChangeRecord) Reset() {
+	*x = ManualUnlockMechanism_UnlockMap_XXXMapChangeRecord{}
+	mi := &file_mechanisms_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ManualUnlockMechanism_UnlockMap_XXXMapChangeRecord) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ManualUnlockMechanism_UnlockMap_XXXMapChangeRecord) ProtoMessage() {}
+
+func (x *ManualUnlockMechanism_UnlockMap_XXXMapChangeRecord) ProtoReflect() protoreflect.Message {
+	mi := &file_mechanisms_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ManualUnlockMechanism_UnlockMap_XXXMapChangeRecord.ProtoReflect.Descriptor instead.
+func (*ManualUnlockMechanism_UnlockMap_XXXMapChangeRecord) Descriptor() ([]byte, []int) {
+	return file_mechanisms_proto_rawDescGZIP(), []int{2, 1}
+}
+
+func (x *ManualUnlockMechanism_UnlockMap_XXXMapChangeRecord) GetKey() int32 {
+	if x != nil {
+		return x.Key
+	}
+	return 0
+}
+
+func (x *ManualUnlockMechanism_UnlockMap_XXXMapChangeRecord) GetValue() bool {
+	if x != nil {
+		return x.Value
+	}
+	return false
+}
+
+func (x *ManualUnlockMechanism_UnlockMap_XXXMapChangeRecord) GetIsDelete() bool {
+	if x != nil {
+		return x.IsDelete
+	}
+	return false
+}
+
+type WearMechanism_WearMap_XXXMapChangeRecord struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Key           int32                  `protobuf:"varint,1,opt,name=Key,proto3" json:"Key,omitempty"`
+	Value         int32                  `protobuf:"varint,2,opt,name=Value,proto3" json:"Value,omitempty"`
+	IsDelete      bool                   `protobuf:"varint,3,opt,name=IsDelete,proto3" json:"IsDelete,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WearMechanism_WearMap_XXXMapChangeRecord) Reset() {
+	*x = WearMechanism_WearMap_XXXMapChangeRecord{}
+	mi := &file_mechanisms_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WearMechanism_WearMap_XXXMapChangeRecord) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WearMechanism_WearMap_XXXMapChangeRecord) ProtoMessage() {}
+
+func (x *WearMechanism_WearMap_XXXMapChangeRecord) ProtoReflect() protoreflect.Message {
+	mi := &file_mechanisms_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WearMechanism_WearMap_XXXMapChangeRecord.ProtoReflect.Descriptor instead.
+func (*WearMechanism_WearMap_XXXMapChangeRecord) Descriptor() ([]byte, []int) {
+	return file_mechanisms_proto_rawDescGZIP(), []int{3, 1}
+}
+
+func (x *WearMechanism_WearMap_XXXMapChangeRecord) GetKey() int32 {
+	if x != nil {
+		return x.Key
+	}
+	return 0
+}
+
+func (x *WearMechanism_WearMap_XXXMapChangeRecord) GetValue() int32 {
+	if x != nil {
+		return x.Value
+	}
+	return 0
+}
+
+func (x *WearMechanism_WearMap_XXXMapChangeRecord) GetIsDelete() bool {
+	if x != nil {
+		return x.IsDelete
+	}
+	return false
+}
+
 var File_mechanisms_proto protoreflect.FileDescriptor
 
 const file_mechanisms_proto_rawDesc = "" +
@@ -352,18 +488,28 @@ const file_mechanisms_proto_rawDesc = "" +
 	"\x03_IdB\t\n" +
 	"\a_ConfIdB\r\n" +
 	"\v_CreateTimeB\v\n" +
-	"\t_UseTimes\"\x9e\x01\n" +
+	"\t_UseTimes\"\xf5\x02\n" +
 	"\x15ManualUnlockMechanism\x12G\n" +
-	"\tUnlockMap\x18\x01 \x03(\v2).MME.ManualUnlockMechanism.UnlockMapEntryR\tUnlockMap\x1a<\n" +
+	"\tUnlockMap\x18\x01 \x03(\v2).MME.ManualUnlockMechanism.UnlockMapEntryR\tUnlockMap\x12q\n" +
+	"\x17UnlockMap_XXXChangeList\x18\xe9\a \x03(\v27.MME.ManualUnlockMechanism.UnlockMap_XXXMapChangeRecordR\x16UnlockMapXXXChangeList\x1a<\n" +
 	"\x0eUnlockMapEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\x05R\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\bR\x05value:\x028\x01\"\xae\x01\n" +
+	"\x05value\x18\x02 \x01(\bR\x05value:\x028\x01\x1ab\n" +
+	"\x1cUnlockMap_XXXMapChangeRecord\x12\x10\n" +
+	"\x03Key\x18\x01 \x01(\x05R\x03Key\x12\x14\n" +
+	"\x05Value\x18\x02 \x01(\bR\x05Value\x12\x1a\n" +
+	"\bIsDelete\x18\x03 \x01(\bR\bIsDelete\"\xf5\x02\n" +
 	"\rWearMechanism\x129\n" +
 	"\aWearMap\x18\x01 \x03(\v2\x1f.MME.WearMechanism.WearMapEntryR\aWearMap\x12\x1b\n" +
-	"\x06ConfId\x18\x02 \x01(\x05H\x00R\x06ConfId\x88\x01\x01\x1a:\n" +
+	"\x06ConfId\x18\x02 \x01(\x05H\x00R\x06ConfId\x88\x01\x01\x12c\n" +
+	"\x15WearMap_XXXChangeList\x18\xe9\a \x03(\v2-.MME.WearMechanism.WearMap_XXXMapChangeRecordR\x14WearMapXXXChangeList\x1a:\n" +
 	"\fWearMapEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\x05R\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01B\t\n" +
+	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01\x1a`\n" +
+	"\x1aWearMap_XXXMapChangeRecord\x12\x10\n" +
+	"\x03Key\x18\x01 \x01(\x05R\x03Key\x12\x14\n" +
+	"\x05Value\x18\x02 \x01(\x05R\x05Value\x12\x1a\n" +
+	"\bIsDelete\x18\x03 \x01(\bR\bIsDeleteB\t\n" +
 	"\a_ConfIdB'Z%gitee.com/orbit-w/orbit/app/proto/mmeb\x06proto3"
 
 var (
@@ -378,7 +524,7 @@ func file_mechanisms_proto_rawDescGZIP() []byte {
 	return file_mechanisms_proto_rawDescData
 }
 
-var file_mechanisms_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_mechanisms_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_mechanisms_proto_goTypes = []any{
 	(*LevelUpMechanism)(nil),      // 0: MME.LevelUpMechanism
 	(*HeroMechanism)(nil),         // 1: MME.HeroMechanism
@@ -387,18 +533,22 @@ var file_mechanisms_proto_goTypes = []any{
 	nil,                           // 4: MME.HeroMechanism.SkillsEntry
 	(*HeroMechanism_Skills_XXXMapChangeRecord)(nil), // 5: MME.HeroMechanism.Skills_XXXMapChangeRecord
 	nil, // 6: MME.ManualUnlockMechanism.UnlockMapEntry
-	nil, // 7: MME.WearMechanism.WearMapEntry
+	(*ManualUnlockMechanism_UnlockMap_XXXMapChangeRecord)(nil), // 7: MME.ManualUnlockMechanism.UnlockMap_XXXMapChangeRecord
+	nil, // 8: MME.WearMechanism.WearMapEntry
+	(*WearMechanism_WearMap_XXXMapChangeRecord)(nil), // 9: MME.WearMechanism.WearMap_XXXMapChangeRecord
 }
 var file_mechanisms_proto_depIdxs = []int32{
 	4, // 0: MME.HeroMechanism.Skills:type_name -> MME.HeroMechanism.SkillsEntry
 	5, // 1: MME.HeroMechanism.Skills_XXXChangeList:type_name -> MME.HeroMechanism.Skills_XXXMapChangeRecord
 	6, // 2: MME.ManualUnlockMechanism.UnlockMap:type_name -> MME.ManualUnlockMechanism.UnlockMapEntry
-	7, // 3: MME.WearMechanism.WearMap:type_name -> MME.WearMechanism.WearMapEntry
-	4, // [4:4] is the sub-list for method output_type
-	4, // [4:4] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	7, // 3: MME.ManualUnlockMechanism.UnlockMap_XXXChangeList:type_name -> MME.ManualUnlockMechanism.UnlockMap_XXXMapChangeRecord
+	8, // 4: MME.WearMechanism.WearMap:type_name -> MME.WearMechanism.WearMapEntry
+	9, // 5: MME.WearMechanism.WearMap_XXXChangeList:type_name -> MME.WearMechanism.WearMap_XXXMapChangeRecord
+	6, // [6:6] is the sub-list for method output_type
+	6, // [6:6] is the sub-list for method input_type
+	6, // [6:6] is the sub-list for extension type_name
+	6, // [6:6] is the sub-list for extension extendee
+	0, // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_mechanisms_proto_init() }
@@ -415,7 +565,7 @@ func file_mechanisms_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_mechanisms_proto_rawDesc), len(file_mechanisms_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   8,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

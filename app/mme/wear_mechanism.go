@@ -1,6 +1,7 @@
 package mme
 
 import (
+	"gitee.com/orbit-w/meteor/bases/container/xmap"
 	"gitee.com/orbit-w/orbit/app/proto/mme"
 	dirtyflag "gitee.com/orbit-w/orbit/lib/base/dirty_flag"
 	fieldmeta "gitee.com/orbit-w/orbit/lib/base/field_meta"
@@ -75,6 +76,9 @@ type WearMechanismWrapper struct {
 	data *WearMechanism
 	dirtyflag.IDirtyFlag
 	fieldMetas *fieldmeta.FieldMetas
+
+	// Value 为值类型，使用 xmap.MapAccessor 进行包装
+	wearMapAccessor *xmap.MapAccessor[int32, int32]
 }
 
 func NewWearMechanismWrapper(data *WearMechanism) *WearMechanismWrapper {
@@ -87,6 +91,7 @@ func NewWearMechanismWrapper(data *WearMechanism) *WearMechanismWrapper {
 		fieldMetas: fieldmeta.NewFieldMetas(),
 	}
 
+	w.wearMapAccessor = xmap.NewMapAccessorWithMarker(&w.data.WearMap, w, WearMechanismDirtyWearMapBit)
 	return w
 }
 
@@ -104,15 +109,9 @@ func (w *WearMechanismWrapper) MatchesAll(fieldID uint8, fieldTypes ...fieldmeta
 	return w.fieldMetas.MatchesAll(fieldID, fieldTypes...)
 }
 
-// 包装器-获取WearMap
-func (w *WearMechanismWrapper) GetWearMap() map[int32]int32 {
-	return w.data.WearMap
-}
-
-// 包装器-设置WearMap
-func (w *WearMechanismWrapper) SetWearMap(v map[int32]int32) {
-	w.data.WearMap = v
-	w.MarkDirty(WearMechanismDirtyWearMapBit)
+// 包装器-获取WearMap访问器
+func (w *WearMechanismWrapper) GetWearMapAccessor() *xmap.MapAccessor[int32, int32] {
+	return w.wearMapAccessor
 }
 
 func (w *WearMechanismWrapper) GetConfId() int32 {
@@ -131,6 +130,7 @@ func (w *WearMechanismWrapper) ClearAllDirtyFlags() {
 	// 如果Value为引用类型且有脏标记，则清除所有xmap中Value的脏标记
 
 	// 清除所有xmap中的操作记录
+	w.wearMapAccessor.ResetOperations()
 }
 
 // BuildMongoUpdate 构建MongoDB更新操作
@@ -140,9 +140,7 @@ func (w *WearMechanismWrapper) BuildMongoUpdate(builder *mgo_builder.MongoUpdate
 	}
 
 	if w.IsDirty(WearMechanismDirtyWearMapBit) {
-		copy := make(map[int32]int32, len(w.data.WearMap))
-		maps.Copy(copy, w.data.WearMap)
-		builder.SetNestedPath(path, "wear_map", copy)
+		builder.SetNestedPath(path, "wear_map", w.wearMapAccessor.Clone())
 	}
 	if w.IsDirty(WearMechanismDirtyConfIdBit) {
 		builder.SetNestedPath(path, "conf_id", w.GetConfId())
@@ -164,11 +162,7 @@ func (w *WearMechanismWrapper) ToIncrementalProtoWithContext(ctx mmemodel.SyncCo
 	incremental := &mme.WearMechanism{}
 
 	if mmemodel.FieldCanBeIncrementalSynced(w, WearMechanismDirtyWearMapBit, WearMechanismFieldIndexWearMap, ctx) {
-		m := w.GetWearMap()
-		if m != nil {
-			incremental.WearMap = make(map[int32]int32, len(m))
-			maps.Copy(incremental.WearMap, m)
-		}
+		incremental.WearMap = w.wearMapAccessor.Clone()
 	}
 	if mmemodel.FieldCanBeIncrementalSynced(w, WearMechanismDirtyConfIdBit, WearMechanismFieldIndexConfId, ctx) {
 		v := w.GetConfId()
@@ -193,7 +187,11 @@ func (w *WearMechanismWrapper) FromProto(pb *mme.WearMechanism) {
 	}
 
 	if pb.WearMap != nil {
-		maps.Copy(w.data.WearMap, pb.WearMap)
+		// 清空现有的数据
+		temp := make(map[int32]int32, len(pb.WearMap))
+		maps.Copy(temp, pb.WearMap)
+		// 设置新的数据，并清空所有变化操作记录
+		w.wearMapAccessor.Reset(&temp)
 	}
 	if pb.ConfId != nil {
 		w.SetConfId(*pb.ConfId)
@@ -219,12 +217,11 @@ func (w *WearMechanismWrapper) DeepCopyTo(copy *WearMechanism) {
 	// 拷贝基础类型字段
 	*copy = *w.data
 
-	// 初始化目标 map
-	if copy.WearMap == nil {
-		copy.WearMap = make(map[int32]int32, len(w.data.WearMap))
-	}
-	// 拷贝所有 int32
-	if w.data.WearMap != nil {
-		maps.Copy(copy.WearMap, w.data.WearMap)
+	// 拷贝 WearMapAccessor
+	if w.wearMapAccessor != nil {
+		if copy.WearMap == nil {
+			copy.WearMap = make(map[int32]int32, w.wearMapAccessor.Len())
+		}
+		w.wearMapAccessor.Copy(copy.WearMap)
 	}
 }

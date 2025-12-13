@@ -200,5 +200,65 @@ func Test_RequestLogin(t *testing.T) {
 }
 
 func Test_ProtoToWrapper(t *testing.T) {
+	serverId := "1"
+	services := Setup(serverId)
+	defer services.Stop()
 
+	// 启动PlayerZone
+	id := servicezone_mgr.GenLocalZoneId(servicezone.ZoneTypePlayer, serverId)
+	meta, err := zone_meta.SetZoneMeta(id, int32(servicezone.ZoneTypePlayer), &zone_meta.ZoneDispatcher{
+		Type:     zone_meta.Zone_DispatcherType_ForWorld,
+		ServerId: serverId,
+		NodeId:   serverId,
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = servicezone_mgr.StartZoneWithMeta(id, meta)
+	if err != nil {
+		panic(err)
+	}
+
+	playerId := int64(1600005)
+
+	playerEntity := mmeobj.NewPlayerEntity()
+	playerEntity.XXXId = playerId
+	wrapper := mmeobj.NewPlayerEntityWrapper()
+	raw, err := bson.Marshal(playerEntity)
+	if err != nil {
+		panic(err)
+	}
+	wrapper.Load(raw)
+	heroWrapper := wrapper.GetHeroManager().HeroMap_Set(100001, mmeobj.NewHeroModule())
+	heroWrapper.GetBase().SetId(100001)
+	heroWrapper.GetBase().SetConfId(100001)
+	heroWrapper.GetBase().SetCreateTime(time.Now().Unix())
+	heroWrapper.GetBase().SetUseTimes(10)
+	heroWrapper.GetLevelUp().SetCurExp(100001)
+	heroWrapper.GetLevelUp().SetConfId(100001)
+	heroWrapper.GetLevelUp().SetCurLevel(10)
+	pbMsg := wrapper.ToProto()
+	playerData, err := proto.Marshal(pbMsg)
+	if err != nil {
+		panic(err)
+	}
+	req := &core.Request_SetEntityRequest{
+		EntityRef: &mme.EntityRef{
+			EntityId:   proto.Int64(playerId),
+			EntityType: mme.EntityType_PlayerEntityType.Enum(),
+		},
+		Data: playerData,
+	}
+	data, err := proto.Marshal(req)
+	if err != nil {
+		panic(err)
+	}
+
+	zoneId := servicezone_mgr.GenLocalZoneId(servicezone.ZoneTypePlayer, serverId)
+	servicezone_mgr.ClientRequest(zoneId, network.NewClientRequest(1, pb.PID_Request_SetEntityRequest, data, nil))
+	if err != nil {
+		panic(err)
+	}
+	time.Sleep(5 * time.Minute)
 }

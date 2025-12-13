@@ -1,6 +1,7 @@
 package mme
 
 import (
+	"gitee.com/orbit-w/meteor/bases/container/xmap"
 	"gitee.com/orbit-w/orbit/app/proto/mme"
 	dirtyflag "gitee.com/orbit-w/orbit/lib/base/dirty_flag"
 	fieldmeta "gitee.com/orbit-w/orbit/lib/base/field_meta"
@@ -67,6 +68,9 @@ type ManualUnlockMechanismWrapper struct {
 	data *ManualUnlockMechanism
 	dirtyflag.IDirtyFlag
 	fieldMetas *fieldmeta.FieldMetas
+
+	// Value 为值类型，使用 xmap.MapAccessor 进行包装
+	unlockMapAccessor *xmap.MapAccessor[int32, bool]
 }
 
 func NewManualUnlockMechanismWrapper(data *ManualUnlockMechanism) *ManualUnlockMechanismWrapper {
@@ -79,6 +83,7 @@ func NewManualUnlockMechanismWrapper(data *ManualUnlockMechanism) *ManualUnlockM
 		fieldMetas: fieldmeta.NewFieldMetas(),
 	}
 
+	w.unlockMapAccessor = xmap.NewMapAccessorWithMarker(&w.data.UnlockMap, w, ManualUnlockMechanismDirtyUnlockMapBit)
 	return w
 }
 
@@ -95,15 +100,9 @@ func (w *ManualUnlockMechanismWrapper) MatchesAll(fieldID uint8, fieldTypes ...f
 	return w.fieldMetas.MatchesAll(fieldID, fieldTypes...)
 }
 
-// 包装器-获取UnlockMap
-func (w *ManualUnlockMechanismWrapper) GetUnlockMap() map[int32]bool {
-	return w.data.UnlockMap
-}
-
-// 包装器-设置UnlockMap
-func (w *ManualUnlockMechanismWrapper) SetUnlockMap(v map[int32]bool) {
-	w.data.UnlockMap = v
-	w.MarkDirty(ManualUnlockMechanismDirtyUnlockMapBit)
+// 包装器-获取UnlockMap访问器
+func (w *ManualUnlockMechanismWrapper) GetUnlockMapAccessor() *xmap.MapAccessor[int32, bool] {
+	return w.unlockMapAccessor
 }
 
 // ClearAllDirtyFlags 清除所有脏标记位
@@ -113,6 +112,7 @@ func (w *ManualUnlockMechanismWrapper) ClearAllDirtyFlags() {
 	// 如果Value为引用类型且有脏标记，则清除所有xmap中Value的脏标记
 
 	// 清除所有xmap中的操作记录
+	w.unlockMapAccessor.ResetOperations()
 }
 
 // BuildMongoUpdate 构建MongoDB更新操作
@@ -122,9 +122,7 @@ func (w *ManualUnlockMechanismWrapper) BuildMongoUpdate(builder *mgo_builder.Mon
 	}
 
 	if w.IsDirty(ManualUnlockMechanismDirtyUnlockMapBit) {
-		copy := make(map[int32]bool, len(w.data.UnlockMap))
-		maps.Copy(copy, w.data.UnlockMap)
-		builder.SetNestedPath(path, "unlock_map", copy)
+		builder.SetNestedPath(path, "unlock_map", w.unlockMapAccessor.Clone())
 	}
 }
 
@@ -143,11 +141,7 @@ func (w *ManualUnlockMechanismWrapper) ToIncrementalProtoWithContext(ctx mmemode
 	incremental := &mme.ManualUnlockMechanism{}
 
 	if mmemodel.FieldCanBeIncrementalSynced(w, ManualUnlockMechanismDirtyUnlockMapBit, ManualUnlockMechanismFieldIndexUnlockMap, ctx) {
-		m := w.GetUnlockMap()
-		if m != nil {
-			incremental.UnlockMap = make(map[int32]bool, len(m))
-			maps.Copy(incremental.UnlockMap, m)
-		}
+		incremental.UnlockMap = w.unlockMapAccessor.Clone()
 	}
 	return incremental
 }
@@ -168,7 +162,11 @@ func (w *ManualUnlockMechanismWrapper) FromProto(pb *mme.ManualUnlockMechanism) 
 	}
 
 	if pb.UnlockMap != nil {
-		maps.Copy(w.data.UnlockMap, pb.UnlockMap)
+		// 清空现有的数据
+		temp := make(map[int32]bool, len(pb.UnlockMap))
+		maps.Copy(temp, pb.UnlockMap)
+		// 设置新的数据，并清空所有变化操作记录
+		w.unlockMapAccessor.Reset(&temp)
 	}
 }
 
@@ -188,12 +186,11 @@ func (w *ManualUnlockMechanismWrapper) DeepCopyTo(copy *ManualUnlockMechanism) {
 		return
 	}
 
-	// 初始化目标 map
-	if copy.UnlockMap == nil {
-		copy.UnlockMap = make(map[int32]bool, len(w.data.UnlockMap))
-	}
-	// 拷贝所有 bool
-	if w.data.UnlockMap != nil {
-		maps.Copy(copy.UnlockMap, w.data.UnlockMap)
+	// 拷贝 UnlockMapAccessor
+	if w.unlockMapAccessor != nil {
+		if copy.UnlockMap == nil {
+			copy.UnlockMap = make(map[int32]bool, w.unlockMapAccessor.Len())
+		}
+		w.unlockMapAccessor.Copy(copy.UnlockMap)
 	}
 }
