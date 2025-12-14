@@ -44,10 +44,10 @@ func (c *Codec) Encode(data []byte, seq uint32, pid uint32) (packet.IPacket, err
 	return w, nil
 }
 
-// EncodeBatch 消息类型(1byte) [协议号（4byte）｜seq（4byte，optional）｜消息长度（4byte）｜消息内容（bytes）]...
+// EncodeBatch [协议号（4byte）｜seq（4byte，optional）｜消息长度（4byte）｜消息内容（bytes）]...
 func (c *Codec) EncodeBatch(msgList []Message) (packet.IPacket, error) {
 	// Calculate total size for all messages
-	totalSize := 1 // Initial 4 bytes for package length
+	totalSize := 0 // Initial 4 bytes for package length
 	for _, msg := range msgList {
 		// Base size: 4(protocol) + 4(seq) + 4(length) + len(data)
 		msgSize := 8 + len(msg.Data)
@@ -60,7 +60,6 @@ func (c *Codec) EncodeBatch(msgList []Message) (packet.IPacket, error) {
 
 	// Create packet with total size
 	w := packet.WriterP(totalSize)
-	w.WriteInt8(PatternNone)
 
 	// Write each message
 	for _, msg := range msgList {
