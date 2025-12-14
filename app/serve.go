@@ -35,7 +35,10 @@ import (
    @2024 4月 周日 17:36
 */
 
+var ServerId string
+
 func Serve(serverId string) {
+	ServerId = serverId
 	servicezone_behavior.SetRouter(routers.GetRouter())
 	stream.RegisterRequestHandler(requestHandler)
 
@@ -88,7 +91,6 @@ func RunServices() *service.Services {
 	services.Reg(cluster.NewManager(config_v2.GetServerName())) //启动集群管理服务
 	services.Reg(zone_meta.NewZoneMetaService())                //启动ZoneMeta服务
 	services.Reg(servicezone_mgr.NewZoneManager())              //启动ZoneManager服务
-
 	err := services.Start()
 	if err != nil {
 		panic(err)
@@ -150,7 +152,8 @@ func gracefulShutdown(stopper func(ctx context.Context) error) {
 }
 
 var requestHandler = func(session *network.Session, data []byte, seq, pid uint32) error {
-	servicezone_mgr.ClientRequest("play", network.NewClientRequest(seq, pid, data, session))
+	id := servicezone_mgr.GenLocalZoneId(servicezone.ZoneTypePlayer, ServerId)
+	servicezone_mgr.ClientRequest(id, network.NewClientRequest(seq, pid, data, session))
 	return nil
 }
 

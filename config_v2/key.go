@@ -6,4 +6,6 @@ const (
 	GroupServer = "server"
 	GroupRedis  = "redis"
 	GroupMongo  = "mongodb"
+
+	ServerId = "server_id"
 )

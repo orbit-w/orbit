@@ -1,6 +1,6 @@
 cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
-gitee.com/orbit-w/meteor v0.0.0-20251210075022-91f6de426ed6 h1:KdHaL6Q/sHExx7xpmbTT4nVmmpn35rLBJ/E3gTB1gh8=
-gitee.com/orbit-w/meteor v0.0.0-20251210075022-91f6de426ed6/go.mod h1:yfBTjKZHfr4+iW9mC229oQ4EC/Vcs2MPyWHsSLa7Ecs=
+gitee.com/orbit-w/meteor v0.0.0-20251213155926-624bd3cbbe37 h1:dqQFmqLBM5ZsxtZ5bAM8HphKplOkatiQj+AgdPouFBU=
+gitee.com/orbit-w/meteor v0.0.0-20251213155926-624bd3cbbe37/go.mod h1:yfBTjKZHfr4+iW9mC229oQ4EC/Vcs2MPyWHsSLa7Ecs=
 gitee.com/orbit-w/mux-go v0.0.0-20251213142011-ead621af2ef1 h1:sg4cgeP9l1B53ucCFdKTWba8yWSJ+KxJ1c/DUHJDpeo=
 gitee.com/orbit-w/mux-go v0.0.0-20251213142011-ead621af2ef1/go.mod h1:3TOMtFgq2Y1uR2pKz6wXMddISc2Vw3d5zmYCFTYeaGc=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=

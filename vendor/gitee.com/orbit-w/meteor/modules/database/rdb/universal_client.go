@@ -5,7 +5,6 @@ import (
 	"errors"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -54,6 +53,8 @@ func NewClient(ops RedisClientOps) (redis.UniversalClient, error) {
 		return nil, ErrAddressInvalid
 	}
 
+	ParseOps(&ops)
+
 	var client redis.UniversalClient
 	switch {
 	case ops.Cluster:
@@ -63,6 +64,9 @@ func NewClient(ops RedisClientOps) (redis.UniversalClient, error) {
 			Password:       ops.Password,
 			MaxIdleConns:   ops.MaxIdleConns,
 			MaxActiveConns: ops.MaxActiveConns,
+			ReadTimeout:    ops.ReadTimeout,
+			WriteTimeout:   ops.WriteTimeout,
+			PoolTimeout:    ops.PoolTimeout,
 		})
 	default:
 		client = redis.NewClient(&redis.Options{
@@ -72,15 +76,13 @@ func NewClient(ops RedisClientOps) (redis.UniversalClient, error) {
 			DB:             ops.DB,       // use default db
 			MaxIdleConns:   ops.MaxIdleConns,
 			MaxActiveConns: ops.MaxActiveConns,
+			ReadTimeout:    ops.ReadTimeout,
+			WriteTimeout:   ops.WriteTimeout,
+			PoolTimeout:    ops.PoolTimeout,
 		})
 	}
 
-	timeout := 5 * time.Second
-	if ops.DialTimeout > 0 {
-		timeout = ops.DialTimeout
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), ops.DialTimeout)
 	defer cancel()
 	if err := client.Ping(ctx).Err(); err != nil {
 		return nil, err

@@ -5,7 +5,9 @@
 package controllerv2
 
 import (
+	"gitee.com/orbit-w/meteor/modules/mlog"
 	mmeobj "gitee.com/orbit-w/orbit/app/mme"
+	"go.uber.org/zap"
 
 	"gitee.com/orbit-w/orbit/app/proto/core"
 	"gitee.com/orbit-w/orbit/app/proto/mme"
@@ -21,12 +23,18 @@ type Controller struct{}
 
 func (c *Controller) HandleSearchBook(req *core.Request_SearchBook) proto.Message {
 	// TODO: 实现业务逻辑
-	return nil
+	mlog.Info("HandleSearchBook", zap.Any("req", req))
+	return &core.Request_SearchBook_Rsp{
+		Result: &core.Book{
+			Content: proto.String("Hello, World!"),
+		},
+	}
 }
 
 func (c *Controller) HandleHeartBeat(req *core.Request_HeartBeat) proto.Message {
 	// TODO: 实现业务逻辑
-	return nil
+	mlog.Info("HandleHeartBeat", zap.Any("req", req))
+	return &core.OK{}
 }
 
 func (c *Controller) HandleAskLevelUp(req *mme.Request_AskLevelUp) proto.Message {

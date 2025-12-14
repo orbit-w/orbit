@@ -91,6 +91,10 @@ func (m *ZoneManager) GetZone(zoneId string) (*actor.PID, error) {
 func (m *ZoneManager) Load(zoneId string, zoneMeta *zone_meta.ZoneMeta) (*actor.PID, error) {
 	// 使用 ExecuteOnce 确保并发安全
 	re := m.exec.ExecuteOnce(zoneId, func() any {
+		if pid, exists := m.cache.Get(zoneId); exists {
+			return pid
+		}
+
 		// 创建 ServiceZone
 		zone := servicezone.NewServiceZone(zoneId, zoneMeta)
 
