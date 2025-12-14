@@ -31,3 +31,5 @@ bin/
 /test/logs
 /test/data
 /test/log
+/cache/
+/log/
