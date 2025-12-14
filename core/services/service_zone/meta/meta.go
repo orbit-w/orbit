@@ -31,8 +31,7 @@ func NewZoneMetaService() *ZoneMetaService {
 
 func (s *ZoneMetaService) Start() error {
 	once.Do(func() {
-		cli := rdb.UniversalClient()
-		cache = cachev1.NewCache(cli, CachePattern, func() *ZoneMeta {
+		cache = cachev1.NewCache(rdb.UniversalClient(), CachePattern, func() *ZoneMeta {
 			return &ZoneMeta{}
 		})
 	})
@@ -40,6 +39,7 @@ func (s *ZoneMetaService) Start() error {
 }
 
 func (s *ZoneMetaService) Stop() error {
+	cache.Close()
 	return nil
 }
 

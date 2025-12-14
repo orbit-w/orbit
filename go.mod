@@ -3,7 +3,7 @@ module gitee.com/orbit-w/orbit
 go 1.24.0
 
 require (
-	gitee.com/orbit-w/meteor v0.0.0-20251213155926-624bd3cbbe37
+	gitee.com/orbit-w/meteor v0.0.0-20251214142128-46e5a36d83fa
 	gitee.com/orbit-w/mux-go v0.0.0-20251213142011-ead621af2ef1
 	github.com/asynkron/protoactor-go v0.0.0-20240822202345-3c0e61ca19c9
 	github.com/go-viper/mapstructure/v2 v2.4.0

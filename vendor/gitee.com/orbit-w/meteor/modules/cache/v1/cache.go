@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"sync"
+	"sync/atomic"
 	"time"
 
+	"gitee.com/orbit-w/meteor/bases/misc/utils"
 	"gitee.com/orbit-w/meteor/modules/mlog"
 	"gitee.com/orbit-w/meteor/modules/unique_task_exec"
 	"github.com/orca-zhang/ecache"
-	"github.com/orca-zhang/ecache/dist"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
@@ -19,41 +19,19 @@ import (
 const (
 	CachePattern = "meteor_cache"
 	CacheTTL     = 15 * time.Minute
+
+	topic = "meteor_cache"
+
+	stateReady   = 1
+	stateStopped = 2
+
+	defaultPublishTimeout = time.Second * 5
+	defaultPingTimeout    = time.Second * 5
 )
-
-var (
-	distInitOnce sync.Once
-)
-
-// universalClientAdapter 适配 redis.UniversalClient 到 dist.RedisCli 接口
-type universalClientAdapter struct {
-	cli redis.UniversalClient
-	ctx context.Context
-}
-
-func (a *universalClientAdapter) OK() bool {
-	return a.cli != nil && a.cli.Ping(a.ctx).Err() == nil
-}
-
-func (a *universalClientAdapter) Pub(channel, payload string) error {
-	return a.cli.Publish(a.ctx, channel, payload).Err()
-}
-
-func (a *universalClientAdapter) Sub(channel string, callback func(payload string)) error {
-	pubsub := a.cli.Subscribe(a.ctx, channel)
-	ch := pubsub.Channel()
-	go func() {
-		defer pubsub.Close()
-		for msg := range ch {
-			if msg != nil {
-				callback(msg.Payload)
-			}
-		}
-	}()
-	return nil
-}
 
 type Cache[V proto.Message] struct {
+	state   atomic.Uint32
+	topic   string
 	cli     redis.UniversalClient
 	ttl     time.Duration
 	Pattern string
@@ -61,12 +39,15 @@ type Cache[V proto.Message] struct {
 	exec    *unique_task_exec.UniqueTaskExecutor
 	factory func() V
 	log     *mlog.Logger
+	ctx     context.Context
+	cancel  context.CancelFunc
 }
 
 func NewCache[V proto.Message](cli redis.UniversalClient, pattern string, factory func() V) *Cache[V] {
 	// 初始化 ecache，容量为 128 个分片，最大存储 1024 个元素，过期时间为 15 分钟
 	cache := ecache.NewLRUCache(128, 1024, CacheTTL)
 
+	ctx, cancel := context.WithCancel(context.Background())
 	c := &Cache[V]{
 		cli:     cli,
 		ttl:     CacheTTL,
@@ -75,23 +56,13 @@ func NewCache[V proto.Message](cli redis.UniversalClient, pattern string, factor
 		exec:    unique_task_exec.NewUniqueTaskExecutor(),
 		factory: factory,
 		log:     mlog.WithPrefix("cache"),
+		topic:   topic + "_" + pattern,
+		ctx:     ctx,
+		cancel:  cancel,
 	}
 
-	// 初始化 dist 组件（只初始化一次）
-	distInitOnce.Do(func() {
-		// 使用适配器包装 UniversalClient
-		adapter := &universalClientAdapter{
-			cli: cli,
-			ctx: context.Background(),
-		}
-		dist.Init(adapter)
-	})
-
-	// 将缓存实例绑定到 pattern 对应的 pool
-	// dist 包会自动处理分布式一致性，当调用 dist.OnDel(pattern, key) 时
-	// 会通知所有节点删除该 pool 下的所有缓存实例中的 key
-	dist.Bind(pattern, cache)
-
+	c.state.Store(stateReady)
+	go c.runSubscribe()
 	return c
 }
 
@@ -113,7 +84,7 @@ func (c *Cache[V]) Set(key string, value V) error {
 
 	// 通知其他节点删除旧缓存，保证分布式一致性
 	// 其他节点下次访问时会从 Redis 重新加载最新数据
-	dist.OnDel(c.Pattern, key)
+	c.onDel(key)
 	return nil
 }
 
@@ -132,9 +103,7 @@ func (c *Cache[V]) Remove(key string) error {
 		c.log.Error("remove cache del failed", zap.Error(err))
 		return err
 	}
-	// 使用 dist.OnDel 触发分布式删除
-	// 这会通知所有节点（包括本节点）删除该 pool 下所有缓存实例中的 key
-	dist.OnDel(c.Pattern, key)
+	c.onDel(key)
 	return nil
 }
 
@@ -174,10 +143,92 @@ func (c *Cache[V]) Load(key string) (V, error) {
 	}
 }
 
-// Stop 停止缓存（目前 dist 包会自动管理，此方法保留用于未来扩展）
-func (c *Cache[V]) Stop() {
-	// dist 包会自动管理订阅和清理，无需手动处理
-	// 如果需要清理，可以在这里添加逻辑
+func (c *Cache[V]) Close() {
+	c.state.CompareAndSwap(stateReady, stateStopped)
+	if c.cancel != nil {
+		c.cancel() // 取消 context，让 goroutine 立即退出
+	}
+}
+
+func (c *Cache[V]) runSubscribe() {
+	defer utils.RecoverPanic()
+
+	for {
+		select {
+		case <-c.ctx.Done():
+			return
+		default:
+		}
+
+		for c.cli == nil || !c.ping() {
+			if c.state.Load() == stateStopped {
+				return
+			}
+
+			// 简单的 sleep，但无法中断
+			time.Sleep(10 * time.Millisecond)
+
+			// 睡眠后再次检查 context
+			select {
+			case <-c.ctx.Done():
+				return
+			default:
+			}
+		}
+
+		if c.state.Load() == stateStopped {
+			return
+		}
+
+		c.sub()
+	}
+}
+
+func (c *Cache[V]) sub() {
+	defer utils.RecoverPanic()
+
+	pubsub := c.cli.Subscribe(c.ctx, c.topic)
+	ch := pubsub.Channel()
+	defer pubsub.Close()
+
+	for {
+		select {
+		case <-c.ctx.Done():
+			// context 被取消，立即退出
+			return
+		case msg, ok := <-ch:
+			if !ok {
+				// channel 已关闭
+				c.log.Error("subscribe channel closed", zap.String("topic", c.topic))
+				return
+			}
+			if msg != nil {
+				key := msg.Payload
+				c.cache.Del(key)
+			}
+		}
+	}
+}
+
+func (c *Cache[V]) pub(key string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), defaultPublishTimeout)
+	defer cancel()
+	return c.cli.Publish(ctx, c.topic, key).Err()
+}
+
+func (c *Cache[V]) ping() bool {
+	ctx, cancel := context.WithTimeout(context.Background(), defaultPingTimeout)
+	defer cancel()
+	return c.cli != nil && c.cli.Ping(ctx).Err() == nil
+}
+
+func (c *Cache[V]) onDel(key string) error {
+	// pub to remote nodes
+	if c.pub(key) == nil {
+		return nil
+	}
+	c.cache.Del(key)
+	return nil
 }
 
 func GenItemKey(pattern string, key string) string {
