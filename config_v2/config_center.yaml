@@ -25,3 +25,9 @@ sources:
     group: mongodb
     format: yaml
     need_listen: false
+
+# gate main
+  - data_id: gate.main
+    group: server
+    format: yaml
+    need_listen: true

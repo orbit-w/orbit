@@ -24,6 +24,7 @@ gitee.com/orbit-w/meteor/modules/wrappers/sender_wrapper
 ## explicit; go 1.24.0
 gitee.com/orbit-w/mux-go
 gitee.com/orbit-w/mux-go/metadata
+gitee.com/orbit-w/mux-go/multiplexers
 # github.com/BurntSushi/toml v1.4.0
 ## explicit; go 1.18
 github.com/BurntSushi/toml

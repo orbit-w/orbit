@@ -25,11 +25,11 @@ func TestInitConfig(t *testing.T) {
 
 		// 测试获取配置
 		// 参数：dataId, group, key
-		serverName := GetString(DtaIDGameMain, GroupServer, "name")
+		serverName := GetString(DtaIDGameMain, GameMainGroupServer, "name")
 		t.Logf("Server name: %s", serverName)
 
 		// 测试获取 Redis 配置
-		redisAddrs := GetStringSlice(DtaIDGameMain, GroupRedis, "addr")
+		redisAddrs := GetStringSlice(DtaIDGameMain, GameMainGroupRedis, "addr")
 		t.Logf("Redis addrs: %v", redisAddrs)
 	})
 }
@@ -98,11 +98,11 @@ func TestOnConfigChange(t *testing.T) {
 	defer StopConfig()
 
 	// 注册配置变更回调
-	OnConfigChange(DtaIDGameMain, GroupServer, func() {
+	OnConfigChange(DtaIDGameMain, GameMainGroupServer, func() {
 		t.Log("Config changed!")
-		serverName := GetString(DtaIDGameMain, GroupServer, "name")
+		serverName := GetString(DtaIDGameMain, GameMainGroupServer, "name")
 		t.Logf("New server name: %s", serverName)
-		port := GetInt(DtaIDGameMain, GroupServer, "port")
+		port := GetInt(DtaIDGameMain, GameMainGroupServer, "port")
 		t.Logf("New server port: %d", port)
 	})
 
