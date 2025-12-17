@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"gitee.com/orbit-w/orbit/config_v2"
+	"gitee.com/orbit-w/orbit/config"
 	"gitee.com/orbit-w/orbit/lib/module/logger"
 	"github.com/nacos-group/nacos-sdk-go/v2/clients"
 	"github.com/nacos-group/nacos-sdk-go/v2/clients/naming_client"
@@ -21,7 +21,7 @@ import (
 
 // NacosRegistry Nacos 服务注册发现
 type NacosRegistry struct {
-	config       *config_v2.NacosConfig
+	config       *config.NacosConfig
 	namingClient naming_client.INamingClient
 	nodeID       string
 	nodeIP       string
@@ -36,7 +36,7 @@ type NacosRegistry struct {
 }
 
 // NewNacosRegistry 创建 Nacos 注册发现实例
-func NewNacosRegistry(config *config_v2.NacosConfig, nodeID, nodeAddress, serviceName string) (*NacosRegistry, error) {
+func NewNacosRegistry(config *config.NacosConfig, nodeID, nodeAddress, serviceName string) (*NacosRegistry, error) {
 	// 设置默认值
 	if config.TimeoutMs == 0 {
 		config.TimeoutMs = 5000

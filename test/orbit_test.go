@@ -17,7 +17,7 @@ import (
 	"gitee.com/orbit-w/orbit/app/proto/mme"
 	"gitee.com/orbit-w/orbit/app/proto/pb"
 	"gitee.com/orbit-w/orbit/app/routers"
-	"gitee.com/orbit-w/orbit/config_v2"
+	"gitee.com/orbit-w/orbit/config"
 	"gitee.com/orbit-w/orbit/core/network"
 	servicezone_behavior "gitee.com/orbit-w/orbit/core/services/service_zone/behavior"
 	zone_meta "gitee.com/orbit-w/orbit/core/services/service_zone/meta"
@@ -35,12 +35,12 @@ func Setup(nodeId string) *service.Services {
 	// 初始化路由器
 	servicezone_behavior.SetRouter(routers.GetRouter())
 
-	if err := config_v2.InitConfig("../configs/config_center.yaml"); err != nil {
+	if err := config.InitConfig("../configs/config_center.yaml"); err != nil {
 		panic(err)
 	}
 	services := service.NewServices()
 	redisService := service.Wrapper("redis_service").WrapStart(func() error {
-		rdb.Start(config_v2.GetRedisOps())
+		rdb.Start(config.GetRedisOps())
 		return nil
 	}).WrapStop(func() error {
 		rdb.Stop()
@@ -48,7 +48,7 @@ func Setup(nodeId string) *service.Services {
 	})
 
 	mongoService := service.Wrapper("mongo_service").WrapStart(func() error {
-		return mongo.Start(config_v2.GetMongoOps())
+		return mongo.Start(config.GetMongoOps())
 	}).WrapStop(func() error {
 		mongo.Stop()
 		return nil
@@ -69,14 +69,14 @@ func Setup(nodeId string) *service.Services {
 }
 
 func Test_orbit(t *testing.T) {
-	config_v2.InitConfig("../configs/config_center.yaml")
+	config.InitConfig("../configs/config_center.yaml")
 
 	app.Serve("1")
 }
 
 func Test_RedisDial(t *testing.T) {
-	config_v2.InitConfig("../configs/config_center.yaml")
-	rdb.Start(config_v2.GetRedisOps())
+	config.InitConfig("../configs/config_center.yaml")
+	rdb.Start(config.GetRedisOps())
 	cli := rdb.UniversalClient()
 	result, err := cli.Get(context.TODO(), "test").Result()
 	if err != nil && !errors.Is(err, redis.Nil) {

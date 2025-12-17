@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"gitee.com/orbit-w/orbit/config_v2"
+	"gitee.com/orbit-w/orbit/config"
 	"gitee.com/orbit-w/orbit/lib/module/logger"
 	"go.uber.org/zap"
 )
@@ -65,7 +65,7 @@ func (m *Manager) Stop() error {
 // nodeAddress: 节点地址，格式为 "IP:Port" 或 "Host:Port"
 // serviceName: 服务名称，用于在 Nacos 中注册的服务名
 // 返回集群管理器和错误
-func StartNode(cfg *config_v2.NacosConfig, stage, nodeID, nodeAddress string) error {
+func StartNode(cfg *config.NacosConfig, stage, nodeID, nodeAddress string) error {
 	// 1. 获取配置
 	// 2. 创建 Nacos 注册发现实例
 	registry, err := NewNacosRegistry(cfg, nodeID, nodeAddress, manager.serviceName)

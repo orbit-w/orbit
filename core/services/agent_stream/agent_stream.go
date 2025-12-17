@@ -10,7 +10,7 @@ import (
 
 	gnetwork "gitee.com/orbit-w/meteor/modules/net/network"
 	"gitee.com/orbit-w/mux-go/metadata"
-	"gitee.com/orbit-w/orbit/config_v2"
+	"gitee.com/orbit-w/orbit/config"
 	"gitee.com/orbit-w/orbit/core/network"
 	"gitee.com/orbit-w/orbit/lib/module/logger"
 	"go.uber.org/zap"
@@ -114,5 +114,5 @@ func streamHost() string {
 	// if err != nil {
 	// 	panic(err)
 	// }
-	return net.JoinHostPort("127.0.0.1", config_v2.GetServerPort())
+	return net.JoinHostPort("127.0.0.1", config.GetServerPort())
 }

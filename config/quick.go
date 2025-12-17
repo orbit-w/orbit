@@ -1,4 +1,4 @@
-package config_v2
+package config
 
 import (
 	mongodbdriver "gitee.com/orbit-w/meteor/modules/database/no_sql/mongodb_driver"

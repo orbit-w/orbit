@@ -5,13 +5,13 @@ import (
 	"testing"
 	"time"
 
-	"gitee.com/orbit-w/orbit/config_v2"
+	"gitee.com/orbit-w/orbit/config"
 	netutils "gitee.com/orbit-w/orbit/lib/utils/net_utils"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 )
 
-func Setup(filename string) *config_v2.CenterConfig {
+func Setup(filename string) *config.CenterConfig {
 	// 读取测试配置
 	viper.SetConfigFile(filename)
 	viper.SetConfigType("yaml")
@@ -21,7 +21,7 @@ func Setup(filename string) *config_v2.CenterConfig {
 		panic("viper read config failed")
 	}
 
-	cfg := new(config_v2.CenterConfig)
+	cfg := new(config.CenterConfig)
 	if err := viper.Unmarshal(&cfg); err != nil {
 		panic("unmarshal config failed")
 	}

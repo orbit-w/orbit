@@ -1,4 +1,4 @@
-package config_v2
+package config
 
 // NacosConfig Nacos配置中心配置
 type NacosConfig struct {
