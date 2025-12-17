@@ -330,7 +330,7 @@ func generateControllerFile(ctx *RouterGenContext, existingMethods map[string]*M
 
 	// 生成导入语句
 	code.WriteString("import (\n")
-	code.WriteString("\tmmeobj \"gitee.com/orbit-w/orbit/app/mme\"\n")
+	code.WriteString("\tmmeobj \"gitee.com/orbit-w/orbit/internal/game/mme\"\n")
 
 	// 收集所有需要的包导入
 	packages := make(map[string]bool)
@@ -353,7 +353,7 @@ func generateControllerFile(ctx *RouterGenContext, existingMethods map[string]*M
 	}
 
 	for _, pkgName := range sortedPackages {
-		code.WriteString(fmt.Sprintf("\t\"gitee.com/orbit-w/orbit/app/proto/%s\"\n", pkgName))
+		code.WriteString(fmt.Sprintf("\t\"gitee.com/orbit-w/orbit/internal/game/proto/%s\"\n", pkgName))
 	}
 
 	code.WriteString("\t\"google.golang.org/protobuf/proto\"\n")
@@ -517,8 +517,12 @@ func inferControllerPathFromRouter(routerPath string) string {
 func findControllerFile(controller *ControllerInfo) string {
 	// 尝试多个可能的路径
 	possibleDirs := []string{
+		"internal/game/controller_v2",
+		"internal/game/controller",
 		"app/controller_v2",
 		"app/controller",
+		"orbit/internal/game/controller_v2",
+		"orbit/internal/game/controller",
 		"orbit/app/controller_v2",
 		"orbit/app/controller",
 	}
@@ -564,7 +568,7 @@ func appendNewMethods(ctx *RouterGenContext, controllerPath string, newRequests 
 	for _, imp := range node.Imports {
 		if imp.Path != nil {
 			importPath := strings.Trim(imp.Path.Value, "\"")
-			if importPath == "gitee.com/orbit-w/orbit/app/mme" {
+			if importPath == "gitee.com/orbit-w/orbit/internal/game/mme" {
 				// 检查是否有别名 mmeobj
 				if imp.Name != nil && imp.Name.Name == "mmeobj" {
 					hasMMEObjImport = true
@@ -614,7 +618,7 @@ func appendNewMethods(ctx *RouterGenContext, controllerPath string, newRequests 
 				before := content[:insertPos]
 				after := content[insertPos:]
 				// 确保有正确的缩进和格式
-				newImport := "\n\tmmeobj \"gitee.com/orbit-w/orbit/app/mme\""
+				newImport := "\n\tmmeobj \"gitee.com/orbit-w/orbit/internal/game/mme\""
 				content = before + newImport + after
 
 				// 更新 existingContent

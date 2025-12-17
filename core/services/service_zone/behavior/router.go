@@ -1,7 +1,7 @@
 package servicezone_behavior
 
 import (
-	mmeobj "gitee.com/orbit-w/orbit/app/mme"
+	mmeobj "gitee.com/orbit-w/orbit/internal/game/mme"
 	"google.golang.org/protobuf/proto"
 )
 

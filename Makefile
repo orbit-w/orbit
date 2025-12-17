@@ -41,7 +41,7 @@ GenBlueprint:
 	go run tools/gotools/gen/main.go blueprintgen \
 		--blueprint-dir=$(BLUEPRINT_FULL_DIR) \
 		--proto-output=$(PROTOCOL_FULL_DIR) \
-		--go-output=app/mme \
+		--go-output=internal/game/mme \
 		--debug
 
 # Build for Linux with specified config file

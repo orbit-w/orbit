@@ -14,7 +14,7 @@ var (
 		Long: `Generate protobuf files and MME Go code from blueprint YAML files.
 This tool parses YAML files in the blueprint directory and generates:
 - Protocol buffer files in the protocol/ directory
-- MME Go structure files in the app/mme/ directory`,
+- MME Go structure files in the internal/game/mme/ directory`,
 		Run: runBlueprintGen,
 	}
 )
@@ -93,8 +93,8 @@ func runBlueprintGen(cmd *cobra.Command, args []string) {
 	}
 
 	// 生成 protocol_ids.pb.go 文件
-	// protocol_ids.pb.go 应该输出到 app/proto/ 目录下，每个 NetWall 包生成一个文件
-	// 使用 protocol-ids-output 参数，默认值为 app/proto
+	// protocol_ids.pb.go 应该输出到 internal/game/proto/ 目录下，每个 NetWall 包生成一个文件
+	// 使用 protocol-ids-output 参数，默认值为 internal/game/proto
 	if err := protoGen.GenerateProtocolIDs(protocolIDsOutput); err != nil {
 		cmd.PrintErrln("Failed to generate protocol_ids.pb.go:", err)
 		return
@@ -143,10 +143,10 @@ func runBlueprintGen(cmd *cobra.Command, args []string) {
 func InitCmd(father *cobra.Command) {
 	blueprintGenCmd.Flags().String("blueprint-dir", "../protocol/blueprint", "Directory containing blueprint YAML files")
 	blueprintGenCmd.Flags().String("proto-output", "../protocol/protocol", "Output directory for proto files")
-	blueprintGenCmd.Flags().String("go-output", "app/mme", "Output directory for Go files")
-	blueprintGenCmd.Flags().String("protocol-ids-output", "app/proto/pb", "Output directory for protocol_ids.pb.go file")
-	blueprintGenCmd.Flags().String("controller-dir", "app/controller_v2", "Directory containing Controller files")
-	blueprintGenCmd.Flags().String("router-output", "app/routers/routers.go", "Output file path for generated router code")
+	blueprintGenCmd.Flags().String("go-output", "internal/game/mme", "Output directory for Go files")
+	blueprintGenCmd.Flags().String("protocol-ids-output", "internal/game/proto/pb", "Output directory for protocol_ids.pb.go file")
+	blueprintGenCmd.Flags().String("controller-dir", "internal/game/controller_v2", "Directory containing Controller files")
+	blueprintGenCmd.Flags().String("router-output", "internal/game/routers/routers.go", "Output file path for generated router code")
 	blueprintGenCmd.Flags().String("controller-path", "", "Controller file path (default: controller-dir/controller.go)")
 	blueprintGenCmd.Flags().Bool("debug", false, "Enable debug mode")
 

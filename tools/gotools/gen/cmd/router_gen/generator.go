@@ -30,7 +30,7 @@ func generateRouterCode(ctx *RouterGenContext) error {
 		// Controller 包路径：包名是 controllerv2，但目录是 controller_v2
 		// 需要从包名推断目录名（将驼峰转换为下划线格式）
 		controllerDir := toSnakeCase(ctx.Controller.PackageName)
-		code.WriteString(fmt.Sprintf("\t%s \"gitee.com/orbit-w/orbit/app/%s\"\n",
+		code.WriteString(fmt.Sprintf("\t%s \"gitee.com/orbit-w/orbit/internal/game/%s\"\n",
 			ctx.Controller.PackageName, controllerDir))
 	}
 
@@ -55,7 +55,7 @@ func generateRouterCode(ctx *RouterGenContext) error {
 	}
 
 	for _, pkgName := range sortedPackages {
-		code.WriteString(fmt.Sprintf("\t\"gitee.com/orbit-w/orbit/app/proto/%s\"\n", pkgName))
+		code.WriteString(fmt.Sprintf("\t\"gitee.com/orbit-w/orbit/internal/game/proto/%s\"\n", pkgName))
 	}
 
 	// 添加固定导入（检查是否已存在 mme 包）
@@ -67,11 +67,11 @@ func generateRouterCode(ctx *RouterGenContext) error {
 		}
 	}
 	if !hasMME {
-		code.WriteString("\t\"gitee.com/orbit-w/orbit/app/proto/mme\"\n")
+		code.WriteString("\t\"gitee.com/orbit-w/orbit/internal/game/proto/mme\"\n")
 	}
-	code.WriteString("\t\"gitee.com/orbit-w/orbit/app/proto/pb\"\n")
+	code.WriteString("\t\"gitee.com/orbit-w/orbit/internal/game/proto/pb\"\n")
 	code.WriteString("\tservicezone_behavior \"gitee.com/orbit-w/orbit/core/services/service_zone/behavior\"\n\n")
-	code.WriteString("\tmmeobj \"gitee.com/orbit-w/orbit/app/mme\"\n")
+	code.WriteString("\tmmeobj \"gitee.com/orbit-w/orbit/internal/game/mme\"\n")
 	code.WriteString("\t\"google.golang.org/protobuf/proto\"\n")
 	code.WriteString(")\n\n")
 

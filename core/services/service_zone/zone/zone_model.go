@@ -3,9 +3,9 @@ package servicezone
 import (
 	"fmt"
 
-	mmeobj "gitee.com/orbit-w/orbit/app/mme"
-	"gitee.com/orbit-w/orbit/app/proto/mme"
 	zone_meta "gitee.com/orbit-w/orbit/core/services/service_zone/meta"
+	mmeobj "gitee.com/orbit-w/orbit/internal/game/mme"
+	"gitee.com/orbit-w/orbit/internal/game/proto/mme"
 	"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder"
 	"gitee.com/orbit-w/orbit/lib/module/persistence"
 	"go.mongodb.org/mongo-driver/v2/bson"

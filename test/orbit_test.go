@@ -8,21 +8,21 @@ import (
 	"time"
 
 	"gitee.com/orbit-w/meteor/modules/database/rdb"
-	"gitee.com/orbit-w/orbit/app"
+	"gitee.com/orbit-w/orbit/internal/game"
 	"go.mongodb.org/mongo-driver/v2/bson"
 
-	mmeobj "gitee.com/orbit-w/orbit/app/mme"
-	"gitee.com/orbit-w/orbit/app/modules/service"
-	"gitee.com/orbit-w/orbit/app/proto/core"
-	"gitee.com/orbit-w/orbit/app/proto/mme"
-	"gitee.com/orbit-w/orbit/app/proto/pb"
-	"gitee.com/orbit-w/orbit/app/routers"
 	"gitee.com/orbit-w/orbit/config"
 	"gitee.com/orbit-w/orbit/core/network"
 	servicezone_behavior "gitee.com/orbit-w/orbit/core/services/service_zone/behavior"
 	zone_meta "gitee.com/orbit-w/orbit/core/services/service_zone/meta"
 	servicezone_mgr "gitee.com/orbit-w/orbit/core/services/service_zone/mgr"
 	servicezone "gitee.com/orbit-w/orbit/core/services/service_zone/zone"
+	mmeobj "gitee.com/orbit-w/orbit/internal/game/mme"
+	"gitee.com/orbit-w/orbit/internal/game/modules/service"
+	"gitee.com/orbit-w/orbit/internal/game/proto/core"
+	"gitee.com/orbit-w/orbit/internal/game/proto/mme"
+	"gitee.com/orbit-w/orbit/internal/game/proto/pb"
+	"gitee.com/orbit-w/orbit/internal/game/routers"
 	"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder"
 	"gitee.com/orbit-w/orbit/lib/module/db/mongo"
 	"gitee.com/orbit-w/orbit/lib/module/persistence"
@@ -71,7 +71,7 @@ func Setup(nodeId string) *service.Services {
 func Test_orbit(t *testing.T) {
 	config.InitConfig("../configs/config_center.yaml")
 
-	app.Serve("1")
+	game.Serve("1")
 }
 
 func Test_RedisDial(t *testing.T) {

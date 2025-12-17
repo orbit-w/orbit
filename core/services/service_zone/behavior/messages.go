@@ -1,11 +1,11 @@
 package servicezone_behavior
 
 import (
-	mmeobj "gitee.com/orbit-w/orbit/app/mme"
-	"gitee.com/orbit-w/orbit/app/proto/core"
-	"gitee.com/orbit-w/orbit/app/proto/mme"
-	"gitee.com/orbit-w/orbit/app/proto/pb"
 	"gitee.com/orbit-w/orbit/core/network"
+	mmeobj "gitee.com/orbit-w/orbit/internal/game/mme"
+	"gitee.com/orbit-w/orbit/internal/game/proto/core"
+	"gitee.com/orbit-w/orbit/internal/game/proto/mme"
+	"gitee.com/orbit-w/orbit/internal/game/proto/pb"
 	"github.com/asynkron/protoactor-go/actor"
 	"google.golang.org/protobuf/proto"
 )

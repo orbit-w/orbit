@@ -1,8 +1,8 @@
 package servicezone
 
 import (
-	mmeobj "gitee.com/orbit-w/orbit/app/mme"
-	"gitee.com/orbit-w/orbit/app/proto/mme"
+	mmeobj "gitee.com/orbit-w/orbit/internal/game/mme"
+	"gitee.com/orbit-w/orbit/internal/game/proto/mme"
 	"google.golang.org/protobuf/proto"
 )
 

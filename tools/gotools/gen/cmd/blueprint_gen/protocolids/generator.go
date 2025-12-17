@@ -36,7 +36,7 @@ func NewGenerator(netWalls []NetWallFile) *Generator {
 
 // Generate 生成 protocol_ids.pb.go 文件
 // 收集所有 NetWall 中的 Request 和 Response，生成一个统一的 protocol_ids.pb.go 文件
-// outputDir: 输出目录，通常是 app/proto/pb
+// outputDir: 输出目录，通常是 internal/game/proto/pb
 func (g *Generator) Generate(outputDir string) error {
 	// 收集所有 NetWall 包的消息
 	allMessages := g.collectAllNetWallMessages()
@@ -52,7 +52,7 @@ func (g *Generator) Generate(outputDir string) error {
 	// 生成协议ID
 	messageIDs := g.generateProtocolIDs(allMessages)
 
-	// 生成文件，输出到 outputDir 目录（应该是 app/proto/pb）
+	// 生成文件，输出到 outputDir 目录（通常是 internal/game/proto/pb）
 	return g.generateProtocolIDsFile(messageIDs, outputDir)
 }
 
