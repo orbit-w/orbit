@@ -2,8 +2,8 @@ package servicezone_behavior
 
 import (
 	mmeobj "gitee.com/orbit-w/orbit/internal/game/mme"
-	"gitee.com/orbit-w/orbit/internal/game/proto/core"
-	"gitee.com/orbit-w/orbit/internal/game/proto/mme"
+	"gitee.com/orbit-w/orbit/pkg/proto/core"
+	"gitee.com/orbit-w/orbit/pkg/proto/mme"
 	"github.com/asynkron/protoactor-go/actor"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"

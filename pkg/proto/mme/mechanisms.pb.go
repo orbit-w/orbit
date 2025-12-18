@@ -510,7 +510,7 @@ const file_mechanisms_proto_rawDesc = "" +
 	"\x03Key\x18\x01 \x01(\x05R\x03Key\x12\x14\n" +
 	"\x05Value\x18\x02 \x01(\x05R\x05Value\x12\x1a\n" +
 	"\bIsDelete\x18\x03 \x01(\bR\bIsDeleteB\t\n" +
-	"\a_ConfIdB1Z/gitee.com/orbit-w/orbit/internal/game/proto/mmeb\x06proto3"
+	"\a_ConfIdB'Z%gitee.com/orbit-w/orbit/pkg/proto/mmeb\x06proto3"
 
 var (
 	file_mechanisms_proto_rawDescOnce sync.Once

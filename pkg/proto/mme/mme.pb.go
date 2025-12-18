@@ -261,7 +261,7 @@ const file_mme_proto_rawDesc = "" +
 	"\x03Exp\x18\x01 \x01(\x05H\x00R\x03Exp\x88\x01\x01\x12(\n" +
 	"\x03Loc\x18\xe8\a \x01(\v2\x10.MME.MMELocationH\x01R\x03Loc\x88\x01\x01B\x06\n" +
 	"\x04_ExpB\x06\n" +
-	"\x04_LocB1Z/gitee.com/orbit-w/orbit/internal/game/proto/mmeb\x06proto3"
+	"\x04_LocB'Z%gitee.com/orbit-w/orbit/pkg/proto/mmeb\x06proto3"
 
 var (
 	file_mme_proto_rawDescOnce sync.Once

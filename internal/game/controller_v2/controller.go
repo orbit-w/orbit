@@ -9,9 +9,9 @@ import (
 	mmeobj "gitee.com/orbit-w/orbit/internal/game/mme"
 	"go.uber.org/zap"
 
-	"gitee.com/orbit-w/orbit/internal/game/proto/core"
-	"gitee.com/orbit-w/orbit/internal/game/proto/mme"
-	"gitee.com/orbit-w/orbit/internal/game/proto/sample"
+	"gitee.com/orbit-w/orbit/pkg/proto/core"
+	"gitee.com/orbit-w/orbit/pkg/proto/mme"
+	"gitee.com/orbit-w/orbit/pkg/proto/sample"
 	"google.golang.org/protobuf/proto"
 )
 

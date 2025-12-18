@@ -328,35 +328,22 @@ func generateControllerFile(ctx *RouterGenContext, existingMethods map[string]*M
 		code.WriteString("package controllerv2\n\n")
 	}
 
+	// 从现有文件中提取导入（如果文件存在）
+	existingImports := extractExistingImports(ctx)
+
 	// 生成导入语句
 	code.WriteString("import (\n")
-	code.WriteString("\tmmeobj \"gitee.com/orbit-w/orbit/internal/game/mme\"\n")
 
-	// 收集所有需要的包导入
-	packages := make(map[string]bool)
+	// 收集所有需要的 proto 包导入
+	protoPackages := make(map[string]bool)
 	for _, req := range ctx.Requests {
-		packages[req.PackageName] = true
+		protoPackages[req.PackageName] = true
 	}
 
-	// 添加 proto 包导入
-	sortedPackages := make([]string, 0, len(packages))
-	for pkgName := range packages {
-		sortedPackages = append(sortedPackages, pkgName)
-	}
-	// 简单排序
-	for i := 0; i < len(sortedPackages)-1; i++ {
-		for j := i + 1; j < len(sortedPackages); j++ {
-			if sortedPackages[i] > sortedPackages[j] {
-				sortedPackages[i], sortedPackages[j] = sortedPackages[j], sortedPackages[i]
-			}
-		}
-	}
+	// 合并现有导入和新需要的导入，按标准分组
+	allImports := mergeAndGroupImports(existingImports, protoPackages, ctx)
+	code.WriteString(allImports)
 
-	for _, pkgName := range sortedPackages {
-		code.WriteString(fmt.Sprintf("\t\"gitee.com/orbit-w/orbit/internal/game/proto/%s\"\n", pkgName))
-	}
-
-	code.WriteString("\t\"google.golang.org/protobuf/proto\"\n")
 	code.WriteString(")\n\n")
 
 	// 确定 Controller 类型名和变量名
@@ -716,4 +703,139 @@ func appendNewMethods(ctx *RouterGenContext, controllerPath string, newRequests 
 	}
 
 	return nil
+}
+
+// extractExistingImports 从现有 Controller 文件中提取导入
+func extractExistingImports(ctx *RouterGenContext) map[string]string {
+	imports := make(map[string]string) // path -> alias (or "" for no alias)
+
+	// 确定 Controller 文件路径
+	controllerPath := ctx.ControllerPath
+	if controllerPath == "" {
+		controllerPath = inferControllerPath(ctx)
+	}
+	if controllerPath == "" {
+		return imports
+	}
+
+	// 检查文件是否存在
+	if _, err := os.Stat(controllerPath); os.IsNotExist(err) {
+		return imports
+	}
+
+	// 解析文件
+	fset := token.NewFileSet()
+	node, err := parser.ParseFile(fset, controllerPath, nil, parser.ParseComments)
+	if err != nil {
+		return imports
+	}
+
+	// 提取所有导入
+	for _, imp := range node.Imports {
+		if imp.Path == nil {
+			continue
+		}
+
+		path := strings.Trim(imp.Path.Value, "\"")
+		alias := ""
+		if imp.Name != nil {
+			alias = imp.Name.Name
+		}
+
+		imports[path] = alias
+	}
+
+	return imports
+}
+
+// mergeAndGroupImports 合并并分组导入
+func mergeAndGroupImports(existingImports map[string]string, protoPackages map[string]bool, ctx *RouterGenContext) string {
+	var result strings.Builder
+
+	// 分组：第三方库和本地项目包
+	thirdParty := make([]string, 0) // meteor, zap 等外部依赖
+	localPkg := make([]string, 0)   // 本地项目包（mmeobj, proto）
+	localProto := make([]string, 0) // pkg/proto/*
+	googlePb := ""                  // google.golang.org/protobuf/proto
+
+	// 从现有导入中提取（除了要重新生成的 proto 包）
+	for path, alias := range existingImports {
+		// 跳过将被重新生成的 proto 包导入
+		if strings.Contains(path, "/pkg/proto/") {
+			continue
+		}
+		if path == "google.golang.org/protobuf/proto" {
+			googlePb = path
+			continue
+		}
+
+		// 区分第三方库和本地包
+		if strings.Contains(path, "gitee.com/orbit-w/orbit/") {
+			// 本地项目包
+			if alias != "" {
+				localPkg = append(localPkg, fmt.Sprintf("\t%s \"%s\"\n", alias, path))
+			} else {
+				localPkg = append(localPkg, fmt.Sprintf("\t\"%s\"\n", path))
+			}
+		} else if strings.HasPrefix(path, "gitee.com") ||
+			strings.HasPrefix(path, "github.com") ||
+			strings.HasPrefix(path, "go.uber.org") {
+			// 第三方库（meteor, zap 等）
+			if alias != "" {
+				thirdParty = append(thirdParty, fmt.Sprintf("\t%s \"%s\"\n", alias, path))
+			} else {
+				thirdParty = append(thirdParty, fmt.Sprintf("\t\"%s\"\n", path))
+			}
+		}
+	}
+
+	// 确保有 mmeobj 导入
+	if _, exists := existingImports["gitee.com/orbit-w/orbit/internal/game/mme"]; !exists {
+		localPkg = append(localPkg, "\tmmeobj \"gitee.com/orbit-w/orbit/internal/game/mme\"\n")
+	}
+
+	// 添加所需的 proto 包导入
+	sortedProtoPackages := make([]string, 0, len(protoPackages))
+	for pkgName := range protoPackages {
+		sortedProtoPackages = append(sortedProtoPackages, pkgName)
+	}
+	// 简单排序
+	for i := 0; i < len(sortedProtoPackages)-1; i++ {
+		for j := i + 1; j < len(sortedProtoPackages); j++ {
+			if sortedProtoPackages[i] > sortedProtoPackages[j] {
+				sortedProtoPackages[i], sortedProtoPackages[j] = sortedProtoPackages[j], sortedProtoPackages[i]
+			}
+		}
+	}
+
+	for _, pkgName := range sortedProtoPackages {
+		localProto = append(localProto, fmt.Sprintf("\t\"gitee.com/orbit-w/orbit/pkg/proto/%s\"\n", pkgName))
+	}
+
+	// 确保有 google.golang.org/protobuf/proto
+	if googlePb == "" {
+		googlePb = "google.golang.org/protobuf/proto"
+	}
+	localProto = append(localProto, fmt.Sprintf("\t\"%s\"\n", googlePb))
+
+	// 组装最终的导入
+	// 1. 第三方库（meteor, zap）
+	for _, imp := range thirdParty {
+		result.WriteString(imp)
+	}
+
+	// 2. 本地项目包（空行分隔）
+	if len(thirdParty) > 0 && (len(localPkg) > 0 || len(localProto) > 0) {
+		result.WriteString("\n")
+	}
+
+	for _, imp := range localPkg {
+		result.WriteString(imp)
+	}
+
+	for _, imp := range localProto {
+		result.WriteString(imp)
+	}
+
+	return result.String()
 }

@@ -7,7 +7,7 @@
 package core
 
 import (
-	mme "gitee.com/orbit-w/orbit/internal/game/proto/mme"
+	mme "gitee.com/orbit-w/orbit/pkg/proto/mme"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -635,7 +635,7 @@ const file_core_proto_rawDesc = "" +
 	"\x04Data\x18\x02 \x01(\fH\x01R\x04Data\x88\x01\x01B\f\n" +
 	"\n" +
 	"_EntityRefB\a\n" +
-	"\x05_DataB2Z0gitee.com/orbit-w/orbit/internal/game/proto/coreb\x06proto3"
+	"\x05_DataB(Z&gitee.com/orbit-w/orbit/pkg/proto/coreb\x06proto3"
 
 var (
 	file_core_proto_rawDescOnce sync.Once

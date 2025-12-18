@@ -168,7 +168,7 @@ const file_sample_proto_rawDesc = "" +
 	"\x06Result\x18\x01 \x01(\tH\x00R\x06Result\x88\x01\x01B\t\n" +
 	"\a_ResultB\b\n" +
 	"\x06_TitleB\r\n" +
-	"\v_PageNumberB4Z2gitee.com/orbit-w/orbit/internal/game/proto/sampleb\x06proto3"
+	"\v_PageNumberB*Z(gitee.com/orbit-w/orbit/pkg/proto/sampleb\x06proto3"
 
 var (
 	file_sample_proto_rawDescOnce sync.Once

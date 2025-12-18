@@ -3,8 +3,8 @@ package servicezone_behavior
 import (
 	"fmt"
 
-	"gitee.com/orbit-w/orbit/internal/game/proto/mme"
-	"gitee.com/orbit-w/orbit/internal/game/proto/pb"
+	"gitee.com/orbit-w/orbit/pkg/proto/mme"
+	"gitee.com/orbit-w/orbit/pkg/proto/pb"
 	"google.golang.org/protobuf/proto"
 )
 

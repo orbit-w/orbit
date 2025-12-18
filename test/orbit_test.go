@@ -9,6 +9,7 @@ import (
 
 	"gitee.com/orbit-w/meteor/modules/database/rdb"
 	"gitee.com/orbit-w/orbit/internal/game"
+	"gitee.com/orbit-w/orbit/pkg/proto/pb"
 	"go.mongodb.org/mongo-driver/v2/bson"
 
 	"gitee.com/orbit-w/orbit/config"
@@ -19,13 +20,12 @@ import (
 	servicezone "gitee.com/orbit-w/orbit/core/services/service_zone/zone"
 	mmeobj "gitee.com/orbit-w/orbit/internal/game/mme"
 	"gitee.com/orbit-w/orbit/internal/game/modules/service"
-	"gitee.com/orbit-w/orbit/internal/game/proto/core"
-	"gitee.com/orbit-w/orbit/internal/game/proto/mme"
-	"gitee.com/orbit-w/orbit/internal/game/proto/pb"
 	"gitee.com/orbit-w/orbit/internal/game/routers"
 	"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder"
 	"gitee.com/orbit-w/orbit/lib/module/db/mongo"
 	"gitee.com/orbit-w/orbit/lib/module/persistence"
+	"gitee.com/orbit-w/orbit/pkg/proto/core"
+	"gitee.com/orbit-w/orbit/pkg/proto/mme"
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/protobuf/proto"
 )

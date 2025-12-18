@@ -2,7 +2,7 @@ package servicezone
 
 import (
 	mmeobj "gitee.com/orbit-w/orbit/internal/game/mme"
-	"gitee.com/orbit-w/orbit/internal/game/proto/mme"
+	"gitee.com/orbit-w/orbit/pkg/proto/mme"
 )
 
 // Subscriber 订阅者信息

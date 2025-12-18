@@ -7,12 +7,12 @@ package routers
 import (
 	"fmt"
 
-	controllerv2 "gitee.com/orbit-w/orbit/internal/game/controller_v2"
-	"gitee.com/orbit-w/orbit/internal/game/proto/core"
-	"gitee.com/orbit-w/orbit/internal/game/proto/mme"
-	"gitee.com/orbit-w/orbit/internal/game/proto/sample"
-	"gitee.com/orbit-w/orbit/internal/game/proto/pb"
 	servicezone_behavior "gitee.com/orbit-w/orbit/core/services/service_zone/behavior"
+	controllerv2 "gitee.com/orbit-w/orbit/internal/game/controller_v2"
+	"gitee.com/orbit-w/orbit/pkg/proto/core"
+	"gitee.com/orbit-w/orbit/pkg/proto/mme"
+	"gitee.com/orbit-w/orbit/pkg/proto/pb"
+	"gitee.com/orbit-w/orbit/pkg/proto/sample"
 
 	mmeobj "gitee.com/orbit-w/orbit/internal/game/mme"
 	"google.golang.org/protobuf/proto"
@@ -44,14 +44,14 @@ func init() {
 		return controllerv2.GControllerV2.HandleSetEntityRequest(req), "Request_SetEntityRequest_Rsp", nil
 	})
 
-	RegisterHandler(pb.PID_Request_AskLevelUp, func(ctx servicezone_behavior.IContext, msg proto.Message, entities ...mmeobj.IEntity) (proto.Message, string, error) {
-		req := msg.(*mme.Request_AskLevelUp)
-		return controllerv2.GControllerV2.HandleAskLevelUp(req), "Request_AskLevelUp_Rsp", nil
-	})
-
 	RegisterHandler(pb.PID_Request_SearchNewsPaper, func(ctx servicezone_behavior.IContext, msg proto.Message, entities ...mmeobj.IEntity) (proto.Message, string, error) {
 		req := msg.(*sample.Request_SearchNewsPaper)
 		return controllerv2.GControllerV2.HandleSearchNewsPaper(req), "Request_SearchNewsPaper_Rsp", nil
+	})
+
+	RegisterHandler(pb.PID_Request_AskLevelUp, func(ctx servicezone_behavior.IContext, msg proto.Message, entities ...mmeobj.IEntity) (proto.Message, string, error) {
+		req := msg.(*mme.Request_AskLevelUp)
+		return controllerv2.GControllerV2.HandleAskLevelUp(req), "Request_AskLevelUp_Rsp", nil
 	})
 
 }

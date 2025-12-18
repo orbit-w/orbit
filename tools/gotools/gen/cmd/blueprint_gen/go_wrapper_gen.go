@@ -486,7 +486,7 @@ func (g *GoWrapperGenerator) generateModuleWrappers(outputDir string) error {
 		} else {
 			// 如果文件不存在，需要添加 package 声明和导入
 			imports := "import (\n"
-			imports += "\t\"gitee.com/orbit-w/orbit/internal/game/proto/mme\"\n"
+			imports += "\t\"gitee.com/orbit-w/orbit/pkg/proto/mme\"\n"
 			imports += "\tdirtyflag \"gitee.com/orbit-w/orbit/lib/base/dirty_flag\"\n"
 			imports += "\tfieldmeta \"gitee.com/orbit-w/orbit/lib/base/field_meta\"\n"
 			imports += "\t\"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder\"\n"
@@ -986,7 +986,7 @@ func (g *GoWrapperGenerator) generateEntityWrappers(outputDir string) error {
 		} else {
 			// 如果文件不存在，需要添加 package 声明和导入
 			imports := "import (\n"
-			imports += "\t\"gitee.com/orbit-w/orbit/internal/game/proto/mme\"\n"
+			imports += "\t\"gitee.com/orbit-w/orbit/pkg/proto/mme\"\n"
 			imports += "\tdirtyflag \"gitee.com/orbit-w/orbit/lib/base/dirty_flag\"\n"
 			imports += "\tfieldmeta \"gitee.com/orbit-w/orbit/lib/base/field_meta\"\n"
 			imports += "\t\"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder\"\n"

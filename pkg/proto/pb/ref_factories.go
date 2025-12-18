@@ -3,8 +3,8 @@ package pb
 import (
 	"fmt"
 
-	"gitee.com/orbit-w/orbit/internal/game/proto/core"
-	"gitee.com/orbit-w/orbit/internal/game/proto/mme"
+	"gitee.com/orbit-w/orbit/pkg/proto/core"
+	"gitee.com/orbit-w/orbit/pkg/proto/mme"
 	"google.golang.org/protobuf/proto"
 )
 

@@ -104,7 +104,7 @@ const file_modules_proto_rawDesc = "" +
 	"\n" +
 	"\b_LevelUpB\x0f\n" +
 	"\r_TalentUnlockB\v\n" +
-	"\t_SkinWearB1Z/gitee.com/orbit-w/orbit/internal/game/proto/mmeb\x06proto3"
+	"\t_SkinWearB'Z%gitee.com/orbit-w/orbit/pkg/proto/mmeb\x06proto3"
 
 var (
 	file_modules_proto_rawDescOnce sync.Once

@@ -418,7 +418,7 @@ const file_common_proto_rawDesc = "" +
 	"\n" +
 	"EntityType\x12\x15\n" +
 	"\x11EntityTypeUnknown\x10\x00\x12\x14\n" +
-	"\x10PlayerEntityType\x10\x01B1Z/gitee.com/orbit-w/orbit/internal/game/proto/mmeb\x06proto3"
+	"\x10PlayerEntityType\x10\x01B'Z%gitee.com/orbit-w/orbit/pkg/proto/mmeb\x06proto3"
 
 var (
 	file_common_proto_rawDescOnce sync.Once

@@ -1,9 +1,9 @@
 package mme
 
 import (
-	"gitee.com/orbit-w/orbit/internal/game/proto/mme"
 	"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder"
 	mmemodel "gitee.com/orbit-w/orbit/lib/module/mme_model"
+	"gitee.com/orbit-w/orbit/pkg/proto/mme"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"google.golang.org/protobuf/proto"
 )

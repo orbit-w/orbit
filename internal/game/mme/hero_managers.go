@@ -2,12 +2,12 @@ package mme
 
 import (
 	"gitee.com/orbit-w/meteor/bases/container/xmap"
-	"gitee.com/orbit-w/orbit/internal/game/proto/mme"
 	dirtyflag "gitee.com/orbit-w/orbit/lib/base/dirty_flag"
 	fieldmeta "gitee.com/orbit-w/orbit/lib/base/field_meta"
 	"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder"
 	mmemodel "gitee.com/orbit-w/orbit/lib/module/mme_model"
 	xmapwrapper "gitee.com/orbit-w/orbit/lib/module/xmapwrapper"
+	"gitee.com/orbit-w/orbit/pkg/proto/mme"
 	"google.golang.org/protobuf/proto"
 )
 

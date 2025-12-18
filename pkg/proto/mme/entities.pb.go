@@ -81,7 +81,7 @@ const file_entities_proto_rawDesc = "" +
 	"\fPlayerEntity\x127\n" +
 	"\vHeroManager\x18\x01 \x01(\v2\x10.MME.HeroManagerH\x00R\vHeroManager\x88\x01\x01\x12\x15\n" +
 	"\x05XXXId\x18\x90N \x01(\x03R\x05XXXIdB\x0e\n" +
-	"\f_HeroManagerB1Z/gitee.com/orbit-w/orbit/internal/game/proto/mmeb\x06proto3"
+	"\f_HeroManagerB'Z%gitee.com/orbit-w/orbit/pkg/proto/mmeb\x06proto3"
 
 var (
 	file_entities_proto_rawDescOnce sync.Once

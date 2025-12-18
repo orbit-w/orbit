@@ -147,7 +147,7 @@ const file_managers_proto_rawDesc = "" +
 	"\x1aHeroMap_XXXMapChangeRecord\x12\x10\n" +
 	"\x03Key\x18\x01 \x01(\x03R\x03Key\x12%\n" +
 	"\x05Value\x18\x02 \x01(\v2\x0f.MME.HeroModuleR\x05Value\x12\x1a\n" +
-	"\bIsDelete\x18\x03 \x01(\bR\bIsDeleteB1Z/gitee.com/orbit-w/orbit/internal/game/proto/mmeb\x06proto3"
+	"\bIsDelete\x18\x03 \x01(\bR\bIsDeleteB'Z%gitee.com/orbit-w/orbit/pkg/proto/mmeb\x06proto3"
 
 var (
 	file_managers_proto_rawDescOnce sync.Once
