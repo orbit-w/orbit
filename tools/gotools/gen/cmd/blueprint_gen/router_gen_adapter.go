@@ -61,6 +61,7 @@ func convertNetWallsToRequestInfos(netWalls []*NetWallFile) []*router_gen.Reques
 	for _, netwall := range netWalls {
 		for _, req := range netwall.Requests {
 			requestInfo := convertNetMessageToRequestInfo(req, netwall.PackageName)
+			fmt.Println("DEBUG: requestInfo", netwall.PackageName, requestInfo)
 			if requestInfo != nil {
 				requestInfos = append(requestInfos, requestInfo)
 			}
