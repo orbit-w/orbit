@@ -10,6 +10,7 @@ import (
 	"gitee.com/orbit-w/meteor/modules/database/rdb"
 	"gitee.com/orbit-w/orbit/internal/game"
 	"gitee.com/orbit-w/orbit/pkg/proto/pb"
+	"gitee.com/orbit-w/orbit/pkg/proto/play"
 	"go.mongodb.org/mongo-driver/v2/bson"
 
 	"gitee.com/orbit-w/orbit/config"
@@ -88,7 +89,7 @@ func Test_RedisDial(t *testing.T) {
 func initRouter() {
 	servicezone_behavior.SetRouter(routers.GetRouter())
 	routers.RegisterFackRouter(pb.PID_Request_LoginRequest, func(ctx servicezone_behavior.IContext, msg proto.Message, entities ...mmeobj.IEntity) (proto.Message, string, error) {
-		_ = msg.(*core.Request_LoginRequest)
+		_ = msg.(*play.Request_LoginRequest)
 		playerEntity, ok := entities[0].(*mmeobj.PlayerEntityWrapper)
 		if !ok {
 			return nil, "", fmt.Errorf("player entity not found in entities")
@@ -184,7 +185,7 @@ func Test_RequestLogin(t *testing.T) {
 	ref.EntityId = proto.Int64(1600000)
 	ref.EntityType = mme.EntityType_PlayerEntityType.Enum()
 
-	req := &core.Request_LoginRequest{
+	req := &play.Request_LoginRequest{
 		PlayerEntityRef: ref,
 	}
 	data, err := proto.Marshal(req)
