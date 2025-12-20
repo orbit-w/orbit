@@ -2,7 +2,6 @@ package blueprint_gen
 
 import (
 	"fmt"
-	"strings"
 
 	blueprint_types "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types"
 )
@@ -79,7 +78,7 @@ func (r *TypeReferenceResolver) resolveEnumTypeReference(typeName, currentPackag
 
 	// 如果枚举不在当前包中，需要添加包名前缀
 	if enum.SourceProto != currentPackageName {
-		packageName := r.getPackageNameForSource(enum.SourceProto)
+		packageName := r.getPackageNameForMessageName(enum.Name)
 		if packageName != "" && packageName != currentPackageName {
 			// MME 包中的枚举不需要前缀（因为都在同一个包中）
 			// 其他包的枚举需要添加包名前缀
@@ -124,18 +123,9 @@ func (r *TypeReferenceResolver) isEnumType(typeName string) bool {
 	return exists
 }
 
-// getPackageNameForSource 根据 SourceProto 返回对应的包名
-func (r *TypeReferenceResolver) getPackageNameForSource(sourceProto string) string {
-	switch sourceProto {
-	case "entities", "managers", "modules", "mechanisms", "common":
-		return "MME" // 这些都在 MME 包中
-	default:
-		// NetWall 包名，返回原值（首字母大写）
-		if sourceProto != "" {
-			return strings.ToUpper(sourceProto[:1]) + sourceProto[1:]
-		}
-		return sourceProto
-	}
+// getPackageNameForMessageName 根据 Message Name 返回对应的包名
+func (r *TypeReferenceResolver) getPackageNameForMessageName(name string) string {
+	return r.ctx.GetPackageProtoName(name)
 }
 
 // CollectImportsFromField 从字段中收集需要的导入
@@ -226,9 +216,9 @@ func (r *TypeReferenceResolver) collectImportsFromFieldType(fieldType *blueprint
 	if enum, exists := r.enumMap[typeName]; exists {
 		// 如果枚举不在当前文件中，需要导入
 		if enum.SourceProto != currentSourceProto {
-			importFile := r.getProtoImportForSource(enum.SourceProto)
-			if importFile != "" && importFile != r.getProtoImportForSource(currentSourceProto) {
-				imports[importFile] = true
+			importFileName := r.genProtoImportByObjectName(typeName)
+			if importFileName != "" {
+				imports[importFileName] = true
 			}
 		}
 		return
@@ -250,47 +240,6 @@ func (r *TypeReferenceResolver) genProtoImportByObjectName(name string) string {
 	return r.ctx.GetProtoImportByObjectName(name)
 }
 
-// getProtoImportForSource 根据 SourceProto 返回对应的 proto 导入文件
-func (r *TypeReferenceResolver) getProtoImportForSource(sourceProto string) string {
-	switch sourceProto {
-	case "entities":
-		return "entities.proto"
-	case "managers":
-		return "managers.proto"
-	case "modules":
-		return "modules.proto"
-	case "mechanisms":
-		return "mechanisms.proto"
-	case "common":
-		return "common.proto"
-	default:
-		// NetWall 包名，转换为小写并添加 .proto 后缀
-		if sourceProto != "" {
-			return strings.ToLower(sourceProto) + ".proto"
-		}
-		return ""
-	}
-}
-
-// getProtoImportForPackage 根据包名返回对应的 proto 导入文件
-func (r *TypeReferenceResolver) getProtoImportForPackage(packageName string) string {
-	switch packageName {
-	case "MME":
-		// MME 包可能来自多个文件，需要根据具体类型判断
-		// 这里返回空，由调用方根据具体类型决定
-		return ""
-	case "Enum":
-		// 枚举可能来自多个文件，需要根据具体类型判断
-		return ""
-	default:
-		// NetWall 包名，转换为小写并添加 .proto 后缀
-		if packageName != "" {
-			return strings.ToLower(packageName) + ".proto"
-		}
-		return ""
-	}
-}
-
 // CollectImportsFromFields 从字段列表中收集所有需要的导入
 // currentPackageName: 当前 proto 文件的包名（如 "MME", "Core" 等）
 // 注意：对于 MME 包，应该使用 CollectImportsFromFieldsWithSourceProto 并传入 SourceProto
@@ -310,103 +259,4 @@ func (r *TypeReferenceResolver) CollectImportsFromFields(fields []*blueprint_typ
 		result = append(result, imp)
 	}
 	return UniqueProtoImports(result)
-}
-
-// CollectMessageImportsFromFields 从字段列表中收集消息类型的导入（不包括枚举）
-func (r *TypeReferenceResolver) CollectMessageImportsFromFields(fields []*blueprint_types.Field, currentPackageName string) []string {
-	imports := make(map[string]bool)
-
-	if r.nameSpaces == nil {
-		r.nameSpaces = r.ctx.GetNameSpace()
-	}
-
-	for _, field := range fields {
-		typeName := field.Type.Name
-		if typeName == "" {
-			typeName = field.Type.TypeName
-		}
-		if typeName == "" {
-			continue
-		}
-
-		// 只处理消息类型，跳过枚举
-		if field.Type.IsMessage() && !r.isEnumType(typeName) {
-			if packageName, ok := r.nameSpaces[typeName]; ok && packageName != currentPackageName {
-				importFile := r.getProtoImportForType(typeName, packageName)
-				if importFile != "" {
-					imports[importFile] = true
-				}
-			}
-		}
-
-		// 检查 map/xmap 的 value 类型
-		if field.Type.ValueType != nil {
-			valueTypeName := field.Type.ValueType.Name
-			if valueTypeName == "" {
-				valueTypeName = field.Type.ValueType.TypeName
-			}
-			if valueTypeName != "" && field.Type.ValueType.IsMessage() && !r.isEnumType(valueTypeName) {
-				if packageName, ok := r.nameSpaces[valueTypeName]; ok && packageName != currentPackageName {
-					importFile := r.getProtoImportForType(valueTypeName, packageName)
-					if importFile != "" {
-						imports[importFile] = true
-					}
-				}
-			}
-		}
-	}
-
-	// 转换为列表并返回
-	result := make([]string, 0, len(imports))
-	for imp := range imports {
-		result = append(result, imp)
-	}
-	return UniqueProtoImports(result)
-}
-
-// getProtoImportForType 根据类型名称和包名返回对应的 proto 导入文件
-func (r *TypeReferenceResolver) getProtoImportForType(typeName, packageName string) string {
-	if packageName == "MME" {
-		// MME 包需要根据类型判断具体文件
-		return r.getMMEProtoImportForType(typeName)
-	}
-	// 其他包直接使用包名
-	return r.getProtoImportForPackage(packageName)
-}
-
-// getMMEProtoImportForType 根据 MME 类型名称返回对应的 proto 文件
-func (r *TypeReferenceResolver) getMMEProtoImportForType(typeName string) string {
-	// 检查是否是 Entity
-	for _, entity := range r.ctx.Entities {
-		if entity.Name == typeName {
-			return "entities.proto"
-		}
-	}
-	// 检查是否是 Manager
-	for _, manager := range r.ctx.Managers {
-		if manager.Name == typeName {
-			return "managers.proto"
-		}
-	}
-	// 检查是否是 Module
-	for _, module := range r.ctx.Modules {
-		if module.Name == typeName {
-			return "modules.proto"
-		}
-	}
-	// 检查是否是 Mechanism
-	for _, mechanism := range r.ctx.Mechanisms {
-		if mechanism.Name == typeName {
-			return "mechanisms.proto"
-		}
-	}
-	// 检查是否是 Common DataStruct
-	if r.ctx.HeadFile != nil {
-		for _, ds := range r.ctx.HeadFile.CommonDataStructs {
-			if ds.Name == typeName {
-				return "common.proto"
-			}
-		}
-	}
-	return ""
 }

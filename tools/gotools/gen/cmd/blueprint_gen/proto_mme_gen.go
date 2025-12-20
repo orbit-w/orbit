@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	blueprint_types "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types"
-	mmeobject "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types/mme_obj"
 )
 
 // generateHeadfileProto 生成 common.proto
@@ -62,94 +61,6 @@ func (g *ProtoGenerator) collectDataStructImports() []string {
 	// 使用统一的解析器收集所有导入（包括枚举和消息类型）
 	// 传入 "common" 作为 currentSourceProto，因为 DataStruct 生成到 common.proto
 	return g.resolver.CollectImportsFromFieldsWithSourceProto(fields, "common")
-}
-
-// collectEnumImportsFromFields 从字段列表中收集枚举类型的导入（已废弃，使用 TypeReferenceResolver）
-// currentSourceProto: 当前 proto 文件的 SourceProto（如 "entities", "managers", "common" 等）
-func (g *ProtoGenerator) collectEnumImportsFromFields(fields []*blueprint_types.Field, currentSourceProto string) []string {
-	// 将 currentSourceProto 转换为包名
-	currentPackageName := g.resolver.getPackageNameForSource(currentSourceProto)
-	if currentPackageName == "" {
-		currentPackageName = "MME"
-	}
-	// 使用统一的解析器收集所有导入
-	return g.resolver.CollectImportsFromFields(fields, currentPackageName)
-}
-
-// MMEObjectAutoProtoImport 自动生成 MMEObject 的 Proto 导入
-// 根据 MMEObject 的类型和名称，生成对应的 Proto 导入（包括枚举类型）
-// currentSourceProto: 当前 proto 文件的 SourceProto
-// 返回 Proto 导入列表
-func (g *ProtoGenerator) MMEObjectAutoProtoImport(mmeObjects []MMEObjectBase, currentSourceProto string) []string {
-	imports := []string{}
-
-	// 收集所有字段
-	fields := make([]*blueprint_types.Field, 0)
-	for _, mmeObject := range mmeObjects {
-		fields = append(fields, mmeObject.GetFields()...)
-	}
-
-	// 收集枚举类型的导入
-	enumImports := g.collectEnumImportsFromFields(fields, currentSourceProto)
-	imports = append(imports, enumImports...)
-
-	// 收集其他类型的导入
-	for _, mmeObject := range mmeObjects {
-		for _, f := range mmeObject.GetFields() {
-			switch {
-			case f.Type.IsMessage():
-				imports = append(imports, g.genMessageProtoImport(f.GetType()))
-			case f.Type.IsMMEObjectType():
-				objName := f.Type.GetName()
-				if objName != "" {
-					imports = append(imports, g.genMMEObjectProtoImport(objName))
-				}
-			case f.Type.IsXMapField() || f.Type.IsMapField():
-				switch {
-				case f.Type.ValueType.IsMMEObjectType():
-					valueName := f.Type.ValueType.GetName()
-					imports = append(imports, g.genMMEObjectProtoImport(valueName))
-				case f.Type.ValueType.IsFieldBaseType():
-					continue
-				case f.Type.ValueType.IsMessage():
-					imports = append(imports, g.genMessageProtoImport(f.GetValueType()))
-				default:
-					// 其他类型（如枚举）已在 collectEnumImportsFromFields 中处理
-				}
-			}
-		}
-	}
-
-	// 排重&&排序imports
-	return UniqueProtoImports(imports)
-}
-
-func (g *ProtoGenerator) genMessageProtoImport(field *blueprint_types.FieldType) string {
-	nameSpaces := g.data.GetNameSpace()
-	namespace, ok := nameSpaces[field.TypeName]
-	if !ok {
-		return ""
-	}
-	return GenerateProtoImport(namespace)
-}
-
-func (g *ProtoGenerator) genMMEObjectProtoImport(name string) string {
-	objType, ok := g.data.GetObjectType(name)
-	if !ok {
-		return ""
-	}
-	switch objType {
-	case mmeobject.ObjectTypeEntity:
-		return GenerateProtoImport("entities")
-	case mmeobject.ObjectTypeManager:
-		return GenerateProtoImport("managers")
-	case mmeobject.ObjectTypeModule:
-		return GenerateProtoImport("modules")
-	case mmeobject.ObjectTypeMechanism:
-		return GenerateProtoImport("mechanisms")
-	default:
-		panic(fmt.Sprintf("unknown object type: %s", objType))
-	}
 }
 
 // generateMechanismsProto 生成 mechanisms.proto
