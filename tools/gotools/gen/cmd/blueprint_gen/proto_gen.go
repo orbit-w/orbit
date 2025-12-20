@@ -4,6 +4,11 @@ import (
 	"fmt"
 	"strings"
 
+	"gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/pb_gen/net_message"
+	"gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/pb_gen/pbfactories"
+	"gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/pb_gen/protocolids"
+	"gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/pb_gen/ref_extractors"
+
 	blueprint_types "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types"
 )
 
@@ -61,8 +66,34 @@ func (g *ProtoGenerator) Generate(outputDir string) error {
 
 // GenerateProtocolIDs 生成 protocol_ids.pb.go 文件
 func (g *ProtoGenerator) GenerateProtocolIDs(outputDir string) error {
-	protocolIDGen := newProtocolIDGenerator(g.data)
+	netWalls := make([]net_message.NetWallFile, len(g.data.NetWalls))
+	for i, netwall := range g.data.NetWalls {
+		netWalls[i] = netwall
+	}
+	protocolIDGen := protocolids.NewGenerator(netWalls)
 	return protocolIDGen.Generate(outputDir)
+}
+
+// GeneratePBFactories 生成 pb_factories.go 文件
+func (g *ProtoGenerator) GeneratePBFactories(outputDir string) error {
+	netWalls := make([]net_message.NetWallFile, len(g.data.NetWalls))
+	for i, netwall := range g.data.NetWalls {
+		netWalls[i] = netwall
+	}
+
+	gen := pbfactories.NewGenerator(netWalls)
+	return gen.Generate(outputDir)
+}
+
+// GenerateRefFactories 生成 ref_factories.go 文件
+func (g *ProtoGenerator) GenerateRefFactories(outputDir string) error {
+	netWalls := make([]net_message.NetWallFile, len(g.data.NetWalls))
+	for i, netwall := range g.data.NetWalls {
+		netWalls[i] = netwall
+	}
+
+	gen := ref_extractors.NewGenerator(netWalls)
+	return gen.Generate(outputDir)
 }
 
 // generateProtoHeader 生成 Proto 文件头部
@@ -141,12 +172,6 @@ func (g *ProtoGenerator) generateFieldProtoWithIndent(field *blueprint_types.Fie
 	}
 
 	return builder.String()
-}
-
-// resolveEnumTypeReference 解析枚举类型引用（已废弃，使用 TypeReferenceResolver）
-// 保留此方法以保持向后兼容，但实际使用 resolver.ResolveTypeReference
-func (g *ProtoGenerator) resolveEnumTypeReference(protoType string, fieldType *blueprint_types.FieldType, currentPackageName string) string {
-	return g.resolver.ResolveTypeReference(fieldType, currentPackageName)
 }
 
 // generateFieldProtoFromOldField 从 Field 类型生成 Proto 定义（已统一使用 *blueprint_types.Field）

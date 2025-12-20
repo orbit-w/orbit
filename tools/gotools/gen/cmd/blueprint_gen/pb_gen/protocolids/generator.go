@@ -5,30 +5,18 @@ import (
 	"sort"
 
 	"gitee.com/orbit-w/orbit/lib/base/protoid"
+	"gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/pb_gen/net_message"
 )
-
-// NetWallFile 表示 NetWall 文件，用于避免循环依赖
-type NetWallFile interface {
-	GetPackageName() string
-	GetRequests() []NetMessage
-	GetNotifies() []NetMessage
-}
-
-// NetMessage 表示 NetWall 消息，用于避免循环依赖
-type NetMessage interface {
-	GetName() string
-	GetResponse() NetMessage
-}
 
 // Generator 协议ID生成器
 // 负责从 NetWall 定义中收集 Request、Response 和 Notify 消息，并生成 protocol_ids.pb.go 文件
 type Generator struct {
-	netWalls []NetWallFile
+	netWalls []net_message.NetWallFile
 }
 
 // NewGenerator 创建新的协议ID生成器
 // netWalls: NetWall 文件列表
-func NewGenerator(netWalls []NetWallFile) *Generator {
+func NewGenerator(netWalls []net_message.NetWallFile) *Generator {
 	return &Generator{
 		netWalls: netWalls,
 	}
@@ -69,7 +57,7 @@ func (g *Generator) collectAllNetWallMessages() []MessageInfo {
 }
 
 // collectNetWallMessages 收集指定 NetWall 包中的 Request、Response 和 Notify 消息
-func (g *Generator) collectNetWallMessages(netwallFile NetWallFile) []MessageInfo {
+func (g *Generator) collectNetWallMessages(netwallFile net_message.NetWallFile) []MessageInfo {
 	var messages []MessageInfo
 	packageName := netwallFile.GetPackageName()
 
@@ -92,9 +80,9 @@ func (g *Generator) collectNetWallMessages(netwallFile NetWallFile) []MessageInf
 }
 
 // createRequestMessageInfo 创建 Request 消息信息
-func (g *Generator) createRequestMessageInfo(packageName string, req NetMessage) MessageInfo {
+func (g *Generator) createRequestMessageInfo(packageName string, req *net_message.NetMessage) MessageInfo {
 	// Request 消息的 FullName 格式: Request_{RequestName}
-	reqFullName := fmt.Sprintf("Request_%s", req.GetName())
+	reqFullName := req.GetFullName()
 	// Request 消息的 PidName 格式: {PackageName}-Request_{RequestName}
 	reqPidName := fmt.Sprintf("%s-%s", packageName, reqFullName)
 
@@ -105,9 +93,9 @@ func (g *Generator) createRequestMessageInfo(packageName string, req NetMessage)
 }
 
 // createResponseMessageInfo 创建 Response 消息信息
-func (g *Generator) createResponseMessageInfo(packageName string, req NetMessage) MessageInfo {
+func (g *Generator) createResponseMessageInfo(packageName string, req *net_message.NetMessage) MessageInfo {
 	// Response 消息的 FullName 格式: Request_{RequestName}_Rsp
-	rspFullName := fmt.Sprintf("Request_%s_Rsp", req.GetName())
+	rspFullName := req.GetResponse().GetFullName()
 	// Response 消息的 PidName 格式: {PackageName}-Request_{RequestName}_Rsp
 	rspPidName := fmt.Sprintf("%s-%s", packageName, rspFullName)
 
@@ -118,9 +106,9 @@ func (g *Generator) createResponseMessageInfo(packageName string, req NetMessage
 }
 
 // createNotifyMessageInfo 创建 Notify 消息信息
-func (g *Generator) createNotifyMessageInfo(packageName string, notify NetMessage) MessageInfo {
+func (g *Generator) createNotifyMessageInfo(packageName string, notify *net_message.NetMessage) MessageInfo {
 	// Notify 消息的 FullName 格式: Notify_{NotifyName}
-	notifyFullName := fmt.Sprintf("Notify_%s", notify.GetName())
+	notifyFullName := notify.GetFullName()
 	// Notify 消息的 PidName 格式: {PackageName}-Notify_{NotifyName}
 	notifyPidName := fmt.Sprintf("%s-%s", packageName, notifyFullName)
 

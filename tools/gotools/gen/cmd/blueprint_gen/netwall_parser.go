@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	types "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types"
+	"gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/pb_gen/net_message"
 )
 
 const (
@@ -102,8 +102,8 @@ func (p *YamlParser) parseNetWallFile(filePath string) error {
 	return nil
 }
 
-func (p *YamlParser) parseRequestItems(ctx *NetWallFile, items []any) ([]*NetMessage, error) {
-	requests := make([]*NetMessage, 0)
+func (p *YamlParser) parseRequestItems(ctx *NetWallFile, items []any) ([]*net_message.NetMessage, error) {
+	requests := make([]*net_message.NetMessage, 0)
 	for _, item := range items {
 		req := p.parseRequestItem(ctx.PackageName, item)
 		ctx.AddRequest(req)
@@ -112,16 +112,15 @@ func (p *YamlParser) parseRequestItems(ctx *NetWallFile, items []any) ([]*NetMes
 }
 
 // 解析yaml的请求项，生成请求消息和响应消息
-func (p *YamlParser) parseRequestItem(packageName string, item any) (req *NetMessage) {
+func (p *YamlParser) parseRequestItem(packageName string, item any) (req *net_message.NetMessage) {
 	itemMap := item.(map[string]any)
 	fmt.Println("itemMap", itemMap)
 	for key, data := range itemMap {
 		switch key {
 		case "Rsp":
 		default:
-			req = NewNetMessage(NetWallMessageTypeRequest)
+			req = net_message.NewNetMessage(net_message.NetWallMessageTypeRequest, key)
 			req.PackageName = packageName
-			req.Name = key
 			if data == nil {
 				continue
 			}
@@ -141,22 +140,19 @@ func (p *YamlParser) parseRequestItem(packageName string, item any) (req *NetMes
 	rspData, ok := itemMap["Rsp"]
 	if ok {
 		rspDataMap := rspData.(map[string]any)
-		rsp := NewNetMessage(NetWallMessageTypeResponse)
-		rsp.PackageName = packageName
-		rsp.Name = RequestPrefix + req.Name + ResponseSuffix
 		fields, err := p.ParseMessageFields(rspDataMap)
 		if err != nil {
-			panic(fmt.Sprintf("Failed to parse fields for response %s: %v", rsp.Name, err))
+			panic(fmt.Sprintf("Failed to parse fields for response %s: %v", req.GetName(), err))
 		}
-		rsp.Fields = fields
-		req.Rsp = rsp
+		rsp := req.AddResponse()
+		rsp.SetFields(fields)
 	}
 
 	return req
 }
 
-func (p *YamlParser) parseNotifyItems(ctx *NetWallFile, items []any) ([]*NetMessage, error) {
-	notifies := make([]*NetMessage, 0)
+func (p *YamlParser) parseNotifyItems(ctx *NetWallFile, items []any) ([]*net_message.NetMessage, error) {
+	notifies := make([]*net_message.NetMessage, 0)
 	for _, item := range items {
 		notify := p.parseNotifyItem(ctx.PackageName, item)
 		if notify == nil {
@@ -167,12 +163,11 @@ func (p *YamlParser) parseNotifyItems(ctx *NetWallFile, items []any) ([]*NetMess
 	return notifies, nil
 }
 
-func (p *YamlParser) parseNotifyItem(packageName string, item any) (notify *NetMessage) {
+func (p *YamlParser) parseNotifyItem(packageName string, item any) (notify *net_message.NetMessage) {
 	itemMap := item.(map[string]any)
 	for key, data := range itemMap {
-		notify = NewNetMessage(NetWallMessageTypeNotify)
+		notify = net_message.NewNetMessage(net_message.NetWallMessageTypeNotify, key)
 		notify.PackageName = packageName
-		notify.Name = key
 		if data == nil {
 			continue
 		}
@@ -181,13 +176,13 @@ func (p *YamlParser) parseNotifyItem(packageName string, item any) (notify *NetM
 		if err != nil {
 			panic(fmt.Sprintf("Failed to parse fields for notify %s: %v", key, err))
 		}
-		notify.Fields = fields
+		notify.SetFields(fields)
 	}
 	return notify
 }
 
-func (p *YamlParser) parseDataStructItems(ctx *NetWallFile, items []any) ([]*NetMessage, error) {
-	dataStructs := make([]*NetMessage, 0)
+func (p *YamlParser) parseDataStructItems(ctx *NetWallFile, items []any) ([]*net_message.NetMessage, error) {
+	dataStructs := make([]*net_message.NetMessage, 0)
 	for _, item := range items {
 		dataStruct := p.parseDataStructItem(ctx.PackageName, item)
 		ctx.AddDataStruct(dataStruct)
@@ -195,16 +190,14 @@ func (p *YamlParser) parseDataStructItems(ctx *NetWallFile, items []any) ([]*Net
 	return dataStructs, nil
 }
 
-func (p *YamlParser) parseDataStructItem(packageName string, item any) (dataStruct *NetMessage) {
+func (p *YamlParser) parseDataStructItem(packageName string, item any) (dataStruct *net_message.NetMessage) {
 	fmt.Println("parseDataStructItem", item)
 	itemMap := item.(map[string]any)
 	for key, data := range itemMap {
-		dataStruct = NewNetMessage(NetWallMessageTypeDataStruct)
+		dataStruct = net_message.NewNetMessage(net_message.NetWallMessageTypeDataStruct, key)
 		dataStruct.PackageName = packageName
-		dataStruct.Name = key
 		if data == nil {
 			// 允许没有字段的 DataStruct（如 OK）
-			dataStruct.Fields = make([]*types.Field, 0)
 			return dataStruct
 		}
 		fieldsMap := data.(map[string]any)
@@ -212,7 +205,7 @@ func (p *YamlParser) parseDataStructItem(packageName string, item any) (dataStru
 		if err != nil {
 			panic(fmt.Sprintf("Failed to parse fields for data struct %s: %v", key, err))
 		}
-		dataStruct.Fields = fields
+		dataStruct.SetFields(fields)
 		return dataStruct
 	}
 	// 如果 itemMap 为空，说明没有找到 DataStruct

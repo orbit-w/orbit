@@ -51,6 +51,8 @@ func GenerateControllerMethods(ctx *RouterGenContext) error {
 		}
 	}
 
+	fmt.Printf("DEBUG: Controller generation - Existing methods: %d, New requests to generate: %d\n", len(existingMethods), len(newRequests))
+
 	// 如果没有新方法需要生成，直接返回
 	if len(newRequests) == 0 {
 		return nil

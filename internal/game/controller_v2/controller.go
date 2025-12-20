@@ -5,10 +5,7 @@
 package controllerv2
 
 import (
-	"gitee.com/orbit-w/meteor/modules/mlog"
 	mmeobj "gitee.com/orbit-w/orbit/internal/game/mme"
-	"go.uber.org/zap"
-
 	"gitee.com/orbit-w/orbit/pkg/proto/core"
 	"gitee.com/orbit-w/orbit/pkg/proto/mme"
 	"gitee.com/orbit-w/orbit/pkg/proto/sample"
@@ -23,26 +20,10 @@ type Controller struct{}
 
 func (c *Controller) HandleSearchBook(req *core.Request_SearchBook) proto.Message {
 	// TODO: 实现业务逻辑
-	mlog.Info("HandleSearchBook", zap.Any("req", req))
-	return &core.Request_SearchBook_Rsp{
-		Result: &core.Book{
-			Content: proto.String("Hello, World!"),
-		},
-	}
-}
-
-func (c *Controller) HandleHeartBeat(req *core.Request_HeartBeat) proto.Message {
-	// TODO: 实现业务逻辑
-	mlog.Info("HandleHeartBeat", zap.Any("req", req))
-	return &core.OK{}
-}
-
-func (c *Controller) HandleAskLevelUp(req *mme.Request_AskLevelUp) proto.Message {
-	// TODO: 实现业务逻辑
 	return nil
 }
 
-func (c *Controller) HandleSearchNewsPaper(req *sample.Request_SearchNewsPaper) proto.Message {
+func (c *Controller) HandleHeartBeat(req *core.Request_HeartBeat) proto.Message {
 	// TODO: 实现业务逻辑
 	return nil
 }
@@ -54,6 +35,16 @@ func (c *Controller) HandleLoginRequest(req *core.Request_LoginRequest, playerEn
 }
 
 func (c *Controller) HandleSetEntityRequest(req *core.Request_SetEntityRequest) proto.Message {
+	// TODO: 实现业务逻辑
+	return nil
+}
+
+func (c *Controller) HandleAskLevelUp(req *mme.Request_AskLevelUp) proto.Message {
+	// TODO: 实现业务逻辑
+	return nil
+}
+
+func (c *Controller) HandleSearchNewsPaper(req *sample.Request_SearchNewsPaper) proto.Message {
 	// TODO: 实现业务逻辑
 	return nil
 }

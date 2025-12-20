@@ -104,6 +104,26 @@ func runBlueprintGen(cmd *cobra.Command, args []string) {
 		println("protocol_ids.pb.go generated successfully")
 	}
 
+	// 生成 pb_factories.go 文件
+	if err := protoGen.GeneratePBFactories(protocolIDsOutput); err != nil {
+		cmd.PrintErrln("Failed to generate pb_factories.go:", err)
+		return
+	}
+
+	if debug {
+		println("pb_factories.go generated successfully")
+	}
+
+	// 生成 ref_factories.go 文件
+	if err := protoGen.GenerateRefFactories(protocolIDsOutput); err != nil {
+		cmd.PrintErrln("Failed to generate ref_factories.go:", err)
+		return
+	}
+
+	if debug {
+		println("ref_factories.go generated successfully")
+	}
+
 	// 生成 Go 文件
 	goGen := NewGoStructGenerator(data)
 	if err := goGen.Generate(goOutput); err != nil {
@@ -123,16 +143,30 @@ func runBlueprintGen(cmd *cobra.Command, args []string) {
 		println("Go files formatted successfully")
 	}
 
+	// 格式化 protocol-ids-output 目录下的 Go 文件
+	if err := FormatGoFiles(protocolIDsOutput); err != nil {
+		cmd.PrintErrln("Warning: Failed to format protocol-ids-output files:", err)
+	} else if debug {
+		println("Protocol IDs files formatted successfully")
+	}
+
 	// 生成 Router 代码
 	controllerDir, _ := cmd.Flags().GetString("controller-dir")
 	routerOutput, _ := cmd.Flags().GetString("router-output")
 	controllerPath, _ := cmd.Flags().GetString("controller-path")
 	if routerOutput != "" && controllerDir != "" {
+		if debug {
+			println("Generating router code...")
+		}
 		if err := generateRouterCode(data, controllerDir, routerOutput, controllerPath); err != nil {
 			cmd.PrintErrln("Warning: Failed to generate router code:", err)
 			// 不中断流程，仅打印警告
 		} else if debug {
 			println("Router code generated successfully")
+		}
+	} else {
+		if debug {
+			println("Skipping router code generation: router-output or controller-dir not set")
 		}
 	}
 

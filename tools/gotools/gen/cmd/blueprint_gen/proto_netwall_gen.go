@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/pb_gen/net_message"
 	blueprint_types "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types"
 )
 
@@ -55,7 +56,7 @@ func (g *ProtoGenerator) generateNetWallProtoFile(outputDir string, netwallFile 
 		if ds.Comment != "" {
 			sb.WriteString(fmt.Sprintf("// %s\n", ds.Comment))
 		}
-		sb.WriteString(fmt.Sprintf("message %s {\n", ds.Name))
+		sb.WriteString(fmt.Sprintf("message %s {\n", ds.GetName()))
 		if len(ds.Fields) > 0 {
 			// 按编号排序字段
 			fields := make([]*blueprint_types.Field, len(ds.Fields))
@@ -92,7 +93,7 @@ func (g *ProtoGenerator) generateNetWallProtoFile(outputDir string, netwallFile 
 
 // collectNetWallImports 收集跨 NetWall 的引用（包括枚举类型和消息类型）
 func (g *ProtoGenerator) collectNetWallImports(wallFile *NetWallFile) []string {
-	allMessages := make([]*NetMessage, 0)
+	allMessages := make([]*net_message.NetMessage, 0)
 	allMessages = append(allMessages, wallFile.Requests...)
 	allMessages = append(allMessages, wallFile.Notifies...)
 	allMessages = append(allMessages, wallFile.DataStructs...)
@@ -101,8 +102,8 @@ func (g *ProtoGenerator) collectNetWallImports(wallFile *NetWallFile) []string {
 	allFields := make([]*blueprint_types.Field, 0)
 	for _, msg := range allMessages {
 		allFields = append(allFields, msg.Fields...)
-		if msg.Rsp != nil {
-			allFields = append(allFields, msg.Rsp.Fields...)
+		if msg.GetResponse() != nil {
+			allFields = append(allFields, msg.GetResponse().Fields...)
 		}
 	}
 
@@ -114,7 +115,7 @@ func (g *ProtoGenerator) collectNetWallImports(wallFile *NetWallFile) []string {
 }
 
 // generateNetMessageProto 生成 NetMessage 的 Proto 定义
-func (g *ProtoGenerator) generateNetMessageProto(msg *NetMessage, indent string) string {
+func (g *ProtoGenerator) generateNetMessageProto(msg *net_message.NetMessage, indent string) string {
 	sb := strings.Builder{}
 
 	// 添加注释
@@ -123,7 +124,7 @@ func (g *ProtoGenerator) generateNetMessageProto(msg *NetMessage, indent string)
 	}
 
 	// 生成 message 定义
-	sb.WriteString(fmt.Sprintf("%smessage %s {\n", indent, msg.Name))
+	sb.WriteString(fmt.Sprintf("%smessage %s {\n", indent, msg.GetName()))
 
 	// 按编号排序字段
 	fields := make([]*blueprint_types.Field, len(msg.Fields))
@@ -147,11 +148,11 @@ func (g *ProtoGenerator) generateNetMessageProto(msg *NetMessage, indent string)
 	}
 
 	// 生成 Rsp（如果有）
-	if msg.Rsp != nil {
+	if msg.GetResponse() != nil {
 		sb.WriteString(fmt.Sprintf("%s    message Rsp {\n", indent))
 		// 按编号排序 Rsp 字段
-		rspFields := make([]*blueprint_types.Field, len(msg.Rsp.Fields))
-		copy(rspFields, msg.Rsp.Fields)
+		rspFields := make([]*blueprint_types.Field, len(msg.GetResponse().Fields))
+		copy(rspFields, msg.GetResponse().Fields)
 		for i := 0; i < len(rspFields)-1; i++ {
 			for j := i + 1; j < len(rspFields); j++ {
 				if rspFields[i].Number > rspFields[j].Number {

@@ -5,14 +5,17 @@ import (
 	"path/filepath"
 	"strings"
 
-	router_gen "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/router_gen"
+	"gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/pb_gen/net_message"
 	blueprint_types "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types"
+	router_gen "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/router_gen"
 )
 
 // generateRouterCode 从 BlueprintContext 生成 Router 代码
 func generateRouterCode(ctx *BlueprintContext, controllerDir, outputFile, controllerPath string) error {
 	// 将 BlueprintContext 转换为 router_gen 需要的格式
 	requestInfos := convertNetWallsToRequestInfos(ctx.NetWalls)
+
+	fmt.Printf("DEBUG: Found %d request infos for router generation\n", len(requestInfos))
 
 	if len(requestInfos) == 0 {
 		// 如果没有请求，跳过生成
@@ -68,7 +71,7 @@ func convertNetWallsToRequestInfos(netWalls []*NetWallFile) []*router_gen.Reques
 }
 
 // convertNetMessageToRequestInfo 将 NetMessage 转换为 RequestInfo
-func convertNetMessageToRequestInfo(req *NetMessage, packageName string) *router_gen.RequestInfo {
+func convertNetMessageToRequestInfo(req *net_message.NetMessage, packageName string) *router_gen.RequestInfo {
 	// 包名处理：首字母大写用于类型引用，小写用于导入
 	packageNameLower := strings.ToLower(packageName)
 	packageNameUpper := strings.ToUpper(packageName[:1]) + packageName[1:]
@@ -77,11 +80,11 @@ func convertNetMessageToRequestInfo(req *NetMessage, packageName string) *router
 	entityRefs := extractEntityRefsFromFields(req.Fields)
 
 	return &router_gen.RequestInfo{
-		RequestName:      req.Name,
+		RequestName:      req.GetName(),
 		PackageName:      packageNameLower,
 		PackageNameUpper: packageNameUpper,
 		EntityRefs:       entityRefs,
-		HasRsp:           req.Rsp != nil,
+		HasRsp:           req.HasResponse(),
 	}
 }
 
@@ -109,10 +112,10 @@ func extractEntityRefsFromFields(fields []*blueprint_types.Field) []*router_gen.
 		wrapperTypeWithAlias := fmt.Sprintf("*mmeobj.%sEntityWrapper", entityName)
 
 		entityRefs = append(entityRefs, &router_gen.EntityRefInfo{
-			FieldName:           field.Name,
-			EntityName:          entityName,
-			ParamName:           paramName,
-			WrapperType:         wrapperType,
+			FieldName:            field.Name,
+			EntityName:           entityName,
+			ParamName:            paramName,
+			WrapperType:          wrapperType,
 			WrapperTypeWithAlias: wrapperTypeWithAlias,
 		})
 	}
@@ -162,4 +165,3 @@ func toCamelCase(s string) string {
 	}
 	return strings.ToLower(s[:1]) + s[1:]
 }
-

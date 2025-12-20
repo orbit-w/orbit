@@ -158,4 +158,3 @@ func discoverAndParseController(controllerDir string) (*ControllerInfo, error) {
 
 	return nil, fmt.Errorf("controller info not found in any file in %s", controllerDir)
 }
-

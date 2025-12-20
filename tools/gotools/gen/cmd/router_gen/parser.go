@@ -27,7 +27,7 @@ func parseNetWallYAML(yamlPath string) ([]*RequestInfo, error) {
 		return nil, fmt.Errorf("failed to parse YAML: %w", err)
 	}
 
-	netwallData, ok := yamlData["NetWall"].(map[string]interface{})
+	netwallData, ok := yamlData["NetWall"].(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("netWall section not found")
 	}
@@ -37,7 +37,7 @@ func parseNetWallYAML(yamlPath string) ([]*RequestInfo, error) {
 		return nil, fmt.Errorf("netWall name not found")
 	}
 
-	requests, ok := netwallData["Requests"].([]interface{})
+	requests, ok := netwallData["Requests"].([]any)
 	if !ok {
 		return nil, fmt.Errorf("requests section not found or invalid")
 	}
@@ -54,14 +54,14 @@ func parseNetWallYAML(yamlPath string) ([]*RequestInfo, error) {
 }
 
 // parseRequestItem 解析单个 Request 项
-func parseRequestItem(item interface{}, packageName string) *RequestInfo {
-	itemMap, ok := item.(map[string]interface{})
+func parseRequestItem(item any, packageName string) *RequestInfo {
+	itemMap, ok := item.(map[string]any)
 	if !ok {
 		return nil
 	}
 
 	var requestName string
-	var fields map[string]interface{}
+	var fields map[string]any
 	var hasRsp bool
 
 	for key, value := range itemMap {
@@ -71,7 +71,7 @@ func parseRequestItem(item interface{}, packageName string) *RequestInfo {
 		}
 		requestName = key
 		if value != nil {
-			fields, _ = value.(map[string]interface{})
+			fields, _ = value.(map[string]any)
 		}
 	}
 
@@ -103,7 +103,7 @@ func parseEntityRefs(fields map[string]interface{}) []*EntityRefInfo {
 		// YAML 格式：EntityRef PlayerEntityRef: 1
 		// 解析后 fieldKey 是 "EntityRef PlayerEntityRef"
 		// fieldValue 是字段编号（数字），这里不需要使用
-		
+
 		// 检查字段键是否包含 "EntityRef"
 		if !strings.Contains(fieldKey, "EntityRef") {
 			continue
@@ -131,10 +131,10 @@ func parseEntityRefs(fields map[string]interface{}) []*EntityRefInfo {
 		wrapperTypeWithAlias := fmt.Sprintf("*mmeobj.%sEntityWrapper", entityName)
 
 		entityRefs = append(entityRefs, &EntityRefInfo{
-			FieldName:           fieldName,
-			EntityName:          entityName,
-			ParamName:           paramName,
-			WrapperType:         wrapperType,
+			FieldName:            fieldName,
+			EntityName:           entityName,
+			ParamName:            paramName,
+			WrapperType:          wrapperType,
 			WrapperTypeWithAlias: wrapperTypeWithAlias,
 		})
 	}
@@ -307,4 +307,3 @@ func readMultiDocumentYAML(reader io.Reader) (map[string]interface{}, error) {
 
 	return result, nil
 }
-

@@ -3,6 +3,7 @@ package blueprint_gen
 import (
 	"fmt"
 
+	"gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/pb_gen/net_message"
 	types "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types"
 	mmeobject "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types/mme_obj"
 )
@@ -15,15 +16,15 @@ type FieldOption struct {
 // Mechanism 机制定义
 type Mechanism struct {
 	*MMEObject
-	Requests []*NetMessage
-	Notifies []*NetMessage
+	Requests []*net_message.NetMessage
+	Notifies []*net_message.NetMessage
 }
 
 func NewMechanism() *Mechanism {
 	return &Mechanism{
 		MMEObject: NewMMEObject(mmeobject.ObjectTypeMechanism),
-		Requests:  make([]*NetMessage, 0),
-		Notifies:  make([]*NetMessage, 0),
+		Requests:  make([]*net_message.NetMessage, 0),
+		Notifies:  make([]*net_message.NetMessage, 0),
 	}
 }
 
@@ -98,25 +99,6 @@ const (
 	NetWallMessageTypeResponse
 )
 
-// NetMessage NetWall 消息定义
-type NetMessage struct {
-	Type        NetWallMessageType
-	Name        string
-	PackageName string
-	Fields      []*types.Field
-	Rsp         *NetMessage // 仅用于 Request
-	Comment     string
-}
-
-func NewNetMessage(nt NetWallMessageType) *NetMessage {
-	return &NetMessage{
-		Type:    nt,
-		Fields:  make([]*types.Field, 0),
-		Rsp:     nil,
-		Comment: "",
-	}
-}
-
 const (
 	EnumValueOptionContent = "Content"
 )
@@ -169,50 +151,50 @@ func NewEnum(name, comment, sourceProto string) *Enum {
 type NetWallFile struct {
 	Name        string
 	PackageName string
-	Requests    []*NetMessage
-	Notifies    []*NetMessage
-	DataStructs []*NetMessage
+	Requests    []*net_message.NetMessage
+	Notifies    []*net_message.NetMessage
+	DataStructs []*net_message.NetMessage
 	Enums       []*Enum
 	NameSpace   map[string]bool
 }
 
 func NewNetWallFile() *NetWallFile {
 	return &NetWallFile{
-		Requests:    make([]*NetMessage, 0),
-		Notifies:    make([]*NetMessage, 0),
-		DataStructs: make([]*NetMessage, 0),
+		Requests:    make([]*net_message.NetMessage, 0),
+		Notifies:    make([]*net_message.NetMessage, 0),
+		DataStructs: make([]*net_message.NetMessage, 0),
 		Enums:       make([]*Enum, 0),
 		NameSpace:   make(map[string]bool),
 	}
 }
 
-func (n *NetWallFile) GetAllMessages() []*NetMessage {
-	allMessages := make([]*NetMessage, 0)
+func (n *NetWallFile) GetAllMessages() []*net_message.NetMessage {
+	allMessages := make([]*net_message.NetMessage, 0)
 	allMessages = append(allMessages, n.Requests...)
 	allMessages = append(allMessages, n.Notifies...)
 	allMessages = append(allMessages, n.DataStructs...)
 	return allMessages
 }
 
-func (n *NetWallFile) AddRequest(request *NetMessage) {
-	if n.HasNameSpace(request.Name) {
-		panic(fmt.Sprintf("NetWallFile %s 的请求 %s 已存在", n.Name, request.Name))
+func (n *NetWallFile) AddRequest(request *net_message.NetMessage) {
+	if n.HasNameSpace(request.GetName()) {
+		panic(fmt.Sprintf("NetWallFile %s 的请求 %s 已存在", n.Name, request.GetName()))
 	}
 	n.Requests = append(n.Requests, request)
 	n.NameSpace[request.Name] = true
 }
 
-func (n *NetWallFile) AddNotify(notify *NetMessage) {
-	if n.HasNameSpace(notify.Name) {
-		panic(fmt.Sprintf("NetWallFile %s 的通知 %s 已存在", n.Name, notify.Name))
+func (n *NetWallFile) AddNotify(notify *net_message.NetMessage) {
+	if n.HasNameSpace(notify.GetName()) {
+		panic(fmt.Sprintf("NetWallFile %s 的通知 %s 已存在", n.Name, notify.GetName()))
 	}
 	n.Notifies = append(n.Notifies, notify)
 	n.NameSpace[notify.Name] = true
 }
 
-func (n *NetWallFile) AddDataStruct(dataStruct *NetMessage) {
-	if n.HasNameSpace(dataStruct.Name) {
-		panic(fmt.Sprintf("NetWallFile %s 的数据结构 %s 已存在", n.Name, dataStruct.Name))
+func (n *NetWallFile) AddDataStruct(dataStruct *net_message.NetMessage) {
+	if n.HasNameSpace(dataStruct.GetName()) {
+		panic(fmt.Sprintf("NetWallFile %s 的数据结构 %s 已存在", n.Name, dataStruct.GetName()))
 	}
 	n.DataStructs = append(n.DataStructs, dataStruct)
 	n.NameSpace[dataStruct.Name] = true
@@ -229,6 +211,30 @@ func (n *NetWallFile) AddEnum(enum *Enum) {
 func (n *NetWallFile) HasNameSpace(name string) bool {
 	_, ok := n.NameSpace[name]
 	return ok
+}
+
+func (n *NetWallFile) GetRequests() []*net_message.NetMessage {
+	return n.Requests
+}
+
+func (n *NetWallFile) GetNotifies() []*net_message.NetMessage {
+	return n.Notifies
+}
+
+func (n *NetWallFile) GetDataStructs() []*net_message.NetMessage {
+	return n.DataStructs
+}
+
+func (n *NetWallFile) GetEnums() []*Enum {
+	return n.Enums
+}
+
+func (n *NetWallFile) GetNameSpace() map[string]bool {
+	return n.NameSpace
+}
+
+func (n *NetWallFile) GetPackageName() string {
+	return n.PackageName
 }
 
 // BlueprintContext 解析后的蓝图数据
