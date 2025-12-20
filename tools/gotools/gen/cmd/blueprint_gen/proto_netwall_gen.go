@@ -111,7 +111,16 @@ func (g *ProtoGenerator) collectNetWallImports(wallFile *NetWallFile) []string {
 	// CollectImportsFromFields 已经包含了枚举和消息类型的导入
 	imports := g.resolver.CollectImportsFromFields(allFields, wallFile.PackageName)
 
-	return imports
+	// 过滤掉对自己的导入（避免文件导入自己）
+	currentProtoFile := strings.ToLower(wallFile.PackageName) + ".proto"
+	filteredImports := make([]string, 0, len(imports))
+	for _, imp := range imports {
+		if imp != currentProtoFile {
+			filteredImports = append(filteredImports, imp)
+		}
+	}
+
+	return filteredImports
 }
 
 // generateNetMessageProto 生成 NetMessage 的 Proto 定义

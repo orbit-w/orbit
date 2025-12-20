@@ -8,6 +8,7 @@ import (
 
 	"gitee.com/orbit-w/orbit/pkg/proto/core"
 	"gitee.com/orbit-w/orbit/pkg/proto/mme"
+	"gitee.com/orbit-w/orbit/pkg/proto/play"
 )
 
 type ExtractRefsFromRequest func(req proto.Message) ([]*mme.EntityRef, error)
@@ -18,7 +19,7 @@ var (
 
 func init() {
 	RegisterRefExtract(PID_Request_LoginRequest, func(request proto.Message) ([]*mme.EntityRef, error) {
-		req := request.(*core.Request_LoginRequest)
+		req := request.(*play.Request_LoginRequest)
 		refs := make([]*mme.EntityRef, 0)
 		if req.PlayerEntityRef != nil {
 			refs = append(refs, req.PlayerEntityRef)

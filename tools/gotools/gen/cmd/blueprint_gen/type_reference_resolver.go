@@ -9,10 +9,10 @@ import (
 
 // TypeReferenceResolver 类型引用解析器，用于处理跨文件、跨命名空间的类型引用
 type TypeReferenceResolver struct {
-	ctx              *BlueprintContext
-	typeConverter    *TypeConverter
-	nameSpaces       map[string]string
-	enumMap          map[string]*Enum
+	ctx           *BlueprintContext
+	typeConverter *TypeConverter
+	nameSpaces    map[string]string
+	enumMap       map[string]*Enum
 }
 
 // NewTypeReferenceResolver 创建新的类型引用解析器
@@ -238,51 +238,16 @@ func (r *TypeReferenceResolver) collectImportsFromFieldType(fieldType *blueprint
 	// MME Object 类型（Entity, Manager, Module, Mechanism）也需要导入
 	if fieldType.IsMessage() || fieldType.IsMMEObjectType() {
 		// 获取消息类型的 SourceProto
-		typeSourceProto := r.getSourceProtoForType(typeName)
-		if typeSourceProto != "" && typeSourceProto != currentSourceProto {
-			importFile := r.getProtoImportForSource(typeSourceProto)
-			if importFile != "" && importFile != r.getProtoImportForSource(currentSourceProto) {
-				imports[importFile] = true
-			}
+		importFileName := r.genProtoImportByObjectName(typeName)
+		currentImportFileName := importFileName + ".proto"
+		if importFileName != "" && importFileName != currentImportFileName {
+			imports[importFileName] = true
 		}
 	}
 }
 
-// getSourceProtoForType 根据类型名称返回对应的 SourceProto
-func (r *TypeReferenceResolver) getSourceProtoForType(typeName string) string {
-	// 检查是否是 Entity
-	for _, entity := range r.ctx.Entities {
-		if entity.Name == typeName {
-			return "entities"
-		}
-	}
-	// 检查是否是 Manager
-	for _, manager := range r.ctx.Managers {
-		if manager.Name == typeName {
-			return "managers"
-		}
-	}
-	// 检查是否是 Module
-	for _, module := range r.ctx.Modules {
-		if module.Name == typeName {
-			return "modules"
-		}
-	}
-	// 检查是否是 Mechanism
-	for _, mechanism := range r.ctx.Mechanisms {
-		if mechanism.Name == typeName {
-			return "mechanisms"
-		}
-	}
-	// 检查是否是 Common DataStruct
-	if r.ctx.HeadFile != nil {
-		for _, ds := range r.ctx.HeadFile.CommonDataStructs {
-			if ds.Name == typeName {
-				return "common"
-			}
-		}
-	}
-	return ""
+func (r *TypeReferenceResolver) genProtoImportByObjectName(name string) string {
+	return r.ctx.GetProtoImportByObjectName(name)
 }
 
 // getProtoImportForSource 根据 SourceProto 返回对应的 proto 导入文件
@@ -445,4 +410,3 @@ func (r *TypeReferenceResolver) getMMEProtoImportForType(typeName string) string
 	}
 	return ""
 }
-

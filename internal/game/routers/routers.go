@@ -10,7 +10,7 @@ import (
 	controllerv2 "gitee.com/orbit-w/orbit/internal/game/controller_v2"
 	"gitee.com/orbit-w/orbit/pkg/proto/core"
 	"gitee.com/orbit-w/orbit/pkg/proto/mme"
-	"gitee.com/orbit-w/orbit/pkg/proto/sample"
+	"gitee.com/orbit-w/orbit/pkg/proto/play"
 	"gitee.com/orbit-w/orbit/pkg/proto/pb"
 	servicezone_behavior "gitee.com/orbit-w/orbit/core/services/service_zone/behavior"
 
@@ -19,24 +19,9 @@ import (
 )
 
 func init() {
-	RegisterHandler(pb.PID_Request_SearchBook, func(ctx servicezone_behavior.IContext, msg proto.Message, entities ...mmeobj.IEntity) (proto.Message, string, error) {
-		req := msg.(*core.Request_SearchBook)
-		return controllerv2.GControllerV2.HandleSearchBook(req), "Request_SearchBook_Rsp", nil
-	})
-
 	RegisterHandler(pb.PID_Request_HeartBeat, func(ctx servicezone_behavior.IContext, msg proto.Message, entities ...mmeobj.IEntity) (proto.Message, string, error) {
 		req := msg.(*core.Request_HeartBeat)
 		return controllerv2.GControllerV2.HandleHeartBeat(req), "Request_HeartBeat_Rsp", nil
-	})
-
-	RegisterHandler(pb.PID_Request_LoginRequest, func(ctx servicezone_behavior.IContext, msg proto.Message, entities ...mmeobj.IEntity) (proto.Message, string, error) {
-		req := msg.(*core.Request_LoginRequest)
-		playerEntity, ok := entities[0].(*mmeobj.PlayerEntityWrapper)
-		if !ok {
-			return nil, "", fmt.Errorf("player entity not found in entities")
-		}
-
-		return controllerv2.GControllerV2.HandleLoginRequest(req, playerEntity), "Request_LoginRequest_Rsp", nil
 	})
 
 	RegisterHandler(pb.PID_Request_SetEntityRequest, func(ctx servicezone_behavior.IContext, msg proto.Message, entities ...mmeobj.IEntity) (proto.Message, string, error) {
@@ -49,9 +34,14 @@ func init() {
 		return controllerv2.GControllerV2.HandleAskLevelUp(req), "Request_AskLevelUp_Rsp", nil
 	})
 
-	RegisterHandler(pb.PID_Request_SearchNewsPaper, func(ctx servicezone_behavior.IContext, msg proto.Message, entities ...mmeobj.IEntity) (proto.Message, string, error) {
-		req := msg.(*sample.Request_SearchNewsPaper)
-		return controllerv2.GControllerV2.HandleSearchNewsPaper(req), "Request_SearchNewsPaper_Rsp", nil
+	RegisterHandler(pb.PID_Request_LoginRequest, func(ctx servicezone_behavior.IContext, msg proto.Message, entities ...mmeobj.IEntity) (proto.Message, string, error) {
+		req := msg.(*play.Request_LoginRequest)
+		playerEntity, ok := entities[0].(*mmeobj.PlayerEntityWrapper)
+		if !ok {
+			return nil, "", fmt.Errorf("player entity not found in entities")
+		}
+
+		return controllerv2.GControllerV2.HandleLoginRequest(req, playerEntity), "Request_LoginRequest_Rsp", nil
 	})
 
 }

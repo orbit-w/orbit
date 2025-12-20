@@ -10,57 +10,48 @@ import (
 
 // 所有协议ID常量
 const (
-	PID_Error                       uint32 = 0x0c70c3cc // Error
-	PID_Notify_BeAttacked           uint32 = 0x8fee7235 // Notify_BeAttacked
-	PID_Notify_EntityChangeNotify   uint32 = 0x3bbb05a7 // Notify_EntityChangeNotify
-	PID_Notify_ExpChange            uint32 = 0xc8e2ba5f // Notify_ExpChange
-	PID_OK                          uint32 = 0x0ece9291 // OK
-	PID_Request_AskLevelUp          uint32 = 0x5f3b6570 // Request_AskLevelUp
-	PID_Request_AskLevelUp_Rsp      uint32 = 0xa923e163 // Request_AskLevelUp_Rsp
-	PID_Request_HeartBeat           uint32 = 0x95eee555 // Request_HeartBeat
-	PID_Request_LoginRequest        uint32 = 0xe403303b // Request_LoginRequest
-	PID_Request_SearchBook          uint32 = 0xd3ecf693 // Request_SearchBook
-	PID_Request_SearchBook_Rsp      uint32 = 0xf1d19d0a // Request_SearchBook_Rsp
-	PID_Request_SearchNewsPaper     uint32 = 0xd20e5854 // Request_SearchNewsPaper
-	PID_Request_SearchNewsPaper_Rsp uint32 = 0x9bed598e // Request_SearchNewsPaper_Rsp
-	PID_Request_SetEntityRequest    uint32 = 0xb8fae1d6 // Request_SetEntityRequest
+	PID_Error                     uint32 = 0x0c70c3cc // Error
+	PID_Notify_BeAttacked         uint32 = 0x8fee7235 // Notify_BeAttacked
+	PID_Notify_EntityChangeNotify uint32 = 0x3bbb05a7 // Notify_EntityChangeNotify
+	PID_Notify_ExpChange          uint32 = 0xc8e2ba5f // Notify_ExpChange
+	PID_OK                        uint32 = 0x0ece9291 // OK
+	PID_Request_AskLevelUp        uint32 = 0x5f3b6570 // Request_AskLevelUp
+	PID_Request_AskLevelUp_Rsp    uint32 = 0xa923e163 // Request_AskLevelUp_Rsp
+	PID_Request_HeartBeat         uint32 = 0x95eee555 // Request_HeartBeat
+	PID_Request_LoginRequest      uint32 = 0x6f974fb7 // Request_LoginRequest
+	PID_Request_LoginRequest_Rsp  uint32 = 0xc45ab4cc // Request_LoginRequest_Rsp
+	PID_Request_SetEntityRequest  uint32 = 0xb8fae1d6 // Request_SetEntityRequest
 
 )
 
 // AllMessageNameToID 全局消息名称到ID的映射
 var AllMessageNameToID = map[string]uint32{
-	"Error":                       PID_Error,
-	"Notify_BeAttacked":           PID_Notify_BeAttacked,
-	"Notify_EntityChangeNotify":   PID_Notify_EntityChangeNotify,
-	"Notify_ExpChange":            PID_Notify_ExpChange,
-	"OK":                          PID_OK,
-	"Request_AskLevelUp":          PID_Request_AskLevelUp,
-	"Request_AskLevelUp_Rsp":      PID_Request_AskLevelUp_Rsp,
-	"Request_HeartBeat":           PID_Request_HeartBeat,
-	"Request_LoginRequest":        PID_Request_LoginRequest,
-	"Request_SearchBook":          PID_Request_SearchBook,
-	"Request_SearchBook_Rsp":      PID_Request_SearchBook_Rsp,
-	"Request_SearchNewsPaper":     PID_Request_SearchNewsPaper,
-	"Request_SearchNewsPaper_Rsp": PID_Request_SearchNewsPaper_Rsp,
-	"Request_SetEntityRequest":    PID_Request_SetEntityRequest,
+	"Error":                     PID_Error,
+	"Notify_BeAttacked":         PID_Notify_BeAttacked,
+	"Notify_EntityChangeNotify": PID_Notify_EntityChangeNotify,
+	"Notify_ExpChange":          PID_Notify_ExpChange,
+	"OK":                        PID_OK,
+	"Request_AskLevelUp":        PID_Request_AskLevelUp,
+	"Request_AskLevelUp_Rsp":    PID_Request_AskLevelUp_Rsp,
+	"Request_HeartBeat":         PID_Request_HeartBeat,
+	"Request_LoginRequest":      PID_Request_LoginRequest,
+	"Request_LoginRequest_Rsp":  PID_Request_LoginRequest_Rsp,
+	"Request_SetEntityRequest":  PID_Request_SetEntityRequest,
 }
 
 // AllIDToMessageName 全局ID到消息名称的映射
 var AllIDToMessageName = map[uint32]string{
-	PID_Error:                       "Error",
-	PID_Notify_BeAttacked:           "Notify_BeAttacked",
-	PID_Notify_EntityChangeNotify:   "Notify_EntityChangeNotify",
-	PID_Notify_ExpChange:            "Notify_ExpChange",
-	PID_OK:                          "OK",
-	PID_Request_AskLevelUp:          "Request_AskLevelUp",
-	PID_Request_AskLevelUp_Rsp:      "Request_AskLevelUp_Rsp",
-	PID_Request_HeartBeat:           "Request_HeartBeat",
-	PID_Request_LoginRequest:        "Request_LoginRequest",
-	PID_Request_SearchBook:          "Request_SearchBook",
-	PID_Request_SearchBook_Rsp:      "Request_SearchBook_Rsp",
-	PID_Request_SearchNewsPaper:     "Request_SearchNewsPaper",
-	PID_Request_SearchNewsPaper_Rsp: "Request_SearchNewsPaper_Rsp",
-	PID_Request_SetEntityRequest:    "Request_SetEntityRequest",
+	PID_Error:                     "Error",
+	PID_Notify_BeAttacked:         "Notify_BeAttacked",
+	PID_Notify_EntityChangeNotify: "Notify_EntityChangeNotify",
+	PID_Notify_ExpChange:          "Notify_ExpChange",
+	PID_OK:                        "OK",
+	PID_Request_AskLevelUp:        "Request_AskLevelUp",
+	PID_Request_AskLevelUp_Rsp:    "Request_AskLevelUp_Rsp",
+	PID_Request_HeartBeat:         "Request_HeartBeat",
+	PID_Request_LoginRequest:      "Request_LoginRequest",
+	PID_Request_LoginRequest_Rsp:  "Request_LoginRequest_Rsp",
+	PID_Request_SetEntityRequest:  "Request_SetEntityRequest",
 }
 
 // GetProtocolID 获取指定消息名称的协议ID

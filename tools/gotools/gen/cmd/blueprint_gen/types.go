@@ -2,6 +2,7 @@ package blueprint_gen
 
 import (
 	"fmt"
+	"strings"
 
 	"gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/pb_gen/net_message"
 	types "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types"
@@ -239,29 +240,31 @@ func (n *NetWallFile) GetPackageName() string {
 
 // BlueprintContext 解析后的蓝图数据
 type BlueprintContext struct {
-	HeadFile      *HeadFileConfig
-	Entities      []*Entity
-	Managers      []*Manager
-	Modules       []*Module
-	Mechanisms    []*Mechanism
-	NetWalls      []*NetWallFile
-	Enums         []*Enum
-	ObjectTypeMap map[string]mmeobject.ObjectType
-	NameSpaces    map[string]string // 包名空间,建立对象类型与包名空间的映射
-	NameSpaceMap  map[string]bool   // 命名空间检查，enum/struct/table不允许有重复的命名空间
+	HeadFile          *HeadFileConfig
+	Entities          []*Entity
+	Managers          []*Manager
+	Modules           []*Module
+	Mechanisms        []*Mechanism
+	NetWalls          []*NetWallFile
+	Enums             []*Enum
+	ObjectTypeMap     map[string]mmeobject.ObjectType
+	NameSpaces        map[string]string // 包名空间,建立对象类型与包名空间的映射
+	NameSpaceMap      map[string]bool   // 命名空间检查，enum/struct/table不允许有重复的命名空间
+	NameSpaceProtoMap map[string]string // Name与proto文件名的映射,建立import映射
 }
 
 func NewBlueprintContext() *BlueprintContext {
 	return &BlueprintContext{
-		Entities:      make([]*Entity, 0),
-		Managers:      make([]*Manager, 0),
-		Modules:       make([]*Module, 0),
-		Mechanisms:    make([]*Mechanism, 0),
-		NetWalls:      make([]*NetWallFile, 0),
-		Enums:         make([]*Enum, 0),
-		ObjectTypeMap: make(map[string]mmeobject.ObjectType),
-		NameSpaces:    make(map[string]string),
-		NameSpaceMap:  make(map[string]bool),
+		Entities:          make([]*Entity, 0),
+		Managers:          make([]*Manager, 0),
+		Modules:           make([]*Module, 0),
+		Mechanisms:        make([]*Mechanism, 0),
+		NetWalls:          make([]*NetWallFile, 0),
+		Enums:             make([]*Enum, 0),
+		ObjectTypeMap:     make(map[string]mmeobject.ObjectType),
+		NameSpaces:        make(map[string]string),
+		NameSpaceMap:      make(map[string]bool),
+		NameSpaceProtoMap: make(map[string]string),
 	}
 }
 
@@ -376,6 +379,56 @@ func (ctx *BlueprintContext) GetNameSpace() map[string]string {
 		}
 	}
 	return ctx.NameSpaces
+}
+
+// GetProtoImportByObjectName 根据对象名称获取 proto 导入文件
+// name: 对象名称
+// 返回: proto 导入文件名
+func (ctx *BlueprintContext) GetProtoImportByObjectName(name string) string {
+	if len(ctx.NameSpaceProtoMap) == 0 {
+		for _, netwallFile := range ctx.NetWalls {
+			for _, ds := range netwallFile.DataStructs {
+				ctx.NameSpaceProtoMap[ds.Name] = strings.ToLower(netwallFile.PackageName) + ".proto"
+			}
+			for _, req := range netwallFile.Requests {
+				ctx.NameSpaceProtoMap[req.GetName()] = strings.ToLower(netwallFile.PackageName) + ".proto"
+				if req.HasResponse() {
+					ctx.NameSpaceProtoMap[req.GetResponse().GetName()] = strings.ToLower(netwallFile.PackageName) + ".proto"
+				}
+			}
+			for _, notify := range netwallFile.Notifies {
+				ctx.NameSpaceProtoMap[notify.Name] = strings.ToLower(netwallFile.PackageName) + ".proto"
+			}
+			// 映射 NetWall 的枚举 - 所有枚举都映射到 common.proto
+			for _, enum := range netwallFile.Enums {
+				ctx.NameSpaceProtoMap[enum.Name] = "common.proto"
+			}
+		}
+
+		// 检查是否是 Common DataStruct
+		if ctx.HeadFile != nil {
+			for _, ds := range ctx.HeadFile.CommonDataStructs {
+				ctx.NameSpaceProtoMap[ds.Name] = "common.proto"
+			}
+		}
+
+		for _, entity := range ctx.Entities {
+			ctx.NameSpaceProtoMap[entity.Name] = "entities.proto"
+		}
+		for _, manager := range ctx.Managers {
+			ctx.NameSpaceProtoMap[manager.Name] = "managers.proto"
+		}
+		for _, module := range ctx.Modules {
+			ctx.NameSpaceProtoMap[module.Name] = "modules.proto"
+		}
+		for _, mechanism := range ctx.Mechanisms {
+			ctx.NameSpaceProtoMap[mechanism.Name] = "mechanisms.proto"
+		}
+		for _, enum := range ctx.Enums {
+			ctx.NameSpaceProtoMap[enum.Name] = "common.proto"
+		}
+	}
+	return ctx.NameSpaceProtoMap[name]
 }
 
 // SetHeadFile 设置头文件配置

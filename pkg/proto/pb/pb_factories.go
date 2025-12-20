@@ -8,7 +8,7 @@ import (
 
 	"gitee.com/orbit-w/orbit/pkg/proto/core"
 	"gitee.com/orbit-w/orbit/pkg/proto/mme"
-	"gitee.com/orbit-w/orbit/pkg/proto/sample"
+	"gitee.com/orbit-w/orbit/pkg/proto/play"
 )
 
 type pbFactory func() proto.Message
@@ -25,13 +25,7 @@ func init() {
 		return &core.Request_HeartBeat{}
 	})
 	RegisterPBFactory(PID_Request_LoginRequest, func() proto.Message {
-		return &core.Request_LoginRequest{}
-	})
-	RegisterPBFactory(PID_Request_SearchBook, func() proto.Message {
-		return &core.Request_SearchBook{}
-	})
-	RegisterPBFactory(PID_Request_SearchNewsPaper, func() proto.Message {
-		return &sample.Request_SearchNewsPaper{}
+		return &play.Request_LoginRequest{}
 	})
 	RegisterPBFactory(PID_Request_SetEntityRequest, func() proto.Message {
 		return &core.Request_SetEntityRequest{}
