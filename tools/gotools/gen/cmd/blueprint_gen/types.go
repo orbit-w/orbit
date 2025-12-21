@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/mmeobj"
 	"gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/pb_gen/net_message"
 	types "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types"
 	mmeobject "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types/mme_obj"
@@ -14,64 +15,9 @@ type FieldOption struct {
 	Access string // access=all/s/c
 }
 
-// Mechanism 机制定义
-type Mechanism struct {
-	*MMEObject
-	Requests []*net_message.NetMessage
-	Notifies []*net_message.NetMessage
-}
-
-func NewMechanism() *Mechanism {
-	return &Mechanism{
-		MMEObject: NewMMEObject(mmeobject.ObjectTypeMechanism),
-		Requests:  make([]*net_message.NetMessage, 0),
-		Notifies:  make([]*net_message.NetMessage, 0),
-	}
-}
-
-// Module 模块定义
-type Module struct {
-	*MMEObject
-}
-
-func NewModule() *Module {
-	return &Module{
-		MMEObject: NewMMEObject(mmeobject.ObjectTypeModule),
-	}
-}
-
-// Manager 管理器定义
-type Manager struct {
-	*MMEObject
-}
-
-func NewManager() *Manager {
-	return &Manager{
-		MMEObject: NewMMEObject(mmeobject.ObjectTypeManager),
-	}
-}
-
-// Entity 实体定义
-type Entity struct {
-	*MMEObject
-}
-
-func NewEntity() *Entity {
-	return &Entity{
-		MMEObject: NewMMEObject(mmeobject.ObjectTypeEntity),
-	}
-}
-
-func (e *Entity) GetName() string {
-	return e.Name
-}
-
 // HeadFileConfig 头文件配置
 type HeadFileConfig struct {
-	EntityFields              map[string]any
-	ModuleFields              map[string]any
 	ModuleStorageOption       []string
-	MechanismFields           map[string]any
 	MechanismDataFieldOptions map[string]FieldOptionDefinition
 	CommonDataStructs         []DataStruct
 }
@@ -241,10 +187,10 @@ func (n *NetWallFile) GetPackageName() string {
 // BlueprintContext 解析后的蓝图数据
 type BlueprintContext struct {
 	HeadFile            *HeadFileConfig
-	Entities            []*Entity
-	Managers            []*Manager
-	Modules             []*Module
-	Mechanisms          []*Mechanism
+	Entities            []*mmeobj.Entity
+	Managers            []*mmeobj.Manager
+	Modules             []*mmeobj.Module
+	Mechanisms          []*mmeobj.Mechanism
 	NetWalls            []*NetWallFile
 	Enums               []*Enum
 	ObjectTypeMap       map[string]mmeobject.ObjectType
@@ -256,10 +202,10 @@ type BlueprintContext struct {
 
 func NewBlueprintContext() *BlueprintContext {
 	return &BlueprintContext{
-		Entities:            make([]*Entity, 0),
-		Managers:            make([]*Manager, 0),
-		Modules:             make([]*Module, 0),
-		Mechanisms:          make([]*Mechanism, 0),
+		Entities:            make([]*mmeobj.Entity, 0),
+		Managers:            make([]*mmeobj.Manager, 0),
+		Modules:             make([]*mmeobj.Module, 0),
+		Mechanisms:          make([]*mmeobj.Mechanism, 0),
 		NetWalls:            make([]*NetWallFile, 0),
 		Enums:               make([]*Enum, 0),
 		ObjectTypeMap:       make(map[string]mmeobject.ObjectType),
@@ -282,22 +228,22 @@ func (ctx *BlueprintContext) GetEnums() []*Enum {
 	return ctx.Enums
 }
 
-func (ctx *BlueprintContext) AddEntity(entity *Entity) {
+func (ctx *BlueprintContext) AddEntity(entity *mmeobj.Entity) {
 	ctx.Entities = append(ctx.Entities, entity)
 	ctx.ObjectTypeMap[entity.Name] = mmeobject.ObjectTypeEntity
 }
 
-func (ctx *BlueprintContext) AddManager(manager *Manager) {
+func (ctx *BlueprintContext) AddManager(manager *mmeobj.Manager) {
 	ctx.Managers = append(ctx.Managers, manager)
 	ctx.ObjectTypeMap[manager.Name] = mmeobject.ObjectTypeManager
 }
 
-func (ctx *BlueprintContext) AddModule(module *Module) {
+func (ctx *BlueprintContext) AddModule(module *mmeobj.Module) {
 	ctx.Modules = append(ctx.Modules, module)
 	ctx.ObjectTypeMap[module.Name] = mmeobject.ObjectTypeModule
 }
 
-func (ctx *BlueprintContext) AddMechanism(mechanism *Mechanism) {
+func (ctx *BlueprintContext) AddMechanism(mechanism *mmeobj.Mechanism) {
 	ctx.Mechanisms = append(ctx.Mechanisms, mechanism)
 	ctx.ObjectTypeMap[mechanism.Name] = mmeobject.ObjectTypeMechanism
 }
@@ -489,70 +435,4 @@ func (ctx *BlueprintContext) SetHeadFile(headFile *HeadFileConfig) {
 func (ctx *BlueprintContext) HasNameSpace(name string) bool {
 	_, ok := ctx.NameSpaces[name]
 	return ok
-}
-
-func hasMapField(fields []*types.Field) bool {
-	for _, field := range fields {
-		if field.IsMapField() {
-			return true
-		}
-	}
-	return false
-}
-
-func hasXMapField(fields []*types.Field) (bool, *types.Field) {
-	for _, field := range fields {
-		if field.IsXMapField() {
-			return true, field
-		}
-	}
-	return false, nil
-}
-
-// field 中存在xmap，且xmap的Value类型是基础类型
-func hasXMapValueIsBaseType(fields []*types.Field) (bool, *types.Field) {
-	for _, field := range fields {
-		if field.IsXMapField() {
-			if field.Type.ValueType.IsFieldBaseType() {
-				return true, field
-			}
-		}
-	}
-	return false, nil
-}
-
-// field 中存在map，且map的Value类型是基础类型
-func hasMapValueIsBaseType(fields []*types.Field) (bool, *types.Field) {
-	for _, field := range fields {
-		if field.IsMapField() {
-			if field.Type.ValueType.IsFieldBaseType() {
-				return true, field
-			}
-		}
-	}
-	return false, nil
-}
-
-// field 中存在xmap，且xmap的Value类型是 MMEObject 或 Message
-func hasXMapValueIsMMEObjectOrMessage(fields []*types.Field) (bool, *types.Field) {
-	for _, field := range fields {
-		if field.IsXMapField() {
-			if field.Type.IsXMapValueMMEObject() {
-				return true, field
-			}
-		}
-	}
-	return false, nil
-}
-
-// field 中存在map，且map的Value类型是 MMEObject 或 Message
-func hasMapValueIsMMEObjectOrMessage(fields []*types.Field) (bool, *types.Field) {
-	for _, field := range fields {
-		if field.IsMapField() {
-			if field.Type.IsMapValueMMEObject() {
-				return true, field
-			}
-		}
-	}
-	return false, nil
 }

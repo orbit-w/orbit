@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 
+	"gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/mmeobj"
 	field_parser "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/parser"
 	types "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types"
 )
@@ -91,8 +92,8 @@ func (p *YamlParser) ParseEntities() error {
 // parseEntityFromMap 从 map 数据中解析单个 Entity
 // entityName: 实体名称
 // entityData: 实体数据，通常是包含字段定义的 map
-func (p *YamlParser) parseEntityFromMap(entityName string, entityData any) *Entity {
-	entity := NewEntity()
+func (p *YamlParser) parseEntityFromMap(entityName string, entityData any) *mmeobj.Entity {
+	entity := mmeobj.NewEntity()
 	entity.Name = entityName
 
 	fieldsMap, ok := entityData.(map[string]any)
@@ -195,8 +196,8 @@ func (p *YamlParser) parseManagers(items []any) {
 // managerData: Manager 数据，可能是 nil 或包含字段定义的 map
 // managerMap: 完整的 managerMap，用于从平铺结构中提取字段
 // 返回: 解析后的 Manager
-func (p *YamlParser) parseManagerFromMap(managerName string, managerData any, managerMap map[string]any) *Manager {
-	manager := NewManager()
+func (p *YamlParser) parseManagerFromMap(managerName string, managerData any, managerMap map[string]any) *mmeobj.Manager {
+	manager := mmeobj.NewManager()
 	manager.Name = managerName
 
 	// 判断字段定义的位置
@@ -247,7 +248,7 @@ func (p *YamlParser) ParseModules() error {
 	moduleList := yamlData["Modules"].([]any)
 	for _, moduleItem := range moduleList {
 		moduleMap := moduleItem.(map[string]any)
-		module := NewModule()
+		module := mmeobj.NewModule()
 		for moduleName, moduleData := range moduleMap {
 			module.Name = moduleName
 			p.parseModuleItem(module, moduleData.([]any))
@@ -278,7 +279,7 @@ func (p *YamlParser) ParseModules() error {
 // module: 模块
 // moduleItem: 模块的 Item，通常是包含字段定义/Settings定义的 map
 // 返回: 解析后的 Module
-func (p *YamlParser) parseModuleItem(module *Module, moduleItem []any) {
+func (p *YamlParser) parseModuleItem(module *mmeobj.Module, moduleItem []any) {
 	for i := range moduleItem {
 		keyWordItem := moduleItem[i]
 		keyWordItemMap := keyWordItem.(map[string]any)
@@ -287,7 +288,7 @@ func (p *YamlParser) parseModuleItem(module *Module, moduleItem []any) {
 			case ModuleKeyWordSettings:
 				settings := keyWordItem.(map[string]any)
 				if settings != nil {
-					maps.Copy(module.Settings, settings)
+					module.SetSettings(settings)
 				}
 			default:
 				//如果不是其他特殊关键字，则认为是Field定义
@@ -295,7 +296,8 @@ func (p *YamlParser) parseModuleItem(module *Module, moduleItem []any) {
 				if field == nil {
 					panic(fmt.Sprintf("failed to parse field %s", keyWord))
 				}
-				module.Fields = append(module.Fields, field)
+
+				module.AddField(field)
 			}
 		}
 	}
@@ -339,8 +341,8 @@ func (p *YamlParser) ParseMechanisms() error {
 	return nil
 }
 
-func (p *YamlParser) parseMechanismItem(mechItem map[string]any) *Mechanism {
-	mechanism := NewMechanism()
+func (p *YamlParser) parseMechanismItem(mechItem map[string]any) *mmeobj.Mechanism {
+	mechanism := mmeobj.NewMechanism()
 	for mechKey, mechData := range mechItem {
 		switch mechKey {
 		case MechanismKeyWordSettings:

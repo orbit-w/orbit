@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/mmeobj"
 	types "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types"
 	mmeobject "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types/mme_obj"
 )
@@ -540,7 +541,7 @@ func (g *GoStructGenerator) generateEntityFiles(outputDir string) error {
 }
 
 // genEntityInitFunction 生成 Entity 的 init 函数，注册工厂方法
-func (g *GoStructGenerator) genEntityInitFunction(entity *Entity) string {
+func (g *GoStructGenerator) genEntityInitFunction(entity *mmeobj.Entity) string {
 	var sb strings.Builder
 
 	sb.WriteString("func init() {\n")
@@ -562,7 +563,7 @@ func (g *GoStructGenerator) genEntityInitFunction(entity *Entity) string {
 }
 
 // genEntityFromProtoMethod 生成 Entity 的 FromProto 方法
-func (g *GoStructGenerator) genEntityFromProtoMethod(entity *Entity) string {
+func (g *GoStructGenerator) genEntityFromProtoMethod(entity *mmeobj.Entity) string {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("func (e *%s) FromProto(msg proto.Message) {\n", entity.Name))
 	sb.WriteString("\tif e == nil || msg == nil {\n")
@@ -588,7 +589,7 @@ func (g *GoStructGenerator) genEntityFromProtoMethod(entity *Entity) string {
 }
 
 // genEntityToProtoMethod 生成 Entity 的 ToProto 方法
-func (g *GoStructGenerator) genEntityToProtoMethod(entity *Entity) string {
+func (g *GoStructGenerator) genEntityToProtoMethod(entity *mmeobj.Entity) string {
 	var sb strings.Builder
 	// 生成 ToProto 方法
 	sb.WriteString(fmt.Sprintf("func (e *%s) ToProto() proto.Message {\n", entity.Name))

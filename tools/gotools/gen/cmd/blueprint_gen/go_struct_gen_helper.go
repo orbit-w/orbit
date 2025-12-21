@@ -4,8 +4,21 @@ import (
 	"fmt"
 	"strings"
 
+	types "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types"
 	mmeobject "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types/mme_obj"
 )
+
+type MMEObjectBase interface {
+	GetFields() []*types.Field
+	GetName() string
+	HasMapField() bool
+	HasXMapField() bool
+	GetObjectType() mmeobject.ObjectType
+	HasXMapValueIsBaseType() bool
+	HasMapValueIsBaseType() bool
+	HasXMapValueIsMMEObjectOrMessage() (bool, *types.Field)
+	HasMapValueIsMMEObjectOrMessage() (bool, *types.Field)
+}
 
 func (g *GoStructGenerator) GenerateImport(obj MMEObjectBase, packageName string) string {
 	sb := strings.Builder{}
@@ -31,7 +44,7 @@ func (g *GoStructGenerator) GenerateImport(obj MMEObjectBase, packageName string
 	)
 
 	// 检查xmap的Value类型是 MMEObject 或 Message, 需要使用xmapwrapper
-	if ok, _ := hasXMapValueIsMMEObjectOrMessage(obj.GetFields()); ok {
+	if ok, _ := obj.HasXMapValueIsMMEObjectOrMessage(); ok {
 		sb.WriteString("\txmapwrapper \"gitee.com/orbit-w/orbit/lib/module/xmapwrapper\"\n")
 		if !xmapImport {
 			xmapImport = true
@@ -41,18 +54,18 @@ func (g *GoStructGenerator) GenerateImport(obj MMEObjectBase, packageName string
 	}
 
 	//TODO: 检查map的Value类型是 MMEObject 或 Message, 需要特殊处理
-	if ok, field := hasMapValueIsMMEObjectOrMessage(obj.GetFields()); ok {
+	if ok, field := obj.HasMapValueIsMMEObjectOrMessage(); ok {
 		panic(fmt.Sprintf("map的Value类型是 MMEObject 或 Message, 需要特殊处理: %+v", field.Name))
 	}
 
 	// 检查map的Value类型是基础类型, 则需要导入maps包
-	if ok, _ := hasMapValueIsBaseType(obj.GetFields()); ok {
+	if obj.HasMapValueIsBaseType() {
 		mapsImport = true
 		sb.WriteString("\t\"maps\"\n")
 	}
 
 	// 检查xmap的Value类型是基础类型, 则需要导入maps包和xmap包
-	if ok, _ := hasXMapValueIsBaseType(obj.GetFields()); ok {
+	if obj.HasXMapValueIsBaseType() {
 		if !mapsImport {
 			mapsImport = true
 			sb.WriteString("\t\"maps\"\n")

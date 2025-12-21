@@ -57,10 +57,7 @@ func (p *YamlParser) parseHeadFile() error {
 
 	// 创建 HeadFileConfig
 	headFileConfig := &HeadFileConfig{
-		EntityFields:              make(map[string]any),
-		ModuleFields:              make(map[string]any),
 		ModuleStorageOption:       make([]string, 0),
-		MechanismFields:           make(map[string]any),
 		MechanismDataFieldOptions: make(map[string]FieldOptionDefinition),
 		CommonDataStructs:         make([]DataStruct, 0),
 	}
