@@ -253,6 +253,20 @@ func (ctx *BlueprintContext) AddNetWallFile(netWallFile *NetWallFile) {
 	ctx.NetWalls = append(ctx.NetWalls, netWallFile)
 }
 
+// LinkModules 链接 Modules 和 Mechanisms
+func (ctx *BlueprintContext) LinkModules() {
+	for _, module := range ctx.Modules {
+		module.LinkMechanisms(ctx.Mechanisms)
+	}
+}
+
+// LinkManagers 链接 Managers 和 Modules
+func (ctx *BlueprintContext) LinkManagers() {
+	for _, manager := range ctx.Managers {
+		manager.LinkModules(ctx.Modules)
+	}
+}
+
 // CheckFields 检查Entity所有字段是否符合要求
 func (ctx *BlueprintContext) CheckEntityFields() {
 	for _, entity := range ctx.Entities {

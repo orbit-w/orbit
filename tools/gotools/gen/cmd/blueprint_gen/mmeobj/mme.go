@@ -7,6 +7,8 @@ import (
 	mmeobject "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types/mme_obj"
 )
 
+type Index int32
+
 type MMEObject struct {
 	Name       string
 	ObjectType mmeobject.ObjectType

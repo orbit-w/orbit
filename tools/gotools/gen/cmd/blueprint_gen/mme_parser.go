@@ -33,6 +33,11 @@ func (p *YamlParser) parseMMEFiles() error {
 		return fmt.Errorf("failed to parse mechanisms: %w", err)
 	}
 
+	// 链接 Modules 和 Mechanisms
+	p.ctx.LinkModules()
+	// 链接 Managers 和 Modules
+	p.ctx.LinkManagers()
+
 	return nil
 }
 

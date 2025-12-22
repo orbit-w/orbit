@@ -247,8 +247,8 @@ func (x *Coord) GetZ() int32 {
 type MMELocation struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	EntityId       *int64                 `protobuf:"varint,1,opt,name=EntityId,proto3,oneof" json:"EntityId,omitempty"`
-	ModuleId       *int32                 `protobuf:"varint,2,opt,name=ModuleId,proto3,oneof" json:"ModuleId,omitempty"`
-	ManagerId      *int32                 `protobuf:"varint,3,opt,name=ManagerId,proto3,oneof" json:"ManagerId,omitempty"`
+	ModuleIndex    *int32                 `protobuf:"varint,2,opt,name=ModuleIndex,proto3,oneof" json:"ModuleIndex,omitempty"`
+	ManagerIndex   *int32                 `protobuf:"varint,3,opt,name=ManagerIndex,proto3,oneof" json:"ManagerIndex,omitempty"`
 	MechanismIndex *int32                 `protobuf:"varint,4,opt,name=MechanismIndex,proto3,oneof" json:"MechanismIndex,omitempty"`
 	Key            *int64                 `protobuf:"varint,5,opt,name=Key,proto3,oneof" json:"Key,omitempty"`
 	unknownFields  protoimpl.UnknownFields
@@ -292,16 +292,16 @@ func (x *MMELocation) GetEntityId() int64 {
 	return 0
 }
 
-func (x *MMELocation) GetModuleId() int32 {
-	if x != nil && x.ModuleId != nil {
-		return *x.ModuleId
+func (x *MMELocation) GetModuleIndex() int32 {
+	if x != nil && x.ModuleIndex != nil {
+		return *x.ModuleIndex
 	}
 	return 0
 }
 
-func (x *MMELocation) GetManagerId() int32 {
-	if x != nil && x.ManagerId != nil {
-		return *x.ManagerId
+func (x *MMELocation) GetManagerIndex() int32 {
+	if x != nil && x.ManagerIndex != nil {
+		return *x.ManagerIndex
 	}
 	return 0
 }
@@ -384,17 +384,16 @@ const file_common_proto_rawDesc = "" +
 	"\x01Z\x18\x03 \x01(\x05H\x02R\x01Z\x88\x01\x01B\x04\n" +
 	"\x02_XB\x04\n" +
 	"\x02_YB\x04\n" +
-	"\x02_Z\"\xf9\x01\n" +
+	"\x02_Z\"\x8b\x02\n" +
 	"\vMMELocation\x12\x1f\n" +
-	"\bEntityId\x18\x01 \x01(\x03H\x00R\bEntityId\x88\x01\x01\x12\x1f\n" +
-	"\bModuleId\x18\x02 \x01(\x05H\x01R\bModuleId\x88\x01\x01\x12!\n" +
-	"\tManagerId\x18\x03 \x01(\x05H\x02R\tManagerId\x88\x01\x01\x12+\n" +
+	"\bEntityId\x18\x01 \x01(\x03H\x00R\bEntityId\x88\x01\x01\x12%\n" +
+	"\vModuleIndex\x18\x02 \x01(\x05H\x01R\vModuleIndex\x88\x01\x01\x12'\n" +
+	"\fManagerIndex\x18\x03 \x01(\x05H\x02R\fManagerIndex\x88\x01\x01\x12+\n" +
 	"\x0eMechanismIndex\x18\x04 \x01(\x05H\x03R\x0eMechanismIndex\x88\x01\x01\x12\x15\n" +
 	"\x03Key\x18\x05 \x01(\x03H\x04R\x03Key\x88\x01\x01B\v\n" +
-	"\t_EntityIdB\v\n" +
-	"\t_ModuleIdB\f\n" +
-	"\n" +
-	"_ManagerIdB\x11\n" +
+	"\t_EntityIdB\x0e\n" +
+	"\f_ModuleIndexB\x0f\n" +
+	"\r_ManagerIndexB\x11\n" +
 	"\x0f_MechanismIndexB\x06\n" +
 	"\x04_Key\"~\n" +
 	"\tEntityRef\x12\x1f\n" +
