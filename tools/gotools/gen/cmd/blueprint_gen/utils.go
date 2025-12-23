@@ -804,6 +804,10 @@ func GenEntityTypeEnumName(entityName string) string {
 	return fmt.Sprintf("%sType", entityName)
 }
 
+func GenMechanismTypeEnumName(mechanismName string) string {
+	return fmt.Sprintf("%sType", mechanismName)
+}
+
 // GenerateBsonTag 生成 bson tag
 // 将字段名转换为小写加下划线的格式
 // 例如: ConfId -> bson:"conf_id"
