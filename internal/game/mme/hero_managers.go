@@ -12,12 +12,12 @@ import (
 )
 
 const (
-	HeroManagerFieldIndexHeroMap = uint8(0)
+	HeroManagerFieldIndexHeroMap = uint8(1)
 )
 
 // Dirty bits for HeroManager fields
 const (
-	HeroManagerDirtyHeroMapBit int64 = 1 << HeroManagerFieldIndexHeroMap
+	HeroManagerDirtyHeroMapBit int64 = 1 << (HeroManagerFieldIndexHeroMap - 1)
 )
 
 type HeroManager struct {

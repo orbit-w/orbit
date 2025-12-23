@@ -12,12 +12,12 @@ import (
 )
 
 const (
-	ManualUnlockMechanismFieldIndexUnlockMap = uint8(0)
+	ManualUnlockMechanismFieldIndexUnlockMap = uint8(1)
 )
 
 // Dirty bits for Mechanism fields
 const (
-	ManualUnlockMechanismDirtyUnlockMapBit int64 = 1 << ManualUnlockMechanismFieldIndexUnlockMap
+	ManualUnlockMechanismDirtyUnlockMapBit int64 = 1 << (ManualUnlockMechanismFieldIndexUnlockMap - 1)
 )
 
 type ManualUnlockMechanism struct {

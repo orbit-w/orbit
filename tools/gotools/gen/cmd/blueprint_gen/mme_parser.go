@@ -568,7 +568,7 @@ func (p *YamlParser) parseMechanismRegister(yamlData map[string]any) error {
 	enum := NewEnum("MechanismType", "Mechanism 类型枚举，由 mechanism register 自动生成", "common")
 
 	// 添加默认枚举值 0（protobuf 要求第一个枚举值必须为 0）
-	defaultEnumValue := NewEnumValue("MechanismTypeUnknown", 0, "未知 Mechanism 类型")
+	defaultEnumValue := NewEnumValue("Unknown", 0, "未知 Mechanism 类型")
 	defaultEnumValue.Options[EnumValueOptionContent] = defaultEnumValue.Comment
 	enum.Values = append(enum.Values, defaultEnumValue)
 

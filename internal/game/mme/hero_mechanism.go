@@ -12,20 +12,20 @@ import (
 )
 
 const (
-	HeroMechanismFieldIndexId         = uint8(0)
-	HeroMechanismFieldIndexConfId     = uint8(1)
-	HeroMechanismFieldIndexCreateTime = uint8(2)
-	HeroMechanismFieldIndexUseTimes   = uint8(3)
-	HeroMechanismFieldIndexSkills     = uint8(4)
+	HeroMechanismFieldIndexId         = uint8(1)
+	HeroMechanismFieldIndexConfId     = uint8(2)
+	HeroMechanismFieldIndexCreateTime = uint8(3)
+	HeroMechanismFieldIndexUseTimes   = uint8(4)
+	HeroMechanismFieldIndexSkills     = uint8(5)
 )
 
 // Dirty bits for Mechanism fields
 const (
-	HeroMechanismDirtyIdBit         int64 = 1 << HeroMechanismFieldIndexId
-	HeroMechanismDirtyConfIdBit     int64 = 1 << HeroMechanismFieldIndexConfId
-	HeroMechanismDirtyCreateTimeBit int64 = 1 << HeroMechanismFieldIndexCreateTime
-	HeroMechanismDirtyUseTimesBit   int64 = 1 << HeroMechanismFieldIndexUseTimes
-	HeroMechanismDirtySkillsBit     int64 = 1 << HeroMechanismFieldIndexSkills
+	HeroMechanismDirtyIdBit         int64 = 1 << (HeroMechanismFieldIndexId - 1)
+	HeroMechanismDirtyConfIdBit     int64 = 1 << (HeroMechanismFieldIndexConfId - 1)
+	HeroMechanismDirtyCreateTimeBit int64 = 1 << (HeroMechanismFieldIndexCreateTime - 1)
+	HeroMechanismDirtyUseTimesBit   int64 = 1 << (HeroMechanismFieldIndexUseTimes - 1)
+	HeroMechanismDirtySkillsBit     int64 = 1 << (HeroMechanismFieldIndexSkills - 1)
 )
 
 type HeroMechanism struct {

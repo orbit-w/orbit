@@ -18,7 +18,7 @@ const (
 // Dirty bits for PlayerEntity fields
 const (
 	PlayerEntityDirtyXXXIdBit       int64 = 1 << PlayerEntityFieldIndexXXXId
-	PlayerEntityDirtyHeroManagerBit int64 = 1 << PlayerEntityFieldIndexHeroManager
+	PlayerEntityDirtyHeroManagerBit int64 = 1 << (PlayerEntityFieldIndexHeroManager - 1)
 )
 
 func init() {

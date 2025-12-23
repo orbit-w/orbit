@@ -10,18 +10,18 @@ import (
 )
 
 const (
-	HeroModuleFieldIndexBase         = uint8(0)
-	HeroModuleFieldIndexLevelUp      = uint8(1)
-	HeroModuleFieldIndexTalentUnlock = uint8(2)
-	HeroModuleFieldIndexSkinWear     = uint8(3)
+	HeroModuleFieldIndexBase         = uint8(1)
+	HeroModuleFieldIndexLevelUp      = uint8(2)
+	HeroModuleFieldIndexTalentUnlock = uint8(3)
+	HeroModuleFieldIndexSkinWear     = uint8(4)
 )
 
 // Dirty bits for HeroModule fields
 const (
-	HeroModuleDirtyBaseBit         int64 = 1 << HeroModuleFieldIndexBase
-	HeroModuleDirtyLevelUpBit      int64 = 1 << HeroModuleFieldIndexLevelUp
-	HeroModuleDirtyTalentUnlockBit int64 = 1 << HeroModuleFieldIndexTalentUnlock
-	HeroModuleDirtySkinWearBit     int64 = 1 << HeroModuleFieldIndexSkinWear
+	HeroModuleDirtyBaseBit         int64 = 1 << (HeroModuleFieldIndexBase - 1)
+	HeroModuleDirtyLevelUpBit      int64 = 1 << (HeroModuleFieldIndexLevelUp - 1)
+	HeroModuleDirtyTalentUnlockBit int64 = 1 << (HeroModuleFieldIndexTalentUnlock - 1)
+	HeroModuleDirtySkinWearBit     int64 = 1 << (HeroModuleFieldIndexSkinWear - 1)
 )
 
 type HeroModule struct {
@@ -403,4 +403,24 @@ func (w *HeroModuleWrapper) ToIncrementalProtoWithContext(ctx mmemodel.SyncConte
 		}
 	}
 	return incremental
+}
+
+// Location 根据位置信息查找对应的 Mechanism Wrapper 和 MechanismType
+func (w *HeroModuleWrapper) Location(loc *mme.MMELocation) (any, mme.MechanismType) {
+	if loc == nil {
+		return nil, mme.MechanismType_Unknown
+	}
+
+	index := loc.GetModuleIndex()
+	switch index {
+	case int32(HeroModuleFieldIndexBase):
+		return w.BaseWrapper, mme.MechanismType_Hero
+	case int32(HeroModuleFieldIndexLevelUp):
+		return w.LevelUpWrapper, mme.MechanismType_LevelUp
+	case int32(HeroModuleFieldIndexTalentUnlock):
+		return w.TalentUnlockWrapper, mme.MechanismType_ManualUnlock
+	case int32(HeroModuleFieldIndexSkinWear):
+		return w.SkinWearWrapper, mme.MechanismType_Wear
+	}
+	return nil, mme.MechanismType_Unknown
 }

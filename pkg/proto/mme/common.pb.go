@@ -187,32 +187,32 @@ type MechanismType int32
 
 const (
 	// 未知 Mechanism 类型
-	MechanismType_MechanismTypeUnknown MechanismType = 0
+	MechanismType_Unknown MechanismType = 0
 	// Mechanism 类型: LevelUpMechanism
-	MechanismType_LevelUpMechanismType MechanismType = 1
+	MechanismType_LevelUp MechanismType = 1
 	// Mechanism 类型: HeroMechanism
-	MechanismType_HeroMechanismType MechanismType = 2
+	MechanismType_Hero MechanismType = 2
 	// Mechanism 类型: ManualUnlockMechanism
-	MechanismType_ManualUnlockMechanismType MechanismType = 3
+	MechanismType_ManualUnlock MechanismType = 3
 	// Mechanism 类型: WearMechanism
-	MechanismType_WearMechanismType MechanismType = 4
+	MechanismType_Wear MechanismType = 4
 )
 
 // Enum value maps for MechanismType.
 var (
 	MechanismType_name = map[int32]string{
-		0: "MechanismTypeUnknown",
-		1: "LevelUpMechanismType",
-		2: "HeroMechanismType",
-		3: "ManualUnlockMechanismType",
-		4: "WearMechanismType",
+		0: "Unknown",
+		1: "LevelUp",
+		2: "Hero",
+		3: "ManualUnlock",
+		4: "Wear",
 	}
 	MechanismType_value = map[string]int32{
-		"MechanismTypeUnknown":      0,
-		"LevelUpMechanismType":      1,
-		"HeroMechanismType":         2,
-		"ManualUnlockMechanismType": 3,
-		"WearMechanismType":         4,
+		"Unknown":      0,
+		"LevelUp":      1,
+		"Hero":         2,
+		"ManualUnlock": 3,
+		"Wear":         4,
 	}
 )
 
@@ -478,13 +478,13 @@ const file_common_proto_rawDesc = "" +
 	"\n" +
 	"EntityType\x12\x15\n" +
 	"\x11EntityTypeUnknown\x10\x00\x12\x14\n" +
-	"\x10PlayerEntityType\x10\x01*\x90\x01\n" +
-	"\rMechanismType\x12\x18\n" +
-	"\x14MechanismTypeUnknown\x10\x00\x12\x18\n" +
-	"\x14LevelUpMechanismType\x10\x01\x12\x15\n" +
-	"\x11HeroMechanismType\x10\x02\x12\x1d\n" +
-	"\x19ManualUnlockMechanismType\x10\x03\x12\x15\n" +
-	"\x11WearMechanismType\x10\x04B'Z%gitee.com/orbit-w/orbit/pkg/proto/mmeb\x06proto3"
+	"\x10PlayerEntityType\x10\x01*O\n" +
+	"\rMechanismType\x12\v\n" +
+	"\aUnknown\x10\x00\x12\v\n" +
+	"\aLevelUp\x10\x01\x12\b\n" +
+	"\x04Hero\x10\x02\x12\x10\n" +
+	"\fManualUnlock\x10\x03\x12\b\n" +
+	"\x04Wear\x10\x04B'Z%gitee.com/orbit-w/orbit/pkg/proto/mmeb\x06proto3"
 
 var (
 	file_common_proto_rawDescOnce sync.Once

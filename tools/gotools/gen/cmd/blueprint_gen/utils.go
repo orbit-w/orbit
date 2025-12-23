@@ -805,7 +805,9 @@ func GenEntityTypeEnumName(entityName string) string {
 }
 
 func GenMechanismTypeEnumName(mechanismName string) string {
-	return fmt.Sprintf("%sType", mechanismName)
+	// 去掉 "Mechanism" 后缀，生成简洁的枚举值名称
+	// 例如: LevelUpMechanism -> LevelUp, HeroMechanism -> Hero
+	return strings.TrimSuffix(mechanismName, "Mechanism")
 }
 
 // GenerateBsonTag 生成 bson tag

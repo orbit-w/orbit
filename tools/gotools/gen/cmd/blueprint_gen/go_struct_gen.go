@@ -62,9 +62,9 @@ func (g *GoStructGenerator) generateMechanismFiles(outputDir string) error {
 
 		// 生成 FieldIndex 常量
 		sb.WriteString("const (\n")
-		for idx, field := range mech.Fields {
+		for _, field := range mech.Fields {
 			fieldIndexName := fmt.Sprintf("%sFieldIndex%s", mech.Name, field.Name)
-			sb.WriteString(fmt.Sprintf("\t%s = uint8(%d)\n", fieldIndexName, idx))
+			sb.WriteString(fmt.Sprintf("\t%s = uint8(%d)\n", fieldIndexName, field.Number))
 		}
 		sb.WriteString(")\n\n")
 
@@ -73,7 +73,7 @@ func (g *GoStructGenerator) generateMechanismFiles(outputDir string) error {
 		sb.WriteString("const (\n")
 		for _, field := range mech.Fields {
 			dirtyBitName := fmt.Sprintf("%sDirty%sBit", mech.Name, field.Name)
-			sb.WriteString(fmt.Sprintf("\t%s int64 = 1 << %sFieldIndex%s\n",
+			sb.WriteString(fmt.Sprintf("\t%s int64 = 1 << (%sFieldIndex%s - 1)\n",
 				dirtyBitName, mech.Name, field.Name))
 		}
 		sb.WriteString(")\n\n")
@@ -234,9 +234,9 @@ func (g *GoStructGenerator) generateModuleFiles(outputDir string) error {
 
 		// 生成 FieldIndex 常量
 		sb.WriteString("const (\n")
-		for idx, field := range module.Fields {
+		for _, field := range module.Fields {
 			fieldIndexName := fmt.Sprintf("%sFieldIndex%s", module.Name, field.Name)
-			sb.WriteString(fmt.Sprintf("\t%s = uint8(%d)\n", fieldIndexName, idx))
+			sb.WriteString(fmt.Sprintf("\t%s = uint8(%d)\n", fieldIndexName, field.Number))
 		}
 		sb.WriteString(")\n\n")
 
@@ -245,7 +245,7 @@ func (g *GoStructGenerator) generateModuleFiles(outputDir string) error {
 		sb.WriteString("const (\n")
 		for _, field := range module.Fields {
 			dirtyBitName := fmt.Sprintf("%sDirty%sBit", module.Name, field.Name)
-			sb.WriteString(fmt.Sprintf("\t%s int64 = 1 << %sFieldIndex%s\n",
+			sb.WriteString(fmt.Sprintf("\t%s int64 = 1 << (%sFieldIndex%s - 1)\n",
 				dirtyBitName, module.Name, field.Name))
 		}
 		sb.WriteString(")\n\n")
@@ -340,9 +340,9 @@ func (g *GoStructGenerator) generateManagerFiles(outputDir string) error {
 
 		// 生成 FieldIndex 常量
 		sb.WriteString("const (\n")
-		for idx, field := range manager.Fields {
+		for _, field := range manager.Fields {
 			fieldIndexName := fmt.Sprintf("%sFieldIndex%s", manager.Name, field.Name)
-			sb.WriteString(fmt.Sprintf("\t%s = uint8(%d)\n", fieldIndexName, idx))
+			sb.WriteString(fmt.Sprintf("\t%s = uint8(%d)\n", fieldIndexName, field.Number))
 		}
 		sb.WriteString(")\n\n")
 
@@ -351,7 +351,7 @@ func (g *GoStructGenerator) generateManagerFiles(outputDir string) error {
 		sb.WriteString("const (\n")
 		for _, field := range manager.Fields {
 			dirtyBitName := fmt.Sprintf("%sDirty%sBit", manager.Name, field.Name)
-			sb.WriteString(fmt.Sprintf("\t%s int64 = 1 << %sFieldIndex%s\n",
+			sb.WriteString(fmt.Sprintf("\t%s int64 = 1 << (%sFieldIndex%s - 1)\n",
 				dirtyBitName, manager.Name, field.Name))
 		}
 		sb.WriteString(")\n\n")
@@ -470,9 +470,9 @@ func (g *GoStructGenerator) generateEntityFiles(outputDir string) error {
 		// 生成 FieldIndex 常量（Entity的Id字段默认是0）
 		sb.WriteString("const (\n")
 		sb.WriteString(fmt.Sprintf("\t%sFieldIndexXXXId = uint8(0)\n", entity.Name))
-		for idx, field := range entity.Fields {
+		for _, field := range entity.Fields {
 			fieldIndexName := fmt.Sprintf("%sFieldIndex%s", entity.Name, field.Name)
-			sb.WriteString(fmt.Sprintf("\t%s = uint8(%d)\n", fieldIndexName, idx+1))
+			sb.WriteString(fmt.Sprintf("\t%s = uint8(%d)\n", fieldIndexName, field.Number))
 		}
 		sb.WriteString(")\n\n")
 
@@ -482,7 +482,7 @@ func (g *GoStructGenerator) generateEntityFiles(outputDir string) error {
 		sb.WriteString(fmt.Sprintf("\t%sDirtyXXXIdBit int64 = 1 << %sFieldIndexXXXId\n", entity.Name, entity.Name))
 		for _, field := range entity.Fields {
 			dirtyBitName := fmt.Sprintf("%sDirty%sBit", entity.Name, field.Name)
-			sb.WriteString(fmt.Sprintf("\t%s int64 = 1 << %sFieldIndex%s\n",
+			sb.WriteString(fmt.Sprintf("\t%s int64 = 1 << (%sFieldIndex%s - 1)\n",
 				dirtyBitName, entity.Name, field.Name))
 		}
 		sb.WriteString(")\n\n")

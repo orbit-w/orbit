@@ -12,14 +12,14 @@ import (
 )
 
 const (
-	WearMechanismFieldIndexWearMap = uint8(0)
-	WearMechanismFieldIndexConfId  = uint8(1)
+	WearMechanismFieldIndexWearMap = uint8(1)
+	WearMechanismFieldIndexConfId  = uint8(2)
 )
 
 // Dirty bits for Mechanism fields
 const (
-	WearMechanismDirtyWearMapBit int64 = 1 << WearMechanismFieldIndexWearMap
-	WearMechanismDirtyConfIdBit  int64 = 1 << WearMechanismFieldIndexConfId
+	WearMechanismDirtyWearMapBit int64 = 1 << (WearMechanismFieldIndexWearMap - 1)
+	WearMechanismDirtyConfIdBit  int64 = 1 << (WearMechanismFieldIndexConfId - 1)
 )
 
 type WearMechanism struct {

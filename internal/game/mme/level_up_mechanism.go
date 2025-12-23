@@ -10,16 +10,16 @@ import (
 )
 
 const (
-	LevelUpMechanismFieldIndexCurLevel = uint8(0)
-	LevelUpMechanismFieldIndexCurExp   = uint8(1)
-	LevelUpMechanismFieldIndexConfId   = uint8(2)
+	LevelUpMechanismFieldIndexCurLevel = uint8(1)
+	LevelUpMechanismFieldIndexCurExp   = uint8(2)
+	LevelUpMechanismFieldIndexConfId   = uint8(3)
 )
 
 // Dirty bits for Mechanism fields
 const (
-	LevelUpMechanismDirtyCurLevelBit int64 = 1 << LevelUpMechanismFieldIndexCurLevel
-	LevelUpMechanismDirtyCurExpBit   int64 = 1 << LevelUpMechanismFieldIndexCurExp
-	LevelUpMechanismDirtyConfIdBit   int64 = 1 << LevelUpMechanismFieldIndexConfId
+	LevelUpMechanismDirtyCurLevelBit int64 = 1 << (LevelUpMechanismFieldIndexCurLevel - 1)
+	LevelUpMechanismDirtyCurExpBit   int64 = 1 << (LevelUpMechanismFieldIndexCurExp - 1)
+	LevelUpMechanismDirtyConfIdBit   int64 = 1 << (LevelUpMechanismFieldIndexConfId - 1)
 )
 
 type LevelUpMechanism struct {

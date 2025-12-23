@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/mmeobj"
 	types "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types"
 	mmeobject "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types/mme_obj"
 )
@@ -465,6 +466,9 @@ func (g *GoWrapperGenerator) generateModuleWrappers(outputDir string) error {
 		}
 		sb.WriteString(generatorToIncrementalProto.GenerateToIncrementalProtoMethod(module.Fields))
 
+		// 生成 Location 方法
+		sb.WriteString(g.generateModulesLocationMethod(module, wrapperName))
+
 		// 写入文件（追加到模块文件）
 		fileName := GetModuleFileName(module.Name)
 		filePath := fmt.Sprintf("%s/%s", outputDir, fileName)
@@ -486,11 +490,12 @@ func (g *GoWrapperGenerator) generateModuleWrappers(outputDir string) error {
 		} else {
 			// 如果文件不存在，需要添加 package 声明和导入
 			imports := "import (\n"
-			imports += "\t\"gitee.com/orbit-w/orbit/pkg/proto/mme\"\n"
+			imports += "\t\"errors\"\n\n"
 			imports += "\tdirtyflag \"gitee.com/orbit-w/orbit/lib/base/dirty_flag\"\n"
 			imports += "\tfieldmeta \"gitee.com/orbit-w/orbit/lib/base/field_meta\"\n"
 			imports += "\t\"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder\"\n"
 			imports += "\tmmemodel \"gitee.com/orbit-w/orbit/lib/module/mme_model\"\n"
+			imports += "\t\"gitee.com/orbit-w/orbit/pkg/proto/mme\"\n"
 			imports += "\t\"google.golang.org/protobuf/proto\"\n"
 			imports += ")\n\n"
 			newContent = fmt.Sprintf("package %s\n\n%s", packageName, imports) + sb.String()
@@ -501,6 +506,57 @@ func (g *GoWrapperGenerator) generateModuleWrappers(outputDir string) error {
 	}
 
 	return nil
+}
+
+// generateLocationMethod 生成 Location 方法
+// Location 方法根据 MMELocation 查找对应的 Mechanism Wrapper 和 MechanismType
+func (g *GoWrapperGenerator) generateModulesLocationMethod(module *mmeobj.Module, wrapperName string) string {
+	sb := strings.Builder{}
+
+	// 只有包含 MMEObject 字段的 Module 才生成 Location 方法
+	hasMMEObjectField := false
+	for _, field := range module.Fields {
+		if field.Type.IsMMEObjectType() {
+			hasMMEObjectField = true
+			break
+		}
+	}
+
+	if !hasMMEObjectField {
+		return ""
+	}
+
+	// 生成方法签名和开头
+	sb.WriteString("// Location 根据位置信息查找对应的 Mechanism Wrapper 和 MechanismType\n")
+	sb.WriteString(fmt.Sprintf("func (w *%s) Location(loc *mme.MMELocation) (any, mme.MechanismType) {\n", wrapperName))
+	sb.WriteString("\tif loc == nil {\n")
+	sb.WriteString("\t\treturn nil, mme.MechanismType_Unknown\n")
+	sb.WriteString("\t}\n\n")
+	sb.WriteString("\tindex := loc.GetModuleIndex()\n")
+	sb.WriteString("\tswitch index {\n")
+
+	// 生成 case 分支
+	for _, field := range module.Fields {
+		if field.Type.IsMMEObjectType() {
+			fieldIndexName := fmt.Sprintf("%sFieldIndex%s", module.Name, field.Name)
+			wrapperFieldName := field.Name + "Wrapper"
+			typeName := field.GetTypeName()
+
+			// 生成 MechanismType 枚举值名称
+			mechanismTypeEnumName := GenMechanismTypeEnumName(typeName)
+
+			sb.WriteString(fmt.Sprintf("\tcase int32(%s):\n", fieldIndexName))
+			sb.WriteString(fmt.Sprintf("\t\treturn w.%s, mme.MechanismType_%s\n",
+				wrapperFieldName, mechanismTypeEnumName))
+		}
+	}
+
+	// 生成默认分支
+	sb.WriteString("\t}\n")
+	sb.WriteString("\treturn nil, mme.MechanismType_Unknown\n")
+	sb.WriteString("}\n\n")
+
+	return sb.String()
 }
 
 // generateManagerWrappers 生成 Manager Wrapper
