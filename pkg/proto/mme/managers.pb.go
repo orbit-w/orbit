@@ -25,6 +25,7 @@ type HeroManager struct {
 	state                 protoimpl.MessageState                    `protogen:"open.v1"`
 	HeroMap               map[int64]*HeroModule                     `protobuf:"bytes,1,rep,name=HeroMap,proto3" json:"HeroMap,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	HeroMap_XXXChangeList []*HeroManager_HeroMap_XXXMapChangeRecord `protobuf:"bytes,1001,rep,name=HeroMap_XXXChangeList,json=HeroMapXXXChangeList,proto3" json:"HeroMap_XXXChangeList,omitempty"`
+	SingleHeroModule      *HeroModule                               `protobuf:"bytes,2,opt,name=SingleHeroModule,proto3" json:"SingleHeroModule,omitempty"`
 	unknownFields         protoimpl.UnknownFields
 	sizeCache             protoimpl.SizeCache
 }
@@ -69,6 +70,13 @@ func (x *HeroManager) GetHeroMap() map[int64]*HeroModule {
 func (x *HeroManager) GetHeroMap_XXXChangeList() []*HeroManager_HeroMap_XXXMapChangeRecord {
 	if x != nil {
 		return x.HeroMap_XXXChangeList
+	}
+	return nil
+}
+
+func (x *HeroManager) GetSingleHeroModule() *HeroModule {
+	if x != nil {
+		return x.SingleHeroModule
 	}
 	return nil
 }
@@ -137,10 +145,11 @@ var File_managers_proto protoreflect.FileDescriptor
 
 const file_managers_proto_rawDesc = "" +
 	"\n" +
-	"\x0emanagers.proto\x12\x03MME\x1a\rmodules.proto\"\xe9\x02\n" +
+	"\x0emanagers.proto\x12\x03MME\x1a\rmodules.proto\"\xa6\x03\n" +
 	"\vHeroManager\x127\n" +
 	"\aHeroMap\x18\x01 \x03(\v2\x1d.MME.HeroManager.HeroMapEntryR\aHeroMap\x12a\n" +
-	"\x15HeroMap_XXXChangeList\x18\xe9\a \x03(\v2+.MME.HeroManager.HeroMap_XXXMapChangeRecordR\x14HeroMapXXXChangeList\x1aK\n" +
+	"\x15HeroMap_XXXChangeList\x18\xe9\a \x03(\v2+.MME.HeroManager.HeroMap_XXXMapChangeRecordR\x14HeroMapXXXChangeList\x12;\n" +
+	"\x10SingleHeroModule\x18\x02 \x01(\v2\x0f.MME.HeroModuleR\x10SingleHeroModule\x1aK\n" +
 	"\fHeroMapEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\x03R\x03key\x12%\n" +
 	"\x05value\x18\x02 \x01(\v2\x0f.MME.HeroModuleR\x05value:\x028\x01\x1aq\n" +
@@ -171,13 +180,14 @@ var file_managers_proto_goTypes = []any{
 var file_managers_proto_depIdxs = []int32{
 	1, // 0: MME.HeroManager.HeroMap:type_name -> MME.HeroManager.HeroMapEntry
 	2, // 1: MME.HeroManager.HeroMap_XXXChangeList:type_name -> MME.HeroManager.HeroMap_XXXMapChangeRecord
-	3, // 2: MME.HeroManager.HeroMapEntry.value:type_name -> MME.HeroModule
-	3, // 3: MME.HeroManager.HeroMap_XXXMapChangeRecord.Value:type_name -> MME.HeroModule
-	4, // [4:4] is the sub-list for method output_type
-	4, // [4:4] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	3, // 2: MME.HeroManager.SingleHeroModule:type_name -> MME.HeroModule
+	3, // 3: MME.HeroManager.HeroMapEntry.value:type_name -> MME.HeroModule
+	3, // 4: MME.HeroManager.HeroMap_XXXMapChangeRecord.Value:type_name -> MME.HeroModule
+	5, // [5:5] is the sub-list for method output_type
+	5, // [5:5] is the sub-list for method input_type
+	5, // [5:5] is the sub-list for extension type_name
+	5, // [5:5] is the sub-list for extension extendee
+	0, // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_managers_proto_init() }

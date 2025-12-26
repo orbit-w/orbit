@@ -260,9 +260,9 @@ func (e *PlayerEntityWrapper) ToIncrementalProtoWithContext(ctx mmemodel.SyncCon
 
 	if mmemodel.FieldCanBeIncrementalSynced(e, PlayerEntityDirtyHeroManagerBit, PlayerEntityFieldIndexHeroManager, ctx) {
 		if e.HeroManagerWrapper != nil {
-			pb := e.HeroManagerWrapper.ToIncrementalProtoWithContext(ctx)
-			if pb != nil {
-				v, ok := pb.(*mme.HeroManager)
+			pbObj := e.HeroManagerWrapper.ToIncrementalProtoWithContext(ctx)
+			if pbObj != nil {
+				v, ok := pbObj.(*mme.HeroManager)
 				if ok {
 					incremental.HeroManager = v
 				}

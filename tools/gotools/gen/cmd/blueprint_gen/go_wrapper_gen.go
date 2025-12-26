@@ -559,6 +559,93 @@ func (g *GoWrapperGenerator) generateModulesLocationMethod(module *mmeobj.Module
 	return sb.String()
 }
 
+func (g *GoWrapperGenerator) generateMMEGOStructWrapper(objName string, _ mmeobject.ObjectType, fields []*types.Field, sb *strings.Builder) {
+	// 生成 Wrapper 结构体
+	wrapperName := objName + "Wrapper"
+	sb.WriteString(fmt.Sprintf("type %s struct {\n", wrapperName))
+	sb.WriteString(fmt.Sprintf("\tdata *%s\n", objName))
+	sb.WriteString("\tdirtyflag.IDirtyFlag\n")
+	sb.WriteString("\tfieldMetas *fieldmeta.FieldMetas\n\n")
+
+	for _, field := range fields {
+		switch {
+		case field.Type.IsXMapField() || field.Type.IsMapField():
+			if field.Type.IsXMapField() {
+				if !field.Type.IsXMapValueMMEObject() {
+					panic(fmt.Sprintf("%s 的xmap字段 %s 的Value类型必须是 MMEObject 类型", objName, field.Name))
+				}
+			} else if field.Type.IsMapField() {
+				if !field.Type.IsMapValueMMEObject() {
+					panic(fmt.Sprintf("%s 的map字段 %s 的Value类型必须是 MMEObject 类型", objName, field.Name))
+				}
+			}
+
+			keyType := field.Type.KeyKind().String()
+			valueType := field.GetValueName()
+			wrapperTypeName := valueType + "Wrapper"
+			linkFieldName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Link"
+			sb.WriteString("\t//Value为MME Object，使用xmap.MapAccessor进行包装\n")
+			sb.WriteString(fmt.Sprintf("\t%s *xmapwrapper.XMapWrapper[%s, *%s, *%s]\n",
+				linkFieldName, keyType, valueType, wrapperTypeName))
+		case field.Type.IsMMEObjectType():
+			wrapperTypeName := field.GetTypeName() + "Wrapper"
+			sb.WriteString(fmt.Sprintf("\t%sWrapper *%s\n", field.Name, wrapperTypeName))
+		default:
+			panic(fmt.Sprintf("field %s type is not supported", field.Name))
+		}
+
+	}
+
+	sb.WriteString("}\n\n")
+
+}
+
+func (g *GoWrapperGenerator) generateMMEGOStructWrapperNewConstructor(objName string, _ mmeobject.ObjectType, fields []*types.Field, sb *strings.Builder) {
+	// 生成 New 构造函数
+	wrapperName := objName + "Wrapper"
+	sb.WriteString(fmt.Sprintf("func New%s(data *%s) *%s {\n", wrapperName, objName, wrapperName))
+	sb.WriteString("\tif data == nil {\n")
+	sb.WriteString("\t\tpanic(\"data is nil\")\n")
+	sb.WriteString("\t}\n")
+	sb.WriteString(fmt.Sprintf("\tm := &%s{\n", wrapperName))
+	sb.WriteString("\t\tdata:       data,\n")
+	sb.WriteString("\t\tIDirtyFlag: dirtyflag.NewDirtyFlag(),\n")
+	sb.WriteString("\t\tfieldMetas: fieldmeta.NewFieldMetas(),\n")
+	sb.WriteString("\t}\n\n")
+
+	// 初始化 XMapWrapper
+	for _, field := range fields {
+		switch {
+		case field.Type.IsXMapField() || field.Type.IsMapField():
+			valueName := field.GetValueName()
+			linkFieldName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Link"
+			dirtyBitName := fmt.Sprintf("%sDirty%sBit", objName, field.Name)
+			newWrapperFuncName := fmt.Sprintf("New%sWrapper", valueName)
+			sb.WriteString(fmt.Sprintf("\tm.%s = xmapwrapper.NewXMapWrapperWithParent(\n",
+				linkFieldName))
+			sb.WriteString(fmt.Sprintf("\t\t&data.%s,\n", field.Name))
+			sb.WriteString("\t\tm.GetDirtyTracker(),\n")
+			sb.WriteString(fmt.Sprintf("\t\t%s,\n", dirtyBitName))
+			sb.WriteString(fmt.Sprintf("\t\t%s,\n", newWrapperFuncName))
+			sb.WriteString("\t)\n\n")
+		case field.Type.IsMMEObjectType():
+			// 当 data = nil 时，需要初始化
+			sb.WriteString(fmt.Sprintf("\tif data.%s == nil {\n", field.Name))
+			sb.WriteString(fmt.Sprintf("\t\tdata.%s = New%s()\n", field.Name, field.GetTypeName()))
+			sb.WriteString("\t}\n")
+			dirtyBitName := fmt.Sprintf("%sDirty%sBit", objName, field.Name)
+			wrapperTypeName := field.GetTypeName() + "Wrapper"
+			sb.WriteString(fmt.Sprintf("\tm.%sWrapper = New%s(data.%s)\n", field.Name, wrapperTypeName, field.Name))
+			sb.WriteString(fmt.Sprintf("\tm.%sWrapper.Link(m.GetDirtyTracker(), %s)\n", field.Name, dirtyBitName))
+		default:
+			panic(fmt.Sprintf("field %s type is not supported", field.Name))
+		}
+	}
+
+	sb.WriteString("\treturn m\n")
+	sb.WriteString("}\n\n")
+}
+
 // generateManagerWrappers 生成 Manager Wrapper
 func (g *GoWrapperGenerator) generateManagerWrappers(outputDir string) error {
 	for _, manager := range g.data.Managers {
@@ -566,67 +653,10 @@ func (g *GoWrapperGenerator) generateManagerWrappers(outputDir string) error {
 
 		// 生成 Wrapper 结构体
 		wrapperName := manager.Name + "Wrapper"
-		sb.WriteString(fmt.Sprintf("type %s struct {\n", wrapperName))
-		sb.WriteString(fmt.Sprintf("\tdata *%s\n", manager.Name))
-		sb.WriteString("\tdirtyflag.IDirtyFlag\n")
-		sb.WriteString("\tfieldMetas *fieldmeta.FieldMetas\n\n")
-
-		// 生成 map 字段的 XMapWrapper（Manager 的 map 字段的 value 通常是 Module 类型）
-		for _, field := range manager.Fields {
-			if field.Type.IsXMapField() || field.Type.IsMapField() {
-				// Manager 的 map 字段的 value 必须是 MME Object（Module 类型）
-				if field.Type.IsXMapField() {
-					if !field.Type.IsXMapValueMMEObject() {
-						panic(fmt.Sprintf("manager %s 的xmap字段 %s 的Value类型必须是 MMEObject 类型（Module）", manager.Name, field.Name))
-					}
-				} else if field.Type.IsMapField() {
-					if !field.Type.IsMapValueMMEObject() {
-						panic(fmt.Sprintf("manager %s 的map字段 %s 的Value类型必须是 MMEObject 类型（Module）", manager.Name, field.Name))
-					}
-				}
-
-				keyType := field.Type.KeyKind().String()
-				valueType := field.GetValueName()
-				wrapperTypeName := valueType + "Wrapper"
-				linkFieldName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Link"
-				sb.WriteString("\t//Value为MME Object，使用xmap.MapAccessor进行包装\n")
-				sb.WriteString(fmt.Sprintf("\t%s *xmapwrapper.XMapWrapper[%s, *%s, *%s]\n",
-					linkFieldName, keyType, valueType, wrapperTypeName))
-			}
-		}
-
-		sb.WriteString("}\n\n")
+		g.generateMMEGOStructWrapper(manager.Name, mmeobject.ObjectTypeManager, manager.Fields, &sb)
 
 		// 生成 New 构造函数
-		sb.WriteString(fmt.Sprintf("func New%s(data *%s) *%s {\n", wrapperName, manager.Name, wrapperName))
-		sb.WriteString("\tif data == nil {\n")
-		sb.WriteString("\t\tpanic(\"data is nil\")\n")
-		sb.WriteString("\t}\n")
-		sb.WriteString(fmt.Sprintf("\tm := &%s{\n", wrapperName))
-		sb.WriteString("\t\tdata:       data,\n")
-		sb.WriteString("\t\tIDirtyFlag: dirtyflag.NewDirtyFlag(),\n")
-		sb.WriteString("\t\tfieldMetas: fieldmeta.NewFieldMetas(),\n")
-		sb.WriteString("\t}\n\n")
-
-		// 初始化 XMapWrapper
-		for _, field := range manager.Fields {
-			if field.Type.IsXMapField() || field.Type.IsMapField() {
-				valueName := field.GetValueName()
-				linkFieldName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Link"
-				dirtyBitName := fmt.Sprintf("%sDirty%sBit", manager.Name, field.Name)
-				newWrapperFuncName := fmt.Sprintf("New%sWrapper", valueName)
-				sb.WriteString(fmt.Sprintf("\tm.%s = xmapwrapper.NewXMapWrapperWithParent(\n",
-					linkFieldName))
-				sb.WriteString(fmt.Sprintf("\t\t&data.%s,\n", field.Name))
-				sb.WriteString("\t\tm.GetDirtyTracker(),\n")
-				sb.WriteString(fmt.Sprintf("\t\t%s,\n", dirtyBitName))
-				sb.WriteString(fmt.Sprintf("\t\t%s,\n", newWrapperFuncName))
-				sb.WriteString("\t)\n\n")
-			}
-		}
-
-		sb.WriteString("\treturn m\n")
-		sb.WriteString("}\n\n")
+		g.generateMMEGOStructWrapperNewConstructor(manager.Name, mmeobject.ObjectTypeManager, manager.Fields, &sb)
 
 		// 生成 InitFieldContext 方法
 		sb.WriteString(fmt.Sprintf("func (m *%s) InitFieldContext() {\n", wrapperName))

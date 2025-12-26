@@ -12,16 +12,19 @@ import (
 )
 
 const (
-	HeroManagerFieldIndexHeroMap = uint8(1)
+	HeroManagerFieldIndexHeroMap          = uint8(1)
+	HeroManagerFieldIndexSingleHeroModule = uint8(2)
 )
 
 // Dirty bits for HeroManager fields
 const (
-	HeroManagerDirtyHeroMapBit int64 = 1 << (HeroManagerFieldIndexHeroMap - 1)
+	HeroManagerDirtyHeroMapBit          int64 = 1 << (HeroManagerFieldIndexHeroMap - 1)
+	HeroManagerDirtySingleHeroModuleBit int64 = 1 << (HeroManagerFieldIndexSingleHeroModule - 1)
 )
 
 type HeroManager struct {
-	HeroMap map[int64]*HeroModule `bson:"hero_map"`
+	HeroMap          map[int64]*HeroModule `bson:"hero_map"`
+	SingleHeroModule *HeroModule           `bson:"single_hero_module"`
 }
 
 func NewHeroManager() *HeroManager {
@@ -87,7 +90,8 @@ type HeroManagerWrapper struct {
 	fieldMetas *fieldmeta.FieldMetas
 
 	//Value为MME Object，使用xmap.MapAccessor进行包装
-	heroMapLink *xmapwrapper.XMapWrapper[int64, *HeroModule, *HeroModuleWrapper]
+	heroMapLink             *xmapwrapper.XMapWrapper[int64, *HeroModule, *HeroModuleWrapper]
+	SingleHeroModuleWrapper *HeroModuleWrapper
 }
 
 func NewHeroManagerWrapper(data *HeroManager) *HeroManagerWrapper {
@@ -107,11 +111,17 @@ func NewHeroManagerWrapper(data *HeroManager) *HeroManagerWrapper {
 		NewHeroModuleWrapper,
 	)
 
+	if data.SingleHeroModule == nil {
+		data.SingleHeroModule = NewHeroModule()
+	}
+	m.SingleHeroModuleWrapper = NewHeroModuleWrapper(data.SingleHeroModule)
+	m.SingleHeroModuleWrapper.Link(m.GetDirtyTracker(), HeroManagerDirtySingleHeroModuleBit)
 	return m
 }
 
 func (m *HeroManagerWrapper) InitFieldContext() {
 	m.fieldMetas.SetFieldType(HeroManagerFieldIndexHeroMap, fieldmeta.FieldTypeSync)
+	m.fieldMetas.SetFieldType(HeroManagerFieldIndexSingleHeroModule, fieldmeta.FieldTypeSync)
 
 	// 初始化所有 HeroModule 的字段上下文
 	m.heroMapLink.Range(func(key int64, wrapper *HeroModuleWrapper) bool {
@@ -182,6 +192,11 @@ func (m *HeroManagerWrapper) BuildMongoUpdate(builder *mgo_builder.MongoUpdateBu
 		m.heroMapLink.DeepCopy(&copy)
 		builder.SetNestedPath(path, "hero_map", copy)
 	}
+	if m.IsDirty(HeroManagerDirtySingleHeroModuleBit) {
+		if m.SingleHeroModuleWrapper != nil {
+			m.SingleHeroModuleWrapper.BuildMongoUpdate(builder, path.Field("single_hero_module"))
+		}
+	}
 }
 
 // ToProto 将 HeroManager 数据转换为完整的 protobuf 结构体
@@ -204,6 +219,12 @@ func (m *HeroManagerWrapper) FromProto(pb *mme.HeroManager) {
 		v := NewHeroModule()
 		wrapper := m.heroMapLink.SetWithoutTrack(key, v)
 		wrapper.FromProto(pbValue)
+	}
+	if pb.SingleHeroModule != nil {
+		if m.data.SingleHeroModule == nil {
+			m.data.SingleHeroModule = NewHeroModule()
+		}
+		m.SingleHeroModuleWrapper.FromProto(pb.SingleHeroModule)
 	}
 }
 
@@ -229,6 +250,12 @@ func (m *HeroManagerWrapper) DeepCopyTo(copy *HeroManager) {
 	}
 	// 拷贝所有 HeroModule
 	m.heroMapLink.DeepCopy(&copy.HeroMap)
+	if m.data.SingleHeroModule != nil {
+		if copy.SingleHeroModule == nil {
+			copy.SingleHeroModule = &HeroModule{}
+		}
+		m.SingleHeroModuleWrapper.DeepCopyTo(copy.SingleHeroModule)
+	}
 }
 
 // ToIncrementalProtoWithContext 根据脏标记位构建增量数据的 protoMessage
@@ -270,6 +297,17 @@ func (m *HeroManagerWrapper) ToIncrementalProtoWithContext(ctx mmemodel.SyncCont
 			return true
 		})
 
+	}
+	if mmemodel.FieldCanBeIncrementalSynced(m, HeroManagerDirtySingleHeroModuleBit, HeroManagerFieldIndexSingleHeroModule, ctx) {
+		if m.SingleHeroModuleWrapper != nil {
+			pbObj := m.SingleHeroModuleWrapper.ToIncrementalProtoWithContext(ctx)
+			if pbObj != nil {
+				v, ok := pbObj.(*mme.HeroModule)
+				if ok {
+					incremental.SingleHeroModule = v
+				}
+			}
+		}
 	}
 	return incremental
 }
