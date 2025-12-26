@@ -209,45 +209,15 @@ func (g *ProtoGenerator) generateManagersProto(outputDir string) error {
 
 		// 生成字段
 		for _, field := range manager.Fields {
-			// 检查是否是 map 或 xmap 类型
-			if field.Type.Kind != blueprint_types.FieldKindMap && field.Type.Kind != blueprint_types.FieldKindXMap {
-				continue // 跳过非 map/xmap 类型
-			}
-
-			// 获取 key 类型
-			keyType := "unknown"
-			if field.Type.KeyType != nil {
-				if field.Type.KeyType.TypeName != "" {
-					keyType = field.Type.KeyType.TypeName
-				} else {
-					keyType = ToProtoTypeFromTypesFieldType(field.Type.KeyType)
-				}
-			}
-
-			// 获取 value 类型（Module 名称），使用解析器处理类型引用
-			moduleName := "unknown"
-			if field.Type.ValueType != nil {
-				// 使用解析器解析类型引用，自动处理包名前缀
-				moduleName = g.resolver.ResolveTypeReference(field.Type.ValueType, "MME")
-			}
-
-			// 生成字段定义
-			fieldType := fmt.Sprintf("map<%s, %s>", keyType, moduleName)
-			sb.WriteString(fmt.Sprintf("    %s %s = %d;\n",
-				fieldType, field.Name, field.Number))
-
-			// 如果是 xmap，生成增量同步字段（格式化后分多行）
-			if field.Type.Kind == blueprint_types.FieldKindXMap {
-				// 生成 ChangeRecord message
-				// 注意：recordName 应该是 "HeroMap_XXXMapChangeRecord" 而不是 "HeroManager_HeroMap_XXXMapChangeRecord"
-				recordName := fmt.Sprintf("%s_XXXMapChangeRecord", field.Name)
-				changeListFieldNumber := 1000 + int32(field.Number)
-				sb.WriteString(fmt.Sprintf("    repeated %s %s_XXXChangeList = %d;\n", recordName, field.Name, changeListFieldNumber))
-				sb.WriteString(fmt.Sprintf("    message %s {\n", recordName))
-				sb.WriteString(fmt.Sprintf("        %s Key = 1;\n", keyType))
-				sb.WriteString(fmt.Sprintf("        %s Value = 2;\n", moduleName))
-				sb.WriteString("        bool IsDelete = 3;\n")
-				sb.WriteString("    }\n")
+			switch field.Type.Kind {
+			case blueprint_types.FieldKindMap:
+				g.generateMessageByMapOrXMapField(field, &sb)
+			case blueprint_types.FieldKindXMap:
+				g.generateMessageByMapOrXMapField(field, &sb)
+			case blueprint_types.FieldKindRepeated:
+				panic(fmt.Sprintf("manager %s 的字段 %s 类型不能是 repeated", manager.Name, field.Name))
+			default:
+				g.generateMessageByField(field, &sb)
 			}
 		}
 
@@ -265,6 +235,49 @@ func (g *ProtoGenerator) generateManagersProto(outputDir string) error {
 	// 格式化 proto 内容
 	content = FormatProtoContent(content)
 	return WriteFile(outputDir+"/managers.proto", content)
+}
+
+func (g *ProtoGenerator) generateMessageByField(field *blueprint_types.Field, sb *strings.Builder) {
+	fmt.Fprintf(sb, "    %s %s = %d;\n",
+		field.Type.GetName(), field.Name, field.Number)
+}
+
+func (g *ProtoGenerator) generateMessageByMapOrXMapField(field *blueprint_types.Field, sb *strings.Builder) {
+	// 获取 key 类型
+	keyType := "unknown"
+	if field.Type.KeyType != nil {
+		if field.Type.KeyType.TypeName != "" {
+			keyType = field.Type.KeyType.TypeName
+		} else {
+			keyType = ToProtoTypeFromTypesFieldType(field.Type.KeyType)
+		}
+	}
+
+	// 获取 value 类型（Module 名称），使用解析器处理类型引用
+	moduleName := "unknown"
+	if field.Type.ValueType != nil {
+		// 使用解析器解析类型引用，自动处理包名前缀
+		moduleName = g.resolver.ResolveTypeReference(field.Type.ValueType, "MME")
+	}
+
+	// 生成字段定义
+	fieldType := fmt.Sprintf("map<%s, %s>", keyType, moduleName)
+	sb.WriteString(fmt.Sprintf("    %s %s = %d;\n",
+		fieldType, field.Name, field.Number))
+
+	// 如果是 xmap，生成增量同步字段（格式化后分多行）
+	if field.Type.Kind == blueprint_types.FieldKindXMap {
+		// 生成 ChangeRecord message
+		// 注意：recordName 应该是 "HeroMap_XXXMapChangeRecord" 而不是 "HeroManager_HeroMap_XXXMapChangeRecord"
+		recordName := fmt.Sprintf("%s_XXXMapChangeRecord", field.Name)
+		changeListFieldNumber := 1000 + int32(field.Number)
+		sb.WriteString(fmt.Sprintf("    repeated %s %s_XXXChangeList = %d;\n", recordName, field.Name, changeListFieldNumber))
+		sb.WriteString(fmt.Sprintf("    message %s {\n", recordName))
+		sb.WriteString(fmt.Sprintf("        %s Key = 1;\n", keyType))
+		sb.WriteString(fmt.Sprintf("        %s Value = 2;\n", moduleName))
+		sb.WriteString("        bool IsDelete = 3;\n")
+		sb.WriteString("    }\n")
+	}
 }
 
 // generateEntitiesProto 生成 entities.proto

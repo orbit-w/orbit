@@ -360,9 +360,9 @@ func (w *HeroModuleWrapper) ToIncrementalProtoWithContext(ctx mmemodel.SyncConte
 
 	if mmemodel.FieldCanBeIncrementalSynced(w, HeroModuleDirtyBaseBit, HeroModuleFieldIndexBase, ctx) {
 		if w.BaseWrapper != nil {
-			pb := w.BaseWrapper.ToIncrementalProtoWithContext(ctx)
-			if pb != nil {
-				v, ok := pb.(*mme.HeroMechanism)
+			pbObj := w.BaseWrapper.ToIncrementalProtoWithContext(ctx)
+			if pbObj != nil {
+				v, ok := pbObj.(*mme.HeroMechanism)
 				if ok {
 					incremental.Base = v
 				}
@@ -371,9 +371,9 @@ func (w *HeroModuleWrapper) ToIncrementalProtoWithContext(ctx mmemodel.SyncConte
 	}
 	if mmemodel.FieldCanBeIncrementalSynced(w, HeroModuleDirtyLevelUpBit, HeroModuleFieldIndexLevelUp, ctx) {
 		if w.LevelUpWrapper != nil {
-			pb := w.LevelUpWrapper.ToIncrementalProtoWithContext(ctx)
-			if pb != nil {
-				v, ok := pb.(*mme.LevelUpMechanism)
+			pbObj := w.LevelUpWrapper.ToIncrementalProtoWithContext(ctx)
+			if pbObj != nil {
+				v, ok := pbObj.(*mme.LevelUpMechanism)
 				if ok {
 					incremental.LevelUp = v
 				}
@@ -382,9 +382,9 @@ func (w *HeroModuleWrapper) ToIncrementalProtoWithContext(ctx mmemodel.SyncConte
 	}
 	if mmemodel.FieldCanBeIncrementalSynced(w, HeroModuleDirtyTalentUnlockBit, HeroModuleFieldIndexTalentUnlock, ctx) {
 		if w.TalentUnlockWrapper != nil {
-			pb := w.TalentUnlockWrapper.ToIncrementalProtoWithContext(ctx)
-			if pb != nil {
-				v, ok := pb.(*mme.ManualUnlockMechanism)
+			pbObj := w.TalentUnlockWrapper.ToIncrementalProtoWithContext(ctx)
+			if pbObj != nil {
+				v, ok := pbObj.(*mme.ManualUnlockMechanism)
 				if ok {
 					incremental.TalentUnlock = v
 				}
@@ -393,9 +393,9 @@ func (w *HeroModuleWrapper) ToIncrementalProtoWithContext(ctx mmemodel.SyncConte
 	}
 	if mmemodel.FieldCanBeIncrementalSynced(w, HeroModuleDirtySkinWearBit, HeroModuleFieldIndexSkinWear, ctx) {
 		if w.SkinWearWrapper != nil {
-			pb := w.SkinWearWrapper.ToIncrementalProtoWithContext(ctx)
-			if pb != nil {
-				v, ok := pb.(*mme.WearMechanism)
+			pbObj := w.SkinWearWrapper.ToIncrementalProtoWithContext(ctx)
+			if pbObj != nil {
+				v, ok := pbObj.(*mme.WearMechanism)
 				if ok {
 					incremental.SkinWear = v
 				}

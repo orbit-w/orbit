@@ -518,10 +518,10 @@ func (g *ToIncrementalProtoCodeGenerator) GenerateToIncrementalProtoMethod(field
 			sb.WriteString(fmt.Sprintf("\tif mmemodel.FieldCanBeIncrementalSynced(%s, %s, %s, ctx) {\n",
 				g.Receiver, dirtyBitName, fieldIndexName))
 			sb.WriteString(fmt.Sprintf("\t\tif %s.%s != nil {\n", g.Receiver, wrapperFieldName))
-			sb.WriteString(fmt.Sprintf("\t\t\tpb := %s.%s.ToIncrementalProtoWithContext(ctx)\n",
+			sb.WriteString(fmt.Sprintf("\t\t\tpbObj := %s.%s.ToIncrementalProtoWithContext(ctx)\n",
 				g.Receiver, wrapperFieldName))
-			sb.WriteString("\t\t\tif pb != nil {\n")
-			sb.WriteString(fmt.Sprintf("\t\t\t\tv, ok := pb.(%s)\n", protoTypeName))
+			sb.WriteString("\t\t\tif pbObj != nil {\n")
+			sb.WriteString(fmt.Sprintf("\t\t\t\tv, ok := pbObj.(%s)\n", protoTypeName))
 			sb.WriteString("\t\t\t\tif ok {\n")
 			sb.WriteString(fmt.Sprintf("\t\t\t\t\tincremental.%s = v\n", field.Name))
 			sb.WriteString("\t\t\t\t}\n")
