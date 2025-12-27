@@ -11,9 +11,6 @@ type Field struct {
 	Number  int32 // 字段编号
 	Options FieldOption
 	Comment string
-
-	// 深度元数据（可选，用于存储完整的解析信息）
-	Metadata *FieldMetadata
 }
 
 // GetTypeName 获取字段类型名称，如 map, xmap, repeated等基础类型或HeroManager等MMEObject类型

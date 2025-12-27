@@ -21,10 +21,6 @@ func ParseFieldDefinition(line string) *types.Field {
 		panic(fmt.Sprintf("failed to build field type: %s", err))
 	}
 
-	// 构建 FieldMetadata
-	fieldMetadata := types.BuildFieldMetadata(field)
-	field.Metadata = fieldMetadata
-
 	return field
 }
 
