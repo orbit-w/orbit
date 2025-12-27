@@ -189,6 +189,8 @@ func FieldKindFromString(typeName string) FieldKind {
 
 // ParseTypeString 递归解析类型字符串，支持嵌套的 map/xmap/repeated 类型
 // 例如: "int32", "map<int32, string>", "map<int32, map<string, int64>>", "repeated map<string, MessageType>"
+// FIXME: 再解析MME Object类型时，还是依据 命名规则来判断，例如后缀是Entity, Manager, Module, Mechanism则认为是MME Object类型
+// 后续还是统一规则，按照 Object 墙 来判断
 func ParseTypeString(typeStr string) (*FieldType, error) {
 	typeStr = strings.TrimSpace(typeStr)
 	if typeStr == "" {

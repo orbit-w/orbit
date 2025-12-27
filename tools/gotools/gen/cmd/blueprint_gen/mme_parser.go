@@ -38,6 +38,10 @@ func (p *YamlParser) parseMMEFiles() error {
 	// 链接 Managers 和 Modules
 	p.ctx.LinkManagers()
 
+	// 检查字段是否符合要求
+	checker := NewFiledChecker(p.ctx)
+	checker.Check()
+
 	return nil
 }
 

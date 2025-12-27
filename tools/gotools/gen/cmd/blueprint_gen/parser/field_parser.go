@@ -6,7 +6,10 @@ import (
 	"strings"
 
 	types "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types"
-	mmeobject "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types/mme_obj"
+)
+
+const (
+	FieldNumberMin = 1
 )
 
 // ParseFieldDefinition 解析字段定义行，直接返回 *types.Field
@@ -21,15 +24,6 @@ func ParseFieldDefinition(line string) *types.Field {
 	// 构建 FieldMetadata
 	fieldMetadata := types.BuildFieldMetadata(field)
 	field.Metadata = fieldMetadata
-
-	if field.IsMMEObjectType() {
-		name := field.GetTypeName()
-		mmeObjectType, err := mmeobject.ParseMMEObjectType(name)
-		if err != nil {
-			panic(fmt.Sprintf("failed to parse mme object type: %s", name))
-		}
-		fieldMetadata.SetMMEObjectKind(mmeObjectType)
-	}
 
 	return field
 }
@@ -61,8 +55,13 @@ func BuildFieldType(line string, field *types.Field) error {
 
 	var num int32
 	if _, err := fmt.Sscanf(matches[1], "%d", &num); err != nil {
-		return fmt.Errorf("failed to scan field number: %w", err)
+		return ErrFieldNumberNotFound(err, line)
 	}
+
+	if num < FieldNumberMin {
+		return ErrFieldNumberInvalid(num, line)
+	}
+
 	field.Number = num
 
 	// 移除 :N 部分
@@ -72,19 +71,22 @@ func BuildFieldType(line string, field *types.Field) error {
 	// 分割类型和字段名
 	parts = strings.Fields(line)
 	if len(parts) < 2 {
-		return fmt.Errorf("invalid field format: %s", line)
+		return ErrInvalidFieldFormat(line)
 	}
 
 	// 类型部分是前面的所有部分（可能包含空格，如 "Core.MMELocation"）
 	// 字段名是最后一部分
 	field.Name = parts[len(parts)-1]
+	if field.Name == "" {
+		return ErrFieldNameNotFound(line)
+	}
 	typeParts := parts[:len(parts)-1]
 	typeStr := strings.Join(typeParts, " ")
 
 	// 使用 types.ParseTypeString 解析类型
 	fieldType, err := types.ParseTypeString(typeStr)
 	if err != nil {
-		return fmt.Errorf("failed to parse type: %w", err)
+		return ErrFieldTypeParseFailed(err, typeStr)
 	}
 	field.Type = *fieldType
 

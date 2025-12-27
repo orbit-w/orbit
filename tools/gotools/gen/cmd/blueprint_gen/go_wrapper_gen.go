@@ -205,7 +205,7 @@ func (g *GoWrapperGenerator) generateMechanismWrappers(outputDir string) error {
 			Receiver:    "w",
 			ObjectType:  mmeobject.ObjectTypeMechanism,
 		}
-		sb.WriteString(generator.GenerateBuildMongoUpdateMethod(mech.Fields))
+		sb.WriteString(generator.GenerateBuildMongoUpdateMethod(g.data, mech.Fields))
 
 		generatorToIncrementalProto := &ToIncrementalProtoCodeGenerator{
 			ObjectName:  mech.Name,
@@ -443,7 +443,7 @@ func (g *GoWrapperGenerator) generateModuleWrappers(outputDir string) error {
 			Receiver:    "w",
 			ObjectType:  mmeobject.ObjectTypeModule,
 		}
-		sb.WriteString(generator.GenerateBuildMongoUpdateMethod(module.Fields))
+		sb.WriteString(generator.GenerateBuildMongoUpdateMethod(g.data, module.Fields))
 
 		wrapperMethodCodeGenerator := &WrapperMethodCodeGenerator{
 			ObjectName:  module.Name,
@@ -742,7 +742,7 @@ func (g *GoWrapperGenerator) generateManagerWrappers(outputDir string) error {
 			Receiver:    "m",
 			ObjectType:  mmeobject.ObjectTypeManager,
 		}
-		sb.WriteString(generator.GenerateBuildMongoUpdateMethod(manager.Fields))
+		sb.WriteString(generator.GenerateBuildMongoUpdateMethod(g.data, manager.Fields))
 
 		wrapperMethodCodeGenerator := &WrapperMethodCodeGenerator{
 			ObjectName:  manager.Name,
@@ -1015,7 +1015,7 @@ func (g *GoWrapperGenerator) generateEntityWrappers(outputDir string) error {
 			Receiver:    "e",
 			ObjectType:  mmeobject.ObjectTypeEntity,
 		}
-		sb.WriteString(generator.GenerateBuildMongoUpdateMethod(entity.Fields))
+		sb.WriteString(generator.GenerateBuildMongoUpdateMethod(g.data, entity.Fields))
 
 		wrapperMethodCodeGenerator := &WrapperMethodCodeGenerator{
 			ObjectName:  entity.Name,

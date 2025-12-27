@@ -48,6 +48,23 @@ func (m *MMEObject) AddField(field *types.Field) {
 	m.Fields = append(m.Fields, field)
 }
 
+func (m *MMEObject) RemoveField(field *types.Field) {
+	for i, f := range m.Fields {
+		if f.Number == field.Number {
+			m.Fields = append(m.Fields[:i], m.Fields[i+1:]...)
+			break
+		}
+	}
+}
+
+func (m *MMEObject) RangeFields(f func(field *types.Field) bool) {
+	for _, field := range m.Fields {
+		if !f(field) {
+			break
+		}
+	}
+}
+
 func (m *MMEObject) HasMapField() bool {
 	for _, field := range m.Fields {
 		if field.IsMapField() {

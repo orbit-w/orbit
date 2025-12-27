@@ -250,7 +250,7 @@ type BuildMongoUpdateCodeGenerator struct {
 }
 
 // GenerateBuildMongoUpdateMethod 生成 BuildMongoUpdate 方法的完整代码
-func (g *BuildMongoUpdateCodeGenerator) GenerateBuildMongoUpdateMethod(fields []*types.Field) string {
+func (g *BuildMongoUpdateCodeGenerator) GenerateBuildMongoUpdateMethod(ctx *BlueprintContext, fields []*types.Field) string {
 	var sb strings.Builder
 
 	// 生成方法签名
@@ -264,18 +264,6 @@ func (g *BuildMongoUpdateCodeGenerator) GenerateBuildMongoUpdateMethod(fields []
 
 	for i := range fields {
 		field := fields[i]
-
-		switch {
-		case g.ObjectType.IsEntity():
-			// Entity 类型只处理 Manager 类型的字段
-			if field.IsMMEObjectType() {
-				fieldType := field.GetMMEObjectType()
-				if !fieldType.IsManager() {
-					panic(fmt.Sprintf("field %s is not MMEObject type, it is %s", field.Name, fieldType.String()))
-				}
-			}
-		}
-
 		dirtyBitName := fmt.Sprintf("%sDirty%sBit", g.ObjectName, field.Name)
 		fieldNameSnake := CamelToSnake(field.Name)
 		sb.WriteString(fmt.Sprintf("%sif %s.IsDirty(%s) {\n", indent, g.Receiver, dirtyBitName))
