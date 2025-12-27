@@ -698,37 +698,7 @@ func (g *GoWrapperGenerator) generateManagerWrappers(outputDir string) error {
 		sb.WriteString("\treturn m.fieldMetas.MatchesAll(fieldID, fieldTypes...)\n")
 		sb.WriteString("}\n\n")
 
-		// 生成 map 字段的工具方法（Set, Delete, Range）
-		for _, field := range manager.Fields {
-			if field.Type.IsXMapField() || field.Type.IsMapField() {
-				keyType := field.Type.KeyKind().String()
-				valueName := field.GetValueName()
-				wrapperTypeName := valueName + "Wrapper"
-				linkFieldName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Link"
-				methodPrefix := strings.ToUpper(field.Name[0:1]) + field.Name[1:]
-
-				// Set 方法
-				sb.WriteString(fmt.Sprintf("// Set%s 设置/添加%s模块\n", methodPrefix, valueName))
-				sb.WriteString(fmt.Sprintf("func (m *%s) %s_Set(id %s, value *%s) *%s {\n",
-					wrapperName, field.Name, keyType, valueName, wrapperTypeName))
-				sb.WriteString(fmt.Sprintf("\treturn m.%s.Set(id, value)\n", linkFieldName))
-				sb.WriteString("}\n\n")
-
-				// Delete 方法
-				sb.WriteString(fmt.Sprintf("// Delete%s 删除%s模块\n", methodPrefix, valueName))
-				sb.WriteString(fmt.Sprintf("func (m *%s) %s_Delete(id %s) bool {\n",
-					wrapperName, field.Name, keyType))
-				sb.WriteString(fmt.Sprintf("\treturn m.%s.Delete(id)\n", linkFieldName))
-				sb.WriteString("}\n\n")
-
-				// Range 方法
-				sb.WriteString(fmt.Sprintf("// Range%s 遍历所有%s\n", methodPrefix, valueName))
-				sb.WriteString(fmt.Sprintf("func (m *%s) %s_Range(f func(id %s, %s *%s) bool) {\n",
-					wrapperName, field.Name, keyType, strings.ToLower(valueName[0:1])+valueName[1:], wrapperTypeName))
-				sb.WriteString(fmt.Sprintf("\tm.%s.Range(f)\n", linkFieldName))
-				sb.WriteString("}\n\n")
-			}
-		}
+		g.generateMMEGOStructWrapperGetterAndSetterMethod(manager.Name, mmeobject.ObjectTypeManager, manager.Fields, &sb)
 
 		// 生成 ClearAllDirty 方法
 		sb.WriteString(fmt.Sprintf("func (m *%s) ClearAllDirtyFlags() {\n", wrapperName))
@@ -820,6 +790,53 @@ func (g *GoWrapperGenerator) generateManagerWrappers(outputDir string) error {
 	}
 
 	return nil
+}
+
+// generateMMEGOStructWrapperGetterAndSetterMethod 生成 Getter 和 Setter 方法
+func (g *GoWrapperGenerator) generateMMEGOStructWrapperGetterAndSetterMethod(objName string, _ mmeobject.ObjectType, fields []*types.Field, sb *strings.Builder) {
+	for _, field := range fields {
+		switch {
+		case field.Type.IsXMapField() || field.Type.IsMapField():
+			// 生成 map 字段的工具方法（Set, Delete, Range）
+			keyType := field.Type.KeyKind().String()
+			valueName := field.GetValueName()
+			wrapperTypeName := valueName + "Wrapper"
+			wrapperObjName := objName + "Wrapper"
+			linkFieldName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Link"
+			methodPrefix := strings.ToUpper(field.Name[0:1]) + field.Name[1:]
+
+			// Set 方法
+			sb.WriteString(fmt.Sprintf("// Set%s 设置/添加%s模块\n", methodPrefix, valueName))
+			sb.WriteString(fmt.Sprintf("func (m *%s) %s_Set(id %s, value *%s) *%s {\n",
+				wrapperObjName, field.Name, keyType, valueName, wrapperTypeName))
+			sb.WriteString(fmt.Sprintf("\treturn m.%s.Set(id, value)\n", linkFieldName))
+			sb.WriteString("}\n\n")
+
+			// Delete 方法
+			sb.WriteString(fmt.Sprintf("// Delete%s 删除%s模块\n", methodPrefix, valueName))
+			sb.WriteString(fmt.Sprintf("func (m *%s) %s_Delete(id %s) bool {\n",
+				wrapperObjName, field.Name, keyType))
+			sb.WriteString(fmt.Sprintf("\treturn m.%s.Delete(id)\n", linkFieldName))
+			sb.WriteString("}\n\n")
+
+			// Range 方法
+			sb.WriteString(fmt.Sprintf("// Range%s 遍历所有%s\n", methodPrefix, valueName))
+			sb.WriteString(fmt.Sprintf("func (m *%s) %s_Range(f func(id %s, %s *%s) bool) {\n",
+				wrapperObjName, field.Name, keyType, strings.ToLower(valueName[0:1])+valueName[1:], wrapperTypeName))
+			sb.WriteString(fmt.Sprintf("\tm.%s.Range(f)\n", linkFieldName))
+			sb.WriteString("}\n\n")
+		case field.Type.IsMMEObjectType():
+			// 生成 Getter 方法（获取嵌套的 Mechanism Wrapper）
+			typeName := field.GetTypeName()
+			wrapperObjName := objName + "Wrapper"
+			wrapperFieldName := field.Name + "Wrapper"
+			methodName := strings.ToUpper(field.Name[0:1]) + field.Name[1:]
+			sb.WriteString(fmt.Sprintf("func (w *%s) Get%s() *%sWrapper {\n",
+				wrapperObjName, methodName, typeName))
+			sb.WriteString(fmt.Sprintf("\treturn w.%s\n", wrapperFieldName))
+			sb.WriteString("}\n\n")
+		}
+	}
 }
 
 // generateEntityInitFunction 生成 Entity 的 init 函数

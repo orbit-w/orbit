@@ -155,6 +155,10 @@ func (m *HeroManagerWrapper) HeroMap_Range(f func(id int64, heroModule *HeroModu
 	m.heroMapLink.Range(f)
 }
 
+func (w *HeroManagerWrapper) GetSingleHeroModule() *HeroModuleWrapper {
+	return w.SingleHeroModuleWrapper
+}
+
 func (m *HeroManagerWrapper) ClearAllDirtyFlags() {
 	m.IDirtyFlag.ClearAllDirty()
 
