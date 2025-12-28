@@ -18,8 +18,9 @@ const (
 )
 
 var (
-	cache *cachev1.Cache[*ZoneMeta]
-	once  sync.Once
+	cache             *cachev1.Cache[*ZoneMeta]
+	once              sync.Once
+	dispatcherService *ZoneDispatcherService
 )
 
 type ZoneMetaService struct {
@@ -34,6 +35,7 @@ func (s *ZoneMetaService) Start() error {
 		cache = cachev1.NewCache(rdb.UniversalClient(), CachePattern, func() *ZoneMeta {
 			return &ZoneMeta{}
 		})
+		dispatcherService = NewZoneDispatcherService()
 	})
 	return nil
 }
@@ -43,17 +45,28 @@ func (s *ZoneMetaService) Stop() error {
 	return nil
 }
 
-func NewZoneMeta(id string, pattern int32, dispatcher *ZoneDispatcher) *ZoneMeta {
-	return &ZoneMeta{
+func NewZoneMeta(id string, pattern int32, dispatcher *ZoneDispatcher) (*ZoneMeta, error) {
+	meta := &ZoneMeta{
 		Id:         id,
 		Pattern:    pattern,
 		Dispatcher: dispatcher,
 	}
+	if dispatcher != nil {
+		node, err := dispatcherService.SelectNode(dispatcher)
+		if err != nil {
+			return nil, err
+		}
+		meta.node = node
+	}
+	return meta, nil
 }
 
 func SetZoneMeta(id string, pattern int32, dispatcher *ZoneDispatcher) (*ZoneMeta, error) {
-	meta := NewZoneMeta(id, pattern, dispatcher)
-	err := cache.Set(id, meta)
+	meta, err := NewZoneMeta(id, pattern, dispatcher)
+	if err != nil {
+		return nil, err
+	}
+	err = cache.Set(id, meta)
 	if err != nil {
 		return nil, err
 	}
@@ -61,5 +74,19 @@ func SetZoneMeta(id string, pattern int32, dispatcher *ZoneDispatcher) (*ZoneMet
 }
 
 func GetZoneMeta(id string) (*ZoneMeta, error) {
-	return cache.Get(id)
+	meta, err := cache.Get(id)
+	if err != nil {
+		return nil, err
+	}
+	if meta.IsNodeExpired() || meta.NodeInvalid() {
+		if meta.Dispatcher != nil {
+			node, err := dispatcherService.SelectNode(meta.Dispatcher)
+			if err != nil {
+				return nil, err
+			}
+			meta.node = node
+		}
+
+	}
+	return meta, nil
 }

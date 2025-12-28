@@ -7,11 +7,13 @@
 package zone_meta
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	"gitee.com/orbit-w/orbit/core/cluster"
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -24,22 +26,22 @@ const (
 type Zone_DispatcherType int32
 
 const (
-	Zone_DispatcherType_ForWorld      Zone_DispatcherType = 0 // 世界分组
-	Zone_DispatcherType_ForDesignated Zone_DispatcherType = 1 // 指定节点服分组
-	Zone_DispatcherType_ForRandom     Zone_DispatcherType = 2 // 随机服分组
+	Zone_DispatcherType_ForDesignated  Zone_DispatcherType = 0 // 指定节点服分组
+	Zone_DispatcherType_ForLeastLoaded Zone_DispatcherType = 1 // 负载最低的节点
+	Zone_DispatcherType_ForRandom      Zone_DispatcherType = 2 // 随机服分组
 )
 
 // Enum value maps for Zone_DispatcherType.
 var (
 	Zone_DispatcherType_name = map[int32]string{
-		0: "ForWorld",
-		1: "ForDesignated",
+		0: "ForDesignated",
+		1: "ForLeastLoaded",
 		2: "ForRandom",
 	}
 	Zone_DispatcherType_value = map[string]int32{
-		"ForWorld":      0,
-		"ForDesignated": 1,
-		"ForRandom":     2,
+		"ForDesignated":  0,
+		"ForLeastLoaded": 1,
+		"ForRandom":      2,
 	}
 )
 
@@ -77,6 +79,9 @@ type ZoneMeta struct {
 	Dispatcher    *ZoneDispatcher        `protobuf:"bytes,3,opt,name=Dispatcher,proto3" json:"Dispatcher,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
+
+	node            *cluster.Node `protobuf:"-" json:"-"`
+	nodeRefreshTime int64         `protobuf:"-" json:"-"`
 }
 
 func (x *ZoneMeta) Reset() {
@@ -173,7 +178,7 @@ func (x *ZoneDispatcher) GetType() Zone_DispatcherType {
 	if x != nil {
 		return x.Type
 	}
-	return Zone_DispatcherType_ForWorld
+	return Zone_DispatcherType_ForDesignated
 }
 
 func (x *ZoneDispatcher) GetServerId() int32 {
@@ -205,10 +210,10 @@ const file_meta_proto_rawDesc = "" +
 	"\x0eZoneDispatcher\x122\n" +
 	"\x04Type\x18\x01 \x01(\x0e2\x1e.zone_meta.Zone_DispatcherTypeR\x04Type\x12\x1a\n" +
 	"\bServerId\x18\x02 \x01(\x05R\bServerId\x12\x16\n" +
-	"\x06NodeId\x18\x03 \x01(\tR\x06NodeId*E\n" +
-	"\x13Zone_DispatcherType\x12\f\n" +
-	"\bForWorld\x10\x00\x12\x11\n" +
-	"\rForDesignated\x10\x01\x12\r\n" +
+	"\x06NodeId\x18\x03 \x01(\tR\x06NodeId*K\n" +
+	"\x13Zone_DispatcherType\x12\x11\n" +
+	"\rForDesignated\x10\x00\x12\x12\n" +
+	"\x0eForLeastLoaded\x10\x01\x12\r\n" +
 	"\tForRandom\x10\x02B\rZ\v.;zone_metab\x06proto3"
 
 var (

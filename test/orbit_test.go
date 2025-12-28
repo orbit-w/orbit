@@ -168,7 +168,7 @@ func Test_RequestLogin(t *testing.T) {
 	// 启动PlayerZone
 	id := servicezone_mgr.GenLocalZoneId(servicezone.ZoneTypePlayer, serverId)
 	meta, err := zone_meta.SetZoneMeta(id, int32(servicezone.ZoneTypePlayer), &zone_meta.ZoneDispatcher{
-		Type:     zone_meta.Zone_DispatcherType_ForWorld,
+		Type:     zone_meta.Zone_DispatcherType_ForDesignated,
 		ServerId: serverId,
 		NodeId:   fmt.Sprintf("%d", serverId), // 当前节点ID是服务器ID
 	})
@@ -208,7 +208,7 @@ func Test_ProtoToWrapper(t *testing.T) {
 	// 启动PlayerZone
 	id := servicezone_mgr.GenLocalZoneId(servicezone.ZoneTypePlayer, serverId)
 	meta, err := zone_meta.SetZoneMeta(id, int32(servicezone.ZoneTypePlayer), &zone_meta.ZoneDispatcher{
-		Type:     zone_meta.Zone_DispatcherType_ForWorld,
+		Type:     zone_meta.Zone_DispatcherType_ForDesignated,
 		ServerId: serverId,
 		NodeId:   fmt.Sprintf("%d", serverId), // 当前节点ID是服务器ID
 	})

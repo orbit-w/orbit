@@ -17,7 +17,7 @@ message ZoneDispatcher {
 }
 
 enum Zone_DispatcherType {
-  ForWorld = 0; // 世界分组
-  ForDesignated = 1; // 指定节点服分组
+  ForDesignated = 0; // 指定节点服分组
+  ForLeastLoaded = 1; // 负载最低的节点
   ForRandom = 2; // 随机服分组
 }

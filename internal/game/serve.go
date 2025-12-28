@@ -102,7 +102,7 @@ func StartZones(serverId int32) {
 	id := servicezone_mgr.GenLocalZoneId(servicezone.ZoneTypePlayer, serverId)
 	currentNode := cluster.GetManager().GetCurrentNode()
 	meta, err := zone_meta.SetZoneMeta(id, int32(servicezone.ZoneTypePlayer), &zone_meta.ZoneDispatcher{
-		Type:     zone_meta.Zone_DispatcherType_ForWorld,
+		Type:     zone_meta.Zone_DispatcherType_ForDesignated,
 		ServerId: serverId,
 		NodeId:   currentNode.GetId(),
 	})

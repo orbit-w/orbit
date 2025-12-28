@@ -14,16 +14,18 @@ import (
 )
 
 type ZoneManager struct {
-	system *actor.ActorSystem
-	cache  cmap.ConcurrentMap[string, *actor.PID]
-	exec   *unipue_task_exec.UniqueTaskExecutor
+	system     *actor.ActorSystem
+	cache      cmap.ConcurrentMap[string, *actor.PID]
+	exec       *unipue_task_exec.UniqueTaskExecutor
+	dispatcher *zone_meta.ZoneDispatcherService
 }
 
 func NewZoneManager() *ZoneManager {
 	globalManager = &ZoneManager{
-		system: actor.NewActorSystem(),
-		cache:  cmap.New[*actor.PID](),
-		exec:   unipue_task_exec.NewUniqueTaskExecutor(),
+		system:     actor.NewActorSystem(),
+		cache:      cmap.New[*actor.PID](),
+		exec:       unipue_task_exec.NewUniqueTaskExecutor(),
+		dispatcher: zone_meta.NewZoneDispatcherService(),
 	}
 	return globalManager
 }
@@ -86,13 +88,18 @@ func (m *ZoneManager) GetZone(zoneId string) (*actor.PID, error) {
 
 // Load 加载或创建 Zone Actor
 // zoneId: 服务区 ID
-// zoneType: 服务区类型（可选，如果为 nil 则使用默认类型 ZoneTypeWild）
+// zoneMeta: 服务区元数据（包含调度策略）
 // 返回: Zone Actor 的 PID
 func (m *ZoneManager) Load(zoneId string, zoneMeta *zone_meta.ZoneMeta) (*actor.PID, error) {
 	// 使用 ExecuteOnce 确保并发安全
 	re := m.exec.ExecuteOnce(zoneId, func() any {
 		if pid, exists := m.cache.Get(zoneId); exists {
 			return pid
+		}
+
+		// 根据调度策略验证节点
+		if err := m.validateNodeForZone(zoneMeta); err != nil {
+			return fmt.Errorf("failed to validate node for zone %s: %w", zoneId, err)
 		}
 
 		// 创建 ServiceZone
@@ -117,6 +124,32 @@ func (m *ZoneManager) Load(zoneId string, zoneMeta *zone_meta.ZoneMeta) (*actor.
 	default:
 		return nil, fmt.Errorf("unknown error: %v", re)
 	}
+}
+
+// validateNodeForZone 根据调度策略验证节点是否可以加载 Zone
+// 对于 ForDesignated 策略，需要验证当前节点是否是指定节点
+func (m *ZoneManager) validateNodeForZone(zoneMeta *zone_meta.ZoneMeta) error {
+	if zoneMeta == nil || zoneMeta.Dispatcher == nil {
+		return nil
+	}
+
+	// 对于指定节点策略，验证当前节点是否匹配
+	if zoneMeta.Dispatcher.Type == zone_meta.Zone_DispatcherType_ForDesignated {
+		node, err := m.dispatcher.SelectNode(zoneMeta.Dispatcher)
+		if err != nil {
+			return fmt.Errorf("dispatcher validation failed: %w", err)
+		}
+
+		// 验证选中的节点是否是当前节点
+		// 注意：这里假设 cluster.GetManager().GetCurrentNode() 返回当前节点
+		// 如果不是当前节点，说明该 Zone 不应该在当前节点加载
+		if node.ID != zoneMeta.Dispatcher.NodeId {
+			return fmt.Errorf("zone is designated to node %s, but current node is %s",
+				zoneMeta.Dispatcher.NodeId, node.ID)
+		}
+	}
+
+	return nil
 }
 
 func (m *ZoneManager) ZoneExists(zoneId string) bool {
