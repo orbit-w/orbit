@@ -7,8 +7,46 @@ import (
 	mmeobject "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types/mme_obj"
 )
 
-// FieldType 字段类型定义 - 增强以支持深度元数据解析
+// DefinitionKind 定义节点的类型（AST Node Kind）
+type DefinitionKind int
+
+const (
+	DefKindUnknown   DefinitionKind = iota
+	DefKindEntity                   // Entity 实体
+	DefKindManager                  // Manager 管理器
+	DefKindModule                   // Module 模块
+	DefKindMechanism                // Mechanism 机制
+	DefKindMessage                  // Message 消息（NetWall 或 Common DataStruct）
+	DefKindEnum                     // Enum 枚举
+	DefKindStruct                   // Struct 结构体（Common DataStruct）
+)
+
+// String 返回 DefinitionKind 的字符串表示
+func (k DefinitionKind) String() string {
+	switch k {
+	case DefKindEntity:
+		return "Entity"
+	case DefKindManager:
+		return "Manager"
+	case DefKindModule:
+		return "Module"
+	case DefKindMechanism:
+		return "Mechanism"
+	case DefKindMessage:
+		return "Message"
+	case DefKindEnum:
+		return "Enum"
+	case DefKindStruct:
+		return "Struct"
+	default:
+		return "Unknown"
+	}
+}
+
+// FieldType 字段类型定义 - 增强以支持深度元数据解析和 AST 语义链接
 type FieldType struct {
+	// --- 词法信息 (Lexical Info) ---
+	// 从源文件解析出的原始信息
 	Kind         FieldKind  // 字段类型种类（参考 descriptorpb）
 	Label        FieldLabel // 字段标签（OPTIONAL, REQUIRED, REPEATED）
 	Name         string     // 类型名称
@@ -20,6 +58,14 @@ type FieldType struct {
 	// Map/XMap/Repeated 类型信息（递归类型支持）
 	KeyType   *FieldType // map/xmap 的 key 类型，nil 表示无（对于 repeated 类型）
 	ValueType *FieldType // map/xmap 的 value 类型，或 repeated 的元素类型
+
+	// --- 语义信息 (Semantic Info) ---
+	// 符号解析 (Symbol Resolution) 后的结果
+	// 指向该类型对应的 AST Definition 节点
+	// 类似于编译器前端的 Symbol Table 查找结果
+	// 在 Link 阶段（Pass 3: Reference Resolution）被填充
+	// 仅对 FieldKindMMEObject 和 FieldKindMessage 类型有效
+	ResolvedType Definition
 }
 
 func (ft FieldType) GetName() string {
@@ -138,6 +184,30 @@ func (ft FieldType) IsFieldBaseType() bool {
 	default:
 		panic(fmt.Sprintf("unknown field kind: %s", ft.Kind))
 	}
+}
+
+// IsResolved 检查类型引用是否已被解析（AST 链接完成）
+// 仅对 FieldKindMMEObject 和 FieldKindMessage 类型有效
+func (ft FieldType) IsResolved() bool {
+	if ft.Kind != FieldKindMMEObject && ft.Kind != FieldKindMessage {
+		return false
+	}
+	return ft.ResolvedType != nil
+}
+
+// GetResolvedDefinition 获取已解析的 Definition（类型安全访问）
+// 如果类型未解析，返回 nil
+func (ft FieldType) GetResolvedDefinition() Definition {
+	return ft.ResolvedType
+}
+
+// MustGetResolvedDefinition 获取已解析的 Definition，如果未解析则 panic
+// 用于在确保已经过 Link 阶段的代码生成器中使用
+func (ft FieldType) MustGetResolvedDefinition() Definition {
+	if ft.ResolvedType == nil {
+		panic(fmt.Sprintf("type %s is not resolved, Link phase may not have been executed", ft.TypeName))
+	}
+	return ft.ResolvedType
 }
 
 // FieldKind 字段类型种类（参考 descriptorpb 的设计）
