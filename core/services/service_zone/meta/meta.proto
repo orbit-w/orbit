@@ -12,7 +12,7 @@ message ZoneMeta {
 
 message ZoneDispatcher {
   Zone_DispatcherType Type = 1;
-  string ServerId = 2; //最新的逻辑服ID
+  int32 ServerId = 2; //最新的逻辑服ID
   string NodeId = 3; //最新的节点ID
 }
 

@@ -11,9 +11,9 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func NewMeta(name, pattern, serverId string, dispatcher *Dispatcher) *Meta {
+func NewMeta(id, pattern, serverId string, dispatcher *Dispatcher) *Meta {
 	return &Meta{
-		ActorName:  name,
+		Id:         id,
 		Pattern:    pattern,
 		ServerId:   serverId,
 		Dispatcher: dispatcher,

@@ -38,6 +38,6 @@ func Call(zoneId string, req any, timeout ...time.Duration) (*actor.Future, erro
 	return GetZoneManager().Call(zoneId, req, timeout...)
 }
 
-func GenLocalZoneId(pattern servicezone.ZonePattern, serverId string) string {
-	return fmt.Sprintf("%d_%s", int32(pattern), serverId)
+func GenLocalZoneId(pattern servicezone.ZonePattern, serverId int32) string {
+	return fmt.Sprintf("%d_%d", int32(pattern), serverId)
 }

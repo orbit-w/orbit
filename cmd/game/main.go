@@ -15,7 +15,7 @@ import (
 
 var (
 	configPath = flag.String("config", "configs/config_center.yaml", "path to config file")
-	serverId   = flag.String("server_id", "1", "server id")
+	serverId   = flag.Int64("server_id", 1, "server id")
 )
 
 func main() {
@@ -26,5 +26,5 @@ func main() {
 		panic(err)
 	}
 
-	game.Serve(*serverId)
+	game.Serve(int32(*serverId))
 }

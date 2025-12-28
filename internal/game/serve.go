@@ -35,10 +35,8 @@ import (
    @2024 4月 周日 17:36
 */
 
-var ServerId string
-
-func Serve(serverId string) {
-	ServerId = serverId
+func Serve(serverId int32) {
+	config.SetServerId(serverId)
 	servicezone_behavior.SetRouter(routers.GetRouter())
 	stream.RegisterRequestHandler(requestHandler)
 
@@ -99,13 +97,14 @@ func RunServices() *service.Services {
 	return services
 }
 
-func StartZones(serverId string) {
+func StartZones(serverId int32) {
 	// 启动PlayerZone
 	id := servicezone_mgr.GenLocalZoneId(servicezone.ZoneTypePlayer, serverId)
+	currentNode := cluster.GetManager().GetCurrentNode()
 	meta, err := zone_meta.SetZoneMeta(id, int32(servicezone.ZoneTypePlayer), &zone_meta.ZoneDispatcher{
 		Type:     zone_meta.Zone_DispatcherType_ForWorld,
 		ServerId: serverId,
-		NodeId:   serverId,
+		NodeId:   currentNode.GetId(),
 	})
 	if err != nil {
 		panic(err)
@@ -117,7 +116,7 @@ func StartZones(serverId string) {
 	}
 }
 
-func ClusterSrartNode(serverId string) {
+func ClusterSrartNode(serverId int32) {
 	ip, err := netutils.GetPublicIPv4()
 	if err != nil {
 		panic(err)
@@ -152,12 +151,12 @@ func gracefulShutdown(stopper func(ctx context.Context) error) {
 }
 
 var requestHandler = func(session *network.Session, data []byte, seq, pid uint32) error {
-	id := servicezone_mgr.GenLocalZoneId(servicezone.ZoneTypePlayer, ServerId)
+	id := servicezone_mgr.GenLocalZoneId(servicezone.ZoneTypePlayer, config.GetServerId())
 	servicezone_mgr.ClientRequest(id, network.NewClientRequest(seq, pid, data, session))
 	return nil
 }
 
 // 生成服务唯一Id工具函数
-func GenServerUniqueId(serverName, serverId string) string {
-	return fmt.Sprintf("%s-%s", serverName, serverId)
+func GenServerUniqueId(serverName string, serverId int32) string {
+	return fmt.Sprintf("%s-%d", serverName, serverId)
 }

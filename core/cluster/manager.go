@@ -38,6 +38,10 @@ func NewManager(serviceName string) *Manager {
 	return manager
 }
 
+func GetManager() *Manager {
+	return manager
+}
+
 // Start 启动集群管理器
 func (m *Manager) Start() error {
 	// 启动定时更新节点信息的goroutine

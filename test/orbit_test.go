@@ -32,7 +32,7 @@ import (
 )
 
 // 初始化服务
-func Setup(nodeId string) *service.Services {
+func Setup() *service.Services {
 	// 初始化路由器
 	servicezone_behavior.SetRouter(routers.GetRouter())
 
@@ -72,7 +72,7 @@ func Setup(nodeId string) *service.Services {
 func Test_orbit(t *testing.T) {
 	config.InitConfig("../configs/config_center.yaml")
 
-	game.Serve("1")
+	game.Serve(1)
 }
 
 func Test_RedisDial(t *testing.T) {
@@ -112,8 +112,8 @@ func initRouter() {
 
 // 测试设置PlayerEntity并持久化
 func Test_SetPlayerEntityAndPersist(t *testing.T) {
-	serverId := "1"
-	services := Setup(serverId)
+	serverId := int32(1)
+	services := Setup()
 	defer services.Stop()
 
 	playerEntity := mmeobj.NewPlayerEntity()
@@ -160,9 +160,9 @@ func Test_SetPlayerEntityAndPersist(t *testing.T) {
 
 // 测试路由请求处理逻辑
 func Test_RequestLogin(t *testing.T) {
-	serverId := "1"
+	serverId := int32(1)
 	initRouter()
-	services := Setup(serverId)
+	services := Setup()
 	defer services.Stop()
 
 	// 启动PlayerZone
@@ -170,7 +170,7 @@ func Test_RequestLogin(t *testing.T) {
 	meta, err := zone_meta.SetZoneMeta(id, int32(servicezone.ZoneTypePlayer), &zone_meta.ZoneDispatcher{
 		Type:     zone_meta.Zone_DispatcherType_ForWorld,
 		ServerId: serverId,
-		NodeId:   serverId,
+		NodeId:   fmt.Sprintf("%d", serverId), // 当前节点ID是服务器ID
 	})
 	if err != nil {
 		panic(err)
@@ -201,8 +201,8 @@ func Test_RequestLogin(t *testing.T) {
 }
 
 func Test_ProtoToWrapper(t *testing.T) {
-	serverId := "1"
-	services := Setup(serverId)
+	serverId := int32(1)
+	services := Setup()
 	defer services.Stop()
 
 	// 启动PlayerZone
@@ -210,7 +210,7 @@ func Test_ProtoToWrapper(t *testing.T) {
 	meta, err := zone_meta.SetZoneMeta(id, int32(servicezone.ZoneTypePlayer), &zone_meta.ZoneDispatcher{
 		Type:     zone_meta.Zone_DispatcherType_ForWorld,
 		ServerId: serverId,
-		NodeId:   serverId,
+		NodeId:   fmt.Sprintf("%d", serverId), // 当前节点ID是服务器ID
 	})
 	if err != nil {
 		panic(err)

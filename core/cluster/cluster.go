@@ -28,6 +28,10 @@ type Node struct {
 	UpdatedAt     atomic.Value // 更新时间（使用 atomic.Value 保证并发安全）
 }
 
+func (n *Node) GetId() string {
+	return n.ID
+}
+
 // SetState 设置节点状态
 func (n *Node) SetState(state NodeState) {
 	n.state.Store(int32(state))

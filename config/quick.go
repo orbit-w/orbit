@@ -5,6 +5,11 @@ import (
 	"gitee.com/orbit-w/meteor/modules/database/rdb"
 )
 
+// 快速访问的全局变量
+var (
+	ServerId int32 = 1
+)
+
 // GetServerName 获取服务器名称
 func GetServerName() string {
 	return GetString(DtaIDGameMain, GameMainGroupServer, "name")
@@ -55,4 +60,12 @@ func GetMongoOps() *mongodbdriver.MongoDBConfig {
 // Protocol 获取客户端跟服务器的通信协议
 func GateProtocol() string {
 	return GetString(DtaIDGateMain, GateGroupServer, TagProtocol)
+}
+
+func SetServerId(id int32) {
+	ServerId = id
+}
+
+func GetServerId() int32 {
+	return ServerId
 }
