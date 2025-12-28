@@ -14,6 +14,7 @@ type MMEObject struct {
 	ObjectType mmeobject.ObjectType
 	Fields     []*types.Field
 	Settings   map[string]any
+	SourceFile string // 源文件路径（用于 Definition 接口）
 }
 
 func NewMMEObject(objectType mmeobject.ObjectType) *MMEObject {
@@ -34,6 +35,29 @@ func (m *MMEObject) GetName() string {
 
 func (m *MMEObject) GetFields() []*types.Field {
 	return m.Fields
+}
+
+// GetKind 实现 Definition 接口
+// 根据 ObjectType 转换为 DefinitionKind
+func (m *MMEObject) GetKind() types.DefinitionKind {
+	switch m.ObjectType {
+	case mmeobject.ObjectTypeEntity:
+		return types.DefKindEntity
+	case mmeobject.ObjectTypeManager:
+		return types.DefKindManager
+	case mmeobject.ObjectTypeModule:
+		return types.DefKindModule
+	case mmeobject.ObjectTypeMechanism:
+		return types.DefKindMechanism
+	default:
+		return types.DefKindUnknown
+	}
+}
+
+// GetFile 实现 Definition 接口
+// 返回定义所在的源文件路径
+func (m *MMEObject) GetFile() string {
+	return m.SourceFile
 }
 
 func (m *MMEObject) GetSettings() map[string]any {

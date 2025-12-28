@@ -81,7 +81,7 @@ func convertNetMessageToRequestInfo(req *net_message.NetMessage, packageName str
 	entityRefs := extractEntityRefsFromFields(req.Fields)
 
 	return &router_gen.RequestInfo{
-		RequestName:      req.GetName(),
+		RequestName:      req.GetMessageName(),
 		PackageName:      packageNameLower,
 		PackageNameUpper: packageNameUpper,
 		EntityRefs:       entityRefs,

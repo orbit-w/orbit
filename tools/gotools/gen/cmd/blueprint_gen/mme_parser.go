@@ -38,7 +38,17 @@ func (p *YamlParser) parseMMEFiles() error {
 	// 链接 Managers 和 Modules
 	p.ctx.LinkManagers()
 
-	// 检查字段是否符合要求
+	// Pass 2: 构建符号表 (Symbol Table Construction)
+	if err := p.ctx.BuildSymbolTable(); err != nil {
+		return fmt.Errorf("failed to build symbol table: %w", err)
+	}
+
+	// Pass 3: 解析类型引用 (Reference Resolution)
+	if err := p.ctx.ResolveReferences(); err != nil {
+		return fmt.Errorf("failed to resolve type references: %w", err)
+	}
+
+	// 检查字段是否符合要求（依赖 ResolvedType）
 	checker := NewFiledChecker(p.ctx)
 	checker.Check()
 
@@ -70,6 +80,7 @@ func (p *YamlParser) ParseEntities() error {
 
 		for entityName, entityData := range entityMap {
 			entity := p.parseEntityFromMap(entityName, entityData)
+			entity.SourceFile = filePath // 设置源文件路径
 			if len(entity.Fields) > 0 {
 				p.ctx.AddEntity(entity)
 			}
@@ -156,7 +167,7 @@ func (p *YamlParser) ParseManagers() error {
 		return nil
 	}
 
-	p.parseManagers(managerList)
+	p.parseManagers(managerList, filePath)
 
 	// 解析枚举
 	enumList, ok := yamlData["Enums"].([]any)
@@ -175,7 +186,7 @@ func (p *YamlParser) ParseManagers() error {
 	return nil
 }
 
-func (p *YamlParser) parseManagers(items []any) {
+func (p *YamlParser) parseManagers(items []any, filePath string) {
 	for _, item := range items {
 		managerMap, ok := item.(map[string]any)
 		if !ok {
@@ -193,6 +204,7 @@ func (p *YamlParser) parseManagers(items []any) {
 
 			// 这是 Manager 名称
 			manager := p.parseManagerFromMap(managerName, managerData, managerMap)
+			manager.SourceFile = filePath // 设置源文件路径
 			if len(manager.Fields) > 0 {
 				p.ctx.AddManager(manager)
 			}
@@ -260,6 +272,7 @@ func (p *YamlParser) ParseModules() error {
 		module := mmeobj.NewModule()
 		for moduleName, moduleData := range moduleMap {
 			module.Name = moduleName
+			module.SourceFile = filePath // 设置源文件路径
 			p.parseModuleItem(module, moduleData.([]any))
 		}
 		if len(module.Fields) > 0 {
@@ -326,7 +339,7 @@ func (p *YamlParser) ParseMechanisms() error {
 
 	if mechanismList, ok := yamlData["Mechanisms"].([]any); ok {
 		for _, mechItem := range mechanismList {
-			m := p.parseMechanismItem(mechItem.(map[string]any))
+			m := p.parseMechanismItem(mechItem.(map[string]any), filePath)
 			if m != nil {
 				p.ctx.AddMechanism(m)
 			}
@@ -355,8 +368,9 @@ func (p *YamlParser) ParseMechanisms() error {
 	return nil
 }
 
-func (p *YamlParser) parseMechanismItem(mechItem map[string]any) *mmeobj.Mechanism {
+func (p *YamlParser) parseMechanismItem(mechItem map[string]any, filePath string) *mmeobj.Mechanism {
 	mechanism := mmeobj.NewMechanism()
+	mechanism.SourceFile = filePath // 设置源文件路径
 	for mechKey, mechData := range mechItem {
 		switch mechKey {
 		case MechanismKeyWordSettings:

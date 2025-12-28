@@ -32,8 +32,29 @@ type FieldOptionDefinition struct {
 
 // DataStruct 通用数据结构
 type DataStruct struct {
-	Name   string
-	Fields []*types.Field
+	Name       string
+	Fields     []*types.Field
+	SourceFile string // 源文件路径（用于 Definition 接口）
+}
+
+// GetName 实现 Definition 接口
+func (d *DataStruct) GetName() string {
+	return d.Name
+}
+
+// GetKind 实现 Definition 接口
+func (d *DataStruct) GetKind() types.DefinitionKind {
+	return types.DefKindStruct
+}
+
+// GetFile 实现 Definition 接口
+func (d *DataStruct) GetFile() string {
+	return d.SourceFile
+}
+
+// GetFields 实现 Definition 接口
+func (d *DataStruct) GetFields() []*types.Field {
+	return d.Fields
 }
 
 // NetWallMessageType NetWall 消息类型
@@ -198,6 +219,9 @@ type BlueprintContext struct {
 	NameSpaceMap        map[string]bool   // 命名空间检查，enum/struct/table不允许有重复的命名空间
 	ImportProtoNameMap  map[string]string // message Name与Proto File名的映射,建立import映射
 	PackageProtoNameMap map[string]string // message Name与Proto Package名的映射
+
+	// AST 类型引用系统
+	SymbolTable *types.SymbolTable // 全局符号表（Pass 2: Symbol Table Construction）
 }
 
 func NewBlueprintContext() *BlueprintContext {
@@ -264,26 +288,6 @@ func (ctx *BlueprintContext) LinkModules() {
 func (ctx *BlueprintContext) LinkManagers() {
 	for _, manager := range ctx.Managers {
 		manager.LinkModules(ctx.Modules)
-	}
-}
-
-// CheckFields 检查Entity所有字段是否符合要求
-func (ctx *BlueprintContext) CheckEntityFields() {
-	for _, entity := range ctx.Entities {
-		for _, field := range entity.Fields {
-			if !field.IsMMEObjectType() {
-				panic(fmt.Sprintf("entity %s 的 %s 字段类型不支持，必须是 MMEObject 类型", entity.Name, field.Name))
-			}
-			fieldName := field.GetTypeName()
-			t, ok := ctx.ObjectTypeMap[fieldName]
-			if !ok {
-				panic(fmt.Sprintf("entity %s 的 %s 字段类型不支持，必须是 MMEObject 类型", entity.Name, field.Name))
-			}
-
-			if t != mmeobject.ObjectTypeManager {
-				panic(fmt.Sprintf("entity %s 的 %s 字段类型不支持，必须是 Manager 类型", entity.Name, field.Name))
-			}
-		}
 	}
 }
 
@@ -449,4 +453,154 @@ func (ctx *BlueprintContext) SetHeadFile(headFile *HeadFileConfig) {
 func (ctx *BlueprintContext) HasNameSpace(name string) bool {
 	_, ok := ctx.NameSpaces[name]
 	return ok
+}
+
+// BuildSymbolTable 构建全局符号表（Pass 2: Symbol Table Construction）
+// 将所有已解析的定义（Entity, Manager, Module, Mechanism, NetMessage）注册到符号表
+func (ctx *BlueprintContext) BuildSymbolTable() error {
+	// 创建符号表
+	ctx.SymbolTable = types.NewSymbolTable()
+
+	// 注册所有 Entity（使用 mme 作用域）
+	for _, entity := range ctx.Entities {
+		if err := ctx.SymbolTable.RegisterWithScope("mme", entity.MMEObject); err != nil {
+			return fmt.Errorf("register entity %s: %w", entity.Name, err)
+		}
+	}
+
+	// 注册所有 Manager（使用 mme 作用域）
+	for _, manager := range ctx.Managers {
+		if err := ctx.SymbolTable.RegisterWithScope("mme", manager.MMEObject); err != nil {
+			return fmt.Errorf("register manager %s: %w", manager.Name, err)
+		}
+	}
+
+	// 注册所有 Module（使用 mme 作用域）
+	for _, module := range ctx.Modules {
+		if err := ctx.SymbolTable.RegisterWithScope("mme", module.MMEObject); err != nil {
+			return fmt.Errorf("register module %s: %w", module.Name, err)
+		}
+	}
+
+	// 注册所有 Mechanism（使用 mme 作用域）
+	for _, mechanism := range ctx.Mechanisms {
+		if err := ctx.SymbolTable.RegisterWithScope("mme", mechanism.MMEObject); err != nil {
+			return fmt.Errorf("register mechanism %s: %w", mechanism.Name, err)
+		}
+	}
+
+	// 注册 NetWall 消息（使用各自的包名作用域）
+	for _, netwallFile := range ctx.NetWalls {
+		// 注册 Request 消息
+		for _, request := range netwallFile.Requests {
+			if err := ctx.SymbolTable.RegisterWithScope(netwallFile.PackageName, request); err != nil {
+				return fmt.Errorf("register request %s in %s: %w", request.Name, netwallFile.PackageName, err)
+			}
+			// 如果有响应消息，也注册
+			if request.HasResponse() {
+				rsp := request.GetResponse()
+				if err := ctx.SymbolTable.RegisterWithScope(netwallFile.PackageName, rsp); err != nil {
+					return fmt.Errorf("register response %s in %s: %w", rsp.Name, netwallFile.PackageName, err)
+				}
+			}
+		}
+
+		// 注册 Notify 消息
+		for _, notify := range netwallFile.Notifies {
+			if err := ctx.SymbolTable.RegisterWithScope(netwallFile.PackageName, notify); err != nil {
+				return fmt.Errorf("register notify %s in %s: %w", notify.Name, netwallFile.PackageName, err)
+			}
+		}
+
+		// 注册 DataStruct 消息
+		for _, dataStruct := range netwallFile.DataStructs {
+			if err := ctx.SymbolTable.RegisterWithScope(netwallFile.PackageName, dataStruct); err != nil {
+				return fmt.Errorf("register data struct %s in %s: %w", dataStruct.Name, netwallFile.PackageName, err)
+			}
+		}
+	}
+
+	// 注册 Common DataStructs（如果有）
+	if ctx.HeadFile != nil {
+		for i := range ctx.HeadFile.CommonDataStructs {
+			ds := &ctx.HeadFile.CommonDataStructs[i]
+			if err := ctx.SymbolTable.RegisterWithScope("MME", ds); err != nil {
+				return fmt.Errorf("register common data struct %s: %w", ds.Name, err)
+			}
+		}
+	}
+
+	return nil
+}
+
+// ResolveReferences 解析所有类型引用（Pass 3: Reference Resolution）
+// 遍历所有定义的字段，将类型名称绑定到具体的 Definition 实例
+func (ctx *BlueprintContext) ResolveReferences() error {
+	if ctx.SymbolTable == nil {
+		return fmt.Errorf("symbol table not initialized, call BuildSymbolTable() first")
+	}
+
+	// 创建引用解析器
+	resolver := types.NewReferenceResolver(ctx.SymbolTable)
+
+	// 收集所有错误
+	allErrors := make([]error, 0)
+
+	// 解析 Entity 的字段引用
+	for _, entity := range ctx.Entities {
+		errors := resolver.ResolveFields(entity.Fields)
+		for _, err := range errors {
+			allErrors = append(allErrors, fmt.Errorf("entity %s: %w", entity.Name, err))
+		}
+	}
+
+	// 解析 Manager 的字段引用
+	for _, manager := range ctx.Managers {
+		errors := resolver.ResolveFields(manager.Fields)
+		for _, err := range errors {
+			allErrors = append(allErrors, fmt.Errorf("manager %s: %w", manager.Name, err))
+		}
+	}
+
+	// 解析 Module 的字段引用
+	for _, module := range ctx.Modules {
+		errors := resolver.ResolveFields(module.Fields)
+		for _, err := range errors {
+			allErrors = append(allErrors, fmt.Errorf("module %s: %w", module.Name, err))
+		}
+	}
+
+	// 解析 Mechanism 的字段引用
+	for _, mechanism := range ctx.Mechanisms {
+		errors := resolver.ResolveFields(mechanism.Fields)
+		for _, err := range errors {
+			allErrors = append(allErrors, fmt.Errorf("mechanism %s: %w", mechanism.Name, err))
+		}
+	}
+
+	// 解析 NetWall 消息的字段引用
+	for _, netwallFile := range ctx.NetWalls {
+		for _, message := range netwallFile.GetAllMessages() {
+			errors := resolver.ResolveFields(message.Fields)
+			for _, err := range errors {
+				allErrors = append(allErrors, fmt.Errorf("message %s in %s: %w", message.Name, netwallFile.PackageName, err))
+			}
+		}
+	}
+
+	// 如果有错误，返回汇总错误
+	if len(allErrors) > 0 {
+		errMsg := fmt.Sprintf("found %d reference resolution errors:\n", len(allErrors))
+		for i, err := range allErrors {
+			if i < 10 { // 只显示前 10 个错误，避免输出过长
+				errMsg += fmt.Sprintf("  %d. %v\n", i+1, err)
+			}
+		}
+		if len(allErrors) > 10 {
+			errMsg += fmt.Sprintf("  ... and %d more errors\n", len(allErrors)-10)
+		}
+		return fmt.Errorf("%s", errMsg)
+	}
+
+	return nil
 }

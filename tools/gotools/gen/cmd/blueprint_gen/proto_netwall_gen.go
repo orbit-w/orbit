@@ -56,7 +56,7 @@ func (g *ProtoGenerator) generateNetWallProtoFile(outputDir string, netwallFile 
 		if ds.Comment != "" {
 			sb.WriteString(fmt.Sprintf("// %s\n", ds.Comment))
 		}
-		sb.WriteString(fmt.Sprintf("message %s {\n", ds.GetName()))
+		sb.WriteString(fmt.Sprintf("message %s {\n", ds.GetMessageName()))
 		if len(ds.Fields) > 0 {
 			// 按编号排序字段
 			fields := make([]*blueprint_types.Field, len(ds.Fields))
@@ -133,7 +133,7 @@ func (g *ProtoGenerator) generateNetMessageProto(msg *net_message.NetMessage, in
 	}
 
 	// 生成 message 定义
-	sb.WriteString(fmt.Sprintf("%smessage %s {\n", indent, msg.GetName()))
+	sb.WriteString(fmt.Sprintf("%smessage %s {\n", indent, msg.GetMessageName()))
 
 	// 按编号排序字段
 	fields := make([]*blueprint_types.Field, len(msg.Fields))

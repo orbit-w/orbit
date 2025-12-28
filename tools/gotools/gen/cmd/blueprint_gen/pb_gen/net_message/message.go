@@ -44,6 +44,7 @@ type NetMessage struct {
 	PackageName string
 	Fields      []*types.Field
 	Comment     string
+	SourceFile  string // 源文件路径（用于 Definition 接口）
 
 	// 扩展字段
 	RspExt *NetMessage // 仅用于 Request
@@ -90,7 +91,17 @@ func (m *NetMessage) IsResponse() bool {
 }
 
 // GetName 获取消息名称
+// 对于 Request 和 Notify，返回 FullName（如 "Request_Login"）
+// 对于 DataStruct 和 Response，返回 Name
+// 这样符号表中会注册完整的名称，便于查找和避免冲突
 func (m *NetMessage) GetName() string {
+	if m.Type == NetWallMessageTypeRequest || m.Type == NetWallMessageTypeNotify {
+		return m.FullName
+	}
+	return m.Name
+}
+
+func (m *NetMessage) GetMessageName() string {
 	return m.Name
 }
 
@@ -139,9 +150,10 @@ func (m *NetMessage) AddResponse() *NetMessage {
 	rsp := &NetMessage{
 		Type:        NetWallMessageTypeResponse,
 		PackageName: m.PackageName,
-		Name:        m.GetName(), // 响应消息名称与请求消息名称相同
+		Name:        m.Name, // 响应消息使用基础名称（不包含 Request_ 前缀）
 		FullName:    m.GenRspFullName(),
 		Fields:      make([]*types.Field, 0),
+		SourceFile:  m.SourceFile, // 继承源文件路径
 	}
 
 	m.SetResponse(rsp)
@@ -155,4 +167,16 @@ func (m *NetMessage) SetResponse(rsp *NetMessage) {
 
 func (m *NetMessage) SetFields(fields []*types.Field) {
 	m.Fields = fields
+}
+
+// GetKind 实现 Definition 接口
+// NetMessage 都属于 Message 类型
+func (m *NetMessage) GetKind() types.DefinitionKind {
+	return types.DefKindMessage
+}
+
+// GetFile 实现 Definition 接口
+// 返回定义所在的源文件路径
+func (m *NetMessage) GetFile() string {
+	return m.SourceFile
 }

@@ -37,8 +37,15 @@ func (p *YamlParser) Parse() error {
 		return fmt.Errorf("failed to parse NetWall files: %w", err)
 	}
 
-	// 检查 Entity 字段类型是否符合要求
-	p.ctx.CheckEntityFields()
+	// Pass 2: 构建符号表 (Symbol Table Construction)
+	if err := p.ctx.BuildSymbolTable(); err != nil {
+		return fmt.Errorf("failed to build symbol table: %w", err)
+	}
+
+	// Pass 3: 解析类型引用 (Reference Resolution)
+	if err := p.ctx.ResolveReferences(); err != nil {
+		return fmt.Errorf("failed to resolve type references: %w", err)
+	}
 
 	return nil
 }
@@ -72,8 +79,9 @@ func (p *YamlParser) parseHeadFile() error {
 
 			for dsName, dsData := range dsMap {
 				dataStruct := DataStruct{
-					Name:   dsName,
-					Fields: make([]*types.Field, 0),
+					Name:       dsName,
+					Fields:     make([]*types.Field, 0),
+					SourceFile: filePath, // 设置源文件路径
 				}
 
 				if dsData != nil {

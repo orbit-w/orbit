@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/mmeobj"
+	blueprint_types "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types"
 	types "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types"
 )
 
@@ -67,15 +68,16 @@ func (f *FiledChecker) CheckManagerFields() {
 					}
 					filteredFields = append(filteredFields, field)
 				}
-				objectType, ok := f.ctx.GetObjectType(valueType.GetName())
-				if !ok {
+				resolvedDefinition := valueType.GetResolvedDefinition()
+				if resolvedDefinition == nil {
 					fmt.Printf("manager %s map field %s value type is not mme object\n", manager.Name, field.Name)
 					if f.panicError {
 						panic(fmt.Sprintf("manager %s map field %s value type is not mme object", manager.Name, field.Name))
 					}
 					filteredFields = append(filteredFields, field)
 				}
-				if !objectType.IsModule() {
+
+				if resolvedDefinition.GetKind() != blueprint_types.DefKindModule {
 					fmt.Printf("manager %s map field %s value type is not manager\n", manager.Name, field.Name)
 					if f.panicError {
 						panic(fmt.Sprintf("manager %s map field %s value type is not manager", manager.Name, field.Name))
@@ -83,18 +85,18 @@ func (f *FiledChecker) CheckManagerFields() {
 					filteredFields = append(filteredFields, field)
 				}
 			case field.IsMMEObjectType():
-				objectType, ok := f.ctx.GetObjectType(field.Type.GetName())
-				if !ok {
+				resolvedDefinition := field.Type.GetResolvedDefinition()
+				if resolvedDefinition == nil {
 					fmt.Printf("manager %s map field %s value type is not mme object\n", manager.Name, field.Name)
 					if f.panicError {
 						panic(fmt.Sprintf("manager %s map field %s value type is not mme object", manager.Name, field.Name))
 					}
 					filteredFields = append(filteredFields, field)
 				}
-				if !objectType.IsModule() {
-					fmt.Printf("manager %s map field %s value type is not manager\n", manager.Name, field.Name)
+				if resolvedDefinition.GetKind() != blueprint_types.DefKindModule {
+					fmt.Printf("manager %s map field %s value type is not module\n", manager.Name, field.Name)
 					if f.panicError {
-						panic(fmt.Sprintf("manager %s map field %s value type is not manager", manager.Name, field.Name))
+						panic(fmt.Sprintf("manager %s map field %s value type is not module", manager.Name, field.Name))
 					}
 					filteredFields = append(filteredFields, field)
 				}
@@ -126,18 +128,18 @@ func (f *FiledChecker) CheckModuleFields() {
 				}
 				filteredFields = append(filteredFields, field)
 			}
-			objectType, ok := f.ctx.GetObjectType(field.Type.GetName())
-			if !ok {
+			resolvedDefinition := field.Type.GetResolvedDefinition()
+			if resolvedDefinition == nil {
 				fmt.Printf("module %s field %s type is not mme object\n", module.Name, field.Name)
 				if f.panicError {
 					panic(fmt.Sprintf("module %s field %s type is not mme object", module.Name, field.Name))
 				}
 				filteredFields = append(filteredFields, field)
 			}
-			if !objectType.IsMechanism() {
-				fmt.Printf("module %s field %s type is not module\n", module.Name, field.Name)
+			if resolvedDefinition.GetKind() != blueprint_types.DefKindMechanism {
+				fmt.Printf("module %s field %s type is not mechanism\n", module.Name, field.Name)
 				if f.panicError {
-					panic(fmt.Sprintf("module %s field %s type is not module", module.Name, field.Name))
+					panic(fmt.Sprintf("module %s field %s type is not mechanism", module.Name, field.Name))
 				}
 				filteredFields = append(filteredFields, field)
 			}
