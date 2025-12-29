@@ -315,3 +315,23 @@ func (m *HeroManagerWrapper) ToIncrementalProtoWithContext(ctx mmemodel.SyncCont
 	}
 	return incremental
 }
+
+// Location 根据位置信息查找对应的 Mechanism Wrapper 和 MechanismType
+func (w *HeroManagerWrapper) Location(loc *mme.MMELocation) (any, mme.MechanismType) {
+	if loc == nil {
+		return nil, mme.MechanismType_Unknown
+	}
+
+	index := loc.GetModuleIndex()
+	switch index {
+	case int32(HeroManagerFieldIndexHeroMap):
+		moduleWrapper, exists := w.heroMapLink.Get(loc.GetKey())
+		if exists {
+			return moduleWrapper.Location(loc)
+		}
+		return nil, mme.MechanismType_Unknown
+	case int32(HeroManagerFieldIndexSingleHeroModule):
+		return w.SingleHeroModuleWrapper.Location(loc)
+	}
+	return nil, mme.MechanismType_Unknown
+}

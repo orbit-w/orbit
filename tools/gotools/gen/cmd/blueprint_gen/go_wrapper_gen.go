@@ -559,6 +559,59 @@ func (g *GoWrapperGenerator) generateModulesLocationMethod(module *mmeobj.Module
 	return sb.String()
 }
 
+// generateManagerLocationMethod 生成 Manager 的 Location 方法
+// Location 方法根据 MMELocation 查找对应的 Module Wrapper
+func (g *GoWrapperGenerator) generateManagerLocationMethod(manager *mmeobj.Manager, wrapperName string) string {
+	sb := strings.Builder{}
+
+	// 生成方法签名和开头
+	sb.WriteString("// Location 根据位置信息查找对应的 Mechanism Wrapper 和 MechanismType\n")
+	sb.WriteString(fmt.Sprintf("func (w *%s) Location(loc *mme.MMELocation) (any, mme.MechanismType) {\n", wrapperName))
+	sb.WriteString("\tif loc == nil {\n")
+	sb.WriteString("\t\treturn nil, mme.MechanismType_Unknown\n")
+	sb.WriteString("\t}\n\n")
+	sb.WriteString("\tindex := loc.GetModuleIndex()\n")
+	sb.WriteString("\tswitch index {\n")
+
+	// 生成 case 分支
+	for _, field := range manager.Fields {
+		fieldIndexName := fmt.Sprintf("%sFieldIndex%s", manager.Name, field.Name)
+
+		switch {
+		case field.Type.IsMMEObjectType():
+			if field.Type.IsResolved() {
+				def := field.Type.GetResolvedDefinition()
+				if def != nil && def.GetKind() == types.DefKindModule {
+					wrapperFieldName := field.Name + "Wrapper"
+					sb.WriteString(fmt.Sprintf("\tcase int32(%s):\n", fieldIndexName))
+					sb.WriteString(fmt.Sprintf("\t\treturn w.%s.Location(loc)\n", wrapperFieldName))
+				}
+			}
+		case field.Type.IsXMapField() || field.Type.IsMapField():
+			valueType := field.Type.GetValueType()
+			if valueType != nil && valueType.IsMMEObjectType() && valueType.IsResolved() {
+				def := valueType.GetResolvedDefinition()
+				if def != nil && def.GetKind() == types.DefKindModule {
+					linkFieldName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Link"
+					sb.WriteString(fmt.Sprintf("\tcase int32(%s):\n", fieldIndexName))
+					sb.WriteString(fmt.Sprintf("\t\tmoduleWrapper, exists := w.%s.Get(loc.GetKey())\n", linkFieldName))
+					sb.WriteString("\t\tif exists {\n")
+					sb.WriteString("\t\t\treturn moduleWrapper.Location(loc)\n")
+					sb.WriteString("\t\t}\n")
+					sb.WriteString("\t\treturn nil, mme.MechanismType_Unknown\n")
+				}
+			}
+		}
+	}
+
+	// 生成默认分支
+	sb.WriteString("\t}\n")
+	sb.WriteString("\treturn nil, mme.MechanismType_Unknown\n")
+	sb.WriteString("}\n\n")
+
+	return sb.String()
+}
+
 func (g *GoWrapperGenerator) generateMMEGOStructWrapper(objName string, _ mmeobject.ObjectType, fields []*types.Field, sb *strings.Builder) {
 	// 生成 Wrapper 结构体
 	wrapperName := objName + "Wrapper"
@@ -764,6 +817,9 @@ func (g *GoWrapperGenerator) generateManagerWrappers(outputDir string) error {
 			ObjectType:  mmeobject.ObjectTypeManager,
 		}
 		sb.WriteString(generatorToIncrementalProto.GenerateToIncrementalProtoMethod(manager.Fields))
+
+		// 生成 Location 方法
+		sb.WriteString(g.generateManagerLocationMethod(manager, wrapperName))
 
 		// 写入文件（追加到 Manager 文件）
 		fileName := GetManagerFileName(manager.Name)
