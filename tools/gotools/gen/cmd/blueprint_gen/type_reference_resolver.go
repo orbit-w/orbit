@@ -229,8 +229,9 @@ func (r *TypeReferenceResolver) collectImportsFromFieldType(fieldType *blueprint
 	if fieldType.IsMessage() || fieldType.IsMMEObjectType() {
 		// 获取消息类型的 SourceProto
 		importFileName := r.genProtoImportByObjectName(typeName)
-		currentImportFileName := importFileName + ".proto"
-		if importFileName != "" && importFileName != currentImportFileName {
+		// 构造当前 proto 文件名，避免自引用
+		currentProtoFile := currentSourceProto + ".proto"
+		if importFileName != "" && importFileName != currentProtoFile {
 			imports[importFileName] = true
 		}
 	}

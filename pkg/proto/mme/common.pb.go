@@ -307,7 +307,7 @@ func (x *Coord) GetZ() int32 {
 // MMELocation
 type MMELocation struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
-	EntityId       *int64                 `protobuf:"varint,1,opt,name=EntityId,proto3,oneof" json:"EntityId,omitempty"`
+	EntityRef      *EntityRef             `protobuf:"bytes,1,opt,name=EntityRef,proto3,oneof" json:"EntityRef,omitempty"`
 	ModuleIndex    *int32                 `protobuf:"varint,2,opt,name=ModuleIndex,proto3,oneof" json:"ModuleIndex,omitempty"`
 	ManagerIndex   *int32                 `protobuf:"varint,3,opt,name=ManagerIndex,proto3,oneof" json:"ManagerIndex,omitempty"`
 	MechanismIndex *int32                 `protobuf:"varint,4,opt,name=MechanismIndex,proto3,oneof" json:"MechanismIndex,omitempty"`
@@ -346,11 +346,11 @@ func (*MMELocation) Descriptor() ([]byte, []int) {
 	return file_common_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *MMELocation) GetEntityId() int64 {
-	if x != nil && x.EntityId != nil {
-		return *x.EntityId
+func (x *MMELocation) GetEntityRef() *EntityRef {
+	if x != nil {
+		return x.EntityRef
 	}
-	return 0
+	return nil
 }
 
 func (x *MMELocation) GetModuleIndex() int32 {
@@ -445,14 +445,15 @@ const file_common_proto_rawDesc = "" +
 	"\x01Z\x18\x03 \x01(\x05H\x02R\x01Z\x88\x01\x01B\x04\n" +
 	"\x02_XB\x04\n" +
 	"\x02_YB\x04\n" +
-	"\x02_Z\"\x8b\x02\n" +
-	"\vMMELocation\x12\x1f\n" +
-	"\bEntityId\x18\x01 \x01(\x03H\x00R\bEntityId\x88\x01\x01\x12%\n" +
+	"\x02_Z\"\x9e\x02\n" +
+	"\vMMELocation\x121\n" +
+	"\tEntityRef\x18\x01 \x01(\v2\x0e.MME.EntityRefH\x00R\tEntityRef\x88\x01\x01\x12%\n" +
 	"\vModuleIndex\x18\x02 \x01(\x05H\x01R\vModuleIndex\x88\x01\x01\x12'\n" +
 	"\fManagerIndex\x18\x03 \x01(\x05H\x02R\fManagerIndex\x88\x01\x01\x12+\n" +
 	"\x0eMechanismIndex\x18\x04 \x01(\x05H\x03R\x0eMechanismIndex\x88\x01\x01\x12\x15\n" +
-	"\x03Key\x18\x05 \x01(\x03H\x04R\x03Key\x88\x01\x01B\v\n" +
-	"\t_EntityIdB\x0e\n" +
+	"\x03Key\x18\x05 \x01(\x03H\x04R\x03Key\x88\x01\x01B\f\n" +
+	"\n" +
+	"_EntityRefB\x0e\n" +
 	"\f_ModuleIndexB\x0f\n" +
 	"\r_ManagerIndexB\x11\n" +
 	"\x0f_MechanismIndexB\x06\n" +
@@ -510,12 +511,13 @@ var file_common_proto_goTypes = []any{
 	(*EntityRef)(nil),          // 6: MME.EntityRef
 }
 var file_common_proto_depIdxs = []int32{
-	2, // 0: MME.EntityRef.EntityType:type_name -> MME.EntityType
-	1, // [1:1] is the sub-list for method output_type
-	1, // [1:1] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	6, // 0: MME.MMELocation.EntityRef:type_name -> MME.EntityRef
+	2, // 1: MME.EntityRef.EntityType:type_name -> MME.EntityType
+	2, // [2:2] is the sub-list for method output_type
+	2, // [2:2] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_common_proto_init() }
