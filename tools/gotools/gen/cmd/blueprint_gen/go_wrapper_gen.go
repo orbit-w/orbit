@@ -508,21 +508,24 @@ func (g *GoWrapperGenerator) generateModuleWrappers(outputDir string) error {
 	return nil
 }
 
-// generateLocationMethod 生成 Location 方法
+// generateModulesLocationMethod 生成 Module 的 Location 方法
 // Location 方法根据 MMELocation 查找对应的 Mechanism Wrapper 和 MechanismType
 func (g *GoWrapperGenerator) generateModulesLocationMethod(module *mmeobj.Module, wrapperName string) string {
 	sb := strings.Builder{}
 
-	// 只有包含 MMEObject 字段的 Module 才生成 Location 方法
-	hasMMEObjectField := false
+	// 只有包含 Mechanism 字段的 Module 才生成 Location 方法
+	hasMechanismField := false
 	for _, field := range module.Fields {
-		if field.Type.IsMMEObjectType() {
-			hasMMEObjectField = true
-			break
+		if field.Type.IsMMEObjectType() && field.Type.IsResolved() {
+			def := field.Type.GetResolvedDefinition()
+			if def != nil && def.GetKind() == types.DefKindMechanism {
+				hasMechanismField = true
+				break
+			}
 		}
 	}
 
-	if !hasMMEObjectField {
+	if !hasMechanismField {
 		return ""
 	}
 
@@ -532,22 +535,96 @@ func (g *GoWrapperGenerator) generateModulesLocationMethod(module *mmeobj.Module
 	sb.WriteString("\tif loc == nil {\n")
 	sb.WriteString("\t\treturn nil, mme.MechanismType_Unknown\n")
 	sb.WriteString("\t}\n\n")
-	sb.WriteString("\tindex := loc.GetModuleIndex()\n")
+	sb.WriteString("\tindex := loc.GetMechanismIndex()\n")
 	sb.WriteString("\tswitch index {\n")
 
 	// 生成 case 分支
 	for _, field := range module.Fields {
-		if field.Type.IsMMEObjectType() {
-			fieldIndexName := fmt.Sprintf("%sFieldIndex%s", module.Name, field.Name)
-			wrapperFieldName := field.Name + "Wrapper"
-			typeName := field.GetTypeName()
+		fieldIndexName := fmt.Sprintf("%sFieldIndex%s", module.Name, field.Name)
 
-			// 生成 MechanismType 枚举值名称
-			mechanismTypeEnumName := GenMechanismTypeEnumName(typeName)
+		switch {
+		case field.Type.IsMMEObjectType():
+			if field.Type.IsResolved() {
+				def := field.Type.GetResolvedDefinition()
+				if def != nil && def.GetKind() == types.DefKindMechanism {
+					wrapperFieldName := field.Name + "Wrapper"
+					typeName := field.GetTypeName()
+					mechanismTypeEnumName := GenMechanismTypeEnumName(typeName)
 
-			sb.WriteString(fmt.Sprintf("\tcase int32(%s):\n", fieldIndexName))
-			sb.WriteString(fmt.Sprintf("\t\treturn w.%s, mme.MechanismType_%s\n",
-				wrapperFieldName, mechanismTypeEnumName))
+					sb.WriteString(fmt.Sprintf("\tcase int32(%s):\n", fieldIndexName))
+					sb.WriteString(fmt.Sprintf("\t\treturn w.%s, mme.MechanismType_%s\n",
+						wrapperFieldName, mechanismTypeEnumName))
+				}
+			}
+		case field.Type.IsXMapField() || field.Type.IsMapField():
+			valueType := field.Type.GetValueType()
+			if valueType != nil && valueType.IsMMEObjectType() && valueType.IsResolved() {
+				def := valueType.GetResolvedDefinition()
+				if def != nil && def.GetKind() == types.DefKindMechanism {
+					linkFieldName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Link"
+					typeName := valueType.GetTypeName()
+					mechanismTypeEnumName := GenMechanismTypeEnumName(typeName)
+
+					sb.WriteString(fmt.Sprintf("\tcase int32(%s):\n", fieldIndexName))
+					sb.WriteString(fmt.Sprintf("\t\tval, exists := w.%s.Get(loc.GetKey())\n", linkFieldName))
+					sb.WriteString("\t\tif exists {\n")
+					sb.WriteString(fmt.Sprintf("\t\t\treturn val, mme.MechanismType_%s\n", mechanismTypeEnumName))
+					sb.WriteString("\t\t}\n")
+				}
+			}
+		}
+	}
+
+	// 生成默认分支
+	sb.WriteString("\t}\n")
+	sb.WriteString("\treturn nil, mme.MechanismType_Unknown\n")
+	sb.WriteString("}\n\n")
+
+	return sb.String()
+}
+
+// generateEntityLocationMethod 生成 Entity 的 Location 方法
+// Location 方法根据 MMELocation 查找对应的 Manager Wrapper，并继续向下分发
+func (g *GoWrapperGenerator) generateEntityLocationMethod(entity *mmeobj.Entity, wrapperName string) string {
+	sb := strings.Builder{}
+
+	// 只有包含 Manager 字段的 Entity 才生成 Location 方法
+	hasManagerField := false
+	for _, field := range entity.Fields {
+		if field.Type.IsMMEObjectType() && field.Type.IsResolved() {
+			def := field.Type.GetResolvedDefinition()
+			if def != nil && def.GetKind() == types.DefKindManager {
+				hasManagerField = true
+				break
+			}
+		}
+	}
+
+	if !hasManagerField {
+		return ""
+	}
+
+	// 生成方法签名和开头
+	sb.WriteString("// Location 根据位置信息查找对应的 Mechanism Wrapper 和 MechanismType\n")
+	sb.WriteString(fmt.Sprintf("func (w *%s) Location(loc *mme.MMELocation) (any, mme.MechanismType) {\n", wrapperName))
+	sb.WriteString("\tif loc == nil {\n")
+	sb.WriteString("\t\treturn nil, mme.MechanismType_Unknown\n")
+	sb.WriteString("\t}\n\n")
+	sb.WriteString("\tindex := loc.GetManagerIndex()\n")
+	sb.WriteString("\tswitch index {\n")
+
+	// 生成 case 分支
+	for _, field := range entity.Fields {
+		if field.Type.IsMMEObjectType() && field.Type.IsResolved() {
+			def := field.Type.GetResolvedDefinition()
+			if def != nil && def.GetKind() == types.DefKindManager {
+				fieldIndexName := fmt.Sprintf("%sFieldIndex%s", entity.Name, field.Name)
+				wrapperFieldName := field.Name + "Wrapper"
+				sb.WriteString(fmt.Sprintf("\tcase int32(%s):\n", fieldIndexName))
+				sb.WriteString(fmt.Sprintf("\t\tif w.%s != nil {\n", wrapperFieldName))
+				sb.WriteString(fmt.Sprintf("\t\t\treturn w.%s.Location(loc)\n", wrapperFieldName))
+				sb.WriteString("\t\t}\n")
+			}
 		}
 	}
 
@@ -1093,6 +1170,9 @@ func (g *GoWrapperGenerator) generateEntityWrappers(outputDir string) error {
 			ObjectType:  mmeobject.ObjectTypeEntity,
 		}
 		sb.WriteString(generatorToIncrementalProto.GenerateToIncrementalProtoMethod(entity.Fields))
+
+		// 生成 Location 方法
+		sb.WriteString(g.generateEntityLocationMethod(entity, wrapperName))
 
 		// 写入文件（追加到 Entity 文件）
 		fileName := GetEntityFileName(entity.Name)

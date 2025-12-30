@@ -411,7 +411,7 @@ func (w *HeroModuleWrapper) Location(loc *mme.MMELocation) (any, mme.MechanismTy
 		return nil, mme.MechanismType_Unknown
 	}
 
-	index := loc.GetModuleIndex()
+	index := loc.GetMechanismIndex()
 	switch index {
 	case int32(HeroModuleFieldIndexBase):
 		return w.BaseWrapper, mme.MechanismType_Hero

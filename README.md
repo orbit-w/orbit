@@ -373,9 +373,50 @@ if mmemodel.FieldCanBeIncrementalSynced(m, HeroMechanismDirtySkillsBit, HeroMech
 6. **数据合并**：接收端通过 `FromProto()` 或增量合并逻辑更新本地数据
 7. **清除脏标记**：同步完成后调用 `ClearAllDirty()` 清除脏标记
 
-### Manager 路由分发（Location 方法）
+### 路由分发系统（Location Dispatch）
 
-在 Manager 对应的 Wrapper 代码中，会自动生成 `Location` 方法。该方法的主要作用是根据 `mme.MMELocation` 中的路由信息（Index 和 Key），将请求分发给下层 Module 的 Wrapper 继续处理。
+MME 架构支持从 Entity 层级开始的完整路由分发链，通过 `Location` 方法根据 `mme.MMELocation` 中的路由信息，逐层将请求分发至目标 Mechanism。
+
+分发流程如下：
+1. **Entity Wrapper**: 根据 `ManagerIndex` 分发给 Manager Wrapper
+2. **Manager Wrapper**: 根据 `ModuleIndex` 分发给 Module Wrapper
+3. **Module Wrapper**: 根据 `MechanismIndex` 分发给 Mechanism Wrapper (并返回 MechanismType)
+
+#### 1. Entity Wrapper Location 方法
+
+Entity Wrapper 是路由分发的入口。
+
+**方法签名**：
+```go
+// Location 根据位置信息查找对应的 Mechanism Wrapper 和 MechanismType
+func (w *<EntityName>Wrapper) Location(loc *mme.MMELocation) (any, mme.MechanismType)
+```
+
+**路由规则**：
+- 根据 `loc.GetManagerIndex()` 获取目标 Manager 的 FieldIndex。
+- 查找对应的 Manager Wrapper 字段并调用其 `Location` 方法。
+
+**代码示例**：
+```go
+func (w *PlayerEntityWrapper) Location(loc *mme.MMELocation) (any, mme.MechanismType) {
+    if loc == nil {
+        return nil, mme.MechanismType_Unknown
+    }
+
+    index := loc.GetManagerIndex()
+    switch index {
+    case int32(PlayerEntityFieldIndexHeroManager):
+        if w.HeroManagerWrapper != nil {
+            return w.HeroManagerWrapper.Location(loc)
+        }
+    }
+    return nil, mme.MechanismType_Unknown
+}
+```
+
+#### 2. Manager Wrapper Location 方法
+
+Manager Wrapper 负责将请求分发给下层 Module。
 
 **方法签名**：
 ```go
@@ -385,11 +426,9 @@ func (w *<ManagerName>Wrapper) Location(loc *mme.MMELocation) (any, mme.Mechanis
 
 **路由规则**：
 1. **直接 Module 引用**：
-   - 如果 Field 类型是 Module 类，则根据 Index 直接调用该字段 Wrapper 的 `Location` 方法。
+   - 如果 Field 类型是 Module 类，则根据 `ModuleIndex` 直接调用该字段 Wrapper 的 `Location` 方法。
 2. **Map/Xmap 包含 Module**：
-   - 如果 Field 类型是 map/xmap 且 Value 类型是 Module 类，则通过 `loc.GetKey()` 从 map 中定位到 Module Wrapper，再调用其 `Location` 方法。
-3. **其他字段**：
-   - 不满足上述条件的字段不参与路由分发。
+   - 如果 Field 类型是 map/xmap 且 Value 类型是 Module 类，则根据 `ModuleIndex` 确定字段，再通过 `loc.GetKey()` 从 map 中定位到 Module Wrapper，调用其 `Location` 方法。
 
 **代码示例**：
 ```go
@@ -413,6 +452,38 @@ func (w *HeroManagerWrapper) Location(loc *mme.MMELocation) (any, mme.MechanismT
         return w.SingleHeroModuleWrapper.Location(loc)
     }
 
+    return nil, mme.MechanismType_Unknown
+}
+```
+
+#### 3. Module Wrapper Location 方法
+
+Module Wrapper 是路由的最后一环，负责找到具体的 Mechanism。
+
+**方法签名**：
+```go
+// Location 根据位置信息查找对应的 Mechanism Wrapper 和 MechanismType
+func (w *<ModuleName>Wrapper) Location(loc *mme.MMELocation) (any, mme.MechanismType)
+```
+
+**路由规则**：
+- 根据 `loc.GetMechanismIndex()` 获取目标 Mechanism 的 FieldIndex。
+- 返回对应的 Mechanism Wrapper 实例和 MechanismType 枚举。
+
+**代码示例**：
+```go
+func (w *HeroModuleWrapper) Location(loc *mme.MMELocation) (any, mme.MechanismType) {
+    if loc == nil {
+        return nil, mme.MechanismType_Unknown
+    }
+
+    index := loc.GetMechanismIndex()
+    switch index {
+    case int32(HeroModuleFieldIndexBase):
+        return w.BaseWrapper, mme.MechanismType_Hero
+    case int32(HeroModuleFieldIndexLevelUp):
+        return w.LevelUpWrapper, mme.MechanismType_LevelUp
+    }
     return nil, mme.MechanismType_Unknown
 }
 ```

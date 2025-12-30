@@ -271,3 +271,19 @@ func (e *PlayerEntityWrapper) ToIncrementalProtoWithContext(ctx mmemodel.SyncCon
 	}
 	return incremental
 }
+
+// Location 根据位置信息查找对应的 Mechanism Wrapper 和 MechanismType
+func (w *PlayerEntityWrapper) Location(loc *mme.MMELocation) (any, mme.MechanismType) {
+	if loc == nil {
+		return nil, mme.MechanismType_Unknown
+	}
+
+	index := loc.GetManagerIndex()
+	switch index {
+	case int32(PlayerEntityFieldIndexHeroManager):
+		if w.HeroManagerWrapper != nil {
+			return w.HeroManagerWrapper.Location(loc)
+		}
+	}
+	return nil, mme.MechanismType_Unknown
+}
