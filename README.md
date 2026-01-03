@@ -548,7 +548,7 @@ blueprint/
 
 - `headfile.yaml`: 定义通用字段、选项、公共数据结构
 - `entities.yaml`: 定义实体（Entity），引用 Manager
-- `manager.yaml`: 定义管理器（Manager），组织多个 Module
+- `manager.yaml`: 定义管理器（Manager），以单例模式或Map编排 Module
 - `mechanisms.yaml`: 定义机制（Mechanism）与数据结构
 - `modules.yaml`: 定义模块（Module）对机制的组合与配置
 - `Core.yaml`: 定义核心网络消息墙
@@ -948,6 +948,103 @@ message Notify {
 - 2. access=s: 仅服务端可读写，客户端只读。
 - 3. access=c: 仅客户端可读写，服务端只读。
 - 4. 生成器应在Go代码中添加相应的访问控制逻辑。
+
+---
+
+## MME-Agent 逻辑开发架构
+
+为了解决 MME 纯数据结构与业务逻辑分离的问题，并提供便捷的跨模块编排能力，MME 引入了 **Agent 代理模式**。该架构通过自动生成的 Agent 层，实现了"数据-逻辑分离"、"依赖注入"与"强类型访问"。
+
+### 1. 核心定义与架构分层
+
+在 MME 体系中，遵循 **"容器编排-原子行为"** 的设计原则：
+
+- **Mechanism (机制)**：**唯一的数据与行为载体**。
+    - **数据**：只有 Mechanism 定义具体的业务字段（如 `int32 Gold`, `map Items`）。
+    - **行为**：只有 `MechanismLogic` 定义对数据的直接读写操作（原子行为）。
+- **Module (模块)**：**编排 Mechanism**。
+    - 它是 Mechanism 的静态组合容器（如 `BagModule` = `ItemMechanism` + `LimitMechanism`）。
+    - `ModuleLogic` 不直接操作数据字段，而是通过调用内部 MechanismLogic 的原子方法来编排业务流程。
+- **Manager (管理器)**：**编排 Mechanism（通常是通过编排 Module）**。
+    - 它是更高层级的动态容器，支持以单例或 Map 方式组织 Module。
+    - `ManagerLogic` 由研发人员组织，负责编排 MechanismLogic 的方法，实现跨模块的业务逻辑。
+
+系统分为三层，各司其职：
+
+```mermaid
+graph TD
+    UserCode[Controller / 业务入口] --> Agent[Agent (自动生成)]
+    
+    subgraph "自动生成层 (Auto-Generated)"
+        Agent -->|管理| LogicRegistry[Logic实例缓存]
+        Agent -->|持有| EntityWrapper[Entity Wrapper (数据)]
+        EntityWrapper --> ManagerWrapper
+        ManagerWrapper --> ModuleWrapper
+        ModuleWrapper --> MechanismWrapper
+    end
+    
+    subgraph "业务逻辑层 (User Implemented)"
+        LogicRegistry -->|懒加载| ManagerLogicImpl[Manager Logic Impl]
+        ManagerLogicImpl -->|包含| ModuleLogicImpl[Module Logic Impl]
+        ModuleLogicImpl -->|编排| MechLogicImpl[Mechanism Logic Impl]
+        
+        MechLogicImpl -->|读写| MechanismWrapper
+        MechLogicImpl -->|访问兄弟模块| Agent
+    end
+```
+
+#### 第一层：数据层 (Data Layer - `mme` 包)
+- **来源**：完全由 `blueprint_gen` 自动生成 (Wrapper)。
+- **职责**：纯粹的数据容器。
+    - **MechanismWrapper**: 包含实际的业务字段数据。
+    - **Module/ManagerWrapper**: 仅包含子节点的指针结构，不包含业务字段。
+- **特性**：提供 `Get/Set` 原子接口、脏标记管理、序列化能力。
+
+#### 第二层：代理层 (Agent Layer - `agent` 包)
+- **来源**：完全由 `blueprint_gen` 自动生成。
+- **职责**：
+    - **数据持有**：持有 `EntityWrapper` 根节点。
+    - **逻辑工厂**：负责实例化用户编写的 Logic 类，并注入数据和代理自身。
+    - **依赖注入**：通过 Agent 接口，让任意 Logic 模块都能安全访问其他兄弟模块。
+    - **强类型入口**：提供 `Get<Manager>Logic()` 等强类型方法，快速定位业务逻辑。
+
+#### 第三层：逻辑层 (Logic Layer - `logic` 包)
+- **来源**：用户编写 (可生成脚手架)。
+- **职责**：
+    - **Mechanism Logic (原子层)**：**唯一有权直接读写 Wrapper 数据的层级**。实现最小粒度的业务规则（如 `AddItem`, `UseItem`）。
+    - **Module Logic (编排层)**：聚合多个 Mechanism Logic，对外暴露高层业务语义（如 `LevelUp` 可能涉及 `ExpMechanism` 和 `StatMechanism` 的原子操作）。
+    - **Manager Logic (调度层)**：由研发人员实现，使用动态懒加载与工厂模式实例化。负责管理 Module 集合，主要通过编排 ModuleLogic 的业务方法（也可直接编排 MechanismLogic）来实现跨模块的业务流程。
+
+### 2. Agent 代理详细设计
+
+Agent 是连接数据与逻辑的桥梁，它根据 MME 的层级结构自动生成对应的逻辑访问路径。
+
+### 3. ManagerLogic 实例化与编排策略
+
+ManagerLogic 作为业务逻辑的编排层，采用了灵活的动态加载策略：
+
+1.  **逻辑编排与层级调用**：
+    - ManagerLogic 由研发人员编写，主要职责是编排下属 ModuleLogic 的业务行为，或直接编排 MechanismLogic 的原子行为。
+    - **推荐调用路径**：ManagerLogic → ModuleLogic → MechanismLogic。
+    - 它不直接操作数据字段，而是通过调用下层 Logic 提供的接口来实现复杂的业务流程。
+
+2.  **动态懒加载与工厂模式**：
+    - ManagerLogic 的实例获取采用 **动态懒加载** 策略。
+    - 系统维护一个全局的 Logic 工厂注册表（Factory Registry）。
+    - 当首次访问某个 ManagerLogic 时，Agent 会通过工厂方法动态创建实例并缓存，后续访问直接返回缓存实例。
+    - 这种模式确保了只有被实际使用的逻辑模块才会被初始化，降低内存占用并解耦了模块间的强依赖。
+
+3.  **无状态逻辑约束**：
+    - Logic 层（Manager/Module/Mechanism）应当设计为 **无状态（Stateless）** 或仅持有 **瞬时状态**。
+    - 所有需持久化的业务数据必须存储在 `MechanismWrapper` 中。
+    - 禁止在 Logic 实例中缓存与 Wrapper 数据不一致的中间状态，以确保 MME 的脏标记追踪和增量同步机制正常工作。
+
+### 4. 总结：Agent 如何解决问题
+
+1.  **纯粹的数据与行为分离**：数据定义收敛于 Mechanism，行为定义收敛于 MechanismLogic，Module/Manager 仅负责结构组织与流程编排。
+2.  **解决定位问题**：Controller 层只需持有 `Agent`，即可通过 `agent.GetBagManagerLogic().GetBagModule()` 快速定位到具体的业务对象。
+3.  **解决依赖问题**：所有 Logic 类都持有 `agent IAgent` 接口，打破了模块间的物理依赖。
+4.  **复用与编排**：Module Logic 对外暴露的是高层的业务语义（如 `AddItem`），内部封装了复杂的 Mechanism 组合逻辑。
 
 ## 最佳实践
 

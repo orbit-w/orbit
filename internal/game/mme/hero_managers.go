@@ -145,6 +145,11 @@ func (m *HeroManagerWrapper) HeroMap_Set(id int64, value *HeroModule) *HeroModul
 	return m.heroMapLink.Set(id, value)
 }
 
+func (m *HeroManagerWrapper) HeroMap_Get(id int64) *HeroModuleWrapper {
+	wrapper, _ := m.heroMapLink.Get(id)
+	return wrapper
+}
+
 // DeleteHeroMap 删除HeroModule模块
 func (m *HeroManagerWrapper) HeroMap_Delete(id int64) bool {
 	return m.heroMapLink.Delete(id)
