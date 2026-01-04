@@ -22,6 +22,14 @@ func (m *LevelUpMechanismLogicImpl) GetWrapper() any {
 	return m.wrapper
 }
 
+func (m *LevelUpMechanismLogicImpl) OnLoad(new bool) error {
+	return nil
+}
+
+func (m *LevelUpMechanismLogicImpl) OnSave() error {
+	return nil
+}
+
 // GetCurLevel 获取 CurLevel
 func (m *LevelUpMechanismLogicImpl) GetCurLevel() int32 {
 	return m.wrapper.GetCurLevel()

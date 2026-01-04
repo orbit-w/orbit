@@ -5,6 +5,16 @@ import (
 	dt "gitee.com/orbit-w/meteor/bases/dirty/dirty_tracker"
 )
 
+type XMapContainer[K comparable, PbValue any, WrapperValue Linkable[PbValue]] interface {
+	Get(key K) (WrapperValue, bool)
+	Set(key K, pbValue PbValue) WrapperValue
+	Delete(key K) bool
+	Reset(pbMap *map[K]PbValue)
+	Has(key K) bool
+	Len() int
+	Range(f func(key K, wrapper WrapperValue) bool)
+}
+
 // Linkable 定义可链接对象的接口
 // 所有 Mechanism/Module/Manager 都应该实现此接口
 type Linkable[PbValue any] interface {

@@ -140,6 +140,10 @@ func (m *HeroManagerWrapper) MatchesAll(fieldID uint8, fieldTypes ...fieldmeta.F
 	return m.fieldMetas.MatchesAll(fieldID, fieldTypes...)
 }
 
+func (m *HeroManagerWrapper) GetHeroMap() xmapwrapper.XMapContainer[int64, *HeroModule, *HeroModuleWrapper] {
+	return m.heroMapLink
+}
+
 // SetHeroMap 设置/添加HeroModule模块
 func (m *HeroManagerWrapper) HeroMap_Set(id int64, value *HeroModule) *HeroModuleWrapper {
 	return m.heroMapLink.Set(id, value)

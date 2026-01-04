@@ -22,9 +22,27 @@ func NewPlayerEntityAgent(entityWrapper *mme.PlayerEntityWrapper) *PlayerEntityA
 	}
 }
 
+func (a *PlayerEntityAgent) GetEntity() mme.IEntity {
+	return a.entityWrapper
+}
+
 func (a *PlayerEntityAgent) GetHeroManagerLogic() imodels.IHeroManagerLogic {
 	if a.heroManagerLogic == nil {
 		a.heroManagerLogic = managers.NewHeroManagerLogic(a.entityWrapper.GetHeroManager())
 	}
 	return a.heroManagerLogic
+}
+
+func (a *PlayerEntityAgent) OnLoad(new bool) error {
+	if err := a.GetHeroManagerLogic().OnLoad(new); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (a *PlayerEntityAgent) OnSave() error {
+	if err := a.GetHeroManagerLogic().OnSave(); err != nil {
+		return err
+	}
+	return nil
 }

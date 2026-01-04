@@ -24,6 +24,14 @@ func (m *HeroMechanismAgent) GetWrapper() any {
 	return m.wrapper
 }
 
+func (m *HeroMechanismAgent) OnLoad(new bool) error {
+	return nil
+}
+
+func (m *HeroMechanismAgent) OnSave() error {
+	return nil
+}
+
 func (m *HeroMechanismAgent) InitHero(confId int32) {
 	m.wrapper.SetConfId(confId)
 	m.wrapper.SetCreateTime(time.Now().Unix())

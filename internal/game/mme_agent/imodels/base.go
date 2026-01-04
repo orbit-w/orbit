@@ -4,4 +4,9 @@ package imodels
 type IBaseLogic interface {
 	// GetWrapper 获取对应的 Mechanism Wrapper
 	GetWrapper() any
+
+	// OnLoad 加载逻辑
+	OnLoad(new bool) error
+	// OnSave 保存逻辑
+	OnSave() error
 }

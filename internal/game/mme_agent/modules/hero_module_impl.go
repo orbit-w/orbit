@@ -26,6 +26,26 @@ func (m *HeroModuleAgent) GetWrapper() any {
 	return m.wrapper
 }
 
+func (m *HeroModuleAgent) OnLoad(new bool) error {
+	if err := m.GetHeroMechanismModel().OnLoad(new); err != nil {
+		return err
+	}
+	if err := m.GetLevelUpMechanismLogic().OnLoad(new); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *HeroModuleAgent) OnSave() error {
+	if err := m.GetHeroMechanismModel().OnSave(); err != nil {
+		return err
+	}
+	if err := m.GetLevelUpMechanismLogic().OnSave(); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (m *HeroModuleAgent) GetHeroMechanismModel() imodels.IHeroMechanismModel {
 	if m.baseLogic == nil {
 		m.baseLogic = mechanisms.NewHeroMechanismLogic(m.wrapper.GetBase())
