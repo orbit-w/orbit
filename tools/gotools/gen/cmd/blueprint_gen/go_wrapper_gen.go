@@ -930,19 +930,33 @@ func (g *GoWrapperGenerator) generateMMEGOStructWrapperGetterAndSetterMethod(obj
 	for _, field := range fields {
 		switch {
 		case field.Type.IsXMapField() || field.Type.IsMapField():
-			// 生成 map 字段的工具方法（Set, Delete, Range）
+			// 生成 map 字段的工具方法（GetContainer, Get, Set, Delete, Range）
 			keyType := field.Type.KeyKind().String()
 			valueName := field.GetValueName()
+			valueTypeName := field.Type.GetValueType().GetTypeName()
 			wrapperTypeName := valueName + "Wrapper"
 			wrapperObjName := objName + "Wrapper"
 			linkFieldName := strings.ToLower(field.Name[0:1]) + field.Name[1:] + "Link"
 			methodPrefix := strings.ToUpper(field.Name[0:1]) + field.Name[1:]
+
+			// GetContainer 方法 - 返回整个 XMapContainer
+			sb.WriteString(fmt.Sprintf("func (m *%s) Get%s() xmapwrapper.XMapContainer[%s, *%s, *%s] {\n",
+				wrapperObjName, methodPrefix, keyType, valueTypeName, wrapperTypeName))
+			sb.WriteString(fmt.Sprintf("\treturn m.%s\n", linkFieldName))
+			sb.WriteString("}\n\n")
 
 			// Set 方法
 			sb.WriteString(fmt.Sprintf("// Set%s 设置/添加%s模块\n", methodPrefix, valueName))
 			sb.WriteString(fmt.Sprintf("func (m *%s) %s_Set(id %s, value *%s) *%s {\n",
 				wrapperObjName, field.Name, keyType, valueName, wrapperTypeName))
 			sb.WriteString(fmt.Sprintf("\treturn m.%s.Set(id, value)\n", linkFieldName))
+			sb.WriteString("}\n\n")
+
+			// Get 方法
+			sb.WriteString(fmt.Sprintf("func (m *%s) %s_Get(id %s) *%s {\n",
+				wrapperObjName, field.Name, keyType, wrapperTypeName))
+			sb.WriteString(fmt.Sprintf("\twrapper, _ := m.%s.Get(id)\n", linkFieldName))
+			sb.WriteString("\treturn wrapper\n")
 			sb.WriteString("}\n\n")
 
 			// Delete 方法
