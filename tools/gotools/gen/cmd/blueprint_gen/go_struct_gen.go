@@ -548,7 +548,7 @@ func (g *GoStructGenerator) genEntityInitFunction(entity *mmeobj.Entity) string 
 
 	// 生成 RegisterEntityFactory 调用
 	entityTypeEnumName := GenEntityTypeEnumName(entity.Name)
-	sb.WriteString(fmt.Sprintf("\tRegisterEntityFactory(mme.EntityType_%s, func() IEntity {\n", entityTypeEnumName))
+	sb.WriteString(fmt.Sprintf("\tRegisterEntityFactory(mme.EntityType_%s, func() IEntityWrapper {\n", entityTypeEnumName))
 	sb.WriteString(fmt.Sprintf("\t\treturn New%sWrapper()\n", entity.Name))
 	sb.WriteString("\t})\n\n")
 
