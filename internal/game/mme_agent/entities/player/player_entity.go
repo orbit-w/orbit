@@ -7,6 +7,7 @@ import (
 	"gitee.com/orbit-w/orbit/internal/game/mme"
 	"gitee.com/orbit-w/orbit/internal/game/mme_agent/imodels"
 	"gitee.com/orbit-w/orbit/internal/game/mme_agent/managers"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // PlayerEntityAgent PlayerEntity Agent 实现
@@ -16,9 +17,9 @@ type PlayerEntityAgent struct {
 	heroManagerLogic imodels.IHeroManagerLogic
 }
 
-func NewPlayerEntityAgent(entityWrapper *mme.PlayerEntityWrapper) *PlayerEntityAgent {
+func NewPlayerEntityAgent() *PlayerEntityAgent {
 	return &PlayerEntityAgent{
-		entityWrapper: entityWrapper,
+		entityWrapper: mme.NewPlayerEntityWrapper(),
 	}
 }
 
@@ -33,7 +34,11 @@ func (a *PlayerEntityAgent) GetHeroManagerLogic() imodels.IHeroManagerLogic {
 	return a.heroManagerLogic
 }
 
-func (a *PlayerEntityAgent) OnLoad(new bool) error {
+func (a *PlayerEntityAgent) OnLoad(raw bson.Raw, new bool) error {
+	if err := a.entityWrapper.Load(raw); err != nil {
+		return err
+	}
+
 	if err := a.GetHeroManagerLogic().OnLoad(new); err != nil {
 		return err
 	}
