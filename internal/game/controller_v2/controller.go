@@ -5,7 +5,7 @@
 package controllerv2
 
 import (
-	mmeobj "gitee.com/orbit-w/orbit/internal/game/mme"
+	agent "gitee.com/orbit-w/orbit/internal/game/mme_agent/entities/player"
 	"gitee.com/orbit-w/orbit/pkg/proto/core"
 	"gitee.com/orbit-w/orbit/pkg/proto/mme"
 	"gitee.com/orbit-w/orbit/pkg/proto/play"
@@ -33,7 +33,7 @@ func (c *Controller) HandleAskLevelUp(req *mme.Request_AskLevelUp) proto.Message
 	return nil
 }
 
-func (c *Controller) HandleLoginRequest(req *play.Request_LoginRequest, playerEntity *mmeobj.PlayerEntityWrapper) proto.Message {
+func (c *Controller) HandleLoginRequest(req *play.Request_LoginRequest, playerEntity *agent.PlayerEntityImpl) proto.Message {
 	// TODO: 实现业务逻辑
 	// playerEntity 已经由 Router 层加载完成，可以直接使用
 	return nil

@@ -2,6 +2,7 @@ package router_gen
 
 import (
 	"fmt"
+	"go/format"
 	"os"
 	"strings"
 )
@@ -71,7 +72,8 @@ func generateRouterCode(ctx *RouterGenContext) error {
 	}
 	code.WriteString("\t\"gitee.com/orbit-w/orbit/pkg/proto/pb\"\n")
 	code.WriteString("\tservicezone_behavior \"gitee.com/orbit-w/orbit/core/services/service_zone/behavior\"\n\n")
-	code.WriteString("\tmmeobj \"gitee.com/orbit-w/orbit/internal/game/mme\"\n")
+	code.WriteString("\t\"gitee.com/orbit-w/orbit/internal/game/mme_agent/entities\"\n")
+	code.WriteString("\tagent \"gitee.com/orbit-w/orbit/internal/game/mme_agent/entities/player\"\n")
 	code.WriteString("\t\"google.golang.org/protobuf/proto\"\n")
 	code.WriteString(")\n\n")
 
@@ -82,8 +84,15 @@ func generateRouterCode(ctx *RouterGenContext) error {
 	}
 	code.WriteString("}\n")
 
+	// 格式化代码
+	formatted, err := format.Source([]byte(code.String()))
+	if err != nil {
+		// 如果格式化失败，返回错误（包含原始代码以便调试）
+		return fmt.Errorf("failed to format generated code: %w\nOriginal code:\n%s", err, code.String())
+	}
+
 	// 写入文件
-	return os.WriteFile(ctx.OutputPath, []byte(code.String()), 0644)
+	return os.WriteFile(ctx.OutputPath, formatted, 0644)
 }
 
 // generateHandlerFunction 生成单个 Handler 函数
@@ -103,14 +112,14 @@ func generateHandlerFunction(req *RequestInfo, controller *ControllerInfo) strin
 	controllerCall := generateControllerCall(req, controller)
 
 	// 生成函数签名：使用 msg proto.Message, entities ...mmeobj.IEntity
-	code.WriteString(fmt.Sprintf("\tRegisterHandler(pb.%s, func(ctx servicezone_behavior.IContext, msg proto.Message, entities ...mmeobj.IEntity) (proto.Message, string, error) {\n", pidName))
+	code.WriteString(fmt.Sprintf("\tRegisterHandler(pb.%s, func(ctx servicezone_behavior.IContext, msg proto.Message, entities ...entities.IEntity) (proto.Message, string, error) {\n", pidName))
 	// 使用类型断言解析请求
 	code.WriteString(fmt.Sprintf("\t\treq := msg.(%s)\n", requestTypeFull))
 	// 如果有 EntityRef，生成实体提取和验证代码
 	if len(req.EntityRefs) > 0 {
 		// 从 entities 参数中提取实体并验证
 		for i, entityRef := range req.EntityRefs {
-			code.WriteString(fmt.Sprintf("\t\t%s, ok := entities[%d].(%s)\n", entityRef.ParamName, i, entityRef.WrapperTypeWithAlias))
+			code.WriteString(fmt.Sprintf("\t\t%s, ok := entities[%d].(%s)\n", entityRef.ParamName, i, entityRef.EntityAgentTypeWithAlias))
 			code.WriteString("\t\tif !ok {\n")
 			code.WriteString(fmt.Sprintf("\t\t\treturn nil, \"\", fmt.Errorf(\"%s entity not found in entities\")\n",
 				strings.ToLower(entityRef.EntityName)))

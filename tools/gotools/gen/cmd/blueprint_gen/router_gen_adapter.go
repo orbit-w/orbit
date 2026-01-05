@@ -110,14 +110,14 @@ func extractEntityRefsFromFields(fields []*blueprint_types.Field) []*router_gen.
 
 		// 生成包装器类型
 		wrapperType := fmt.Sprintf("*mme.%sEntityWrapper", entityName)
-		wrapperTypeWithAlias := fmt.Sprintf("*mmeobj.%sEntityWrapper", entityName)
+		entityAgentTypeWithAlias := fmt.Sprintf("*agent.%sEntityImpl", entityName)
 
 		entityRefs = append(entityRefs, &router_gen.EntityRefInfo{
-			FieldName:            field.Name,
-			EntityName:           entityName,
-			ParamName:            paramName,
-			WrapperType:          wrapperType,
-			WrapperTypeWithAlias: wrapperTypeWithAlias,
+			FieldName:                field.Name,
+			EntityName:               entityName,
+			ParamName:                paramName,
+			WrapperType:              wrapperType,
+			EntityAgentTypeWithAlias: entityAgentTypeWithAlias,
 		})
 	}
 

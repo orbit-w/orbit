@@ -22,7 +22,7 @@ const (
 )
 
 func init() {
-	RegisterEntityFactory(mme.EntityType_PlayerEntityType, func() IEntityWrapper {
+	RegisterEntityFactory(mme.EntityType_PlayerEntityType, func() IEntity {
 		return NewPlayerEntityWrapper()
 	})
 

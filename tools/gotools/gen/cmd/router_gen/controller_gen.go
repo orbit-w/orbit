@@ -407,12 +407,11 @@ func generateHandleMethod(req *RequestInfo, controller *ControllerInfo, existing
 	requestType := fmt.Sprintf("%s.Request_%s", req.PackageName, req.RequestName)
 	code.WriteString(fmt.Sprintf("req *%s", requestType))
 
-	// 后续参数：EntityRef 实体包装器
-	// 使用 mmeobj 别名（Controller 中统一使用 mmeobj）
+	// 后续参数：EntityRef 实体（使用 EntityAgentTypeWithAlias）
+	// Controller 层应该接收业务逻辑层的实体类型（PlayerEntityImpl），而不是数据层的包装器
 	for _, entityRef := range req.EntityRefs {
-		// 将 *mme. 替换为 *mmeobj.
-		wrapperType := strings.Replace(entityRef.WrapperType, "*mme.", "*mmeobj.", 1)
-		code.WriteString(fmt.Sprintf(", %s %s", entityRef.ParamName, wrapperType))
+		// 使用 EntityAgentTypeWithAlias (例如 *agent.PlayerEntityImpl)
+		code.WriteString(fmt.Sprintf(", %s %s", entityRef.ParamName, entityRef.EntityAgentTypeWithAlias))
 	}
 
 	code.WriteString(") proto.Message {\n")
@@ -543,17 +542,20 @@ func appendNewMethods(ctx *RouterGenContext, controllerPath string, newRequests 
 		return fmt.Errorf("failed to parse existing controller file: %w", err)
 	}
 
-	// 检查是否需要 mmeobj 导入
+	// 检查是否需要额外的导入
 	needsMMEObjImport := false
+	needsAgentImport := false
 	for _, req := range newRequests {
 		if len(req.EntityRefs) > 0 {
 			needsMMEObjImport = true
+			needsAgentImport = true
 			break
 		}
 	}
 
-	// 检查是否已经导入了 mmeobj
+	// 检查是否已经导入了 mmeobj 和 agent
 	hasMMEObjImport := false
+	hasAgentImport := false
 	for _, imp := range node.Imports {
 		if imp.Path != nil {
 			importPath := strings.Trim(imp.Path.Value, "\"")
@@ -561,15 +563,28 @@ func appendNewMethods(ctx *RouterGenContext, controllerPath string, newRequests 
 				// 检查是否有别名 mmeobj
 				if imp.Name != nil && imp.Name.Name == "mmeobj" {
 					hasMMEObjImport = true
-					break
+				}
+			}
+			if importPath == "gitee.com/orbit-w/orbit/internal/game/mme_agent/entities/player" {
+				// 检查是否有别名 agent
+				if imp.Name != nil && imp.Name.Name == "agent" {
+					hasAgentImport = true
 				}
 			}
 		}
 	}
 
-	// 如果需要 mmeobj 导入但没有，添加导入
+	// 如果需要导入但没有，添加导入
 	content := string(existingContent)
+	importsToAdd := []string{}
 	if needsMMEObjImport && !hasMMEObjImport {
+		importsToAdd = append(importsToAdd, "\tmmeobj \"gitee.com/orbit-w/orbit/internal/game/mme\"")
+	}
+	if needsAgentImport && !hasAgentImport {
+		importsToAdd = append(importsToAdd, "\tagent \"gitee.com/orbit-w/orbit/internal/game/mme_agent/entities/player\"")
+	}
+
+	if len(importsToAdd) > 0 {
 		// 使用 AST 找到 import 块的位置
 		var importEndPos token.Pos
 		if len(node.Imports) > 0 {
@@ -607,7 +622,7 @@ func appendNewMethods(ctx *RouterGenContext, controllerPath string, newRequests 
 				before := content[:insertPos]
 				after := content[insertPos:]
 				// 确保有正确的缩进和格式
-				newImport := "\n\tmmeobj \"gitee.com/orbit-w/orbit/internal/game/mme\""
+				newImport := "\n" + strings.Join(importsToAdd, "\n")
 				content = before + newImport + after
 
 				// 更新 existingContent
@@ -794,6 +809,20 @@ func mergeAndGroupImports(existingImports map[string]string, protoPackages map[s
 	// 确保有 mmeobj 导入
 	if _, exists := existingImports["gitee.com/orbit-w/orbit/internal/game/mme"]; !exists {
 		localPkg = append(localPkg, "\tmmeobj \"gitee.com/orbit-w/orbit/internal/game/mme\"\n")
+	}
+
+	// 检查是否需要 agent 导入（如果有 EntityRef）
+	needsAgentImport := false
+	for _, req := range ctx.Requests {
+		if len(req.EntityRefs) > 0 {
+			needsAgentImport = true
+			break
+		}
+	}
+	if needsAgentImport {
+		if _, exists := existingImports["gitee.com/orbit-w/orbit/internal/game/mme_agent/entities/player"]; !exists {
+			localPkg = append(localPkg, "\tagent \"gitee.com/orbit-w/orbit/internal/game/mme_agent/entities/player\"\n")
+		}
 	}
 
 	// 添加所需的 proto 包导入

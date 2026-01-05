@@ -9,13 +9,13 @@ import (
 
 	servicezone_behavior "gitee.com/orbit-w/orbit/core/services/service_zone/behavior"
 	controllerv2 "gitee.com/orbit-w/orbit/internal/game/controller_v2"
-	"gitee.com/orbit-w/orbit/internal/game/mme_agent/entities"
-	agent "gitee.com/orbit-w/orbit/internal/game/mme_agent/entities/player"
 	"gitee.com/orbit-w/orbit/pkg/proto/core"
 	"gitee.com/orbit-w/orbit/pkg/proto/mme"
 	"gitee.com/orbit-w/orbit/pkg/proto/pb"
 	"gitee.com/orbit-w/orbit/pkg/proto/play"
 
+	"gitee.com/orbit-w/orbit/internal/game/mme_agent/entities"
+	agent "gitee.com/orbit-w/orbit/internal/game/mme_agent/entities/player"
 	"google.golang.org/protobuf/proto"
 )
 
