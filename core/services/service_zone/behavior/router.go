@@ -1,7 +1,7 @@
 package servicezone_behavior
 
 import (
-	mmeobj "gitee.com/orbit-w/orbit/internal/game/mme"
+	"gitee.com/orbit-w/orbit/internal/game/mme_agent/entities"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -10,5 +10,5 @@ import (
 type IRouter interface {
 	// Dispatch 根据 pid 分发请求，返回对应的处理器
 	// 如果找不到对应的处理器，返回 nil
-	Dispatch(pid uint32) func(ctx IContext, req proto.Message, entities ...mmeobj.IEntity) (proto.Message, string, error)
+	Dispatch(pid uint32) func(ctx IContext, req proto.Message, entities ...entities.IEntity) (proto.Message, string, error)
 }

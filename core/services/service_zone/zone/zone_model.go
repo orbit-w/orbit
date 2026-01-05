@@ -5,6 +5,7 @@ import (
 
 	zone_meta "gitee.com/orbit-w/orbit/core/services/service_zone/meta"
 	mmeobj "gitee.com/orbit-w/orbit/internal/game/mme"
+	"gitee.com/orbit-w/orbit/internal/game/mme_agent/entities"
 	"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder"
 	"gitee.com/orbit-w/orbit/lib/module/persistence"
 	"gitee.com/orbit-w/orbit/pkg/proto/mme"
@@ -37,7 +38,7 @@ type ServiceZone struct {
 	Pattern       ZonePattern // 服务区模式
 	Meta          *zone_meta.ZoneMeta
 	EntityTypeMap map[int64]mme.EntityType
-	Entities      map[int64]mmeobj.IEntity
+	Entities      map[int64]entities.IEntity
 	// 订阅管理
 	subscribers map[string]*Subscriber // 订阅者集合，key 为订阅者 ID
 }
@@ -49,7 +50,7 @@ func NewServiceZone(id string, meta *zone_meta.ZoneMeta) *ServiceZone {
 		Pattern:       ZonePattern(meta.GetPattern()),
 		Meta:          meta,
 		EntityTypeMap: make(map[int64]mme.EntityType),
-		Entities:      make(map[int64]mmeobj.IEntity),
+		Entities:      make(map[int64]entities.IEntity),
 		subscribers:   make(map[string]*Subscriber),
 	}
 }
@@ -57,8 +58,8 @@ func NewServiceZone(id string, meta *zone_meta.ZoneMeta) *ServiceZone {
 // LoadRefs 加载多个 EntityRef
 // refs: 实体引用列表
 // 返回: 实体列表, 错误
-func (zone *ServiceZone) LoadRefs(refs []*mme.EntityRef) ([]mmeobj.IEntity, error) {
-	entities := make([]mmeobj.IEntity, 0)
+func (zone *ServiceZone) LoadRefs(refs []*mme.EntityRef) ([]entities.IEntity, error) {
+	entities := make([]entities.IEntity, 0)
 	for _, ref := range refs {
 		entity, err := zone.Load(ref.GetEntityId(), ref.GetEntityType())
 		if err != nil {
@@ -74,14 +75,14 @@ func (zone *ServiceZone) LoadRefs(refs []*mme.EntityRef) ([]mmeobj.IEntity, erro
 // id: 实体 ID
 // entityType: 实体类型
 // 返回: 实体, 错误
-func (zone *ServiceZone) Load(id int64, entityType mme.EntityType) (mmeobj.IEntity, error) {
-	factory := mmeobj.GetEntityFactory(entityType)
+func (zone *ServiceZone) Load(id int64, entityType mme.EntityType) (entities.IEntity, error) {
+	factory := mmeobj.GetEntityWrapperFactory(entityType)
 	if factory == nil {
 		return nil, fmt.Errorf("entity factory not found for entity type %d", entityType)
 	}
-	entity := factory()
+	wrapper := factory()
 	database := ZoneIdToDatabase(zone.ID)
-	future, err := persistence.Load(database, entity.Collection(), id)
+	future, err := persistence.Load(database, wrapper.Collection(), id)
 	if err != nil {
 		return nil, err
 	}
@@ -101,9 +102,13 @@ func (zone *ServiceZone) Load(id int64, entityType mme.EntityType) (mmeobj.IEnti
 		return nil, err
 	}
 
-	var raw bson.Raw
+	var (
+		raw bson.Raw
+		new bool
+	)
 
 	if !loadResp.IsExists() {
+		new = true
 		// 如果不存在，则新建一个实体
 		data := bson.M{
 			"_id": id,
@@ -117,20 +122,21 @@ func (zone *ServiceZone) Load(id int64, entityType mme.EntityType) (mmeobj.IEnti
 		raw = loadResp.GetData()
 	}
 
+	entity := entities.GetEntityFactory(entityType)()
 	// 如果存在，则加载数据
-	if err := entity.Load(raw); err != nil {
+	if err := entity.OnLoad(raw, new); err != nil {
 		return nil, err
 	}
 	return entity, nil
 }
 
 // AddEntity 添加或更新 Entity（实现 IServiceZone 接口）
-func (zone *ServiceZone) AddEntity(entity mmeobj.IEntity) {
+func (zone *ServiceZone) AddEntity(entity entities.IEntity) {
 	zone.SetEntity(entity)
 }
 
 // SetEntity 设置 Entity（添加或更新）
-func (zone *ServiceZone) SetEntity(entity mmeobj.IEntity) {
+func (zone *ServiceZone) SetEntity(entity entities.IEntity) {
 	if entity == nil {
 		return
 	}
@@ -152,24 +158,25 @@ func (zone *ServiceZone) RemoveEntity(targetId int64) {
 	zone.RemoveFromSubscriptions(entity)
 }
 
-func (zone *ServiceZone) getEntityById(targetId int64) mmeobj.IEntity {
+func (zone *ServiceZone) getEntityById(targetId int64) entities.IEntity {
 	// 直接使用 map 查找，O(1) 复杂度
 	entity, ok := zone.Entities[targetId]
 	if !ok {
 		return nil
 	}
 	// 验证实体 ID 是否匹配（防止 map key 和实体 ID 不一致的情况）
-	if entity != nil && entity.GetXXXId() == targetId {
+	if entity != nil && entity.GetEntityWrapper().GetXXXId() == targetId {
 		return entity
 	}
 	return nil
 }
 
-func (zone *ServiceZone) addEntity(entity mmeobj.IEntity) {
-	id := entity.GetXXXId()
+func (zone *ServiceZone) addEntity(entity entities.IEntity) {
+	ew := entity.GetEntityWrapper()
+	id := ew.GetXXXId()
 	zone.Entities[id] = entity
 
-	zone.EntityTypeMap[id] = entity.GetEntityType()
+	zone.EntityTypeMap[id] = ew.GetEntityType()
 }
 
 func (zone *ServiceZone) removeEntity(targetId int64) {
@@ -185,7 +192,7 @@ func (zone *ServiceZone) removeEntity(targetId int64) {
 // subscriberId: 订阅者唯一标识
 // strategy: 订阅策略
 // 返回: 订阅到的 Entity 列表
-func (zone *ServiceZone) Subscribe(subscriberId string, strategy ISubscribeStrategy) []mmeobj.IEntity {
+func (zone *ServiceZone) Subscribe(subscriberId string, strategy ISubscribeStrategy) []entities.IEntity {
 	// 创建或获取订阅者
 	subscriber, exists := zone.subscribers[subscriberId]
 	if !exists {
@@ -199,7 +206,7 @@ func (zone *ServiceZone) Subscribe(subscriberId string, strategy ISubscribeStrat
 	}
 
 	// 根据策略筛选 Entities
-	subscribedEntities := make([]mmeobj.IEntity, 0)
+	subscribedEntities := make([]entities.IEntity, 0)
 	for _, entity := range zone.Entities {
 		if strategy.ShouldSubscribe(entity) {
 			subscriber.SubscribeEntity(entity)
@@ -211,19 +218,19 @@ func (zone *ServiceZone) Subscribe(subscriberId string, strategy ISubscribeStrat
 }
 
 // SubscribeByIds 使用 ID 列表订阅（便捷方法）
-func (zone *ServiceZone) SubscribeByIds(subscriberId string, entityIds []int64) []mmeobj.IEntity {
+func (zone *ServiceZone) SubscribeByIds(subscriberId string, entityIds []int64) []entities.IEntity {
 	strategy := NewByIdsStrategy(entityIds)
 	return zone.Subscribe(subscriberId, strategy)
 }
 
 // SubscribeByType 使用类型订阅（便捷方法）
-func (zone *ServiceZone) SubscribeByType(subscriberId string, entityTypes []string) []mmeobj.IEntity {
+func (zone *ServiceZone) SubscribeByType(subscriberId string, entityTypes []string) []entities.IEntity {
 	strategy := NewByTypeStrategy(entityTypes)
 	return zone.Subscribe(subscriberId, strategy)
 }
 
 // SubscribeAll 订阅所有 Entities（便捷方法）
-func (zone *ServiceZone) SubscribeAll(subscriberId string) []mmeobj.IEntity {
+func (zone *ServiceZone) SubscribeAll(subscriberId string) []entities.IEntity {
 	strategy := NewAllEntitiesStrategy()
 	return zone.Subscribe(subscriberId, strategy)
 }
@@ -239,13 +246,13 @@ func (zone *ServiceZone) Unsubscribe(subscriberId string) {
 }
 
 // GetSubscribedEntities 获取订阅者已订阅的 Entities
-func (zone *ServiceZone) GetSubscribedEntities(subscriberId string) []mmeobj.IEntity {
+func (zone *ServiceZone) GetSubscribedEntities(subscriberId string) []entities.IEntity {
 	subscriber, exists := zone.subscribers[subscriberId]
 	if !exists {
 		return nil
 	}
 
-	entities := make([]mmeobj.IEntity, 0, len(subscriber.Entities))
+	entities := make([]entities.IEntity, 0, len(subscriber.Entities))
 	subscriber.RangeSubscribedEntities(func(entityId int64) {
 		entity := zone.Entities[entityId]
 		// 过滤掉已删除的实体（nil 元素）
@@ -271,7 +278,7 @@ func (zone *ServiceZone) SubscribeByStrategyType(
 	subscriberId string,
 	strategyType mme.SubscribeStrategyType,
 	params any,
-) []mmeobj.IEntity {
+) []entities.IEntity {
 	var strategy ISubscribeStrategy
 
 	switch strategyType {
@@ -311,7 +318,7 @@ func (zone *ServiceZone) SubscribeByStrategyType(
 
 // UpdateSubscriptions 当 Entity 添加或更新时，更新所有订阅者
 // 新添加的 Entity 会根据各订阅者的策略决定是否订阅
-func (zone *ServiceZone) UpdateSubscriptions(entity mmeobj.IEntity) {
+func (zone *ServiceZone) UpdateSubscriptions(entity entities.IEntity) {
 	if entity == nil {
 		return
 	}
@@ -321,25 +328,26 @@ func (zone *ServiceZone) UpdateSubscriptions(entity mmeobj.IEntity) {
 			subscriber.SubscribeEntity(entity)
 		} else {
 			// 如果不再符合订阅条件，从订阅列表中移除
-			subscriber.UnsubscribeEntity(entity.GetXXXId())
+			subscriber.UnsubscribeEntity(entity.GetEntityWrapper().GetXXXId())
 		}
 	}
 }
 
 // RemoveFromSubscriptions 当 Entity 移除时，从所有订阅者中移除
-func (zone *ServiceZone) RemoveFromSubscriptions(entity mmeobj.IEntity) {
-	id := entity.GetXXXId()
+func (zone *ServiceZone) RemoveFromSubscriptions(entity entities.IEntity) {
+	id := entity.GetEntityWrapper().GetXXXId()
 	for _, subscriber := range zone.subscribers {
 		subscriber.UnsubscribeEntity(id)
 	}
 }
 
 // Persist 异步持久化实体数据
-func (zone *ServiceZone) Persist(entities ...mmeobj.IEntity) {
+func (zone *ServiceZone) Persist(entities ...entities.IEntity) {
 	for _, entity := range entities {
+		ew := entity.GetEntityWrapper()
 		builder := mgo_builder.NewMongoUpdateBuilder()
-		entity.BuildMongoUpdate(builder)
+		ew.BuildMongoUpdate(builder)
 		update := builder.Build()
-		persistence.Persist(ZoneIdToDatabase(zone.ID), entity.Collection(), entity.GetXXXId(), update)
+		persistence.Persist(ZoneIdToDatabase(zone.ID), ew.Collection(), ew.GetXXXId(), update)
 	}
 }

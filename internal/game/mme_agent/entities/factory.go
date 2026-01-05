@@ -7,6 +7,8 @@ import (
 )
 
 type IEntity interface {
+	GetId() int64
+	GetEntityType() mme.EntityType
 	GetEntityWrapper() mmeobj.IEntityWrapper
 	OnLoad(raw bson.Raw, new bool) error
 	OnSave() error

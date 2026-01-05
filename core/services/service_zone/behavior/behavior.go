@@ -4,7 +4,7 @@ import (
 	"gitee.com/orbit-w/meteor/bases/misc/utils"
 	"gitee.com/orbit-w/meteor/modules/mlog"
 	"gitee.com/orbit-w/orbit/core/network"
-	mmeobj "gitee.com/orbit-w/orbit/internal/game/mme"
+	"gitee.com/orbit-w/orbit/internal/game/mme_agent/entities"
 	"gitee.com/orbit-w/orbit/lib/module/logger"
 	mmemodel "gitee.com/orbit-w/orbit/lib/module/mme_model"
 	"gitee.com/orbit-w/orbit/pkg/proto/core"
@@ -136,15 +136,15 @@ func (ab *ZoneActorBehavior) HandleClientRequestByRouter(ctx actor.Context, req 
 	ab.SendMessage(req.IClientRequest, entities, resp, respName)
 
 	for _, entity := range entities {
-		entity.ClearAllDirtyFlags()
+		entity.GetEntityWrapper().ClearAllDirtyFlags()
 	}
 }
 
-func (ab *ZoneActorBehavior) Persist(entities []mmeobj.IEntity) {
+func (ab *ZoneActorBehavior) Persist(entities []entities.IEntity) {
 	ab.ctx.Persist(entities...)
 }
 
-func (ab *ZoneActorBehavior) PackEntityChangeNotify(entities []mmeobj.IEntity, messages []network.Message) []network.Message {
+func (ab *ZoneActorBehavior) PackEntityChangeNotify(entities []entities.IEntity, messages []network.Message) []network.Message {
 	var changes []*core.EntityChange
 	// 发送实体变更消息
 	for i := range entities {
@@ -201,7 +201,7 @@ func (ab *ZoneActorBehavior) PackResponse(seq uint32, resp proto.Message, respNa
 	return messages
 }
 
-func (ab *ZoneActorBehavior) SendMessage(request network.IClientRequest, entities []mmeobj.IEntity, resp proto.Message, respName string) {
+func (ab *ZoneActorBehavior) SendMessage(request network.IClientRequest, entities []entities.IEntity, resp proto.Message, respName string) {
 	messages := make([]network.Message, 0)
 	messages = ab.PackEntityChangeNotify(entities, messages)
 	messages = ab.PackResponse(request.GetSeq(), resp, respName, messages)
@@ -211,8 +211,9 @@ func (ab *ZoneActorBehavior) SendMessage(request network.IClientRequest, entitie
 	}
 }
 
-func packEntityChange(entity mmeobj.IEntity) (*core.EntityChange, error) {
-	change := entity.ToIncrementalProtoWithContext(mmemodel.SyncContextClient)
+func packEntityChange(entity entities.IEntity) (*core.EntityChange, error) {
+	ew := entity.GetEntityWrapper()
+	change := ew.ToIncrementalProtoWithContext(mmemodel.SyncContextClient)
 	if change == nil {
 		return nil, nil
 	}
@@ -221,7 +222,7 @@ func packEntityChange(entity mmeobj.IEntity) (*core.EntityChange, error) {
 	if err != nil {
 		return nil, err
 	}
-	entityId := entity.GetXXXId()
+	entityId := entity.GetId()
 	entityType := entity.GetEntityType()
 	return &core.EntityChange{
 		EntityRef: &mme.EntityRef{

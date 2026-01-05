@@ -1,7 +1,7 @@
 package servicezone
 
 import (
-	mmeobj "gitee.com/orbit-w/orbit/internal/game/mme"
+	"gitee.com/orbit-w/orbit/internal/game/mme_agent/entities"
 	"gitee.com/orbit-w/orbit/pkg/proto/mme"
 )
 
@@ -50,12 +50,13 @@ func (s *Subscriber) ClearSubscribedEntities() {
 }
 
 // 订阅 Entity
-func (s *Subscriber) SubscribeEntity(entity mmeobj.IEntity) {
-	id := entity.GetXXXId()
+func (s *Subscriber) SubscribeEntity(entity entities.IEntity) {
+	ew := entity.GetEntityWrapper()
+	id := ew.GetXXXId()
 	if entity == nil {
 		return
 	}
-	entityType := entity.GetEntityType()
+	entityType := ew.GetEntityType()
 
 	remain, ok := s.Entities[id]
 	if ok {

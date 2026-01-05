@@ -957,7 +957,7 @@ message Notify {
 
 ### 1. 核心定义与架构分层
 
-整个架构呈现严格的树状层级：EntityAgentImpl (根) -> ManagerLogicImpl (动态管理器) -> ModuleAgentImpl (静态容器) -> MechanismLogicImpl (原子叶子节点)。
+整个架构呈现严格的树状层级：EntityImpl (根) -> ManagerLogicImpl (动态管理器) -> ModuleAgentImpl (静态容器) -> MechanismLogicImpl (原子叶子节点)。
 
 在 MME 体系中，遵循 **"容器编排-行为"** 的设计原则：
 
@@ -972,7 +972,7 @@ message Notify {
 - **ManagerLogicImpl (动态管理器)**：**通过容器ModuleAgentImpl，编排 MechanismLogicImpl逻辑**。
     - 它是更高层级的动态容器，支持以单例或 Map 方式组织 ModuleAgentImpl
     - `ManagerLogicImpl` 由研发人员定义行为，负责编排 MechanismLogicImpl 的方法，实现跨机制的业务逻辑。
-- **EntityAgentImpl (代理)**: 结合了属性和行为，实现跨ManagerLogicImpl的业务逻辑。
+- **EntityImpl (代理)**: 结合了属性和行为，实现跨ManagerLogicImpl的业务逻辑。
     - 定位: 架构的顶层，代表一个完整的业务对象（如 Player）。它是所有 ManagerLogicImpl实例访问的入口。
     - 强大的代理，可以代理访问到任何MechanismLogicImpl的实例。
 
@@ -990,7 +990,7 @@ message Notify {
 #### 第二层：代理层 (Agent Layer - `mme_agent` 包)
 - **来源**：完全由 `blueprint_gen` 自动生成。
 - **职责**：
-    - **树状入口**：`EntityAgentImpl` 作为整个 Logic 树的根节点（如 `entities/player/player_entity.go`），持有 `EntityWrapper` 数据，并提供访问任意 `ManagerLogicImpl` 的入口。
+    - **树状入口**：`EntityImpl` 作为整个 Logic 树的根节点（如 `entities/player/player_entity.go`），持有 `EntityWrapper` 数据，并提供访问任意 `ManagerLogicImpl` 的入口。
     - **静态组合**: `ModuleAgentImpl`（如 `modules/hero_module_impl.go`）负责静态组合 `MechanismLogicImpl`。
     - **懒加载工厂**：负责实例化用户编写的 Logic 类（`ManagerLogicImpl`），并注入数据依赖。
     - **依赖注入**：通过 Agent 接口，让任意 Logic 模块都能安全访问其他兄弟模块。
@@ -1007,9 +1007,9 @@ message Notify {
       - `OnSave() error`：保存时的生命周期回调。
     - 所有接口，如果返回error，系统会终止后续所有未执行的回调。
 
-### 2. Agent 代理详细设计
+### 2. Entity Agent 代理详细设计
 
-Agent 是连接数据与逻辑的桥梁，它根据 MME 的层级结构自动生成对应的逻辑访问路径。
+Entity Agent 是连接数据与逻辑的桥梁，它根据 MME 的层级结构自动生成对应的逻辑访问路径。
 
 ### 3. ManagerLogicImpl 实例化与编排策略
 
@@ -1030,9 +1030,9 @@ ManagerLogicImpl 作为业务逻辑的编排层，采用了灵活的动态加载
     - 所有需持久化的业务数据必须存储在 `MechanismWrapper` 中。
     - 禁止在 Logic 实例中缓存与 Wrapper 数据不一致的中间状态，以确保 MME 的脏标记追踪和增量同步机制正常工作。
 
-### 4. 总结：Agent 如何解决问题
-1.  **解决定位问题**：Controller 层只需持有 `Agent`，即可通过 `agent.GetBagManagerLogic().GetBagModule()` 快速定位到具体的业务对象。
-2.  **解决依赖问题**：所有 ManagerLogicImpl 类都持有 `agent` 实例的引用，打破了模块间的物理依赖。
+### 4. 总结：Entity Agent 如何解决问题
+1.  **解决定位问题**：Controller 层只需持有 `Entity`，即可通过 `Entity.GetBagManagerLogic().GetBagModule()` 快速定位到具体的业务对象。
+2.  **解决依赖问题**：所有 ManagerLogicImpl 类都持有 `Entity` 实例的引用，打破了模块间的物理依赖。
 3.  **复用与编排**：`ManagerLogicImpl` 对外暴露的是高层的业务语义（如 `AddItem`），内部封装了复杂的 Mechanism 组合逻辑。
 
 ## 最佳实践

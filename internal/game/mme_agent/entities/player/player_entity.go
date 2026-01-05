@@ -15,28 +15,36 @@ import (
 
 func init() {
 	entities.RegisterEntityFactory(mme.EntityType_PlayerEntityType, func() entities.IEntity {
-		return NewPlayerEntityAgent()
+		return NewPlayerEntity()
 	})
 }
 
 // PlayerEntityAgent PlayerEntity Agent 实现
-type PlayerEntityAgentImpl struct {
+type PlayerEntityImpl struct {
 	entityWrapper *mmeobj.PlayerEntityWrapper
 
 	heroManagerLogic imodels.IHeroManagerLogic
 }
 
-func NewPlayerEntityAgent() *PlayerEntityAgentImpl {
-	return &PlayerEntityAgentImpl{
+func NewPlayerEntity() *PlayerEntityImpl {
+	return &PlayerEntityImpl{
 		entityWrapper: mmeobj.NewPlayerEntityWrapper(),
 	}
 }
 
-func (a *PlayerEntityAgentImpl) GetEntityWrapper() mmeobj.IEntityWrapper {
+func (a *PlayerEntityImpl) GetId() int64 {
+	return a.entityWrapper.GetXXXId()
+}
+
+func (a *PlayerEntityImpl) GetEntityType() mme.EntityType {
+	return a.entityWrapper.GetEntityType()
+}
+
+func (a *PlayerEntityImpl) GetEntityWrapper() mmeobj.IEntityWrapper {
 	return a.entityWrapper
 }
 
-func (a *PlayerEntityAgentImpl) GetHeroManagerLogic() imodels.IHeroManagerLogic {
+func (a *PlayerEntityImpl) GetHeroManagerLogic() imodels.IHeroManagerLogic {
 	if a.heroManagerLogic == nil {
 		a.heroManagerLogic = managers.NewHeroManagerLogic(a.entityWrapper.GetHeroManager())
 	}
@@ -44,7 +52,7 @@ func (a *PlayerEntityAgentImpl) GetHeroManagerLogic() imodels.IHeroManagerLogic 
 }
 
 // OnLoad 加载回调
-func (a *PlayerEntityAgentImpl) OnLoad(raw bson.Raw, new bool) error {
+func (a *PlayerEntityImpl) OnLoad(raw bson.Raw, new bool) error {
 	if err := a.entityWrapper.Load(raw); err != nil {
 		return err
 	}
@@ -56,7 +64,7 @@ func (a *PlayerEntityAgentImpl) OnLoad(raw bson.Raw, new bool) error {
 }
 
 // OnSave 保存回调
-func (a *PlayerEntityAgentImpl) OnSave() error {
+func (a *PlayerEntityImpl) OnSave() error {
 	if err := a.GetHeroManagerLogic().OnSave(); err != nil {
 		return err
 	}
@@ -64,7 +72,7 @@ func (a *PlayerEntityAgentImpl) OnSave() error {
 }
 
 // OnLogin 登录回调
-func (a *PlayerEntityAgentImpl) OnLogin() error {
+func (a *PlayerEntityImpl) OnLogin() error {
 	if err := a.GetHeroManagerLogic().OnLogin(); err != nil {
 		return err
 	}
@@ -72,7 +80,7 @@ func (a *PlayerEntityAgentImpl) OnLogin() error {
 }
 
 // OnLogout 登出回调
-func (a *PlayerEntityAgentImpl) OnLogout() error {
+func (a *PlayerEntityImpl) OnLogout() error {
 	if err := a.GetHeroManagerLogic().OnLogout(); err != nil {
 		return err
 	}
