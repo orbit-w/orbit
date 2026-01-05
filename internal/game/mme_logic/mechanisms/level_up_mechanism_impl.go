@@ -2,7 +2,7 @@ package mechanisms
 
 import (
 	"gitee.com/orbit-w/orbit/internal/game/mme"
-	"gitee.com/orbit-w/orbit/internal/game/mme_agent/imodels"
+	"gitee.com/orbit-w/orbit/internal/game/mme_logic/imodels"
 )
 
 // LevelUpMechanismLogicImpl LevelUpMechanism Logic 实现
@@ -22,11 +22,23 @@ func (m *LevelUpMechanismLogicImpl) GetWrapper() any {
 	return m.wrapper
 }
 
+// OnLoad 加载回调
 func (m *LevelUpMechanismLogicImpl) OnLoad(new bool) error {
 	return nil
 }
 
+// OnSave 保存回调
 func (m *LevelUpMechanismLogicImpl) OnSave() error {
+	return nil
+}
+
+// OnLogin 登录回调
+func (m *LevelUpMechanismLogicImpl) OnLogin() error {
+	return nil
+}
+
+// OnLogout 登出回调
+func (m *LevelUpMechanismLogicImpl) OnLogout() error {
 	return nil
 }
 

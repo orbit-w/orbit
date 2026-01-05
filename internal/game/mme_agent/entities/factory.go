@@ -1,0 +1,33 @@
+package entities
+
+import (
+	mmeobj "gitee.com/orbit-w/orbit/internal/game/mme"
+	"gitee.com/orbit-w/orbit/pkg/proto/mme"
+	"go.mongodb.org/mongo-driver/v2/bson"
+)
+
+type IEntity interface {
+	GetEntityWrapper() mmeobj.IEntityWrapper
+	OnLoad(raw bson.Raw, new bool) error
+	OnSave() error
+	OnLogin() error
+	OnLogout() error
+}
+
+type EntityFactory func() IEntity
+
+var (
+	mapEntityFactories = make(map[mme.EntityType]EntityFactory)
+)
+
+func RegisterEntityFactory(entityType mme.EntityType, factory EntityFactory) {
+	mapEntityFactories[entityType] = factory
+}
+
+func GetEntityFactory(entityType mme.EntityType) EntityFactory {
+	factory, ok := mapEntityFactories[entityType]
+	if !ok {
+		return nil
+	}
+	return factory
+}

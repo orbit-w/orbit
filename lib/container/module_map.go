@@ -1,4 +1,4 @@
-package managers
+package container
 
 import "gitee.com/orbit-w/orbit/lib/module/xmapwrapper"
 

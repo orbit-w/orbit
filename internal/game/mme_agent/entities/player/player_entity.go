@@ -4,37 +4,47 @@
 package agent
 
 import (
-	"gitee.com/orbit-w/orbit/internal/game/mme"
-	"gitee.com/orbit-w/orbit/internal/game/mme_agent/imodels"
-	"gitee.com/orbit-w/orbit/internal/game/mme_agent/managers"
+	mmeobj "gitee.com/orbit-w/orbit/internal/game/mme"
+	"gitee.com/orbit-w/orbit/internal/game/mme_agent/entities"
+	"gitee.com/orbit-w/orbit/pkg/proto/mme"
+
+	"gitee.com/orbit-w/orbit/internal/game/mme_logic/imodels"
+	"gitee.com/orbit-w/orbit/internal/game/mme_logic/managers"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
+func init() {
+	entities.RegisterEntityFactory(mme.EntityType_PlayerEntityType, func() entities.IEntity {
+		return NewPlayerEntityAgent()
+	})
+}
+
 // PlayerEntityAgent PlayerEntity Agent 实现
-type PlayerEntityAgent struct {
-	entityWrapper *mme.PlayerEntityWrapper
+type PlayerEntityAgentImpl struct {
+	entityWrapper *mmeobj.PlayerEntityWrapper
 
 	heroManagerLogic imodels.IHeroManagerLogic
 }
 
-func NewPlayerEntityAgent() *PlayerEntityAgent {
-	return &PlayerEntityAgent{
-		entityWrapper: mme.NewPlayerEntityWrapper(),
+func NewPlayerEntityAgent() *PlayerEntityAgentImpl {
+	return &PlayerEntityAgentImpl{
+		entityWrapper: mmeobj.NewPlayerEntityWrapper(),
 	}
 }
 
-func (a *PlayerEntityAgent) GetEntity() mme.IEntity {
+func (a *PlayerEntityAgentImpl) GetEntityWrapper() mmeobj.IEntityWrapper {
 	return a.entityWrapper
 }
 
-func (a *PlayerEntityAgent) GetHeroManagerLogic() imodels.IHeroManagerLogic {
+func (a *PlayerEntityAgentImpl) GetHeroManagerLogic() imodels.IHeroManagerLogic {
 	if a.heroManagerLogic == nil {
 		a.heroManagerLogic = managers.NewHeroManagerLogic(a.entityWrapper.GetHeroManager())
 	}
 	return a.heroManagerLogic
 }
 
-func (a *PlayerEntityAgent) OnLoad(raw bson.Raw, new bool) error {
+// OnLoad 加载回调
+func (a *PlayerEntityAgentImpl) OnLoad(raw bson.Raw, new bool) error {
 	if err := a.entityWrapper.Load(raw); err != nil {
 		return err
 	}
@@ -45,8 +55,25 @@ func (a *PlayerEntityAgent) OnLoad(raw bson.Raw, new bool) error {
 	return nil
 }
 
-func (a *PlayerEntityAgent) OnSave() error {
+// OnSave 保存回调
+func (a *PlayerEntityAgentImpl) OnSave() error {
 	if err := a.GetHeroManagerLogic().OnSave(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// OnLogin 登录回调
+func (a *PlayerEntityAgentImpl) OnLogin() error {
+	if err := a.GetHeroManagerLogic().OnLogin(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// OnLogout 登出回调
+func (a *PlayerEntityAgentImpl) OnLogout() error {
+	if err := a.GetHeroManagerLogic().OnLogout(); err != nil {
 		return err
 	}
 	return nil

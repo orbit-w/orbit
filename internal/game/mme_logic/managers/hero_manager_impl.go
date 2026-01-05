@@ -2,23 +2,25 @@ package managers
 
 import (
 	"gitee.com/orbit-w/orbit/internal/game/mme"
-	"gitee.com/orbit-w/orbit/internal/game/mme_agent/imodels"
+	"gitee.com/orbit-w/orbit/internal/game/mme_logic/imodels"
+	"gitee.com/orbit-w/orbit/lib/container"
+
 	"gitee.com/orbit-w/orbit/internal/game/mme_agent/modules"
 )
 
 // HeroManagerLogicImpl HeroManager Logic 实现
-type HeroManagerAgentImpl struct {
+type HeroManagerLogicImpl struct {
 	wrapper *mme.HeroManagerWrapper
 
-	heroModuleLogics *ModuleMapContainer[int64, *mme.HeroModule, *mme.HeroModuleWrapper, imodels.IHeroModuleLogic]
+	heroModuleLogics *container.ModuleMapContainer[int64, *mme.HeroModule, *mme.HeroModuleWrapper, imodels.IHeroModuleLogic]
 	singleHeroModule imodels.IHeroModuleLogic
 }
 
 // NewHeroManagerLogic 创建 HeroManager Logic
 func NewHeroManagerLogic(wrapper *mme.HeroManagerWrapper) imodels.IHeroManagerLogic {
-	ins := &HeroManagerAgentImpl{
+	ins := &HeroManagerLogicImpl{
 		wrapper: wrapper,
-		heroModuleLogics: NewModuleMapContainer(
+		heroModuleLogics: container.NewModuleMapContainer(
 			wrapper.GetHeroMap(),
 			modules.NewHeroModuleLogic,
 		),
@@ -28,11 +30,11 @@ func NewHeroManagerLogic(wrapper *mme.HeroManagerWrapper) imodels.IHeroManagerLo
 }
 
 // GetWrapper 获取 Wrapper
-func (m *HeroManagerAgentImpl) GetWrapper() any {
+func (m *HeroManagerLogicImpl) GetWrapper() any {
 	return m.wrapper
 }
 
-func (m *HeroManagerAgentImpl) OnLoad(new bool) error {
+func (m *HeroManagerLogicImpl) OnLoad(new bool) error {
 	var err error
 	m.heroModuleLogics.Range(func(key int64, logic imodels.IHeroModuleLogic) bool {
 		if err = logic.OnLoad(new); err != nil {
@@ -50,7 +52,7 @@ func (m *HeroManagerAgentImpl) OnLoad(new bool) error {
 	return nil
 }
 
-func (m *HeroManagerAgentImpl) OnSave() error {
+func (m *HeroManagerLogicImpl) OnSave() error {
 	var err error
 	m.heroModuleLogics.Range(func(key int64, logic imodels.IHeroModuleLogic) bool {
 		if err = logic.OnSave(); err != nil {
@@ -67,12 +69,47 @@ func (m *HeroManagerAgentImpl) OnSave() error {
 	return nil
 }
 
-func (m *HeroManagerAgentImpl) HeroMap_Get(heroId int64) (imodels.IHeroModuleLogic, bool) {
+func (m *HeroManagerLogicImpl) OnLogin() error {
+	var err error
+	m.heroModuleLogics.Range(func(key int64, logic imodels.IHeroModuleLogic) bool {
+		if err = logic.OnLogin(); err != nil {
+			return false
+		}
+		return true
+	})
+	if err != nil {
+		return err
+	}
+
+	if err = m.GetSingleHeroModule().OnLogin(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *HeroManagerLogicImpl) OnLogout() error {
+	var err error
+	m.heroModuleLogics.Range(func(key int64, logic imodels.IHeroModuleLogic) bool {
+		if err = logic.OnLogout(); err != nil {
+			return false
+		}
+		return true
+	})
+	if err != nil {
+		return err
+	}
+
+	if err = m.GetSingleHeroModule().OnLogout(); err != nil {
+		return err
+	}
+	return nil
+}
+func (m *HeroManagerLogicImpl) HeroMap_GetModule(heroId int64) (imodels.IHeroModuleLogic, bool) {
 	logic, exists := m.heroModuleLogics.Get(heroId)
 	return logic, exists
 }
 
-func (m *HeroManagerAgentImpl) GetSingleHeroModule() imodels.IHeroModuleLogic {
+func (m *HeroManagerLogicImpl) GetSingleHeroModule() imodels.IHeroModuleLogic {
 	if m.singleHeroModule == nil {
 		wrapper := m.wrapper.GetSingleHeroModule()
 		if wrapper == nil {

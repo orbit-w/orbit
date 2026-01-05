@@ -8,7 +8,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-type IEntity interface {
+type IEntityWrapper interface {
 	Collection() string
 	Load(raw bson.Raw) error
 	Name() string
@@ -24,22 +24,22 @@ type IEntity interface {
 }
 
 type (
-	EntityFactory func() IEntity
+	EntityFactory func() IEntityWrapper
 
 	EntityDataFactory func() proto.Message
 )
 
 var (
-	mapEntityFactories     = make(map[mme.EntityType]EntityFactory)
-	mapEntityDataFactories = make(map[mme.EntityType]EntityDataFactory)
+	mapEntityWrapperFactories = make(map[mme.EntityType]EntityFactory)
+	mapEntityDataFactories    = make(map[mme.EntityType]EntityDataFactory)
 )
 
 func RegisterEntityFactory(entityType mme.EntityType, factory EntityFactory) {
-	mapEntityFactories[entityType] = factory
+	mapEntityWrapperFactories[entityType] = factory
 }
 
-func GetEntityFactory(entityType mme.EntityType) EntityFactory {
-	factory, ok := mapEntityFactories[entityType]
+func GetEntityWrapperFactory(entityType mme.EntityType) EntityFactory {
+	factory, ok := mapEntityWrapperFactories[entityType]
 	if !ok {
 		return nil
 	}

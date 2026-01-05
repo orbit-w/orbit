@@ -9,4 +9,8 @@ type IBaseLogic interface {
 	OnLoad(new bool) error
 	// OnSave 保存逻辑
 	OnSave() error
+	// OnLogin 登录回调
+	OnLogin() error
+	// OnLogout 登出回调
+	OnLogout() error
 }
