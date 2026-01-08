@@ -967,7 +967,7 @@ message Notify {
     - **线程安全**：不需要考虑线程安全问题。
 - **ModuleAgentImpl (静态组合容器)**：**组合 Mechanism**。
     - 组合：它是 Mechanism 的静态组合容器（如 `HeroModuleAgentImpl` = `HeroMechanismAgentImpl` + `LevelUpMechanismLogicImpl`）。
-    - 生成：文档指出其由 blueprint_gen 自动生成。
+    - 生成：由 blueprint_gen 自动生成。
     - 注意：`ModuleAgentImpl` 不直接定义和操作数据字段，不允许研发来编排业务流程，只是对MechanismLogicImpl实例访问的代理。
 - **ManagerLogicImpl (动态管理器)**：**通过容器ModuleAgentImpl，编排 MechanismLogicImpl逻辑**。
     - 它是更高层级的动态容器，支持以单例或 Map 方式组织 ModuleAgentImpl
@@ -975,6 +975,7 @@ message Notify {
 - **EntityImpl (代理)**: 结合了属性和行为，实现跨ManagerLogicImpl的业务逻辑。
     - 定位: 架构的顶层，代表一个完整的业务对象（如 Player）。它是所有 ManagerLogicImpl实例访问的入口。
     - 强大的代理，可以代理访问到任何MechanismLogicImpl的实例。
+    - 生成：由 blueprint_gen 自动生成。
 
 ### 2. 逻辑分层架构
 
@@ -1001,11 +1002,14 @@ message Notify {
 - **职责**：
     - **MechanismLogicImpl (行为)**：**唯一有权直接读写 Wrapper 数据的层级**。实现最小粒度的业务规则（如 `AddItem`, `UseItem`）。
     - **ManagerLogicImpl (调度编排)**：由研发人员实现，使用动态懒加载策略，直接调用构造函数实例化。负责管理 ModuleAgentImpl 集合，主要通过编排 MechanismLogicImpl 的原子行为来实现跨模块的业务流程。
-- **接口规范**：
-    - `ManagerLogicImpl` 与 `MechanismLogicImpl` 必须实现以下接口：
-      - `OnLoad(new bool) error`：处理数据加载回调。
-      - `OnSave() error`：保存时的生命周期回调。
-    - 所有接口，如果返回error，系统会终止后续所有未执行的回调。
+- **特殊接口规范**：
+    - `MechanismLogicImpl` 需要研发人员实现以下生命周期接口：
+      - `OnLoad(new bool) error`：数据加载完成后的回调，`new` 参数标识是否为新建数据。
+      - `OnSave() error`：数据保存前的生命周期回调。
+      - `OnLogin() error`：玩家登录时的回调。
+      - `OnLogout() error`：玩家登出时的回调。
+    - `ModuleAgentImpl`、`ManagerLogicImpl`、`EntityImpl` 的接口由 `blueprint_gen` 自动生成，无需手动实现。
+    - **错误处理机制**：所有生命周期接口如果返回非 `nil` 的 `error`，系统将终止后续所有未执行的回调；若需继续执行后续回调，应返回 `nil`。
 
 ### 2. Entity Agent 代理详细设计
 
