@@ -1,5 +1,7 @@
 package imodels
 
+// ILevelUpMechanismLogic LevelUpMechanism Logic 接口
+// 业务定义的接口
 type ILevelUpMechanismLogic interface {
 	IBaseLogic
 

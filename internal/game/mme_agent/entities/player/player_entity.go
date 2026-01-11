@@ -57,32 +57,40 @@ func (a *PlayerEntityImpl) OnLoad(raw bson.Raw, new bool) error {
 		return err
 	}
 
-	if err := a.GetHeroManagerLogic().OnLoad(new); err != nil {
-		return err
+	if lifecycle, ok := a.GetHeroManagerLogic().(interface{ OnLoad(new bool) error }); ok {
+		if err := lifecycle.OnLoad(new); err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
 // OnSave 保存回调
 func (a *PlayerEntityImpl) OnSave() error {
-	if err := a.GetHeroManagerLogic().OnSave(); err != nil {
-		return err
+	if lifecycle, ok := a.GetHeroManagerLogic().(interface{ OnSave() error }); ok {
+		if err := lifecycle.OnSave(); err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
 // OnLogin 登录回调
 func (a *PlayerEntityImpl) OnLogin() error {
-	if err := a.GetHeroManagerLogic().OnLogin(); err != nil {
-		return err
+	if lifecycle, ok := a.GetHeroManagerLogic().(interface{ OnLogin() error }); ok {
+		if err := lifecycle.OnLogin(); err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
 // OnLogout 登出回调
 func (a *PlayerEntityImpl) OnLogout() error {
-	if err := a.GetHeroManagerLogic().OnLogout(); err != nil {
-		return err
+	if lifecycle, ok := a.GetHeroManagerLogic().(interface{ OnLogout() error }); ok {
+		if err := lifecycle.OnLogout(); err != nil {
+			return err
+		}
 	}
 	return nil
 }

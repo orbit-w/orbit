@@ -1,8 +1,7 @@
 package imodels
 
+// IHeroManagerLogic HeroManager Logic 接口
+// 业务定义的接口
 type IHeroManagerLogic interface {
-	IBaseLogic
-
-	GetSingleHeroModule() IHeroModuleLogic
-	HeroMap_GetModule(heroId int64) (IHeroModuleLogic, bool)
+	GetWrapper() any
 }

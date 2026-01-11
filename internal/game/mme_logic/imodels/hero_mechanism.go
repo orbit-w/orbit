@@ -1,5 +1,7 @@
 package imodels
 
+// IHeroMechanismModel HeroMechanism Model 接口
+// 业务定义的接口
 type IHeroMechanismModel interface {
 	IBaseLogic
 
