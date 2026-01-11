@@ -951,31 +951,45 @@ message Notify {
 
 ---
 
-## MME-Agent 逻辑开发架构
+## MME-Agent 逻辑开发架构 (Logic Layer)
 
+### 架构概述
 为了解决 MME 纯数据结构与业务逻辑分离的问题，并提供便捷的跨模块编排能力，MME 引入了 **Agent 代理模式**。该架构通过自动生成的 Agent 层，实现了"数据-逻辑分离"、"依赖注入"与"强类型访问"。
 
 ### 1. 核心定义与架构分层
 
-整个架构呈现严格的树状层级：EntityImpl (根) -> ManagerLogicImpl (动态管理器) -> ModuleAgentImpl (静态容器) -> MechanismLogicImpl (原子叶子节点)。
+整个架构呈现严格的树状层级：`EntityImpl` (根) -> `ManagerAgentImpl` (动态容器) -> `ModuleAgentImpl` (静态容器) -> `MechanismLogicImpl` (原子叶子节点)。
 
 在 MME 体系中，遵循 **"容器编排-行为"** 的设计原则：
 
-- **MechanismLogicImpl (机制)**：**唯一的属性与行为载体**。
-    - **属性**：只有 Mechanism 定义具体的业务字段（如 `int32 Gold`, `map Items`）。
-    - **行为**：只有 `MechanismLogic` 定义对数据的直接读写操作。
-    - **线程安全**：不需要考虑线程安全问题。
-- **ModuleAgentImpl (静态组合容器)**：**组合 Mechanism**。
-    - 组合：它是 Mechanism 的静态组合容器（如 `HeroModuleAgentImpl` = `HeroMechanismAgentImpl` + `LevelUpMechanismLogicImpl`）。
-    - 生成：由 blueprint_gen 自动生成。
-    - 注意：`ModuleAgentImpl` 不直接定义和操作数据字段，不允许研发来编排业务流程，只是对MechanismLogicImpl实例访问的代理。
-- **ManagerLogicImpl (动态管理器)**：**通过容器ModuleAgentImpl，编排 MechanismLogicImpl逻辑**。
-    - 它是更高层级的动态容器，支持以单例或 Map 方式组织 ModuleAgentImpl
-    - `ManagerLogicImpl` 由研发人员定义行为，负责编排 MechanismLogicImpl 的方法，实现跨机制的业务逻辑。
-- **EntityImpl (代理)**: 结合了属性和行为，实现跨ManagerLogicImpl的业务逻辑。
-    - 定位: 架构的顶层，代表一个完整的业务对象（如 Player）。它是所有 ManagerLogicImpl实例访问的入口。
-    - 强大的代理，可以代理访问到任何MechanismLogicImpl的实例。
-    - 生成：由 blueprint_gen 自动生成。
+#### MechanismLogicImpl (机制)
+**唯一的属性与行为载体**：
+- **属性**：只有 Mechanism 定义具体的业务字段（如 `int32 Gold`, `map Items`）。
+- **行为**：只有 `MechanismLogic` 定义对数据的直接读写操作。
+- **线程安全**：不需要考虑线程安全问题。
+
+#### ModuleAgentImpl (静态组合容器)
+**组合 Mechanism**：
+- **组合**：它是 Mechanism 的静态组合容器（如 `HeroModuleAgentImpl` = `HeroMechanismAgentImpl` + `LevelUpMechanismLogicImpl`）。
+- **生成**：由 `blueprint_gen` 自动生成。
+- **注意**：`ModuleAgentImpl` 不直接定义和操作数据字段，不允许研发来编排业务流程，只是对 `MechanismLogicImpl` 实例访问的代理。
+
+#### ManagerAgentImpl (动态管理器代理)
+**管理 ModuleAgentImpl 容器与 ManagerLogicImpl 业务**：
+- **容器管理**：它是更高层级的动态容器，负责以单例或 Map 方式组织 `ModuleAgentImpl`。
+- **逻辑代理**：它持有并管理 `ManagerLogicImpl` 实例，将业务调用委托给 Logic 层。
+- **生成**：由 `blueprint_gen` 自动生成。
+
+#### ManagerLogicImpl (动态管理器逻辑)
+**编排 MechanismLogicImpl 逻辑**：
+- `ManagerLogicImpl` 由研发人员定义行为，负责编排 `MechanismLogicImpl` 的方法，实现跨机制的业务逻辑。
+- 它不再负责容器管理（如 Map 的增删查改），专注于业务流程。
+
+#### EntityImpl (代理)
+**结合了属性和行为，实现跨 ManagerAgentImpl 的业务逻辑**：
+- **定位**：架构的顶层，代表一个完整的业务对象（如 Player）。它是所有 `ManagerAgentImpl` 实例访问的入口。
+- **强大的代理**：可以代理访问到任何 `MechanismLogicImpl` 实例。
+- **生成**：由 `blueprint_gen` 自动生成。
 
 ### 2. 逻辑分层架构
 
@@ -984,118 +998,146 @@ message Notify {
 #### 第一层：数据层 (Data Layer - `mme` 包)
 - **来源**：完全由 `blueprint_gen` 自动生成 (Wrapper)。
 - **职责**：纯粹的数据容器。
-    - **MechanismWrapper**: 包含实际的业务字段数据。
-    - **Module/ManagerWrapper**: 仅包含子节点的指针结构，不包含业务字段。
+  - **MechanismWrapper**：包含实际的业务字段数据。
+  - **Module/ManagerWrapper**：仅包含子节点的指针结构，不包含业务字段。
 - **特性**：提供 `Get/Set` 原子接口、脏标记管理、序列化能力。
 
 #### 第二层：代理层 (Agent Layer - `mme_agent` 包)
 - **来源**：完全由 `blueprint_gen` 自动生成。
 - **职责**：
-    - **树状入口**：`EntityImpl` 作为整个 Logic 树的根节点（如 `entities/player/player_entity.go`），持有 `EntityWrapper` 数据，并提供访问任意 `ManagerLogicImpl` 的入口。
-    - **结构容器代理**：`ManagerAgentImpl` 负责屏蔽 Module 的底层存储（Map/List），维护数据 Wrapper 与逻辑 Logic 之间的动态映射与缓存。作为逻辑树的中间节点，自动遍历并驱动所有下属 Module（包括 Map 中的动态节点）执行生命周期回调。
-    - **静态组合**: `ModuleAgentImpl`（如 `modules/hero_module_impl.go`）负责静态组合 `MechanismLogicImpl`。
-    - **懒加载工厂**：负责实例化用户编写的 Logic 类（`ManagerLogicImpl`），并注入数据依赖。
-    - **依赖注入**：通过 Agent 接口，让任意 Logic 模块都能安全访问其他兄弟模块。
-    - **强类型访问**：提供 `Get<Manager>Logic()` 等强类型方法，快速定位业务逻辑。
+  - **树状入口**：`EntityImpl` 作为整个 Logic 树的根节点（如 `entities/player/player_entity.go`），持有 `EntityWrapper` 数据，并提供访问任意 `ManagerAgentImpl` 的入口。
+  - **结构容器代理**：`ManagerAgentImpl` 负责屏蔽 Module 的底层存储（Map/List），维护数据 Wrapper 与逻辑 Logic 之间的动态映射与缓存。作为逻辑树的中间节点，自动遍历并驱动所有下属 Module（包括 Map 中的动态节点）执行生命周期回调。
+  - **静态组合**：`ModuleAgentImpl`（如 `modules/hero_module_impl.go`）负责静态组合 `MechanismLogicImpl`。
+  - **懒加载工厂**：负责实例化用户编写的 Logic 类（`ManagerLogicImpl`），并注入数据依赖。
+  - **依赖注入**：通过 Agent 接口，让任意 Logic 模块都能安全访问其他兄弟模块。
+  - **强类型访问**：提供 `Get<Manager>Agent()` 等强类型方法，快速定位业务逻辑。
 
 #### 第三层：逻辑层 (Logic Layer - `mme_logic` 包)
-- **来源**：MechanismLogicImpl/ManagerLogicImpl用户编写。
+- **来源**：`MechanismLogicImpl`/`ManagerLogicImpl` 由用户编写。
 - **职责**：
-    - **MechanismLogicImpl (行为)**：**唯一有权直接读写 Wrapper 数据的层级**。实现最小粒度的业务规则（如 `AddItem`, `UseItem`）。
-    - **ManagerLogicImpl (调度编排)**：由研发人员实现，使用动态懒加载策略，直接调用构造函数实例化。负责管理 ModuleAgentImpl 集合，主要通过编排 MechanismLogicImpl 的原子行为来实现跨模块的业务流程。
+  - **MechanismLogicImpl (行为)**：**唯一有权直接读写 Wrapper 数据的层级**。实现最小粒度的业务规则（如 `AddItem`, `UseItem`）。
+  - **ManagerLogicImpl (调度编排)**：由研发人员实现，使用动态懒加载策略，直接调用构造函数实例化。负责编排 `MechanismLogicImpl` 的原子行为来实现跨模块的业务流程。
 - **特殊接口规范**：
-    - `MechanismLogicImpl` 需要研发人员实现以下生命周期接口：
-      - `OnLoad(new bool) error`：数据加载完成后的回调，`new` 参数标识是否为新建数据。
-      - `OnSave() error`：数据保存前的生命周期回调。
-      - `OnLogin() error`：玩家登录时的回调。
-      - `OnLogout() error`：玩家登出时的回调。
-    - `ModuleAgentImpl`、`ManagerLogicImpl`、`EntityImpl` 的接口由 `blueprint_gen` 自动生成，无需手动实现。
-    - **错误处理机制**：所有生命周期接口如果返回非 `nil` 的 `error`，系统将终止后续所有未执行的回调；若需继续执行后续回调，应返回 `nil`。
+  - `EntityImpl` 需要实现以下生命周期接口：
+    - `OnLoad(raw bson.Raw, new bool) error`：数据加载完成后的回调。
+  - `MechanismLogicImpl` / `ManagerAgentImpl` / `ModuleAgentImpl` 实现以下生命周期接口：
+    - `OnLoad(new bool) error`：数据加载完成后的回调，`new` 参数标识是否为新建数据。
+    - `OnSave() error`：数据保存前的生命周期回调。
+    - `OnLogin() error`：玩家登录时的回调。
+    - `OnLogout() error`：玩家登出时的回调。
+  - **错误处理机制**：所有生命周期接口如果返回非 `nil` 的 `error`，系统将终止后续所有未执行的回调；若需继续执行后续回调，应返回 `nil`。
 
-### 3. 详细实现模式
+### 3. ManagerLogicImpl 实例化与编排策略
 
-#### 3.1 Entity Agent 层 (`PlayerEntityImpl`)
+`ManagerLogicImpl` 作为业务逻辑的编排层，采用了灵活的动态加载策略：
+
+#### 逻辑编排与层级调用
+- `ManagerLogicImpl` 由研发人员编写，主要职责是编排下属 `MechanismLogicImpl` 的行为。
+- **调用路径**：`ManagerLogicImpl` -> `ModuleAgentImpl` (获取 Mechanism) -> `MechanismLogicImpl` (执行原子行为)。
+- 它不直接操作数据字段，而是通过编排 `MechanismLogicImpl` 提供的原子方法来实现复杂的业务流程。
+
+#### 动态懒加载与直接构造
+- `ManagerLogicImpl` 的实例获取采用 **动态懒加载** 策略。
+- 当首次访问某个 `ManagerAgentImpl` 时，Agent 会直接调用 `ManagerLogicImpl` 的构造函数创建实例并缓存。
+
+#### 无状态逻辑约束
+- Logic 层（`ManagerLogicImpl`/`MechanismLogicImpl`）应当设计为 **无状态（Stateless）** 或仅持有 **瞬时状态**。
+- 所有需持久化的业务数据必须存储在 `MechanismWrapper` 中。
+- 禁止在 Logic 实例中缓存与 Wrapper 数据不一致的中间状态，以确保 MME 的脏标记追踪和增量同步机制正常工作。
+
+### 4. 详细实现模式
+
+#### 4.1 Entity Agent 层 (`PlayerEntityImpl`)
 
 `PlayerEntityImpl` 作为聚合根，不包含具体业务逻辑，主要负责：
 
 - **懒加载机制 (Lazy Loading)**：
-  Manager 通过 `GetHeroManagerLogic()` 在首次访问时实例化，而非创建时。
+  Manager 通过 `GetHeroManagerAgent()` 在首次访问时实例化，而非创建时。
   ```go
-  func (a *PlayerEntityImpl) GetHeroManagerLogic() imodels.IHeroManagerLogic {
-      if a.heroManagerLogic == nil {
-          // 注入 EntityWrapper 中的 Manager 数据，创建 Logic 实例
-          a.heroManagerLogic = managers.NewHeroManagerLogic(a.entityWrapper.GetHeroManager())
+  func (a *PlayerEntityImpl) GetHeroManagerAgent() IHeroManagerAgent {
+      if a.heroManagerAgent == nil {
+          // 注入 EntityWrapper 中的 Manager 数据，创建 Agent 实例
+          a.heroManagerAgent = NewHeroManagerAgent(a.entityWrapper.GetHeroManager())
       }
-      return a.heroManagerLogic
+      return a.heroManagerAgent
   }
   ```
 
 - **生命周期分发 (Lifecycle Dispatch)**：
-  `OnLoad`, `OnSave`, `OnLogin` 等方法会自动检查并调用下层 Manager 的对应接口。
+  `OnLoad`, `OnSave`, `OnLogin` 等方法会自动检查并调用下层 Manager Agent 的对应接口。
   ```go
   func (a *PlayerEntityImpl) OnLogin() error {
       // 检查接口实现并调用，支持错误中断
-      if lifecycle, ok := a.GetHeroManagerLogic().(interface{ OnLogin() error }); ok {
-          if err := lifecycle.OnLogin(); err != nil {
-              return err
-          }
+      if err := CallOnLogin(a.GetHeroManagerAgent()); err != nil {
+          return err
       }
       return nil
   }
   ```
 
-#### 3.2 Manager Logic 层 (`HeroManagerLogicImpl`)
+#### 4.2 Manager Agent 层 (`HeroManagerAgentImpl`)
 
-研发人员编写的业务层，通过嵌入 Agent 接口继承容器能力。
+blueprint_gen 自动生成的**结构容器代理**，主要负责屏蔽底层 Module 的存储细节（Map/List/Singleton），并维护 Data Wrapper 与 Logic Object 之间的动态映射关系。
 
-- **组合优于继承 (Composition)**：
-  结构体嵌入了 `agent_managers.IHeroManagerAgent` 接口。这意味着 Logic 层可以直接调用 Agent 层生成的方法（如获取某个 Hero Module），而无需自己实现容器管理代码。
+- **动态映射与缓存**：通过泛型容器（如 `container.ModuleMapContainer`），在访问时动态将底层的纯数据 ModuleWrapper 实例化为业务对象 ModuleAgent，并进行缓存管理。
+- **结构化访问屏蔽**：对外提供强类型的查找接口（如 `HeroMap_GetModule(id)`），屏蔽底层是 Map、List 还是单独字段的存储差异。
+- **逻辑委托**：嵌入 `imodels.IHeroManagerLogic` 接口，将业务调用委托给 `HeroManagerLogicImpl`。
   ```go
-  type HeroManagerLogicImpl struct {
-      agent_managers.IHeroManagerAgent // 嵌入 Agent 接口
+  type HeroManagerAgentImpl struct {
+      imodels.IHeroManagerLogic // 嵌入业务层接口，实现委托
       wrapper *mme.HeroManagerWrapper
+      // ... 容器字段
   }
   ```
 
-#### 3.3 Manager Agent 层 (`HeroManagerAgentImpl`)
+#### 4.3 Manager Logic 层 (`HeroManagerLogicImpl`)
 
-blueprint_gen自动生成的**结构容器代理**，主要负责屏蔽底层 Module 的存储细节（Map/List/Singleton），并维护 Data Wrapper 与 Logic Object 之间的动态映射关系。
+研发人员编写的业务层，专注于业务逻辑实现。
 
-- **动态映射与缓存**：通过泛型容器（如 `container.ModuleMapContainer`），在访问时动态将底层的纯数据 ModuleWrapper 实例化为业务对象 ModuleLogic，并进行缓存管理。
-- **结构化访问屏蔽**：对外提供强类型的查找接口（如 `GetModule(id)`），屏蔽底层是 Map、List 还是单独字段的存储差异。
-- **生命周期递归分发**：作为逻辑树的中间节点，自动遍历并驱动所有下属 Module（包括 Map 中的动态节点）执行生命周期回调。
-
-### 4. ManagerLogicImpl 实例化与编排策略
-
-ManagerLogicImpl 作为业务逻辑的编排层，采用了灵活的动态加载策略：
-
-1.  **逻辑编排与层级调用**：
-    - `ManagerLogicImpl` 由研发人员编写，主要职责是编排下属 `MechanismLogicImpl` 的行为。
-    - **调用路径**：`ManagerLogicImpl` -> `ModuleAgentImpl` (获取 Mechanism) -> `MechanismLogicImpl` (执行原子行为)。
-    - 它不直接操作数据字段，而是通过编排 `MechanismLogicImpl` 提供的原子方法来实现复杂的业务流程。
-
-2.  **动态懒加载与直接构造**：
-    - `ManagerLogicImpl` 的实例获取采用 **动态懒加载** 策略。
-    - 当首次访问某个 `ManagerLogicImpl` 时，Agent 会直接调用其构造函数创建实例并缓存，后续访问直接返回缓存实例。
-    - 这种模式确保了只有被实际使用的逻辑模块才会被初始化，降低内存占用。
-
-3.  **无状态逻辑约束**：
-    - Logic 层（`ManagerLogicImpl`/`MechanismLogicImpl`）应当设计为 **无状态（Stateless）** 或仅持有 **瞬时状态**。
-    - 所有需持久化的业务数据必须存储在 `MechanismWrapper` 中。
-    - 禁止在 Logic 实例中缓存与 Wrapper 数据不一致的中间状态，以确保 MME 的脏标记追踪和增量同步机制正常工作。
+- **纯粹的逻辑实现**：
+  不再需要处理容器管理（Map 的 CRUD），只需关注业务逻辑。
+  ```go
+  type HeroManagerLogicImpl struct {
+      wrapper *mme.HeroManagerWrapper
+  }
+  ```
 
 ### 5. 调用链路总结
 
 外部系统（如 Controller）操作数据的典型路径：
 
-1.  **Access**: 调用 `PlayerEntity.GetHeroManagerLogic()` (触发 Lazy Load)。
-2.  **Locate**: Logic 层调用 `HeroMap_GetModule(id)` (由 Agent 层提供的容器查找)。
-3.  **Execute**: 在获取的 `HeroModule` (由 Mechanism 组成) 上执行具体的业务方法。
+1.  **Access**: 调用 `PlayerEntity.GetHeroManagerAgent()` (触发 Lazy Load)。
+2.  **Locate**: 调用 `HeroMap_GetModule(id)` (由 Agent 层提供的容器查找)。
+3.  **Execute**: 在获取的 `HeroModuleAgent` 上获取 MechanismLogic，并执行具体的业务方法。
 
 ### 6. 总结：Entity Agent 如何解决问题
-1.  **解决定位问题**：Controller 层只需持有 `Entity`，即可通过 `Entity.GetBagManagerLogic().GetBagModule()` 快速定位到具体的业务对象。
-2.  **解决依赖问题**：所有 ManagerLogicImpl 类都持有 `Entity` 实例的引用，打破了模块间的物理依赖。
+1.  **解决定位问题**：Controller 层只需持有 `Entity`，即可通过 `Entity.GetBagManagerAgent().GetBagModule()` 快速定位到具体的业务对象。
+2.  **解决依赖问题**：所有 ManagerLogicImpl 类都持有 `Entity` 实例的引用（通过构造函数传入或上下文），打破了模块间的物理依赖。
 3.  **复用与编排**：`ManagerLogicImpl` 对外暴露的是高层的业务语义（如 `AddItem`），内部封装了复杂的 Mechanism 组合逻辑。
+
+### 7. 代码生成规范
+
+#### Entity Agent 生成
+- 生成 `EntityImpl` 类，作为整个 Logic 树的根节点。
+- 为每个 Manager 字段生成 `Get<Manager>Agent()` 方法，支持懒加载。
+- 生成 `OnLoad(raw bson.Raw, new bool)` 和 `OnSave()` 等生命周期回调，遍历调用所有 `ManagerAgentImpl` 的对应方法。
+
+#### Manager Agent 生成
+- 生成 `ManagerAgentImpl` 类，持有对应的 `ManagerWrapper` 引用。
+- 维护 `ModuleMapContainer` 或其他容器，管理 ModuleAgent 的生命周期。
+- 嵌入 `I<Manager>Logic` 接口，实现业务逻辑的委托。
+
+#### Module Agent 生成
+- 生成 `ModuleAgentImpl` 类，持有对应的 `ModuleWrapper` 引用。
+- 为每个 Mechanism 字段生成 `Get<Mechanism>Logic()` 方法。
+- 不生成业务逻辑代码，仅作为访问代理。
+
+#### Manager Logic 接口生成
+- 生成 `I<Manager>Logic` 接口，由用户实现具体的 `<Manager>LogicImpl` 类。
+
+#### Mechanism Logic 接口生成
+- 生成 `I<Mechanism>Logic` 接口，包含 `OnLoad()` 和 `OnSave()` 方法。
+- 由用户实现具体的 `<Mechanism>LogicImpl` 类。
 
 ## 最佳实践
 
