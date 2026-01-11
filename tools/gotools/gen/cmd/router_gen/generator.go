@@ -72,8 +72,7 @@ func generateRouterCode(ctx *RouterGenContext) error {
 	}
 	code.WriteString("\t\"gitee.com/orbit-w/orbit/pkg/proto/pb\"\n")
 	code.WriteString("\tservicezone_behavior \"gitee.com/orbit-w/orbit/core/services/service_zone/behavior\"\n\n")
-	code.WriteString("\t\"gitee.com/orbit-w/orbit/internal/game/mme_agent/entities\"\n")
-	code.WriteString("\tagent \"gitee.com/orbit-w/orbit/internal/game/mme_agent/entities/player\"\n")
+	code.WriteString("\tagent \"gitee.com/orbit-w/orbit/internal/game/mme_agent\"\n")
 	code.WriteString("\t\"google.golang.org/protobuf/proto\"\n")
 	code.WriteString(")\n\n")
 
@@ -111,8 +110,8 @@ func generateHandlerFunction(req *RequestInfo, controller *ControllerInfo) strin
 	// Controller 调用
 	controllerCall := generateControllerCall(req, controller)
 
-	// 生成函数签名：使用 msg proto.Message, entities ...mmeobj.IEntity
-	code.WriteString(fmt.Sprintf("\tRegisterHandler(pb.%s, func(ctx servicezone_behavior.IContext, msg proto.Message, entities ...entities.IEntity) (proto.Message, string, error) {\n", pidName))
+	// 生成函数签名：使用 msg proto.Message, entities ...agent.IEntity
+	code.WriteString(fmt.Sprintf("\tRegisterHandler(pb.%s, func(ctx servicezone_behavior.IContext, msg proto.Message, entities ...agent.IEntity) (proto.Message, string, error) {\n", pidName))
 	// 使用类型断言解析请求
 	code.WriteString(fmt.Sprintf("\t\treq := msg.(%s)\n", requestTypeFull))
 	// 如果有 EntityRef，生成实体提取和验证代码

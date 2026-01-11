@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	servicezone_behavior "gitee.com/orbit-w/orbit/core/services/service_zone/behavior"
-	"gitee.com/orbit-w/orbit/internal/game/mme_agent/entities"
+	agent "gitee.com/orbit-w/orbit/internal/game/mme_agent"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -31,26 +31,26 @@ func GetRouter() *Routers {
 	return globalRouter
 }
 
-func RegisterHandler(pid uint32, router func(ctx servicezone_behavior.IContext, req proto.Message, entities ...entities.IEntity) (proto.Message, string, error)) {
+func RegisterHandler(pid uint32, router func(ctx servicezone_behavior.IContext, req proto.Message, entities ...agent.IEntity) (proto.Message, string, error)) {
 	globalRouter.RegisterHandler(pid, router)
 }
 
 // RegisterFackRouter 注册虚假路由，用于测试
-func RegisterFackRouter(pid uint32, router func(ctx servicezone_behavior.IContext, req proto.Message, entities ...entities.IEntity) (proto.Message, string, error)) {
+func RegisterFackRouter(pid uint32, router func(ctx servicezone_behavior.IContext, req proto.Message, entities ...agent.IEntity) (proto.Message, string, error)) {
 	globalRouter.funcMap[pid] = router
 }
 
 type Routers struct {
-	funcMap map[uint32]func(ctx servicezone_behavior.IContext, req proto.Message, entities ...entities.IEntity) (proto.Message, string, error)
+	funcMap map[uint32]func(ctx servicezone_behavior.IContext, req proto.Message, entities ...agent.IEntity) (proto.Message, string, error)
 }
 
 func NewRouter() *Routers {
 	return &Routers{
-		funcMap: make(map[uint32]func(ctx servicezone_behavior.IContext, req proto.Message, entities ...entities.IEntity) (proto.Message, string, error)),
+		funcMap: make(map[uint32]func(ctx servicezone_behavior.IContext, req proto.Message, entities ...agent.IEntity) (proto.Message, string, error)),
 	}
 }
 
-func (r *Routers) RegisterHandler(pid uint32, router func(ctx servicezone_behavior.IContext, req proto.Message, entities ...entities.IEntity) (proto.Message, string, error)) {
+func (r *Routers) RegisterHandler(pid uint32, router func(ctx servicezone_behavior.IContext, req proto.Message, entities ...agent.IEntity) (proto.Message, string, error)) {
 	if _, ok := r.funcMap[pid]; ok {
 		panic(fmt.Sprintf("pid %d already registered", pid))
 	}
@@ -58,7 +58,7 @@ func (r *Routers) RegisterHandler(pid uint32, router func(ctx servicezone_behavi
 	r.funcMap[pid] = router
 }
 
-func (r *Routers) Dispatch(pid uint32) func(ctx servicezone_behavior.IContext, req proto.Message, entities ...entities.IEntity) (proto.Message, string, error) {
+func (r *Routers) Dispatch(pid uint32) func(ctx servicezone_behavior.IContext, req proto.Message, entities ...agent.IEntity) (proto.Message, string, error) {
 	handler, ok := r.funcMap[pid]
 	if !ok {
 		return nil

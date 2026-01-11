@@ -565,7 +565,7 @@ func appendNewMethods(ctx *RouterGenContext, controllerPath string, newRequests 
 					hasMMEObjImport = true
 				}
 			}
-			if importPath == "gitee.com/orbit-w/orbit/internal/game/mme_agent/entities/player" {
+			if importPath == "gitee.com/orbit-w/orbit/internal/game/mme_agent" {
 				// 检查是否有别名 agent
 				if imp.Name != nil && imp.Name.Name == "agent" {
 					hasAgentImport = true
@@ -581,7 +581,7 @@ func appendNewMethods(ctx *RouterGenContext, controllerPath string, newRequests 
 		importsToAdd = append(importsToAdd, "\tmmeobj \"gitee.com/orbit-w/orbit/internal/game/mme\"")
 	}
 	if needsAgentImport && !hasAgentImport {
-		importsToAdd = append(importsToAdd, "\tagent \"gitee.com/orbit-w/orbit/internal/game/mme_agent/entities/player\"")
+		importsToAdd = append(importsToAdd, "\tagent \"gitee.com/orbit-w/orbit/internal/game/mme_agent\"")
 	}
 
 	if len(importsToAdd) > 0 {
@@ -820,8 +820,8 @@ func mergeAndGroupImports(existingImports map[string]string, protoPackages map[s
 		}
 	}
 	if needsAgentImport {
-		if _, exists := existingImports["gitee.com/orbit-w/orbit/internal/game/mme_agent/entities/player"]; !exists {
-			localPkg = append(localPkg, "\tagent \"gitee.com/orbit-w/orbit/internal/game/mme_agent/entities/player\"\n")
+		if _, exists := existingImports["gitee.com/orbit-w/orbit/internal/game/mme_agent"]; !exists {
+			localPkg = append(localPkg, "\tagent \"gitee.com/orbit-w/orbit/internal/game/mme_agent\"\n")
 		}
 	}
 
