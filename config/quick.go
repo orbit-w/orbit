@@ -58,8 +58,17 @@ func GetMongoOps() *mongodbdriver.MongoDBConfig {
 }
 
 // Protocol 获取客户端跟服务器的通信协议
-func GateProtocol() string {
-	return GetString(DtaIDGateMain, GateGroupServer, TagProtocol)
+func AgentProtocol() string {
+	custom := GetString(DtaIDGateMain, GateGroupServer, TagProtocol)
+	if custom == "" {
+		return ProtocolTCP
+	}
+
+	return custom
+}
+
+func GetAgentPort() string {
+	return GetString(DtaIDGateMain, GateGroupServer, AgentPort)
 }
 
 func SetServerId(id int32) {

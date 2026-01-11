@@ -2,7 +2,7 @@ package config
 
 const (
 	TagProtocol = "protocol"
-	GatePort    = "port"
+	AgentPort   = "port"
 )
 
 const (

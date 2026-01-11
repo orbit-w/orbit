@@ -11,9 +11,9 @@ import (
 	"gitee.com/orbit-w/meteor/bases/misc/utils"
 	gnetwork "gitee.com/orbit-w/meteor/modules/net/network"
 	"gitee.com/orbit-w/meteor/modules/net/packet"
-	"gitee.com/orbit-w/orbit/internal/gate/net/onet"
+	"gitee.com/orbit-w/orbit/internal/agent/net/onet"
+	"gitee.com/orbit-w/orbit/lib/module/logger"
 
-	"github.com/nacos-group/nacos-sdk-go/v2/common/logger"
 	"go.uber.org/zap"
 )
 

@@ -16,7 +16,7 @@ const (
 	GameMainGroupMongo  = "mongodb"
 )
 
-// gate
+// gate agent
 const (
 	DtaIDGateMain = "gate.main"
 
