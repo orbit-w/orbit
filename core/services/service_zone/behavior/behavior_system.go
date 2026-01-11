@@ -2,7 +2,7 @@ package servicezone_behavior
 
 import (
 	mmeobj "gitee.com/orbit-w/orbit/internal/game/mme"
-	"gitee.com/orbit-w/orbit/internal/game/mme_agent/entities"
+	"gitee.com/orbit-w/orbit/internal/game/mme_agent"
 	"gitee.com/orbit-w/orbit/pkg/proto/core"
 	"gitee.com/orbit-w/orbit/pkg/proto/mme"
 	"github.com/asynkron/protoactor-go/actor"
@@ -58,5 +58,5 @@ func (ab *ZoneActorBehavior) HandleSystemRequest_SetEntity(ctx actor.Context, cl
 
 	//ab.ctx.SetEntity(entity)
 
-	ab.Persist([]entities.IEntity{entity})
+	ab.Persist([]mme_agent.IEntity{entity})
 }

@@ -13,7 +13,7 @@ type HeroMechanismAgentImpl struct {
 }
 
 // NewHeroMechanismLogic 创建 HeroMechanism Logic
-func NewHeroMechanismLogic(wrapper *mme.HeroMechanismWrapper) imodels.IHeroMechanismModel {
+func NewHeroMechanismLogic(wrapper *mme.HeroMechanismWrapper) imodels.IHeroMechanismLogic {
 	return &HeroMechanismAgentImpl{
 		wrapper: wrapper,
 	}

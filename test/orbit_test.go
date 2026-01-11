@@ -20,8 +20,7 @@ import (
 	servicezone_mgr "gitee.com/orbit-w/orbit/core/services/service_zone/mgr"
 	servicezone "gitee.com/orbit-w/orbit/core/services/service_zone/zone"
 	mmeobj "gitee.com/orbit-w/orbit/internal/game/mme"
-	"gitee.com/orbit-w/orbit/internal/game/mme_agent/entities"
-	agent "gitee.com/orbit-w/orbit/internal/game/mme_agent/entities/player"
+	"gitee.com/orbit-w/orbit/internal/game/mme_agent"
 	"gitee.com/orbit-w/orbit/internal/game/modules/service"
 	"gitee.com/orbit-w/orbit/internal/game/routers"
 	"gitee.com/orbit-w/orbit/lib/module/db/mgo_builder"
@@ -90,9 +89,9 @@ func Test_RedisDial(t *testing.T) {
 
 func initRouter() {
 	servicezone_behavior.SetRouter(routers.GetRouter())
-	routers.RegisterFackRouter(pb.PID_Request_LoginRequest, func(ctx servicezone_behavior.IContext, msg proto.Message, entities ...entities.IEntity) (proto.Message, string, error) {
+	routers.RegisterFackRouter(pb.PID_Request_LoginRequest, func(ctx servicezone_behavior.IContext, msg proto.Message, entities ...mme_agent.IEntity) (proto.Message, string, error) {
 		_ = msg.(*play.Request_LoginRequest)
-		playerEntity, ok := entities[0].(*agent.PlayerEntityImpl)
+		playerEntity, ok := entities[0].(*mme_agent.PlayerEntityImpl)
 		if !ok {
 			return nil, "", fmt.Errorf("player entity not found in entities")
 		}

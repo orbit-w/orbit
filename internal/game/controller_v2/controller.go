@@ -5,7 +5,7 @@
 package controllerv2
 
 import (
-	agent "gitee.com/orbit-w/orbit/internal/game/mme_agent/entities/player"
+	agent "gitee.com/orbit-w/orbit/internal/game/mme_agent"
 	"gitee.com/orbit-w/orbit/pkg/proto/core"
 	"gitee.com/orbit-w/orbit/pkg/proto/mme"
 	"gitee.com/orbit-w/orbit/pkg/proto/play"

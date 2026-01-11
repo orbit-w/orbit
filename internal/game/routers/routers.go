@@ -9,35 +9,34 @@ import (
 
 	servicezone_behavior "gitee.com/orbit-w/orbit/core/services/service_zone/behavior"
 	controllerv2 "gitee.com/orbit-w/orbit/internal/game/controller_v2"
+	"gitee.com/orbit-w/orbit/internal/game/mme_agent"
 	"gitee.com/orbit-w/orbit/pkg/proto/core"
 	"gitee.com/orbit-w/orbit/pkg/proto/mme"
 	"gitee.com/orbit-w/orbit/pkg/proto/pb"
 	"gitee.com/orbit-w/orbit/pkg/proto/play"
 
-	"gitee.com/orbit-w/orbit/internal/game/mme_agent/entities"
-	agent "gitee.com/orbit-w/orbit/internal/game/mme_agent/entities/player"
 	"google.golang.org/protobuf/proto"
 )
 
 func init() {
-	RegisterHandler(pb.PID_Request_HeartBeat, func(ctx servicezone_behavior.IContext, msg proto.Message, entities ...entities.IEntity) (proto.Message, string, error) {
+	RegisterHandler(pb.PID_Request_HeartBeat, func(ctx servicezone_behavior.IContext, msg proto.Message, entities ...mme_agent.IEntity) (proto.Message, string, error) {
 		req := msg.(*core.Request_HeartBeat)
 		return controllerv2.GControllerV2.HandleHeartBeat(req), "Request_HeartBeat_Rsp", nil
 	})
 
-	RegisterHandler(pb.PID_Request_SetEntityRequest, func(ctx servicezone_behavior.IContext, msg proto.Message, entities ...entities.IEntity) (proto.Message, string, error) {
+	RegisterHandler(pb.PID_Request_SetEntityRequest, func(ctx servicezone_behavior.IContext, msg proto.Message, entities ...mme_agent.IEntity) (proto.Message, string, error) {
 		req := msg.(*core.Request_SetEntityRequest)
 		return controllerv2.GControllerV2.HandleSetEntityRequest(req), "Request_SetEntityRequest_Rsp", nil
 	})
 
-	RegisterHandler(pb.PID_Request_AskLevelUp, func(ctx servicezone_behavior.IContext, msg proto.Message, entities ...entities.IEntity) (proto.Message, string, error) {
+	RegisterHandler(pb.PID_Request_AskLevelUp, func(ctx servicezone_behavior.IContext, msg proto.Message, entities ...mme_agent.IEntity) (proto.Message, string, error) {
 		req := msg.(*mme.Request_AskLevelUp)
 		return controllerv2.GControllerV2.HandleAskLevelUp(req), "Request_AskLevelUp_Rsp", nil
 	})
 
-	RegisterHandler(pb.PID_Request_LoginRequest, func(ctx servicezone_behavior.IContext, msg proto.Message, entities ...entities.IEntity) (proto.Message, string, error) {
+	RegisterHandler(pb.PID_Request_LoginRequest, func(ctx servicezone_behavior.IContext, msg proto.Message, entities ...mme_agent.IEntity) (proto.Message, string, error) {
 		req := msg.(*play.Request_LoginRequest)
-		playerEntity, ok := entities[0].(*agent.PlayerEntityImpl)
+		playerEntity, ok := entities[0].(*mme_agent.PlayerEntityImpl)
 		if !ok {
 			return nil, "", fmt.Errorf("player entity not found in entities")
 		}

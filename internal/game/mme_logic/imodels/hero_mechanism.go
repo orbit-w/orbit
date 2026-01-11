@@ -1,8 +1,8 @@
 package imodels
 
-// IHeroMechanismModel HeroMechanism Model 接口
+// IHeroMechanismLogic HeroMechanism Model 接口
 // 业务定义的接口
-type IHeroMechanismModel interface {
+type IHeroMechanismLogic interface {
 	IBaseLogic
 
 	GetId() int64

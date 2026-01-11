@@ -1,7 +1,7 @@
 package servicezone
 
 import (
-	"gitee.com/orbit-w/orbit/internal/game/mme_agent/entities"
+	"gitee.com/orbit-w/orbit/internal/game/mme_agent"
 	"gitee.com/orbit-w/orbit/pkg/proto/mme"
 )
 
@@ -11,7 +11,7 @@ type ISubscribeStrategy interface {
 	// ShouldSubscribe 判断是否应该订阅指定的 Entity
 	// entity: 要判断的 Entity
 	// 返回: true 表示应该订阅，false 表示不订阅
-	ShouldSubscribe(entity entities.IEntity) bool
+	ShouldSubscribe(entity mme_agent.IEntity) bool
 
 	// GetStrategyName 返回策略名称，用于日志和调试
 	GetStrategyName() string
@@ -28,7 +28,7 @@ func NewAllEntitiesStrategy() *AllEntitiesStrategy {
 	return &AllEntitiesStrategy{}
 }
 
-func (s *AllEntitiesStrategy) ShouldSubscribe(entity entities.IEntity) bool {
+func (s *AllEntitiesStrategy) ShouldSubscribe(entity mme_agent.IEntity) bool {
 	return true
 }
 
@@ -56,7 +56,7 @@ func NewOnlyStrategy(allowedTypes []string) *OnlyStrategy {
 	}
 }
 
-func (s *OnlyStrategy) ShouldSubscribe(entity entities.IEntity) bool {
+func (s *OnlyStrategy) ShouldSubscribe(entity mme_agent.IEntity) bool {
 	if entity == nil {
 		return false
 	}
@@ -99,7 +99,7 @@ func NewByIdsStrategy(allowedIds []int64) *ByIdsStrategy {
 	}
 }
 
-func (s *ByIdsStrategy) ShouldSubscribe(entity entities.IEntity) bool {
+func (s *ByIdsStrategy) ShouldSubscribe(entity mme_agent.IEntity) bool {
 	if entity == nil {
 		return false
 	}
@@ -137,7 +137,7 @@ func NewByDistanceStrategy(centerX, centerY, maxDistance float64) *ByDistanceStr
 	}
 }
 
-func (s *ByDistanceStrategy) ShouldSubscribe(entity entities.IEntity) bool {
+func (s *ByDistanceStrategy) ShouldSubscribe(entity mme_agent.IEntity) bool {
 	// 注意：需要 Entity 实现位置接口才能使用此策略
 	// 这里提供框架，实际使用时需要扩展 IEntity 接口或使用类型断言
 	// 例如：
@@ -177,7 +177,7 @@ func NewCompositeStrategy(strategies []ISubscribeStrategy, logic CompositeLogic)
 	}
 }
 
-func (s *CompositeStrategy) ShouldSubscribe(entity entities.IEntity) bool {
+func (s *CompositeStrategy) ShouldSubscribe(entity mme_agent.IEntity) bool {
 	if len(s.Strategies) == 0 {
 		return false
 	}

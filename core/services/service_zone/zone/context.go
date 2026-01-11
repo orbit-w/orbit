@@ -1,14 +1,14 @@
 package servicezone
 
 import (
-	"gitee.com/orbit-w/orbit/internal/game/mme_agent/entities"
+	"gitee.com/orbit-w/orbit/internal/game/mme_agent"
 	"gitee.com/orbit-w/orbit/pkg/proto/mme"
 	"google.golang.org/protobuf/proto"
 )
 
 type IContext interface {
-	LoadRefs(refs []*mme.EntityRef) ([]entities.IEntity, error)
-	Load(id int64, entityType mme.EntityType) (entities.IEntity, error)
+	LoadRefs(refs []*mme.EntityRef) ([]mme_agent.IEntity, error)
+	Load(id int64, entityType mme.EntityType) (mme_agent.IEntity, error)
 }
 
 // IRouter 路由分发接口，用于解耦 service_zone 和 routers 之间的循环依赖

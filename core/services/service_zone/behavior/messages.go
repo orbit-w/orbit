@@ -2,7 +2,7 @@ package servicezone_behavior
 
 import (
 	"gitee.com/orbit-w/orbit/core/network"
-	"gitee.com/orbit-w/orbit/internal/game/mme_agent/entities"
+	"gitee.com/orbit-w/orbit/internal/game/mme_agent"
 	"gitee.com/orbit-w/orbit/pkg/proto/core"
 	"gitee.com/orbit-w/orbit/pkg/proto/mme"
 	"gitee.com/orbit-w/orbit/pkg/proto/pb"
@@ -14,7 +14,7 @@ import (
 
 // AddEntityRequest 添加或更新 Entity 的请求
 type AddEntityRequest struct {
-	Entity entities.IEntity
+	Entity mme_agent.IEntity
 }
 
 // AddEntityResponse 添加或更新 Entity 的响应
@@ -41,7 +41,7 @@ type SubscribeRequest struct {
 
 // SubscribeResponse 订阅响应
 type SubscribeResponse struct {
-	Entities []entities.IEntity
+	Entities []mme_agent.IEntity
 }
 
 // SubscribeByIdsRequest 按 ID 列表订阅请求
@@ -82,7 +82,7 @@ type GetSubscribedEntitiesRequest struct {
 
 // GetSubscribedEntitiesResponse 获取已订阅的 Entities 响应
 type GetSubscribedEntitiesResponse struct {
-	Entities []entities.IEntity
+	Entities []mme_agent.IEntity
 }
 
 // GetSubscriberStrategyTypeResponse 获取订阅策略类型响应
