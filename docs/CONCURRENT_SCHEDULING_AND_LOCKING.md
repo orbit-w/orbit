@@ -18,28 +18,45 @@
 ### 2.1 锁的选择
 使用项目中已有的 `ReentrantLock` (`meteor/bases/sync/reentrantlock`)。
 *   **特性**：支持同一 Goroutine 重入，支持自旋（Spin），支持非阻塞尝试。
-*   **适用性**：适应业务逻辑中可能存在的递归调用（Method A -> Method B -> Method A）。
 
 ### 2.2 使用原则
 *   **强制非阻塞**：严禁使用 `Lock()` 方法。必须使用 `TryLock()` 或 `TryLockWithSpin()`。
 *   **快速失败**：如果无法获取所有必要的锁，立即放弃当前操作，释放已持有的所有锁。
 
+### 2.3 调度策略：资源层级排序 (Canonical Ordering)
+
+这是解决 "竞争同一个 Entity 锁" 导致死锁的唯一数学完备方案。
+
+*   **规则**: 在一个原子操作（事务）中，如果需要同时锁定多个 Entity（例如 `[A, B, C]`），必须按照 Entity ID 的字典序（或数值序）进行排序，然后按顺序加锁。
+*   **场景**:
+    *   Worker 1 处理消息 M1 (Refs: A, B) -> 排序 A < B -> 锁 A -> 锁 B
+    *   Worker 2 处理消息 M2 (Refs: B, A) -> 排序 A < B -> 锁 A -> 锁 B
+*   **结果**: Worker 1 和 Worker 2 会竞争 A 的锁。谁先拿到 A，谁就能继续拿 B。永远不会发生死锁（即 A 等 B，B 等 A 的情况）。
+
 ---
 
-## 3. 死锁规避策略：规范序（Canonical Ordering）
+## 3. 全局调度策略：基于 Anchor 的一致性哈希 (Anchor-based Dispatching)
 
-在任何涉及多个 Entity 的原子操作中，必须严格遵守**"先排序，后加锁"**的规则。
+虽然 Worker 内部具备完善的竞争处理机制，但减少跨 Worker 的锁竞争是提升系统吞吐量的关键。Dispatcher 层应采用基于 **Anchor** 的一致性哈希策略。
 
-### 规则定义
-1.  提取消息涉及的所有 `EntityRef` ID。
-2.  对 ID 列表进行**字典序（Lexicographical）**或**数值序**排序。
-3.  Worker 必须严格按照排序后的顺序依次尝试加锁。
+### 3.1 核心定义
 
-### 效果
-如果 Worker 1 需要锁 [A, B]，Worker 2 需要锁 [B, A]：
-*   双方都会先尝试锁 A。
-*   谁先拿到 A，谁才有资格去尝试锁 B。
-*   **结果**：永远不会出现环路等待，从数学上根除了死锁可能。
+*   **Anchor (锚点)**: 在一次多 Entity 事务中，ID 排序后排在首位的 Entity ID（即 `Sort([A, B, C])[0]`）。
+*   **Locality (局部性)**: 将 Anchor 分配给固定的 Worker，使得针对该 Anchor 的 `TryLock` 操作在绝大多数情况下变为 Worker 内部操作，从而避免跨 Worker 竞争。
+
+### 3.2 路由算法
+
+Dispatcher 在分发消息 M 时：
+
+1.  **提取涉及的 Entity ID 列表**: `Refs = [ID1, ID2, ...]`
+2.  **确定 Anchor**: `AnchorID = Min(Refs)` (或字典序最小)
+3.  **计算目标 Worker**: `WorkerID = ConsistentHash(AnchorID) % WorkerCount`
+4.  **投递**: 将 M 投递给 `Worker[WorkerID]`
+
+### 3.3 收益分析
+
+*   **零竞争 (Zero Contention) 场景**: 对于单 Entity 消息或多 Entity 但都在同一 Worker 的消息，`TryLock` 完全无竞争。
+*   **最小化竞争**: 对于跨 Worker 的事务（如 A 在 Worker 1, B 在 Worker 2），只有当 Worker 1 尝试锁定 B 时才会遇到真正的竞争。由于 A 已经在 Worker 1 本地成功锁定，且全局只有 Worker 1 会处理以 A 为 Anchor 的消息，因此 A 的锁永远不会发生跨 Worker 竞争。
 
 ---
 
@@ -52,54 +69,163 @@
 在 Worker 内部维护一个暂存区：
 
 ```go
+// 增加重试项结构，用于记录退避状态
+type RetryItem struct {
+    AnchorKey    int64
+    FailCount    int   // 连续失败次数，用于计算指数退避
+    CoolDownTick int64 // 冷却截止 Tick (逻辑时钟)，防止立即重试
+}
+
 type Worker struct {
     // 1. 全局输入通道 (来自 Dispatcher)
     InputChan <-chan Message 
 
     // 2. 本地暂存区 (Staging Area)
-    // Key: AnchorKey (主导 Entity ID), Value: 待处理消息队列 (FIFO)
+    // Key: AnchorKey (主导 Entity ID, int64), Value: 待处理消息队列 (FIFO)
     // 作用：当主导 Entity 处于"忙碌/竞争"状态时，后续消息在此排队，确保时序。
-    StagingArea map[string]*Queue 
+    // 优化：使用 int64 避免 string 转换开销；建议配合 sync.Pool 复用 Queue 对象。
+    StagingArea map[int64]*Queue 
 
-    // 3. 重试列表
-    // 记录哪些 AnchorKey 当前有消息积压，需要重试
-    RetryList *UniqueQueue 
+    // 3. 重试列表 (改进版)
+    // 存储 RetryItem，支持带有冷却机制的重试
+    RetryList *LinkedList[*RetryItem] 
+    
+    // 4. 逻辑时钟 (可选)
+    // 用于简单的 Tick 计数，避免频繁调用 time.Now()
+    CurrentTick int64
 }
 ```
 
 ### 4.2 执行流程 (两阶段调度)
 
 #### 阶段一：消息分发 (Fetch & Dispatch)
-当 Worker 从 `InputChan` 收到消息 `M` (涉及 Entity [A, B], Anchor 为 A)：
+当 Worker 从 `InputChan` 收到消息 `M`：
 
-1.  **检查 StagingArea[A]**：
+1. **排序**：对涉及的 ID [A, B] 进行排序 -> [A, B]。 则Anchor 为 A。
+2.  **检查 StagingArea[A]**：
     *   **非空**：说明 A 正处于繁忙或等待重试状态。为保证 M 晚于之前的消息执行，**必须**将 M 追加到 `StagingArea[A]` 的**队尾**。当前处理结束。
     *   **为空**：说明 A 当前空闲。直接进入阶段二。
 
 #### 阶段二：尝试执行 (Try & Lock)
-尝试执行消息 `M`：
+尝试执行消息 `M`（或 AnchorKey A 对应的队头消息）：
 
-1.  **排序**：对涉及的 ID [A, B] 进行排序 -> [A, B]。
+1.  **检查冷却** (仅针对重试任务)：
+    *   若 `RetryItem.CoolDownTick > CurrentTick`，跳过本次执行，保留在 RetryList 中。
 2.  **顺序 TryLock**：
     *   `TryLock(A)` -> 成功。
     *   `TryLock(B)` -> 失败 (被其他 Worker 占用)。
 3.  **处理结果**：
-    *   **成功**：执行业务逻辑 -> 释放所有锁 -> 返回。
+    *   **成功**：
+        1.  执行业务逻辑。
+        2.  释放所有锁。
+        3.  重置 `FailCount = 0`。
+        4.  检查 `StagingArea[A]`：若仍有消息，将 A (新建 RetryItem) 加入 `RetryList` 队尾；否则清理 Map。
     *   **失败 (锁竞争)**：
         1.  **回滚**：立即释放已持有的锁 (A)。
-        2.  **入列**：将 `M` 放入 `StagingArea[A]` 的**队头 (Head)** (如果是刚从 InputChan 来的消息则新建队列)。
-        3.  **标记**：将 A 加入 `RetryList`。
-        4.  **避让**：设置短暂的 Backoff (可选)。
+        2.  **入列**：将 `M` 放入 `StagingArea[A]` 的**队头 (Head)** (保证不丢失)。
+        3.  **惩罚 (Penalty)**：
+            *   `FailCount++`
+            *   计算冷却：`CoolDown = min(FailCount * BaseDelay, MaxDelay)` (简单的线性或指数退避)。
+            *   设置 `RetryItem.CoolDownTick = CurrentTick + CoolDown`。
+        4.  **重试**：将 `RetryItem` 加入 `RetryList` 队尾。
 
-#### 阶段三：重试循环 (Retry Loop)
-Worker 在处理主循环空闲时，或每隔固定 Tick：
+#### 阶段三：Worker 主循环调度策略 (Quota + Batch + Smart Sleep)
 
-1.  遍历 `RetryList` 中的 AnchorKey (如 A)。
-2.  取出 `StagingArea[A]` 的**队头**消息。
-3.  再次尝试 **阶段二**。
-4.  **如果成功**：
-    *   从队列移除该消息。
-    *   **继续处理**该队列的下一条消息（Batch Process），直到队列为空或再次遇到锁竞争。
+为了解决"活锁"和"新消息饥饿"问题，采用带配额的混合调度：
+
+1.  **逻辑时钟推进**: `CurrentTick++`
+2.  **Step 1: 批量重试 (Batch Retry with Quota)**
+    *   **配额 (Quota)**：设定本轮最大处理重试数为 `N` (如 50)。
+    *   **执行**：遍历 `RetryList` (最多 N 次)。
+        *   若 Item 处于冷却中 -> 跳过 (或移至队尾)。
+        *   若 Item 就绪 -> 执行 **[阶段二]**。
+    *   **目的**：限制重试耗时，强制让出 CPU 给新消息。
+
+3.  **Step 2: 输入处理与智能休眠**
+    *   **策略**：无论 Step 1 是否处理完所有重试，只要配额用尽或列表遍历完，**必须**检查 `InputChan`。
+    *   **批量读取**：尝试从 `InputChan` 读取消息（Batch Limit，如 16 个），执行 **[阶段一]**。
+    *   **休眠决策**：
+        *   若 `RetryList` 有任务但都处于冷却/锁住状态，且 `InputChan` 为空 -> **自适应休眠** (见 4.5 节，避免 CPU 空转)。
+        *   若有任务处理成功 -> **不休眠**，直接下一轮。
+
+### 4.3 活锁风险与回滚代价 (Livelock Risks and Rollback Costs)
+
+**风险场景**：
+假设 Worker 1 需要锁定 [A, B] (A < B)，Worker 2 需要锁定 [B]。
+1.  Worker 2 持有 B。
+2.  Worker 1 成功锁定 A。
+3.  Worker 1 尝试锁定 B -> 失败（被占用）。
+4.  Worker 1 执行回滚：释放 A，将任务放回重试队列。
+5.  **问题**：若 Worker 1 **立即**重试，极可能再次锁定 A 但仍无法锁定 B。这将导致 Worker 1 陷入 "Lock A -> Fail B -> Unlock A" 的高频循环（类似活锁），造成 CPU 浪费且加剧 A 的锁竞争。
+
+**优化策略：重试惩罚 (Retry Penalty)**
+当发生因锁竞争导致的回滚时，**严禁立即重试该 AnchorKey**。
+*   **冷却机制**：给该 Key 增加一个"冷却计数器"或"当前 Tick 跳过标记"，在当前 Loop 中不再尝试。
+*   **让渡执行**：优先处理 `RetryList` 中的其他 Key，或处理新消息，让持有锁的竞争者（Worker 2）有时间完成任务并释放锁。
+
+### 4.4 饥饿问题 (Starvation Issues)
+
+**风险场景**：
+如果 `RetryList` 积压严重（例如由于大量锁竞争），Worker 可能在 `Step 1` 中花费过长时间循环处理重试任务，导致 `InputChan` 中的**新消息**长时间得不到处理。虽然 `StagingArea` 保证了单个 Entity 的时序，但新消息的**摄入延迟 (Ingestion Latency)** 会显著增加。
+
+**优化策略：执行配额 (Execution Quota)**
+在 `Step 1: Batch Retry` 中引入强制配额：
+*   **配额限制**：每次主循环最多处理 N 个（如 50 个）Retry 任务。
+*   **强制切单**：即使 `RetryList` 仍有任务，一旦达到配额，必须强制进入 `Step 2` 检查 `InputChan`。
+*   **交替执行**：保证"新消息摄入"和"旧消息重试"在时间片上交替进行，防止新消息饥饿。
+
+**进阶策略：动态权重调度 (Dynamic Weight Scheduling)**
+虽然固定配额（如 50）能防止极端饥饿，但在负载波动剧烈时可能不够灵活。
+*   **问题**：若 `InputChan` 积压严重（例如突发流量），固定处理 50 个重试任务可能会拖慢新消息的响应速度。反之，若 `RetryList` 很长但 `InputChan` 空闲，限制 50 个又太保守。
+*   **动态调整**：根据 `len(InputChan)` 和 `RetryList.Size` 的比例动态调整重试配额 `N`。
+    *   **高新消息压力**：若 `len(InputChan) > Threshold`，降低重试配额 `N`（如降至 10），优先消化新消息。
+    *   **低新消息压力**：若 `InputChan` 为空或较少，提高重试配额 `N`（如升至 100），加速清理重试积压。
+
+### 4.5 CPU 空转与自适应休眠 (Adaptive Sleep Strategy)
+
+**风险场景**：
+在 `阶段三` 的主循环中，如果 Worker 处于“重试全失败且无新消息”的状态，当前的策略是固定休眠 1ms。在高竞争场景下，这可能导致 Worker 进行大量无效的轮询（Busy Waiting），造成 CPU 资源的浪费。
+
+**优化方案：引入指数退避 (Exponential Backoff)**
+将主循环中的固定 `1ms` 休眠改为动态调整的退避时间。
+
+*   **状态维护**：维护一个 `ConsecutiveIdleCount` (连续空闲/失败次数)。
+*   **策略执行**：
+    1.  **重置条件**：若本轮循环中有任何重试任务成功，或从 `InputChan` 收到了新消息，立即重置 `ConsecutiveIdleCount = 0`。
+    2.  **退避计算**：若本轮循环无任何进展（Retry 全败且 Input 为空），则增加计数并计算休眠时间：
+        ```go
+        SleepTime = min(BaseSleep * (2 ^ ConsecutiveIdleCount), MaxSleep)
+        // 例如：1ms -> 2ms -> 4ms -> ... -> 16ms (Max)
+        ```
+    3.  **休眠**：执行 `time.Sleep(SleepTime)`。
+
+*   **收益**：
+    *   **低负载/高竞争时**：自动降低轮询频率，节省 CPU。
+    *   **活跃时**：保持最低延迟响应。
+
+### 4.6 最大重试次数与死信队列 (Max Retries & DLQ)
+
+**风险场景**：
+如果某个 Entity（如 B）处于异常死锁或“僵尸”状态，涉及 B 的消息会在 `RetryList` 中无限重试，甚至可能因队列无限增长导致内存耗尽（OOM）。
+
+**优化方案：设置 TTL 与死信处理**
+为每个 `RetryItem` 增加生命周期管理。
+
+*   **RetryItem 扩充**：
+    ```go
+    type RetryItem struct {
+        // ... 原有字段 ...
+        TotalFailCount int   // 累计失败总次数
+        FirstFailTime  int64 // 首次失败时间戳
+    }
+    ```
+*   **策略执行**：
+    1.  **阈值检查**：在将任务放回 `RetryList` 之前，检查累计失败次数或持续时间是否超过阈值（如 MaxRetry=100 或 MaxDuration=5s）。
+    2.  **死信处理 (Dead Letter)**：
+        *   若超过阈值，**不再重试**。
+        *   将该消息移入 **死信队列 (DLQ)**，并记录详细日志（包括涉及的 Entity ID、当前持有锁的 Worker 等）。
+        *   向发送方返回超时/失败错误（如果是同步请求）。
+    3.  **熔断保护**：如果针对某个 Entity 的死信数量突增，可触发熔断机制，暂时拒绝该 Entity 的新请求。
 
 ---
 
@@ -113,5 +239,6 @@ Worker 在处理主循环空闲时，或每隔固定 Tick：
 | **饥饿** | 重试机制 | `RetryList` + Backoff |
 
 该方案将 Orbit 的消息调度分为两层：
-1.  **全局层 (Dispatcher)**：负责负载均衡，将消息路由到特定 Worker。
+1.  **全局层 (Dispatcher)**：负责负载均衡，采用 **Anchor-based Hash** 策略将消息路由到特定 Worker。
 2.  **本地层 (Worker)**：负责时序保障和竞争处理，通过内部队列消化瞬时的锁冲突。
+3.  **Entity 层**：通过可重入锁提供防御性保护，支持复杂的调用链和生命周期管理。
