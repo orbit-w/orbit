@@ -7,9 +7,11 @@ gitee.com/orbit-w/meteor/bases/container/xmap
 gitee.com/orbit-w/meteor/bases/dirty/dirty_tracker
 gitee.com/orbit-w/meteor/bases/math
 gitee.com/orbit-w/meteor/bases/misc/common
+gitee.com/orbit-w/meteor/bases/misc/g
 gitee.com/orbit-w/meteor/bases/misc/number_utils
 gitee.com/orbit-w/meteor/bases/misc/utils
 gitee.com/orbit-w/meteor/bases/net/bigendian_buf
+gitee.com/orbit-w/meteor/bases/sync/reentrantlock
 gitee.com/orbit-w/meteor/modules/cache/v1
 gitee.com/orbit-w/meteor/modules/database/no_sql/mongodb_driver
 gitee.com/orbit-w/meteor/modules/database/rdb

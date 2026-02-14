@@ -106,3 +106,17 @@ Worker 是资源的持有者，而非简单的线程池。
 *   `GetPrimaryKey() string`：返回路由主键。
 *   `GetEntityRefs() []string`：返回涉及的实体ID列表。
 *   `Payload()`：返回实际业务数据。
+
+
+3.  **数据检查 (GetEntity)**：
+    *   调用 `EntityManager.GetEntity(AnchorID)`。
+    *   **情况 A：数据就绪 (Entity != nil)**
+        *   执行业务逻辑。
+        *   解锁。
+        *   循环处理 `StagingArea` 下一条消息。
+    *   **情况 B：数据未就绪 (Entity == nil)** -> **触发挂起**
+        1.  **发起加载**：`EntityManager.AsyncLoad`，回调发送 `EntityLoadedEvent`。
+        2.  **保存消息**：确保 `M` 位于 `StagingArea` **队头 (Head)**（因为它本该现在执行）。
+        3.  **标记挂起**：`LoadingAnchors[AnchorID] = true`。
+        4.  **释放锁**：`Unlock` 所有锁。
+        5.  **静默**：**不**加入 `RetryList`（避免空转）。

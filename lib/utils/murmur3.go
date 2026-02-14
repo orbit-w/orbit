@@ -325,6 +325,12 @@ func MurmurHash3_x64_128(data []byte, seed uint64) [2]uint64 {
 	return [2]uint64{h1, h2}
 }
 
+// Fmix64 applies the MurmurHash3 64-bit finalizer (bit-mixing) to k.
+// It can be used standalone to hash a single int64/uint64 key with good avalanche properties.
+func Fmix64(k uint64) uint64 {
+	return fmix64(k)
+}
+
 // fmix64 finalizes the hash value for the 64-bit variant
 func fmix64(k uint64) uint64 {
 	k ^= k >> 33
