@@ -1,5 +1,9 @@
 # EntityManager 线程安全管理器设计方案
 
+## 职责边界
+
+EntityManager是纯数据结构层（内存数据和可重入锁管理）。
+
 ## 1. 需求
 
 1. **O(1) ID 查找**：通过唯一 EntityId (`int64`) 快速获取 Entity
