@@ -1,6 +1,7 @@
 package entityloader
 
 import (
+	"fmt"
 	"time"
 
 	entitymgr "gitee.com/orbit-w/orbit/core/system/entity_mgr"
@@ -97,4 +98,46 @@ func (l *EntityLoader) Stop() error {
 // Worker 通过此 PID 发送 EntityLoadBatchRequest。
 func (l *EntityLoader) GetPID() *actor.PID {
 	return l.pid
+}
+
+// SyncLoadBatch 同步批量加载 Entity，阻塞直至批次全部加载完成或超时。
+//
+// 内部通过 RequestFuture 向 EntityLoaderActor 发送 EntityLoadBatchRequest，
+// Actor 完成后将 EntityLoadBatchComplete 回复给 Future，本方法阻塞等待并返回结果。
+//
+// refs:     待加载的实体引用列表
+// anchorID: 批次调度锚点（最小 EntityID），透传给 EntityLoadBatchComplete
+// timeout:  等待超时，<=0 时使用 EntityLoader 自身的 loadTimeout
+//
+// 返回第一个加载错误，全部成功时返回 nil。
+func (l *EntityLoader) SyncLoadBatch(refs []EntityRef, anchorID int64, timeout time.Duration) error {
+	if timeout <= 0 {
+		timeout = l.loadTimeout
+	}
+
+	req := &EntityLoadBatchRequest{
+		Refs:     refs,
+		AnchorID: anchorID,
+		// Requester 留空：Actor 在 handleLoadBatch 中从 ctx.Sender() 获取 Future PID。
+	}
+
+	future := l.system.Root.RequestFuture(l.pid, req, timeout)
+	result, err := future.Result()
+	if err != nil {
+		return fmt.Errorf("sync load batch timed out or failed (anchorID=%d): %w", anchorID, err)
+	}
+
+	resp, ok := result.(*EntityLoadBatchComplete)
+	if !ok {
+		return fmt.Errorf("sync load batch: unexpected response type %T (anchorID=%d)", result, anchorID)
+	}
+
+	if !resp.Success {
+		if len(resp.Errors) > 0 {
+			return resp.Errors[0]
+		}
+		return fmt.Errorf("sync load batch failed (anchorID=%d)", anchorID)
+	}
+
+	return nil
 }

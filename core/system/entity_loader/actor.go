@@ -121,10 +121,18 @@ func (a *entityLoaderActor) Receive(ctx actor.Context) {
 // 如果所有 entity 均已加载，立即回复 EntityLoadBatchComplete。
 func (a *entityLoaderActor) handleLoadBatch(ctx actor.Context, req *EntityLoadBatchRequest) {
 	batchID := a.nextBatchID()
+
+	// 支持同步调用：当 Requester 未显式设置时（SyncLoadBatch 通过 RequestFuture 发送），
+	// 使用 ctx.Sender() 作为回复地址（即 Future 的临时 PID）。
+	requester := req.Requester
+	if requester == nil {
+		requester = ctx.Sender()
+	}
+
 	batch := &pendingBatch{
 		batchID:   batchID,
 		anchorID:  req.AnchorID,
-		requester: req.Requester,
+		requester: requester,
 		startTime: time.Now(),
 	}
 
