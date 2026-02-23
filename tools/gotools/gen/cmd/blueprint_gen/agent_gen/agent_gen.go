@@ -36,8 +36,7 @@ func NewAgentGenerator(
 
 // Generate 生成所有代理层代码
 // agentOutput: mme_agent 输出目录
-// logicOutput: mme_logic 输出目录
-func (g *AgentGenerator) Generate(agentOutput, logicOutput string) error {
+func (g *AgentGenerator) Generate(agentOutput string) error {
 	if err := g.generateStaticFiles(agentOutput); err != nil {
 		return fmt.Errorf("generate static files: %w", err)
 	}
@@ -61,16 +60,6 @@ func (g *AgentGenerator) Generate(agentOutput, logicOutput string) error {
 	for _, module := range g.modules {
 		if err := g.generateModuleAgent(module, agentOutput); err != nil {
 			return fmt.Errorf("generate module agent %s: %w", module.Name, err)
-		}
-	}
-
-	if logicOutput != "" {
-		if err := g.generateLogicInterfaces(logicOutput); err != nil {
-			return fmt.Errorf("generate logic interfaces: %w", err)
-		}
-
-		if err := g.generateLogicScaffolds(logicOutput); err != nil {
-			return fmt.Errorf("generate logic scaffolds: %w", err)
 		}
 	}
 

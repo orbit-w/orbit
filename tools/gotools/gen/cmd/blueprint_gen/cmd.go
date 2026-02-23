@@ -158,7 +158,7 @@ func runBlueprintGen(cmd *cobra.Command, args []string) {
 		agentGen := agent_gen.NewAgentGenerator(
 			data.Entities, data.Managers, data.Modules, data.Mechanisms, data.SymbolTable,
 		)
-		if err := agentGen.Generate(agentOutput, logicOutput); err != nil {
+		if err := agentGen.Generate(agentOutput); err != nil {
 			cmd.PrintErrln("Failed to generate agent files:", err)
 			return
 		}

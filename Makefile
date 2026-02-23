@@ -42,6 +42,7 @@ GenBlueprint:
 		--blueprint-dir=$(BLUEPRINT_FULL_DIR) \
 		--proto-output=$(PROTOCOL_FULL_DIR) \
 		--go-output=internal/game/mme \
+		--agent-output=internal/game/mme_agent \
 		--debug
 
 # Build for Linux with specified config file

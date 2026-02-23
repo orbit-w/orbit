@@ -5,44 +5,39 @@ package mme_agent
 
 import (
 	"gitee.com/orbit-w/orbit/internal/game/mme"
-
 	"gitee.com/orbit-w/orbit/internal/game/mme_logic/imodels"
-	"gitee.com/orbit-w/orbit/lib/container"
-
 	"gitee.com/orbit-w/orbit/internal/game/mme_logic/managers"
+	"gitee.com/orbit-w/orbit/lib/container"
 )
 
 type HeroManagerAgentImpl struct {
 	imodels.IHeroManagerLogic
 	wrapper *mme.HeroManagerWrapper
 
-	heroModuleLogics *container.ModuleMapContainer[int64, *mme.HeroModule, *mme.HeroModuleWrapper, IHeroModuleAgent]
-	singleHeroModule IHeroModuleAgent
+	heroMapContainer      *container.ModuleMapContainer[int64, *mme.HeroModule, *mme.HeroModuleWrapper, IHeroModuleAgent]
+	singleHeroModuleAgent IHeroModuleAgent
 }
 
-// NewHeroManagerAgent 创建 HeroManager Agent
 func NewHeroManagerAgent(wrapper *mme.HeroManagerWrapper) IHeroManagerAgent {
 	ins := &HeroManagerAgentImpl{
 		wrapper:           wrapper,
 		IHeroManagerLogic: managers.NewHeroManagerLogic(wrapper),
-		heroModuleLogics: container.NewModuleMapContainer(
+		heroMapContainer: container.NewModuleMapContainer(
 			wrapper.GetHeroMap(),
 			NewHeroModuleLogic,
 		),
 	}
-
 	return ins
 }
 
-// GetWrapper 获取 Wrapper
 func (m *HeroManagerAgentImpl) GetWrapper() any {
 	return m.wrapper
 }
 
 func (m *HeroManagerAgentImpl) OnLoad(new bool) error {
 	var err error
-	m.heroModuleLogics.Range(func(key int64, logic IHeroModuleAgent) bool {
-		if err := CallOnLoad(logic, new); err != nil {
+	m.heroMapContainer.Range(func(key int64, agent IHeroModuleAgent) bool {
+		if err = CallOnLoad(agent, new); err != nil {
 			return false
 		}
 		return true
@@ -59,8 +54,8 @@ func (m *HeroManagerAgentImpl) OnLoad(new bool) error {
 
 func (m *HeroManagerAgentImpl) OnSave() error {
 	var err error
-	m.heroModuleLogics.Range(func(key int64, logic IHeroModuleAgent) bool {
-		if err := CallOnSave(logic); err != nil {
+	m.heroMapContainer.Range(func(key int64, agent IHeroModuleAgent) bool {
+		if err = CallOnSave(agent); err != nil {
 			return false
 		}
 		return true
@@ -68,6 +63,7 @@ func (m *HeroManagerAgentImpl) OnSave() error {
 	if err != nil {
 		return err
 	}
+
 	if err := CallOnSave(m.GetSingleHeroModule()); err != nil {
 		return err
 	}
@@ -76,8 +72,8 @@ func (m *HeroManagerAgentImpl) OnSave() error {
 
 func (m *HeroManagerAgentImpl) OnLogin() error {
 	var err error
-	m.heroModuleLogics.Range(func(key int64, logic IHeroModuleAgent) bool {
-		if err := CallOnLogin(logic); err != nil {
+	m.heroMapContainer.Range(func(key int64, agent IHeroModuleAgent) bool {
+		if err = CallOnLogin(agent); err != nil {
 			return false
 		}
 		return true
@@ -94,8 +90,8 @@ func (m *HeroManagerAgentImpl) OnLogin() error {
 
 func (m *HeroManagerAgentImpl) OnLogout() error {
 	var err error
-	m.heroModuleLogics.Range(func(key int64, logic IHeroModuleAgent) bool {
-		if err := CallOnLogout(logic); err != nil {
+	m.heroMapContainer.Range(func(key int64, agent IHeroModuleAgent) bool {
+		if err = CallOnLogout(agent); err != nil {
 			return false
 		}
 		return true
@@ -109,18 +105,19 @@ func (m *HeroManagerAgentImpl) OnLogout() error {
 	}
 	return nil
 }
-func (m *HeroManagerAgentImpl) HeroMap_GetModule(heroId int64) (IHeroModuleAgent, bool) {
-	logic, exists := m.heroModuleLogics.Get(heroId)
+
+func (m *HeroManagerAgentImpl) HeroMap_GetModule(key int64) (IHeroModuleAgent, bool) {
+	logic, exists := m.heroMapContainer.Get(key)
 	return logic, exists
 }
 
 func (m *HeroManagerAgentImpl) GetSingleHeroModule() IHeroModuleAgent {
-	if m.singleHeroModule == nil {
+	if m.singleHeroModuleAgent == nil {
 		wrapper := m.wrapper.GetSingleHeroModule()
 		if wrapper == nil {
 			return nil
 		}
-		m.singleHeroModule = NewHeroModuleLogic(wrapper)
+		m.singleHeroModuleAgent = NewHeroModuleLogic(wrapper)
 	}
-	return m.singleHeroModule
+	return m.singleHeroModuleAgent
 }

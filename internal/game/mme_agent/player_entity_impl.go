@@ -6,7 +6,6 @@ package mme_agent
 import (
 	mmeobj "gitee.com/orbit-w/orbit/internal/game/mme"
 	"gitee.com/orbit-w/orbit/pkg/proto/mme"
-
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
@@ -16,7 +15,6 @@ func init() {
 	})
 }
 
-// PlayerEntityAgent PlayerEntity Agent 实现
 type PlayerEntityImpl struct {
 	entityWrapper *mmeobj.PlayerEntityWrapper
 
@@ -48,7 +46,6 @@ func (a *PlayerEntityImpl) GetHeroManagerAgent() IHeroManagerAgent {
 	return a.heroManagerAgent
 }
 
-// OnLoad 加载回调
 func (a *PlayerEntityImpl) OnLoad(raw bson.Raw, new bool) error {
 	if err := a.entityWrapper.Load(raw); err != nil {
 		return err
@@ -60,7 +57,6 @@ func (a *PlayerEntityImpl) OnLoad(raw bson.Raw, new bool) error {
 	return nil
 }
 
-// OnSave 保存回调
 func (a *PlayerEntityImpl) OnSave() error {
 	if err := CallOnSave(a.GetHeroManagerAgent()); err != nil {
 		return err
@@ -68,7 +64,6 @@ func (a *PlayerEntityImpl) OnSave() error {
 	return nil
 }
 
-// OnLogin 登录回调
 func (a *PlayerEntityImpl) OnLogin() error {
 	if err := CallOnLogin(a.GetHeroManagerAgent()); err != nil {
 		return err
@@ -76,7 +71,6 @@ func (a *PlayerEntityImpl) OnLogin() error {
 	return nil
 }
 
-// OnLogout 登出回调
 func (a *PlayerEntityImpl) OnLogout() error {
 	if err := CallOnLogout(a.GetHeroManagerAgent()); err != nil {
 		return err
