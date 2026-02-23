@@ -18,7 +18,7 @@ type HeroModuleAgentImpl struct {
 	skinWearLogic     imodels.IWearMechanismLogic
 }
 
-func NewHeroModuleLogic(wrapper *mme.HeroModuleWrapper) IHeroModuleAgent {
+func NewHeroModuleAgent(wrapper *mme.HeroModuleWrapper) IHeroModuleAgent {
 	return &HeroModuleAgentImpl{
 		wrapper: wrapper,
 	}

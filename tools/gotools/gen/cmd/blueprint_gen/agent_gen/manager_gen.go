@@ -113,7 +113,7 @@ func (g *AgentGenerator) generateManagerAgent(manager *mmeobj.Manager, agentOutp
 			wrapperGetter := "Get" + mf.field.Name
 			sb.WriteString(fmt.Sprintf("\t\t%s: container.NewModuleMapContainer(\n", containerField))
 			sb.WriteString(fmt.Sprintf("\t\t\twrapper.%s(),\n", wrapperGetter))
-			sb.WriteString(fmt.Sprintf("\t\t\tNew%sLogic,\n", mf.moduleName))
+			sb.WriteString(fmt.Sprintf("\t\t\tNew%sAgent,\n", mf.moduleName))
 			sb.WriteString("\t\t),\n")
 		}
 	}
@@ -150,14 +150,14 @@ func (g *AgentGenerator) generateManagerAgent(manager *mmeobj.Manager, agentOutp
 			agentField := firstLower(mf.field.Name) + "Agent"
 			wrapperGetter := "Get" + mf.field.Name
 
-			sb.WriteString(fmt.Sprintf("func (m *%s) Get%s() I%sAgent {\n",
+			sb.WriteString(fmt.Sprintf("func (m *%s) Get%sAgent() I%sAgent {\n",
 				implName, mf.field.Name, mf.moduleName))
 			sb.WriteString(fmt.Sprintf("\tif m.%s == nil {\n", agentField))
 			sb.WriteString(fmt.Sprintf("\t\twrapper := m.wrapper.%s()\n", wrapperGetter))
 			sb.WriteString("\t\tif wrapper == nil {\n")
 			sb.WriteString("\t\t\treturn nil\n")
 			sb.WriteString("\t\t}\n")
-			sb.WriteString(fmt.Sprintf("\t\tm.%s = New%sLogic(wrapper)\n", agentField, mf.moduleName))
+			sb.WriteString(fmt.Sprintf("\t\tm.%s = New%sAgent(wrapper)\n", agentField, mf.moduleName))
 			sb.WriteString("\t}\n")
 			sb.WriteString(fmt.Sprintf("\treturn m.%s\n", agentField))
 			sb.WriteString("}\n\n")
@@ -211,7 +211,7 @@ func (g *AgentGenerator) writeManagerLifecycle(sb *strings.Builder, implName str
 	// Direct modules: CallOnXxx with lazy getter
 	for _, mf := range moduleFields {
 		if mf.kind == moduleFieldDirect {
-			getter := "Get" + mf.field.Name
+			getter := "Get" + mf.field.Name + "Agent"
 			if hasNewParam {
 				sb.WriteString(fmt.Sprintf("\tif err := Call%s(m.%s(), new); err != nil {\n", method, getter))
 			} else {

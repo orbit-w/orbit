@@ -24,7 +24,7 @@ func NewHeroManagerAgent(wrapper *mme.HeroManagerWrapper) IHeroManagerAgent {
 		IHeroManagerLogic: managers.NewHeroManagerLogic(wrapper),
 		heroMapContainer: container.NewModuleMapContainer(
 			wrapper.GetHeroMap(),
-			NewHeroModuleLogic,
+			NewHeroModuleAgent,
 		),
 	}
 	return ins
@@ -46,7 +46,7 @@ func (m *HeroManagerAgentImpl) OnLoad(new bool) error {
 		return err
 	}
 
-	if err := CallOnLoad(m.GetSingleHeroModule(), new); err != nil {
+	if err := CallOnLoad(m.GetSingleHeroModuleAgent(), new); err != nil {
 		return err
 	}
 	return nil
@@ -64,7 +64,7 @@ func (m *HeroManagerAgentImpl) OnSave() error {
 		return err
 	}
 
-	if err := CallOnSave(m.GetSingleHeroModule()); err != nil {
+	if err := CallOnSave(m.GetSingleHeroModuleAgent()); err != nil {
 		return err
 	}
 	return nil
@@ -82,7 +82,7 @@ func (m *HeroManagerAgentImpl) OnLogin() error {
 		return err
 	}
 
-	if err := CallOnLogin(m.GetSingleHeroModule()); err != nil {
+	if err := CallOnLogin(m.GetSingleHeroModuleAgent()); err != nil {
 		return err
 	}
 	return nil
@@ -100,7 +100,7 @@ func (m *HeroManagerAgentImpl) OnLogout() error {
 		return err
 	}
 
-	if err := CallOnLogout(m.GetSingleHeroModule()); err != nil {
+	if err := CallOnLogout(m.GetSingleHeroModuleAgent()); err != nil {
 		return err
 	}
 	return nil
@@ -111,13 +111,13 @@ func (m *HeroManagerAgentImpl) HeroMap_GetModule(key int64) (IHeroModuleAgent, b
 	return logic, exists
 }
 
-func (m *HeroManagerAgentImpl) GetSingleHeroModule() IHeroModuleAgent {
+func (m *HeroManagerAgentImpl) GetSingleHeroModuleAgent() IHeroModuleAgent {
 	if m.singleHeroModuleAgent == nil {
 		wrapper := m.wrapper.GetSingleHeroModule()
 		if wrapper == nil {
 			return nil
 		}
-		m.singleHeroModuleAgent = NewHeroModuleLogic(wrapper)
+		m.singleHeroModuleAgent = NewHeroModuleAgent(wrapper)
 	}
 	return m.singleHeroModuleAgent
 }

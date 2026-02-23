@@ -61,7 +61,7 @@ func (g *AgentGenerator) generateModuleAgent(module *mmeobj.Module, agentOutput 
 	sb.WriteString("}\n\n")
 
 	// Constructor
-	sb.WriteString(fmt.Sprintf("func New%sLogic(wrapper *mme.%sWrapper) I%sAgent {\n",
+	sb.WriteString(fmt.Sprintf("func New%sAgent(wrapper *mme.%sWrapper) I%sAgent {\n",
 		moduleName, moduleName, moduleName))
 	sb.WriteString(fmt.Sprintf("\treturn &%s{\n", implName))
 	sb.WriteString("\t\twrapper: wrapper,\n")
