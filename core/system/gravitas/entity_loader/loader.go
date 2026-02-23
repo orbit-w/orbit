@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	entitymgr "gitee.com/orbit-w/orbit/core/system/entity_mgr"
+	entitymgr "gitee.com/orbit-w/orbit/core/system/gravitas/entity_mgr"
 	"gitee.com/orbit-w/orbit/pkg/proto/mme"
 	"github.com/asynkron/protoactor-go/actor"
 )

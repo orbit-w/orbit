@@ -5,8 +5,8 @@ import (
 
 	"gitee.com/orbit-w/meteor/bases/misc/utils"
 	mlog "gitee.com/orbit-w/meteor/modules/mlog"
-	entityloader "gitee.com/orbit-w/orbit/core/system/entity_loader"
-	entitymgr "gitee.com/orbit-w/orbit/core/system/entity_mgr"
+	entityloader "gitee.com/orbit-w/orbit/core/system/gravitas/entity_loader"
+	entitymgr "gitee.com/orbit-w/orbit/core/system/gravitas/entity_mgr"
 	"gitee.com/orbit-w/orbit/internal/game/mme_agent"
 	"gitee.com/orbit-w/orbit/lib/module/logger"
 	"github.com/asynkron/protoactor-go/actor"

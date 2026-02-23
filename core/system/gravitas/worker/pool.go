@@ -5,8 +5,8 @@ import (
 	"sort"
 	"time"
 
-	entityloader "gitee.com/orbit-w/orbit/core/system/entity_loader"
-	entitymgr "gitee.com/orbit-w/orbit/core/system/entity_mgr"
+	entityloader "gitee.com/orbit-w/orbit/core/system/gravitas/entity_loader"
+	entitymgr "gitee.com/orbit-w/orbit/core/system/gravitas/entity_mgr"
 	orbitutils "gitee.com/orbit-w/orbit/lib/utils"
 	"gitee.com/orbit-w/orbit/pkg/proto/mme"
 	"github.com/asynkron/protoactor-go/actor"

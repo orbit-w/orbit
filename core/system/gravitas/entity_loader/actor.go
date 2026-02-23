@@ -7,9 +7,9 @@ import (
 
 	"gitee.com/orbit-w/meteor/bases/misc/utils"
 	mlog "gitee.com/orbit-w/meteor/modules/mlog"
+	entitymgr "gitee.com/orbit-w/orbit/core/system/gravitas/entity_mgr"
 	mmeobj "gitee.com/orbit-w/orbit/internal/game/mme"
 	"gitee.com/orbit-w/orbit/internal/game/mme_agent"
-	entitymgr "gitee.com/orbit-w/orbit/core/system/entity_mgr"
 	"gitee.com/orbit-w/orbit/lib/module/logger"
 	"gitee.com/orbit-w/orbit/lib/module/persistence"
 	"gitee.com/orbit-w/orbit/pkg/proto/mme"

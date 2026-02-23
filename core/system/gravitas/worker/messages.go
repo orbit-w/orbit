@@ -3,7 +3,7 @@ package worker
 import (
 	"time"
 
-	entityloader "gitee.com/orbit-w/orbit/core/system/entity_loader"
+	entityloader "gitee.com/orbit-w/orbit/core/system/gravitas/entity_loader"
 	"gitee.com/orbit-w/orbit/internal/game/mme_agent"
 )
 
