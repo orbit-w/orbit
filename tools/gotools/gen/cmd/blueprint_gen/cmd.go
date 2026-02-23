@@ -3,6 +3,7 @@ package blueprint_gen
 import (
 	"fmt"
 
+	"gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/agent_gen"
 	blueprint_types "gitee.com/orbit-w/orbit/tools/gotools/gen/cmd/blueprint_gen/types"
 	"github.com/spf13/cobra"
 )
@@ -150,6 +151,36 @@ func runBlueprintGen(cmd *cobra.Command, args []string) {
 		println("Protocol IDs files formatted successfully")
 	}
 
+	// 生成 Agent 代码
+	agentOutput, _ := cmd.Flags().GetString("agent-output")
+	logicOutput, _ := cmd.Flags().GetString("logic-output")
+	if agentOutput != "" {
+		agentGen := agent_gen.NewAgentGenerator(
+			data.Entities, data.Managers, data.Modules, data.Mechanisms, data.SymbolTable,
+		)
+		if err := agentGen.Generate(agentOutput, logicOutput); err != nil {
+			cmd.PrintErrln("Failed to generate agent files:", err)
+			return
+		}
+		if debug {
+			println("Agent files generated successfully")
+		}
+
+		if err := FormatGoFiles(agentOutput); err != nil {
+			cmd.PrintErrln("Warning: Failed to format agent files:", err)
+		} else if debug {
+			println("Agent files formatted successfully")
+		}
+
+		if logicOutput != "" {
+			if err := FormatGoFiles(logicOutput); err != nil {
+				cmd.PrintErrln("Warning: Failed to format logic files:", err)
+			} else if debug {
+				println("Logic files formatted successfully")
+			}
+		}
+	}
+
 	// 生成 Router 代码
 	controllerDir, _ := cmd.Flags().GetString("controller-dir")
 	routerOutput, _ := cmd.Flags().GetString("router-output")
@@ -179,6 +210,8 @@ func InitCmd(father *cobra.Command) {
 	blueprintGenCmd.Flags().String("proto-output", "../protocol/protocol", "Output directory for proto files")
 	blueprintGenCmd.Flags().String("go-output", "internal/game/mme", "Output directory for Go files")
 	blueprintGenCmd.Flags().String("protocol-ids-output", "pkg/proto/pb", "Output directory for protocol_ids.pb.go file")
+	blueprintGenCmd.Flags().String("agent-output", "", "Output directory for agent files (e.g. internal/game/mme_agent)")
+	blueprintGenCmd.Flags().String("logic-output", "", "Output directory for logic interface files (e.g. internal/game/mme_logic)")
 	blueprintGenCmd.Flags().String("controller-dir", "internal/game/controller_v2", "Directory containing Controller files")
 	blueprintGenCmd.Flags().String("router-output", "internal/game/routers/routers.go", "Output file path for generated router code")
 	blueprintGenCmd.Flags().String("controller-path", "", "Controller file path (default: controller-dir/controller.go)")
