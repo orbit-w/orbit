@@ -311,7 +311,7 @@ func (w *Worker) handleAsyncComplete(ctx actor.Context, anchorID int64) {
 // handleAsyncError 异步加载失败处理（文档 Section 11.4）。
 //
 // 策略：有限重试（RetryCount < MaxRetryCount），超限后丢弃并告警。
-func (w *Worker) handleAsyncError(ctx actor.Context, anchorID int64, errors []error) {
+func (w *Worker) handleAsyncError(_ actor.Context, anchorID int64, errors []error) {
 	delete(w.loadingAnchors, anchorID)
 
 	for _, err := range errors {

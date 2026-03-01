@@ -1,6 +1,7 @@
 package entity_nexus
 
 import (
+	"math/rand"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -371,5 +372,364 @@ func TestConcurrentDispatchRoutesToSameWorker(t *testing.T) {
 	if mc := maxConcurrent.Load(); mc > 1 {
 		t.Fatalf("handlers executed concurrently (maxConcurrent=%d > 1), "+
 			"messages must have been routed to different workers", mc)
+	}
+}
+
+// TestMassDispatchAllMessagesExecuted 验证高并发海量消息下无丢消息且可在时限内完成。
+//
+// 测试目的：
+//   - 大量消息并发进入时，所有消息都能被完整执行（totalHandled == msgCount）
+//   - 覆盖多 Worker、多 AnchorID 的高压路径
+//   - 在限定时间内完成，间接证明不存在系统级死锁
+func TestMassDispatchAllMessagesExecuted(t *testing.T) {
+	const (
+		workerCount  = 8
+		entityCount  = 10000
+		msgCount     = 100000
+		dispatchGNum = 50
+		maxRefs      = 3
+	)
+
+	var totalHandled atomic.Int64
+
+	n := &Nexus{
+		cfg: Config{
+			DBResolver: func(entityType mme.EntityType) string { return "test" },
+			Pool: worker.PoolConfig{
+				WorkerCount:  workerCount,
+				TickInterval: 10 * time.Millisecond,
+			},
+		},
+		handler: func(_ []mme_agent.IEntity) error {
+			totalHandled.Add(1)
+			return nil
+		},
+	}
+	if err := n.init(); err != nil {
+		t.Fatalf("init nexus failed: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := n.Stop(); err != nil {
+			t.Fatalf("stop nexus failed: %v", err)
+		}
+	})
+
+	for i := 1; i <= entityCount; i++ {
+		n.EntityManager().Add(&testEntity{
+			id:         int64(i),
+			entityType: mme.EntityType_PlayerEntityType,
+		})
+	}
+
+	msgRefs := make([][]*mme.EntityRef, 0, msgCount)
+	rng := rand.New(rand.NewSource(42))
+	for i := 0; i < msgCount; i++ {
+		refCount := rng.Intn(maxRefs) + 1
+		used := make(map[int64]struct{}, refCount)
+		refs := make([]*mme.EntityRef, 0, refCount)
+
+		for len(refs) < refCount {
+			id := int64(rng.Intn(entityCount) + 1)
+			if _, exists := used[id]; exists {
+				continue
+			}
+			used[id] = struct{}{}
+			refs = append(refs, &mme.EntityRef{
+				EntityId:   proto.Int64(id),
+				EntityType: mme.EntityType_PlayerEntityType.Enum(),
+			})
+		}
+		msgRefs = append(msgRefs, refs)
+	}
+
+	var nextIdx atomic.Int64
+	var wg sync.WaitGroup
+	for i := 0; i < dispatchGNum; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for {
+				idx := int(nextIdx.Add(1) - 1)
+				if idx >= len(msgRefs) {
+					return
+				}
+				n.DispatchFromProto(msgRefs[idx])
+			}
+		}()
+	}
+	wg.Wait()
+
+	deadline := time.Now().Add(30 * time.Second)
+	for time.Now().Before(deadline) {
+		if totalHandled.Load() == msgCount {
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	if got := totalHandled.Load(); got != msgCount {
+		t.Fatalf("expected all %d messages handled, got %d", msgCount, got)
+	}
+}
+
+// TestOverlappingEntityRefsNoConcurrencyViolation 验证跨 Worker 重叠实体竞争场景下无死锁且实体互斥访问成立。
+//
+// 测试目的：
+//   - 不同 AnchorID（可能路由到不同 Worker）下，重叠 EntityRefs 触发真实锁竞争
+//   - 所有消息在时限内处理完毕，保证无死锁
+//   - 任一 Entity 在任意时刻最多被一个 Handler 并发访问（maxObserved <= 1）
+func TestOverlappingEntityRefsNoConcurrencyViolation(t *testing.T) {
+	const (
+		workerCount   = 8
+		entityCount   = 10000
+		msgCount      = 100000
+		dispatchGNum  = 50
+		patternWindow = 3
+	)
+
+	type entityTracker struct {
+		active      atomic.Int64
+		maxObserved atomic.Int64
+	}
+
+	trackers := make(map[int64]*entityTracker, entityCount)
+	for i := 1; i <= entityCount; i++ {
+		trackers[int64(i)] = &entityTracker{}
+	}
+
+	var totalHandled atomic.Int64
+
+	n := &Nexus{
+		cfg: Config{
+			DBResolver: func(entityType mme.EntityType) string { return "test" },
+			Pool: worker.PoolConfig{
+				WorkerCount:  workerCount,
+				TickInterval: 10 * time.Millisecond,
+			},
+		},
+		handler: func(entities []mme_agent.IEntity) error {
+			touched := make([]*entityTracker, 0, len(entities))
+			for _, entity := range entities {
+				tracker := trackers[entity.GetId()]
+				cur := tracker.active.Add(1)
+				for {
+					old := tracker.maxObserved.Load()
+					if cur <= old || tracker.maxObserved.CompareAndSwap(old, cur) {
+						break
+					}
+				}
+				touched = append(touched, tracker)
+			}
+
+			// 扩大并发窗口，提升竞态可观测性。
+			time.Sleep(500 * time.Microsecond)
+
+			for _, tracker := range touched {
+				tracker.active.Add(-1)
+			}
+			totalHandled.Add(1)
+			return nil
+		},
+	}
+	if err := n.init(); err != nil {
+		t.Fatalf("init nexus failed: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := n.Stop(); err != nil {
+			t.Fatalf("stop nexus failed: %v", err)
+		}
+	})
+
+	for i := 1; i <= entityCount; i++ {
+		n.EntityManager().Add(&testEntity{
+			id:         int64(i),
+			entityType: mme.EntityType_PlayerEntityType,
+		})
+	}
+
+	// Pattern i: [i, i+1, i+2], i=1..18，形成相邻 Pattern 的重叠实体竞争。
+	patterns := make([][]*mme.EntityRef, 0, entityCount-patternWindow+1)
+	for start := int64(1); start <= int64(entityCount-patternWindow+1); start++ {
+		refs := make([]*mme.EntityRef, 0, patternWindow)
+		for id := start; id < start+patternWindow; id++ {
+			refs = append(refs, &mme.EntityRef{
+				EntityId:   proto.Int64(id),
+				EntityType: mme.EntityType_PlayerEntityType.Enum(),
+			})
+		}
+		patterns = append(patterns, refs)
+	}
+
+	msgPatternIdx := make([]int, msgCount)
+	rng := rand.New(rand.NewSource(20260301))
+	for i := 0; i < msgCount; i++ {
+		msgPatternIdx[i] = rng.Intn(len(patterns))
+	}
+
+	var nextIdx atomic.Int64
+	var wg sync.WaitGroup
+	for i := 0; i < dispatchGNum; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for {
+				idx := int(nextIdx.Add(1) - 1)
+				if idx >= msgCount {
+					return
+				}
+				n.DispatchFromProto(patterns[msgPatternIdx[idx]])
+			}
+		}()
+	}
+	wg.Wait()
+
+	deadline := time.Now().Add(30 * time.Second)
+	for time.Now().Before(deadline) {
+		if totalHandled.Load() == msgCount {
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	if got := totalHandled.Load(); got != msgCount {
+		t.Fatalf("expected all %d messages handled, got %d", msgCount, got)
+	}
+
+	for entityID, tracker := range trackers {
+		if mc := tracker.maxObserved.Load(); mc > 1 {
+			t.Fatalf("entity %d observed concurrent handler access: maxObserved=%d (>1)", entityID, mc)
+		}
+		if active := tracker.active.Load(); active != 0 {
+			t.Fatalf("entity %d has non-zero active counter after completion: %d", entityID, active)
+		}
+	}
+}
+
+// TestSameAnchorFIFOOrderingWith10000Entities 验证 10000 Entity 规模下，
+// 同 AnchorID 消息的排序、路由与顺序执行性质。
+//
+// 测试目的：
+//   - 入口传入乱序 refs，Worker 侧应按 EntityID 升序处理
+//   - 同一 AnchorID 的消息应路由到同一 Worker 并串行执行（maxConcurrent == 1）
+//   - 顺序投递的消息应保持 FIFO，不出现乱序/死锁
+func TestSameAnchorFIFOOrderingWith10000Entities(t *testing.T) {
+	const (
+		workerCount = 8
+		entityCount = 10000
+		msgCount    = 3000
+		anchorID    = int64(5000)
+	)
+
+	var (
+		totalHandled   atomic.Int64
+		expectedSeq    atomic.Int64
+		activeHandlers atomic.Int64
+		maxConcurrent  atomic.Int64
+		firstErrSet    atomic.Bool
+		firstErr       atomic.Value // string
+	)
+
+	n := &Nexus{
+		cfg: Config{
+			DBResolver: func(entityType mme.EntityType) string { return "test" },
+			Pool: worker.PoolConfig{
+				WorkerCount:  workerCount,
+				TickInterval: 10 * time.Millisecond,
+			},
+		},
+		handler: func(entities []mme_agent.IEntity) error {
+			cur := activeHandlers.Add(1)
+			for {
+				old := maxConcurrent.Load()
+				if cur <= old || maxConcurrent.CompareAndSwap(old, cur) {
+					break
+				}
+			}
+			defer activeHandlers.Add(-1)
+
+			if len(entities) != 2 {
+				if firstErrSet.CompareAndSwap(false, true) {
+					firstErr.Store("handler entity count must be 2")
+				}
+				return nil
+			}
+
+			leftID := entities[0].GetId()
+			rightID := entities[1].GetId()
+			if leftID > rightID {
+				if firstErrSet.CompareAndSwap(false, true) {
+					firstErr.Store("entities are not sorted ascending by EntityID")
+				}
+				return nil
+			}
+			if leftID != anchorID {
+				if firstErrSet.CompareAndSwap(false, true) {
+					firstErr.Store("anchor entity is not the smallest ID in handler payload")
+				}
+				return nil
+			}
+
+			seq := rightID - (anchorID + 1)
+			wantSeq := expectedSeq.Load()
+			if seq != wantSeq {
+				if firstErrSet.CompareAndSwap(false, true) {
+					firstErr.Store("FIFO order violated for same anchor messages")
+				}
+				return nil
+			}
+			expectedSeq.Add(1)
+			totalHandled.Add(1)
+			return nil
+		},
+	}
+	if err := n.init(); err != nil {
+		t.Fatalf("init nexus failed: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := n.Stop(); err != nil {
+			t.Fatalf("stop nexus failed: %v", err)
+		}
+	})
+
+	for i := 1; i <= entityCount; i++ {
+		n.EntityManager().Add(&testEntity{
+			id:         int64(i),
+			entityType: mme.EntityType_PlayerEntityType,
+		})
+	}
+
+	// 关键：顺序发送，消息 refs 故意乱序 [partner, anchor]，
+	// 以验证 Dispatch 内部排序 + 同 Anchor FIFO。
+	for i := 0; i < msgCount; i++ {
+		partnerID := anchorID + 1 + int64(i)
+		n.DispatchFromProto([]*mme.EntityRef{
+			{EntityId: proto.Int64(partnerID), EntityType: mme.EntityType_PlayerEntityType.Enum()},
+			{EntityId: proto.Int64(anchorID), EntityType: mme.EntityType_PlayerEntityType.Enum()},
+		})
+	}
+
+	deadline := time.Now().Add(30 * time.Second)
+	for time.Now().Before(deadline) {
+		if totalHandled.Load() == msgCount {
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	if got := totalHandled.Load(); got != msgCount {
+		t.Fatalf("expected all %d messages handled, got %d", msgCount, got)
+	}
+	if got := expectedSeq.Load(); got != msgCount {
+		t.Fatalf("expected processed sequence count %d, got %d", msgCount, got)
+	}
+	if maxConcurrent.Load() > 1 {
+		t.Fatalf("same-anchor messages executed concurrently, maxConcurrent=%d", maxConcurrent.Load())
+	}
+	if firstErrSet.Load() {
+		errMsg, _ := firstErr.Load().(string)
+		if errMsg == "" {
+			errMsg = "unknown handler assertion error"
+		}
+		t.Fatalf("ordering/routing assertion failed: %s", errMsg)
 	}
 }
