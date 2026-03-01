@@ -20,7 +20,7 @@ const (
 //
 // Worker 在获取所有锁并确保所有 Entity 已加载后调用。
 // entities: EntityID → IEntity 映射，包含消息涉及的所有 Entity。
-type MessageHandler func(entities map[int64]mme_agent.IEntity) error
+type MessageHandler func(entities []mme_agent.IEntity) error
 
 // WorkerMessage Worker 处理的消息单元。
 //

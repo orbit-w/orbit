@@ -206,10 +206,10 @@ func (w *Worker) tryProcessAnchor(ctx actor.Context, msg *WorkerMessage) Process
 	}
 
 	// Phase 3: 执行业务逻辑
-	entities := make(map[int64]mme_agent.IEntity, len(refs))
+	entities := make([]mme_agent.IEntity, 0, len(refs))
 	for _, ref := range refs {
 		if entity, ok := w.em.Get(ref.EntityID); ok {
-			entities[ref.EntityID] = entity
+			entities = append(entities, entity)
 		} else {
 			w.logger.Error("Entity disappeared under lock",
 				zap.Int64("EntityID", ref.EntityID),
@@ -222,6 +222,11 @@ func (w *Worker) tryProcessAnchor(ctx actor.Context, msg *WorkerMessage) Process
 			w.logger.Error("Message handler execution failed",
 				zap.Int64("AnchorID", msg.AnchorID),
 				zap.Error(err))
+		} else {
+			w.logger.Info("Message handler executed successfully",
+				zap.Int("WorkerID", w.id),
+				zap.Int64("AnchorID", msg.AnchorID),
+				zap.Int("EntityCount", len(entities)))
 		}
 	}
 
