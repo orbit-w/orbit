@@ -5,11 +5,13 @@ import (
 	"sort"
 	"time"
 
-	entityloader "gitee.com/orbit-w/orbit/core/system/gravitas/entity_loader"
-	entitymgr "gitee.com/orbit-w/orbit/core/system/gravitas/entity_mgr"
+	entityloader "gitee.com/orbit-w/orbit/core/system/entity_nexus/entity_loader"
+	entitymgr "gitee.com/orbit-w/orbit/core/system/entity_nexus/entity_mgr"
+	"gitee.com/orbit-w/orbit/lib/module/logger"
 	orbitutils "gitee.com/orbit-w/orbit/lib/utils"
 	"gitee.com/orbit-w/orbit/pkg/proto/mme"
 	"github.com/asynkron/protoactor-go/actor"
+	"go.uber.org/zap"
 )
 
 // PoolConfig WorkerPool 配置。
@@ -96,7 +98,7 @@ func (p *WorkerPool) Dispatch(refs []entityloader.EntityRef, handler MessageHand
 		return refs[i].EntityID < refs[j].EntityID
 	})
 
-	anchorID := refs[0].EntityID
+	anchorID := p.GenAnchorID(refs)
 	msg := &WorkerMessage{
 		EntityRefs: refs,
 		AnchorID:   anchorID,
@@ -105,6 +107,10 @@ func (p *WorkerPool) Dispatch(refs []entityloader.EntityRef, handler MessageHand
 	}
 
 	workerIdx := int(uint64(orbitutils.Fmix64(uint64(anchorID))) % uint64(p.count))
+	if workerIdx < 0 || workerIdx >= p.count {
+		workerIdx = 0
+		logger.GetLogger().Error("worker index out of range", zap.Int("workerIdx", workerIdx), zap.Int("count", p.count))
+	}
 	p.system.Root.Send(p.workers[workerIdx], msg)
 }
 
@@ -123,6 +129,22 @@ func (p *WorkerPool) DispatchFromProto(refs []*mme.EntityRef, handler MessageHan
 		})
 	}
 	p.Dispatch(entityRefs, handler)
+}
+
+// GenAnchorID 根据 refs 计算 AnchorID，不修改 refs。
+// 提取 EntityID 到新切片并排序，取最小值经 Fmix64 后返回。
+func (p *WorkerPool) GenAnchorID(refs []entityloader.EntityRef) int64 {
+	if len(refs) == 0 {
+		return 0
+	}
+	ids := make([]int64, len(refs))
+	for i, r := range refs {
+		ids[i] = r.EntityID
+	}
+	sort.Slice(ids, func(i, j int) bool {
+		return ids[i] < ids[j]
+	})
+	return int64(orbitutils.Fmix64(uint64(ids[0])))
 }
 
 // Stop 优雅停止所有 Worker Actor。

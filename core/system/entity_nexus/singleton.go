@@ -1,30 +1,30 @@
-package gravitas
+package entity_nexus
 
 import (
-	entityloader "gitee.com/orbit-w/orbit/core/system/gravitas/entity_loader"
-	entitymgr "gitee.com/orbit-w/orbit/core/system/gravitas/entity_mgr"
-	"gitee.com/orbit-w/orbit/core/system/gravitas/worker"
+	entityloader "gitee.com/orbit-w/orbit/core/system/entity_nexus/entity_loader"
+	entitymgr "gitee.com/orbit-w/orbit/core/system/entity_nexus/entity_mgr"
+	"gitee.com/orbit-w/orbit/core/system/entity_nexus/worker"
 	"gitee.com/orbit-w/orbit/pkg/proto/mme"
 )
 
-var inst *GravitasImpl
+var inst *Nexus
 
-// Start 初始化并启动 Gravitas 单例。
+// Start 初始化并启动 Nexus 单例。
 //
 // 进程生命周期内只应调用一次；重复调用前必须先调用 Stop。
 func Start(cfg Config, handler worker.MessageHandler) error {
-	g := &GravitasImpl{
+	n := &Nexus{
 		cfg:     cfg,
 		handler: handler,
 	}
-	if err := g.init(); err != nil {
+	if err := n.init(); err != nil {
 		return err
 	}
-	inst = g
+	inst = n
 	return nil
 }
 
-// Stop 停止并重置 Gravitas 单例。
+// Stop 停止并重置 Nexus 单例。
 func Stop() error {
 	if inst == nil {
 		return nil
@@ -34,8 +34,8 @@ func Stop() error {
 	return err
 }
 
-// GetInst 返回 Gravitas 单例实例。
-func GetInst() *GravitasImpl {
+// GetInst 返回 Nexus 单例实例。
+func GetInst() *Nexus {
 	return inst
 }
 
